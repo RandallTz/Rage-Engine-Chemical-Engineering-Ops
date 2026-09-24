@@ -32,6 +32,7 @@ import {
   corrientesDeOperacion,
   metodoPorDefecto,
 } from "./modelo";
+import EsperaCalculo from "../components/EsperaCalculo";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const nodeTypes = { corriente: NodoCorriente, operacion: NodoOperacion };
@@ -391,6 +392,8 @@ export default function FlowsheetPage() {
           >
             {cargando ? "Resolviendo..." : "Resolver"}
           </button>
+
+          <EsperaCalculo activa={cargando} titulo="resolviendo el diagrama" segundosEsperados={12} compacto />
 
           {error && <span className="text-xs text-red-400">{error}</span>}
           {!unidades.listo && (

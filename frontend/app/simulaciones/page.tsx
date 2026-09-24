@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSimulacion, type Simulacion } from "../components/SimulacionProvider";
 import { PLANTILLAS, CATEGORIAS } from "../components/plantillas";
+import FondoFluido from "../components/FondoFluido";
 
 function fecha(iso: string) {
   try {
@@ -57,8 +58,12 @@ export default function SimulacionesPage() {
   }
 
   return (
-    <div className="min-h-0 flex-1 overflow-auto bg-zinc-950 px-6 py-6">
-      <div className="mx-auto max-w-5xl">
+    <div className="relative min-h-0 flex-1 overflow-auto bg-zinc-950 px-6 py-6">
+      {/* Va DEBAJO del contenido a proposito: las tarjetas de abajo son
+          opacas, asi que lo tapan solas y el fluido solo asoma por los
+          huecos. Ni recortes ni mascaras, y nunca sobre un boton. */}
+      <FondoFluido />
+      <div className="relative z-10 mx-auto max-w-5xl">
         <h1 className="mb-1 text-lg font-semibold text-zinc-100">Simulaciones</h1>
         <p className="mb-6 text-xs text-zinc-500">
           Cada simulación guarda <strong className="text-zinc-400">sus propios componentes</strong>, el modelo

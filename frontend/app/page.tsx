@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import DiagramaMcCabeThiele, { type DatosDiagramaMT } from "./components/DiagramaMcCabeThiele";
+import EsperaCalculo from "./components/EsperaCalculo";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -299,6 +300,13 @@ export default function Home() {
         >
           {cargando ? "Resolviendo..." : "Resolver"}
         </button>
+
+        <EsperaCalculo
+          activa={cargando}
+          titulo="Resolviendo la columna"
+          detalle="Curva de equilibrio con UNIFAC y escalonamiento etapa a etapa."
+          segundosEsperados={10}
+        />
 
         {error && <p className="text-sm text-red-600">{error}</p>}
       </section>
