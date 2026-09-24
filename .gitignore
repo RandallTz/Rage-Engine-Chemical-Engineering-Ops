@@ -1,0 +1,100 @@
+# --------------------------------------------------------------------
+# Artefactos de build del frontend.
+#
+# Estos dos son la razon de que este archivo tenga que existir ANTES del
+# primer 'git add': medidos, 535 MB y 530 MB, o sea mas de 1 GB de cosas
+# regenerables. Una vez dentro del historial, sacarlos obliga a
+# reescribirlo.
+# --------------------------------------------------------------------
+frontend/.next/
+frontend/node_modules/
+frontend/out/
+frontend/.turbo/
+*.tsbuildinfo
+
+# --------------------------------------------------------------------
+# Datos pesados de archive/ -- 57 de los 58 MB del repositorio.
+#
+# El CODIGO de archive/ (equations.py, etl_yaws.py, propiedades.py...) SI
+# se versiona: es la referencia historica contra la que se validaron las
+# lineas estequiometricas "bit a bit", y core/topology.py lo cita.
+#
+# Lo que queda fuera son los tres archivos de datos:
+#
+#   Yaws_Handbook_...xlsx   12 MB  -- es un libro de referencia COMERCIAL.
+#                                     Subirlo a un repositorio publico es
+#                                     un problema de derechos de autor, no
+#                                     solo de tamano.
+#   base_termodinamica.db   17 MB  -- derivados del anterior via etl_yaws.py,
+#   base_termodinamica.json 29 MB     o sea REGENERABLES a partir de el.
+#
+# Siguen en el disco; simplemente no entran al historial. Y ninguno lo usa
+# el simulador actual, que saca sus propiedades de 'thermo'.
+# --------------------------------------------------------------------
+archive/*.xlsx
+archive/*.db
+archive/*.json
+
+# --------------------------------------------------------------------
+# Python
+# --------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+.Python
+
+# --------------------------------------------------------------------
+# Herramientas
+# --------------------------------------------------------------------
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
+
+# --------------------------------------------------------------------
+# Entornos y secretos: NUNCA al repositorio
+# --------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# --------------------------------------------------------------------
+# Editores y sistema operativo
+# --------------------------------------------------------------------
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*~
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# --------------------------------------------------------------------
+# Salidas del simulador.
+#
+# Las figuras se REGENERAN corriendo el codigo que las produce, y ese
+# codigo si esta versionado. Guardar el PNG ademas invita a que la
+# imagen y la ecuacion que la genera se separen sin que nadie lo note,
+# que es justo el fallo que este proyecto persigue.
+# --------------------------------------------------------------------
+*.png
+*.jpg
+*.jpeg
+*.pdf
+*.svg
+!docs/**/*.svg
+salidas/
+resultados/

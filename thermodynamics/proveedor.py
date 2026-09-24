@@ -1,0 +1,92 @@
+"""
+Adapter sobre la libreria 'thermo': unico punto de contacto entre el
+simulador y los datos/modelos termodinamicos predictivos (Chemical,
+UNIFAC). No conoce pint -- todo lo que recibe y devuelve son floats o
+arrays de numpy en el Sistema Internacional.
+"""
+
+import numpy as np
+from thermo.chemical import Chemical
+from thermo.unifac import UNIFAC
+
+
+class ProveedorTermodinamico:
+    def __init__(self, nombres_componentes):
+        self.componentes = [Chemical(nombre) for nombre in nombres_componentes]
+        self.grupos_unifac = [comp.UNIFAC_groups for comp in self.componentes]
+
+    def actualizar_estado(self, T_kelvin, P_pascal=101325.0):
+        """
+        Obliga a los objetos Chemical a recalcular sus propiedades dependientes de T y P.
+        """
+        for comp in self.componentes:
+            comp.calculate(T_kelvin, P_pascal)
+
+    def presiones_saturacion(self, T_kelvin):
+        self.actualizar_estado(T_kelvin)
+        # Psat devuelve Pascales nativamente en thermo
+        return np.array([comp.Psat for comp in self.componentes], dtype=float)
+
+    def entalpias_vaporizacion(self, T_kelvin):
+        self.actualizar_estado(T_kelvin)
+        # Hvapm devuelve J/mol nativamente en thermo
+        return np.array([comp.Hvapm for comp in self.componentes], dtype=float)
+
+    def capacidades_calorificas_liquido(self, T_kelvin):
+        self.actualizar_estado(T_kelvin)
+        # Cplm devuelve J/(mol*K) nativamente en thermo
+        return np.array([comp.Cplm for comp in self.componentes], dtype=float)
+
+    def propiedades_caloricas(self, T_kelvin):
+        """
+        (Cp_liquido, DHvap) en una sola pasada [J/(mol K)], [J/mol].
+
+        Pedirlas por separado obliga a 'thermo' a recalcular el estado de
+        cada Chemical dos veces a la misma T. CalculadoraEntalpia tabula
+        las dos sobre la misma malla, asi que aqui se ahorra la mitad de
+        las llamadas a calculate().
+        """
+        self.actualizar_estado(T_kelvin)
+        Cp = np.array([comp.Cplm for comp in self.componentes], dtype=float)
+        Hvap = np.array([comp.Hvapm for comp in self.componentes], dtype=float)
+        return Cp, Hvap
+
+    def coeficientes_actividad(self, T_kelvin, x_mezcla):
+        """
+        Coeficientes de actividad gamma_i(T, x) via UNIFAC predictivo puro.
+        No depende de P (UNIFAC clasico es solo funcion de T y composicion).
+        """
+        # thermo requiere que xs sea una lista estandar de Python, no un ndarray
+        x_lista = np.asarray(x_mezcla, dtype=float).tolist()
+        modelo = UNIFAC.from_subgroups(
+            T=T_kelvin, xs=x_lista, chemgroups=self.grupos_unifac
+        )
+        return np.array(modelo.gammas(), dtype=float)
+
+    def entalpias_formacion_liquido(self):
+        """
+        Entalpia estandar de formacion en fase liquida, DeltaHf° [J/mol],
+        a Tstd = 298.15 K. Es una propiedad de referencia fija de 'thermo'
+        (Hfm): no depende del T,P actual de los objetos Chemical, por eso
+        no llama a actualizar_estado.
+        """
+        return np.array([comp.Hfm for comp in self.componentes], dtype=float)
+
+    def energias_gibbs_formacion_liquido(self):
+        """
+        Energia de Gibbs estandar de formacion en fase liquida,
+        DeltaGf° [J/mol], a Tstd = 298.15 K (Gfm de 'thermo', misma
+        naturaleza fija que entalpias_formacion_liquido).
+        """
+        return np.array([comp.Gfm for comp in self.componentes], dtype=float)
+
+    def volatilidades_relativas(self, T_kelvin, x_mezcla, indice_referencia=0):
+        """
+        Calcula el vector de volatilidades relativas (alfa dinamico) usando
+        la Ley de Raoult Modificada (alfa_i = gamma_i * P_sat_i / P_ref_total).
+        """
+        gamma = self.coeficientes_actividad(T_kelvin, x_mezcla)
+        p_sat = self.presiones_saturacion(T_kelvin)
+
+        volatilidades = (gamma * p_sat) / (gamma[indice_referencia] * p_sat[indice_referencia])
+        return volatilidades

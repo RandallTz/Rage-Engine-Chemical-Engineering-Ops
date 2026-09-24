@@ -1,0 +1,53 @@
+# Dependencias del simulador, CON VERSION FIJA.
+#
+# Por que fijas y no libres, que es como estaban:
+#
+# 1. Ya nos mordio una vez. El roadmap lo registra: los atributos Hfl/Gfl
+#    de 'thermo' no existian en la version instalada y hubo que corregir a
+#    Hfm/Gfm. Fue un cambio de API rio arriba que invalidaba en silencio un
+#    calculo termodinamico.
+#
+# 2. Las validaciones de este proyecto comparan contra valores EXACTOS
+#    ("benceno/tolueno 50/50 = 365.515693 K, identico bit a bit"). Ese tipo
+#    de test solo significa algo contra una version fija de 'thermo'. Con
+#    la version flotando, el test mas fuerte del proyecto se convierte en
+#    ruido: un dia falla y no se sabe si se rompio algo aqui o cambio una
+#    correlacion afuera.
+#
+# Entorno con el que estan tomados TODOS los numeros de docs/ y roadmap.md:
+#   Python 3.12.10 en Windows
+#
+# Para actualizar una version: subirla a mano, correr `python run_tests.py`,
+# y si algun valor exacto cambia, entender POR QUE antes de aceptarlo.
+
+# --- Nucleo numerico y termodinamico ---
+numpy==1.26.4
+scipy==1.16.2
+thermo==0.6.1
+# fluids y chemicals son dependencias de thermo, pero el proyecto tambien
+# las importa directamente: van fijas por derecho propio.
+fluids==1.3.1
+chemicals==1.5.2
+
+# --- Frontera de unidades ---
+pint==0.26.1
+
+# --- Graficas ---
+matplotlib==3.10.6
+# Hueco encontrado al fijar versiones: estas DOS faltaban en el
+# requirements.txt anterior, y no son opcionales -- core/topology.py y
+# core/analisis_nodos.py las importan al nivel del modulo. Un clon limpio
+# del repositorio no podia ni importar el motor topologico.
+# OJO con el nombre: el paquete se instala como 'python-ternary' pero se
+# importa como 'ternary'.
+python-ternary==1.0.8
+plotly==7.1.0
+
+# --- Solo para el codigo heredado de archive/etl_yaws.py ---
+# (lee el libro de Yaws; el simulador actual no lo necesita)
+openpyxl==3.1.5
+
+# --- API ---
+fastapi==0.104.1
+uvicorn==0.24.0
+pydantic==2.13.4
