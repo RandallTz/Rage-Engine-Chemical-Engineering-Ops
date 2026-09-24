@@ -96,5 +96,13 @@ $RECYCLE.BIN/
 *.pdf
 *.svg
 !docs/**/*.svg
+
+# Los ESTATICOS del frontend no son salidas del simulador: son parte de
+# la aplicacion y tienen que estar en el repositorio. La regla de arriba
+# se los tragaba (cinco .svg), y como git no versiona carpetas vacias,
+# frontend/public/ directamente no llegaba a GitHub. Se detecto porque
+# Vercel fallaba con "No Output Directory named public found".
+!frontend/public/**
+
 salidas/
 resultados/
