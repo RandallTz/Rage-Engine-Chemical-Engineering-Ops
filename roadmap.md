@@ -555,3 +555,40 @@ El lazo clásico: fresco → mezclador → reactor → divisor, con el 80 % de v
 - Renombrar **no es solo cambiar el id del nodo**: las aristas lo referencian por nombre, y todas las claves del pool (`s1.F`, `s1.x0`…) y de las unidades llevan el nombre delante. Si alguna se quedara con el viejo, el dato existiría pero apuntaría a una corriente inexistente — desaparecería sin decir nada. El renombrado arrastra las cuatro cosas y descarta los resultados anteriores, cuyas claves ya no valen.
 - Se valida el nombre (sin puntos, sin duplicados, formato de identificador) **diciendo el motivo** cuando se rechaza.
 - **Verificado**: renombrar conserva los datos (F = 100), las 8 aristas del lazo, y el diagrama sigue resolviendo después.
+
+---
+
+# Fase 6: El proyecto como proyecto (Infraestructura)
+
+No es física, pero sin esto lo anterior no se sostiene.
+
+### ✅ Control de versiones (Completado)
+- **El proyecto no tenía git.** ~5500 líneas solo en `core/`, más backend, frontend y un `roadmap.md` de 132 KB que ES el registro histórico — todo en una única copia sin historial. Un `sed` mal puesto se lo llevaba.
+- Y hay una razón específica de este proyecto: su criterio de validación se apoya en comparar contra valores anteriores ("idéntico bit a bit", 365.515693 K). **Sin git esa comparación la hacía la memoria**, no una herramienta.
+- **El `.gitignore` primero, antes del primer `git add`.** Medido: `frontend/.next` 535 MB y `frontend/node_modules` 530 MB, o sea **más de 1 GB** de artefactos regenerables. Una vez dentro del historial, sacarlos obliga a reescribirlo.
+- **Hallazgo al revisar qué entraba**: `archive/` eran 57 de los 58 MB restantes, en tres archivos — `Yaws_Handbook_...xlsx` (12 MB) y dos bases derivadas de él (`.db` 17 MB, `.json` 29 MB). El xlsx es un **libro de referencia comercial**: subirlo a un repositorio público es un problema de derechos de autor, no solo de tamaño. Los tres quedan fuera del historial (siguen en disco, y son regenerables con `archive/etl_yaws.py`); el CÓDIGO de `archive/` sí se versiona, porque es la referencia contra la que se validaron las líneas estequiométricas bit a bit y `core/topology.py` lo cita.
+- Resultado: **126 archivos, 1.7 MB**. Dos commits, rama `main`, sin secretos (barrido previo hecho).
+
+### ✅ Versiones de dependencias fijadas (Completado)
+- `requirements.txt` eran cuatro nombres sueltos sin versión. Ahora están fijas, con el porqué escrito en el propio archivo.
+- **No es higiene teórica: ya mordió una vez.** El roadmap lo registra en la Fase 1 — los atributos `Hfl`/`Gfl` de `thermo` no existían en la versión instalada y hubo que corregir a `Hfm`/`Gfm`. Un cambio de API río arriba que invalidaba en silencio un cálculo termodinámico.
+- El argumento de fondo: las validaciones de este proyecto comparan contra valores **exactos**. Ese tipo de test solo significa algo contra una versión fija de `thermo`. Con la versión flotando, el test más fuerte del proyecto se convierte en ruido — un día falla y no se sabe si se rompió algo aquí o cambió una correlación afuera.
+- **Hueco real encontrado al fijarlas**: `python-ternary` y `plotly` **faltaban por completo** del `requirements.txt`, y no son opcionales — `core/topology.py` y `core/analisis_nodos.py` las importan al nivel del módulo. Un clon limpio del repositorio no podía ni importar el motor topológico. (Ojo al nombre: se instala como `python-ternary` y se importa como `ternary`.)
+- Entorno de referencia anotado: Python 3.12.10, `thermo` 0.6.1, `scipy` 1.16.2, `numpy` 1.26.4.
+
+### ✅ Un comando para correr todo (Completado)
+- `run_tests.py`: lanza las 11 suites, muestra tiempos y devuelve **código de salida real** (0/1). Acepta filtro (`python run_tests.py flash`) y `-v`.
+- Lo que faltaba no era el contenido de las validaciones, que siempre fue bueno, sino poder lanzarlas todas de una: antes se ejecutaban a mano y se leían con los ojos, así que no existía un "el proyecto está verde" comprobable, solo un "las que miré estaban bien".
+- **Fallo real encontrado al montarlo**: en una consola Windows por defecto (cp1252), cualquier suite que imprimiera un símbolo griego moría con `UnicodeEncodeError`. No es que fallara la validación — **no llegaba a ejecutarse**, y solo funcionaba si quien la lanzaba sabía poner `PYTHONIOENCODING=utf-8`. Cada suite se protege ahora por dentro.
+- Medido limpio: **11 suites en 60.8 s, todo verde**. (Aviso: una medición anterior daba 5428 s en McCabe-Thiele; era contención entre tres regresiones simultáneas, no una regresión del código. Se volvió a medir en aislamiento: 6.9 s.)
+
+### ✅ README de la raíz (Completado)
+- Existía `docs/README.md` (el índice de la matemática) pero nada en la raíz: la puerta de entrada al repositorio estaba vacía.
+- Incluye una sección **"Qué NO hace"** explícita, en la misma línea que `docs/12-validacion.md`: los límites del simulador son parte de lo que hay que saber antes de usar un número que produce.
+
+### ⬜ Repositorio remoto en GitHub (Pendiente, decisión del usuario)
+- El repositorio local está listo para empujar. Crearlo y publicarlo es una acción hacia fuera y queda a la espera de confirmación explícita.
+- Antes de hacerlo público conviene repasar la exclusión del libro de Yaws (ver arriba).
+
+### ⬜ Integración continua (Pendiente)
+- Con `run_tests.py` devolviendo código de salida, un workflow de GitHub Actions es casi inmediato. No se ha montado.

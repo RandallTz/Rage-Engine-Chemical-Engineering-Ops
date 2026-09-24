@@ -196,6 +196,26 @@ Las suites de navegador usan `puppeteer-core` contra el Edge del sistema:
 **no comprueban que el componente renderice, sino que el número correcto
 llegue a la pantalla**.
 
+### Cómo se lanzan
+
+```bash
+python run_tests.py          # todas, ~60 s, código de salida 0 o 1
+python run_tests.py flash    # solo las que casen con el filtro
+python run_tests.py -v       # con la salida completa de cada una
+```
+
+Antes había que lanzarlas **una a una y leerlas con los ojos**, y nada
+garantizaba que no se hubiera olvidado ninguna. Eso significa que no
+existía un *"el proyecto está verde"* comprobable, solo un *"las que miré
+estaban bien"*. `run_tests.py` devuelve un código de salida real, que es
+lo que hace falta para engancharlo a un hook de pre-commit o a CI.
+
+> **Fallo encontrado al montarlo:** en una consola Windows por defecto
+> (cp1252), cualquier suite que imprimiera un símbolo griego moría con
+> `UnicodeEncodeError`. No es que fallara la validación: **no llegaba a
+> ejecutarse**, que es peor — y solo funcionaba si quien la lanzaba sabía
+> poner `PYTHONIOENCODING=utf-8`. Cada suite se protege ahora por dentro.
+
 ---
 
 ## 12.4 Límites del simulador
