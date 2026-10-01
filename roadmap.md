@@ -638,10 +638,40 @@ Nada de esta fase toca una ecuación. Verificado: el frontend no calcula física
 - La importante es la de extremo a extremo del enlace: se crea una simulación desde una plantilla en un contexto de navegador, se genera el fragmento con `CompressionStream` de verdad, y se abre en un **contexto limpio** —que es el escenario real de "se lo mando a alguien que nunca ha entrado"—. Se comprueba que se reconstruye con su nombre, sus 2 componentes y sus 4 nodos, que entra como simulación nueva y que el fragmento se limpia.
 - Sin regresiones: `verificar_simulaciones.mjs`, `verificar_topologia.mjs` y `verificar_plantillas.mjs` siguen pasando, y las 11 suites de Python siguen en verde.
 
-### ⬜ B — Que no se caiga delante de un desconocido (Pendiente)
-- **B1. Integración continua.** `run_tests.py` ya devuelve código de salida; son ~15 líneas de YAML. Hoy nada impide subir un commit que rompa la física en silencio.
-- **B2. Los 0.1 CPU de Render.** Un mapa residual tarda 85 s medidos en producción. Con A1, la primera impresión de un desconocido deja de ser un detalle.
-- **B3. Cerrar el hueco núcleo↔interfaz.** Medido: el núcleo resuelve 10 tipos de equipo y la interfaz deja dibujar 5. Flash, intercambiador y válvula están construidos y validados pero son **invisibles** desde la web, igual que los tres modos de energía del reactor.
+### ✅ B1 — Integración continua (Completado)
+- `.github/workflows/validacion.yml`: dos trabajos en cada push y cada pull request.
+  - **Núcleo**: `python run_tests.py` con `MPLBACKEND=Agg` (mismo ajuste que hizo falta en Render: `core/mccabe_thiele.py` importa matplotlib al cargar el módulo y un runner no tiene pantalla). Devuelve código de salida real, así que una sola comprobación en rojo tumba el trabajo.
+  - **Frontend**: `npm ci`, `npm run build` y la ida y vuelta del enlace compartible, que es lógica pura y no necesita navegador.
+- Comprobado el comando exacto en local antes de escribirlo: `MPLBACKEND=Agg python run_tests.py` → 11 suites en verde.
+- Nota para el futuro: si esto empieza a fallar sin que nadie haya tocado el núcleo, lo primero que hay que mirar es si alguna dependencia se movió. Las versiones están fijas en `requirements.txt` justamente porque varias comprobaciones comparan contra valores exactos.
+
+### ✅ B3 — Los equipos térmicos, visibles desde la interfaz (Completado)
+- **El hueco, medido**: el núcleo resolvía 10 tipos de equipo y la interfaz dejaba dibujar 5. El flash, el intercambiador y la válvula estaban construidos y validados desde la Fase 4 pero eran **invisibles** desde la web, igual que los tres modos de energía del reactor.
+- Cableado completo: `backend/schemas.py` (tipos y parámetros nuevos), `backend/nucleo_diagrama.py` (despacho), `frontend/app/flowsheet/modelo.ts` (puertos y variables propias), la paleta, el armado de la petición y `PanelLateral.tsx`.
+- Los nodos no hubo que tocarlos: `nodos.tsx` ya dibujaba los puertos con `puertosDe()` de forma genérica, así que los equipos nuevos aparecen solos. Buena señal de que esa abstracción estaba bien puesta.
+- **Una especificación, nunca dos.** El panel del flash ofrece un SELECTOR (calor dado / temperatura / fracción vaporizada) en vez de tres casillas marcables, y la petición manda solo la elegida. El núcleo rechaza las combinaciones sobre-especificadas a propósito; mandar las tres "por si acaso" convertiría un diagrama válido en un error.
+- El flash tiene dos salidas con nombre propio (`vapor` arriba, `liquido` abajo), que NO son intercambiables.
+- Plantilla nueva **«Válvula + flash (listo)»**: líquido a presión → intercambiador → válvula → flash adiabático. Resuelve de un clic y reproduce exactamente los números de la cadena en Python (vapor 36.770 / líquido 63.230 mol/s, y la válvula enfría de 434.6 K a 369.6 K).
+
+### ⚠ Defecto encontrado, y estaba YA EN PRODUCCIÓN
+Al reiniciar la API con el código actual (hasta entonces había un uvicorn viejo sirviendo código anterior, que es lo que enmascaraba el fallo) las **cuatro plantillas de reactor dejaron de resolver**.
+
+- **Causa**: el balance de energía del reactor, añadido en la Fase 4, se activa por defecto (`modo_energia="isotermo"` más proveedor presente). Y ese balance **necesita la T y la P de la corriente de entrada**: sin ellas, `Q` y `Q_reaccion` se quedan sin determinar para siempre y el diagrama nunca sale "completo". O sea que encender la energía **añade un requisito de datos**, cosa que no se vio al construirlo porque las suites de Python sí daban esos datos.
+- **Y debajo había algo peor, que el propio balance destapó**: con la T y la P puestas, el reactor de MTBE de las plantillas sigue fallando a 1 atm — porque **estaría hirviendo**. La guarda `_exigir_liquido` lo rechaza con razón. Las plantillas llevaban modelando un tanque físicamente imposible, y pasaban porque nada lo comprobaba. A 10 atm resuelve y pide **944 kW de refrigeración**.
+- **Arreglo**, en dos partes:
+  1. `con_balance_energia` en el reactor, igual que ya tenían las columnas, con su casilla en el panel. Un diagrama que solo quiere balances de materia no tiene por qué dar la T de entrada.
+  2. Las cuatro plantillas de reactor lo llevan en `false` **explícitamente**, con el motivo escrito al lado. Son demostraciones de balance de materia y así conservan sus números exactos.
+- Queda pendiente, y es buen material de clase: una plantilla de reactor a presión realista que SÍ muestre el calor de refrigeración. Ese número (944 kW para mantener 340 K) es justo lo que un simulador sin balance de energía oculta.
+
+### Verificación de B
+- 10/10 plantillas en verde, incluida la nueva.
+- 11/11 suites de Python.
+- Navegador: `verificar_simulaciones`, `verificar_topologia`, `verificar_unidades`, `verificar_portada_y_enlace` y `verificar_enlace`, todas en verde.
+- **Nota de mantenimiento**: `verificar_plantillas.mjs` tiene su PROPIA copia del mapeo de puertos y del armado de la petición, duplicando `modelo.ts` y `page.tsx`. Hubo que extenderla a mano para los equipos nuevos, y la primera ejecución falló por eso. Es deuda real: cada equipo nuevo hay que añadirlo en dos sitios y nada avisa si se olvida uno.
+
+### ⬜ B2 — Los 0.1 CPU de Render (Pendiente, decisión del usuario)
+- Medido en producción: curva ELV 1.4 s, flowsheet ~10 s, mapa residual **85 s** — unas 14 veces más lento que en local, que es exactamente la firma de una décima de núcleo.
+- Subir a 0.5 CPU (7 USD/mes) lo deja en ~17 s y además quita el arranque en frío de un minuto. Cero código.
 
 ### ⬜ C — Biblioteca de problemas de libro (Pendiente)
 - Casos reconocibles (Seader, Kister, Doherty) con sus valores publicados. Hace tres cosas a la vez: es la **validación contra literatura** que hoy falta —toda la validación actual es consistencia interna, que demuestra coherencia pero no corrección—, es material de clase, y es lo que permite decir "reproduce estos casos publicados".

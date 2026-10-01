@@ -95,6 +95,9 @@ def _construir(request):
                 op.nombre, entrada=None, entradas=entradas, salida=c["salida"],
                 nu=op.reaccion.nu, gestor_reaccion=gestor,
                 con_cinetica=op.con_cinetica,
+                modo_energia=op.modo_energia,
+                Q=op.Q if op.modo_energia == "calor_dado" else None,
+                con_balance_energia=op.con_balance_energia,
             )
         elif op.tipo == "mezclador":
             diagrama.agregar_mezclador(op.nombre, entradas=c["entradas"], salida=c["salida"])
@@ -102,6 +105,34 @@ def _construir(request):
             diagrama.agregar_divisor(op.nombre, entrada=c["entrada"], salidas=c["salidas"], fracciones=op.fracciones or [])
         elif op.tipo == "bomba":
             diagrama.agregar_bomba(op.nombre, entrada=c["entrada"], salida=c["salida"])
+        elif op.tipo == "flash":
+            # Exactamente UNA especificacion. Si el cliente no manda
+            # ninguna se asume adiabatico, que es el separador tipico
+            # detras de una valvula; el nucleo rechaza las combinaciones
+            # sobre-especificadas con su propio mensaje.
+            diagrama.agregar_flash(
+                op.nombre,
+                entrada=c["entrada"], vapor=c["vapor"], liquido=c["liquido"],
+                P_operacion=op.P_sistema,
+                T_operacion=op.T_operacion,
+                Q_por_mol=op.Q_por_mol if op.T_operacion is None and op.fraccion_vapor is None else None,
+                fraccion_vapor=op.fraccion_vapor,
+            )
+        elif op.tipo == "intercambiador":
+            diagrama.agregar_intercambiador(
+                op.nombre, entrada=c["entrada"], salida=c["salida"],
+                Q_por_mol=op.Q_por_mol if op.T_salida is None else None,
+                T_salida=op.T_salida,
+            )
+        elif op.tipo == "valvula":
+            if op.P_salida is None:
+                raise ValueError(
+                    f"{op.nombre}: una valvula necesita la presion de salida. "
+                    "Es lo unico que la define: la expansion es isentalpica."
+                )
+            diagrama.agregar_valvula(
+                op.nombre, entrada=c["entrada"], salida=c["salida"], P_salida=op.P_salida,
+            )
         else:
             raise ValueError(f"tipo de operacion desconocido: {op.tipo!r}")
 

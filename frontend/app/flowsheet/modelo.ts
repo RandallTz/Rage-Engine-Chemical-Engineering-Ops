@@ -1,6 +1,8 @@
 import type { Edge, Node } from "@xyflow/react";
 
-export type TipoOperacion = "columna" | "mezclador" | "divisor" | "bomba" | "reactor_cstr";
+export type TipoOperacion =
+  | "columna" | "mezclador" | "divisor" | "bomba" | "reactor_cstr"
+  | "flash" | "intercambiador" | "valvula";
 export type MetodoColumna = "mccabe_thiele" | "ponchon_savarit" | "fug";
 
 export interface DatosOperacion extends Record<string, unknown> {
@@ -44,6 +46,14 @@ export function puertosDe(datos: DatosOperacion): PuertosOperacion {
       return { entrada: ["entrada"], salida: ["salida_1", "salida_2"] };
     case "bomba":
       return { entrada: ["entrada"], salida: ["salida"] };
+    case "flash":
+      // Dos salidas que NO son intercambiables: el vapor sale por arriba
+      // y el liquido por abajo, como en el equipo real.
+      return { entrada: ["entrada"], salida: ["vapor", "liquido"] };
+    case "intercambiador":
+      return { entrada: ["entrada"], salida: ["salida"] };
+    case "valvula":
+      return { entrada: ["entrada"], salida: ["salida"] };
     case "reactor_cstr": {
       // Un reactor real recibe varias corrientes (fresca + reciclo +
       // inyeccion). Los puertos se generan segun n_entradas.
@@ -84,6 +94,13 @@ export function variablesDeOperacion(datos: DatosOperacion): string[] {
     return datos.con_balance_energia === false ? base : [...base, "Q_c", "Q_R", "R_int", "V_barra"];
   }
   if (datos.tipo === "bomba") return ["factor_P"];
+  if (datos.tipo === "flash") {
+    // T y beta son RESULTADO salvo que se usen como especificacion; el
+    // panel decide cual se da. Q sale siempre: es lo que cuesta.
+    return ["T", "beta", "Q_por_mol", "Q"];
+  }
+  if (datos.tipo === "intercambiador") return ["Q_por_mol", "Q", "beta_salida"];
+  if (datos.tipo === "valvula") return ["beta_salida", "caida_P"];
   if (datos.tipo === "reactor_cstr") {
     // xi (avance) y X (conversion) son dos formas de decir lo mismo y el
     // sistema convierte entre ellas; V y T solo existen si se activa la
@@ -204,6 +221,13 @@ export function corrientesDeOperacion(
     const salida = salidaDe("salida");
     if (entradas.length === 0 || !salida) return null;
     return { entradas, salida };
+  }
+  if (datos.tipo === "flash") {
+    const entrada = entradaDe("entrada");
+    const vapor = salidaDe("vapor");
+    const liquido = salidaDe("liquido");
+    if (!entrada || !vapor || !liquido) return null;
+    return { entrada, vapor, liquido };
   }
   const entrada = entradaDe("entrada");
   const salida = salidaDe("salida");

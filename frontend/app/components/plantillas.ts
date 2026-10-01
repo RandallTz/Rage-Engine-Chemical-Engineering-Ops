@@ -105,6 +105,58 @@ export const PLANTILLAS: Plantilla[] = [
     },
   },
   {
+    id: "valvula_flash_listo",
+    nombre: "Válvula + flash (listo)",
+    descripcion:
+      "Un líquido a presión se calienta, se expande por una válvula y se separa en un flash adiabático. La válvula no le quita calor a nadie: la expansión vaporiza parte de la corriente y el calor latente sale de ella misma, así que SE ENFRÍA de 434.6 K a 369.6 K.",
+    categoria: "separacion",
+    lista: true,
+    componentes: [C.benceno, C.tolueno],
+    modelo: "unifac_raoult",
+    flowsheet: {
+      nodes: [
+        corriente("s1", 40, 200),
+        {
+          id: "e1", type: "operacion", position: { x: 230, y: 180 },
+          data: {
+            clase: "operacion", tipo: "intercambiador", P_sistema: 101325,
+            spec_intercambiador: "Q_por_mol", Q_por_mol: 18000,
+          },
+        },
+        corriente("s2", 430, 200),
+        {
+          id: "v1", type: "operacion", position: { x: 600, y: 180 },
+          data: {
+            clase: "operacion", tipo: "valvula", P_sistema: 101325,
+            P_salida: 101325,
+          },
+        },
+        corriente("s3", 790, 200),
+        {
+          id: "fl1", type: "operacion", position: { x: 960, y: 170 },
+          data: {
+            clase: "operacion", tipo: "flash", P_sistema: 101325,
+            spec_flash: "adiabatico", Q_por_mol: 0,
+          },
+        },
+        corriente("s4", 1180, 80),
+        corriente("s5", 1180, 320),
+      ],
+      edges: [
+        arista("a1", "s1", "e1", undefined, "entrada"),
+        arista("a2", "e1", "s2", "salida", undefined),
+        arista("a3", "s2", "v1", undefined, "entrada"),
+        arista("a4", "v1", "s3", "salida", undefined),
+        arista("a5", "s3", "fl1", undefined, "entrada"),
+        arista("a6", "fl1", "s4", "vapor", undefined),
+        arista("a7", "fl1", "s5", "liquido", undefined),
+      ],
+      dados: {
+        "s1.F": "100", "s1.T": "330", "s1.P": "607950", "s1.x0": "0.45",
+      },
+    },
+  },
+  {
     id: "ponchon_listo",
     nombre: "Columna Ponchon-Savarit (lista)",
     descripcion:
@@ -193,6 +245,10 @@ export const PLANTILLAS: Plantilla[] = [
           id: "r1", type: "operacion", position: { x: 380, y: 180 },
           data: {
             clase: "operacion", tipo: "reactor_cstr", P_sistema: 101325,
+            // Solo balance de MATERIA. Encender la energía aquí exigiría
+            // la T y P de entrada, y además a 1 atm este reactor de MTBE
+            // estaría hirviendo (el núcleo lo rechaza, con razón).
+            con_balance_energia: false,
             nu: "-1,-1,1", A: 1e4, Ea: 45000, con_cinetica: true,
           },
         },
@@ -227,6 +283,10 @@ export const PLANTILLAS: Plantilla[] = [
           id: "r1", type: "operacion", position: { x: 300, y: 200 },
           data: {
             clase: "operacion", tipo: "reactor_cstr", P_sistema: 101325,
+            // Solo balance de MATERIA. Encender la energía aquí exigiría
+            // la T y P de entrada, y además a 1 atm este reactor de MTBE
+            // estaría hirviendo (el núcleo lo rechaza, con razón).
+            con_balance_energia: false,
             nu: "-1,-1,1", A: 1e4, Ea: 45000, con_cinetica: true,
           },
         },
@@ -292,6 +352,10 @@ export const PLANTILLAS: Plantilla[] = [
           id: "r1", type: "operacion", position: { x: 860, y: 90 },
           data: {
             clase: "operacion", tipo: "reactor_cstr", P_sistema: 101325,
+            // Solo balance de MATERIA. Encender la energía aquí exigiría
+            // la T y P de entrada, y además a 1 atm este reactor de MTBE
+            // estaría hirviendo (el núcleo lo rechaza, con razón).
+            con_balance_energia: false,
             nu: "-1,-1,1", A: 1e4, Ea: 45000, con_cinetica: true,
           },
         },
@@ -336,6 +400,10 @@ export const PLANTILLAS: Plantilla[] = [
           id: "r1", type: "operacion", position: { x: 780, y: 180 },
           data: {
             clase: "operacion", tipo: "reactor_cstr", P_sistema: 101325,
+            // Solo balance de MATERIA. Encender la energía aquí exigiría
+            // la T y P de entrada, y además a 1 atm este reactor de MTBE
+            // estaría hirviendo (el núcleo lo rechaza, con razón).
+            con_balance_energia: false,
             nu: "-1,-1,1", A: 1e4, Ea: 45000, con_cinetica: false, n_entradas: 1,
           },
         },

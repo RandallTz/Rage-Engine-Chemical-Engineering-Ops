@@ -231,6 +231,143 @@ function EditorElemento({
           {datosOp.tipo === "reactor_cstr" && (
             <EditorReaccion datos={datosOp} componentes={componentes} onDatos={onDatos} />
           )}
+          {datosOp.tipo === "reactor_cstr" && (
+            <>
+              <label className="flex items-center gap-2 text-[11px] text-zinc-400">
+                <input
+                  type="checkbox"
+                  checked={datosOp.con_balance_energia !== false}
+                  onChange={(e) => onDatos({ con_balance_energia: e.target.checked })}
+                />
+                incluir balance de energía
+              </label>
+              {datosOp.con_balance_energia === false ? (
+                <p className="text-[10px] text-zinc-500">
+                  Solo balance de materia. Q y Q_reacción no se calculan ni cuentan para los
+                  grados de libertad.
+                </p>
+              ) : (
+                <>
+              <label className="block text-[10px] text-zinc-500">balance de energía</label>
+              <select
+                className="w-full rounded border border-zinc-700 bg-zinc-800 p-1 text-xs"
+                value={String(datosOp.modo_energia ?? "isotermo")}
+                onChange={(e) => onDatos({ modo_energia: e.target.value })}
+              >
+                <option value="isotermo">Isotermo — das T, se calcula el calor</option>
+                <option value="adiabatico">Adiabático — Q=0, se calcula la T</option>
+                <option value="calor_dado">Calor dado — das Q, se calcula la T</option>
+              </select>
+              {datosOp.modo_energia === "calor_dado" && (
+                <CampoConfig
+                  etiqueta="Q [W]"
+                  valor={String(datosOp.Q ?? 0)}
+                  onChange={(v) => onDatos({ Q: Number(v) })}
+                />
+              )}
+              <p className="text-[10px] text-zinc-500">
+                En isotermo, Q es el resultado: cuánta refrigeración cuesta mantener esa
+                temperatura. Con una exotérmica suele ser la restricción de diseño real.
+                Necesita la T y la P de la corriente de entrada.
+              </p>
+                </>
+              )}
+            </>
+          )}
+          {/* ------------------------------------------------- flash */}
+          {datosOp.tipo === "flash" && (
+            <>
+              <label className="block text-[10px] text-zinc-500">especificación</label>
+              {/* UNA sola, nunca dos. El núcleo rechaza las combinaciones
+                  sobre-especificadas (fijar T y beta a la vez solo es
+                  consistente por casualidad), así que el panel ofrece un
+                  selector en vez de tres casillas que se puedan marcar
+                  todas. */}
+              <select
+                className="w-full rounded border border-zinc-700 bg-zinc-800 p-1 text-xs"
+                value={String(datosOp.spec_flash ?? "adiabatico")}
+                onChange={(e) => onDatos({ spec_flash: e.target.value })}
+              >
+                <option value="adiabatico">Calor dado (0 = adiabático)</option>
+                <option value="isotermo">Temperatura del recipiente</option>
+                <option value="fraccion">Fracción vaporizada (diseño)</option>
+              </select>
+              {(datosOp.spec_flash ?? "adiabatico") === "adiabatico" && (
+                <CampoConfig
+                  etiqueta="Q [J/mol alim.]"
+                  valor={String(datosOp.Q_por_mol ?? 0)}
+                  onChange={(v) => onDatos({ Q_por_mol: Number(v) })}
+                />
+              )}
+              {datosOp.spec_flash === "isotermo" && (
+                <CampoConfig
+                  etiqueta="T [K]"
+                  valor={String(datosOp.T_operacion ?? 350)}
+                  onChange={(v) => onDatos({ T_operacion: Number(v) })}
+                />
+              )}
+              {datosOp.spec_flash === "fraccion" && (
+                <CampoConfig
+                  etiqueta="β = V/F"
+                  valor={String(datosOp.fraccion_vapor ?? 0.5)}
+                  onChange={(v) => onDatos({ fraccion_vapor: Number(v) })}
+                />
+              )}
+              <p className="text-[10px] text-zinc-500">
+                El vapor sale por el puerto de arriba y el líquido por el de abajo, los dos
+                en equilibrio a la misma T y P.
+              </p>
+            </>
+          )}
+
+          {/* ---------------------------------------- intercambiador */}
+          {datosOp.tipo === "intercambiador" && (
+            <>
+              <label className="block text-[10px] text-zinc-500">especificación</label>
+              <select
+                className="w-full rounded border border-zinc-700 bg-zinc-800 p-1 text-xs"
+                value={String(datosOp.spec_intercambiador ?? "Q_por_mol")}
+                onChange={(e) => onDatos({ spec_intercambiador: e.target.value })}
+              >
+                <option value="Q_por_mol">Dar el calor, calcular la T</option>
+                <option value="T_salida">Dar la T, calcular el calor</option>
+              </select>
+              {(datosOp.spec_intercambiador ?? "Q_por_mol") === "Q_por_mol" ? (
+                <CampoConfig
+                  etiqueta="Q [J/mol]"
+                  valor={String(datosOp.Q_por_mol ?? 0)}
+                  onChange={(v) => onDatos({ Q_por_mol: Number(v) })}
+                />
+              ) : (
+                <CampoConfig
+                  etiqueta="T salida [K]"
+                  valor={String(datosOp.T_salida ?? 350)}
+                  onChange={(v) => onDatos({ T_salida: Number(v) })}
+                />
+              )}
+              <p className="text-[10px] text-zinc-500">
+                Si calientas lo suficiente, la corriente vaporiza: β a la salida lo dice.
+              </p>
+            </>
+          )}
+
+          {/* ----------------------------------------------- válvula */}
+          {datosOp.tipo === "valvula" && (
+            <>
+              <CampoConfig
+                etiqueta="P salida [Pa]"
+                valor={String(datosOp.P_salida ?? 101325)}
+                onChange={(v) => onDatos({ P_salida: Number(v) })}
+              />
+              <p className="text-[10px] text-zinc-500">
+                Expansión isentálpica: la entalpía se conserva y el líquido se vaporiza en
+                parte. Como el calor latente sale de la propia corriente, SE ENFRÍA sin que
+                nadie le quite energía.
+              </p>
+            </>
+          )}
+
+
           <CampoConfig etiqueta="P operación [Pa]" valor={String(datosOp.P_sistema)} onChange={(v) => onDatos({ P_sistema: Number(v) })} />
         </div>
       )}

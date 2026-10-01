@@ -583,7 +583,8 @@ class DiagramaCorrientes:
     # ------------------------------------------------------------------
     def agregar_reactor_cstr(self, nombre, entrada, salida, nu, gestor_reaccion=None,
                               con_cinetica=True, entradas=None,
-                              modo_energia="isotermo", Q=None):
+                              modo_energia="isotermo", Q=None,
+                              con_balance_energia=True):
         """
         Reactor CSTR en estado estacionario. Igual que el resto de
         operaciones, NO es forward-only: el balance por componente se
@@ -661,7 +662,18 @@ class DiagramaCorrientes:
         # queda como estaba antes de esta version -- isotermo con T como
         # dato y sin decir cuanto calor cuesta. Se avisa en vez de
         # simular un balance que no se puede hacer.
-        hay_energia = evaluador.entalpia is not None and evaluador.dH_rxn is not None
+        # con_balance_energia=False apaga la energia del reactor, igual que
+        # en las columnas. No es un capricho: el balance NECESITA la T y la
+        # P de la corriente de entrada, asi que encenderlo anade un
+        # requisito de datos. Un diagrama que solo quiere balances de
+        # materia no tiene por que darlos -- y sin esta escotilla, sus
+        # variables Q se quedarian eternamente sin determinar y el
+        # diagrama nunca saldria "completo".
+        hay_energia = (
+            con_balance_energia
+            and evaluador.entalpia is not None
+            and evaluador.dH_rxn is not None
+        )
         if not hay_energia and modo_energia != "isotermo":
             raise ValueError(
                 f"{nombre}: modo_energia={modo_energia!r} necesita balance de energia, y "

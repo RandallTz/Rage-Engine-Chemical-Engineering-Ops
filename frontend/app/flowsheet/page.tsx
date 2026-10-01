@@ -57,6 +57,9 @@ const CATALOGO: { tipo: TipoOperacion; etiqueta: string; grupo: string }[] = [
   { tipo: "divisor", etiqueta: "Divisor", grupo: "Mezcla" },
   { tipo: "bomba", etiqueta: "Bomba", grupo: "Transporte" },
   { tipo: "reactor_cstr", etiqueta: "Reactor CSTR", grupo: "Reacción" },
+  { tipo: "flash", etiqueta: "Flash", grupo: "Separación" },
+  { tipo: "intercambiador", etiqueta: "Intercambiador", grupo: "Térmicos" },
+  { tipo: "valvula", etiqueta: "Válvula", grupo: "Térmicos" },
 ];
 
 export default function FlowsheetPage() {
@@ -159,7 +162,11 @@ export default function FlowsheetPage() {
    * a borrar las que no querias.
    */
   function agregarOperacion(tipo: TipoOperacion) {
-    const opId = idLibre(tipo === "columna" ? "col" : tipo === "reactor_cstr" ? "r" : tipo.slice(0, 3), nodes);
+    const PREFIJO: Partial<Record<TipoOperacion, string>> = {
+      columna: "col", reactor_cstr: "r", flash: "fl",
+      intercambiador: "e", valvula: "v",
+    };
+    const opId = idLibre(PREFIJO[tipo] ?? tipo.slice(0, 3), nodes);
     const datos: DatosOperacion = {
       clase: "operacion",
       tipo,
@@ -174,7 +181,17 @@ export default function FlowsheetPage() {
           }
         : {}),
       ...(tipo === "divisor" ? { fracciones: "0.5,0.5" } : {}),
-      ...(tipo === "reactor_cstr" ? { nu: "", A: 1e4, Ea: 45000, con_cinetica: true, n_entradas: 1 } : {}),
+      ...(tipo === "reactor_cstr"
+        ? { nu: "", A: 1e4, Ea: 45000, con_cinetica: true, n_entradas: 1, modo_energia: "isotermo" }
+        : {}),
+      // Adiabatico por defecto: es el separador tipico detras de una
+      // valvula, y es la unica spec que no obliga a inventarse un numero.
+      ...(tipo === "flash" ? { spec_flash: "adiabatico", Q_por_mol: 0 } : {}),
+      // Igual aqui: Q=0 no hace nada raro, y el usuario pone lo suyo.
+      ...(tipo === "intercambiador" ? { spec_intercambiador: "Q_por_mol", Q_por_mol: 0 } : {}),
+      // Una valvula sin caida de presion no es una valvula: se arranca
+      // con la mitad de la presion de operacion para que haga algo.
+      ...(tipo === "valvula" ? { P_salida: 101325 / 2 } : {}),
     };
     setNodes((nds) => [
       ...nds,
@@ -280,6 +297,34 @@ export default function FlowsheetPage() {
               }
             : null,
         con_cinetica: datos.con_cinetica !== false,
+        modo_energia: datos.tipo === "reactor_cstr" ? (datos.modo_energia ?? "isotermo") : "isotermo",
+
+        // --- equipos termicos. Se manda SOLO la especificacion elegida:
+        // el nucleo rechaza (con su propio mensaje) que lleguen dos, y
+        // mandar las dos "por si acaso" convertiria un diagrama valido
+        // en un error de sobre-especificacion.
+        Q:
+          datos.tipo === "reactor_cstr" && datos.modo_energia === "calor_dado"
+            ? Number(datos.Q ?? 0)
+            : null,
+        T_operacion:
+          datos.tipo === "flash" && datos.spec_flash === "isotermo"
+            ? Number(datos.T_operacion ?? 0)
+            : null,
+        fraccion_vapor:
+          datos.tipo === "flash" && datos.spec_flash === "fraccion"
+            ? Number(datos.fraccion_vapor ?? 0.5)
+            : null,
+        Q_por_mol:
+          (datos.tipo === "flash" && datos.spec_flash === "adiabatico") ||
+          (datos.tipo === "intercambiador" && datos.spec_intercambiador !== "T_salida")
+            ? Number(datos.Q_por_mol ?? 0)
+            : null,
+        T_salida:
+          datos.tipo === "intercambiador" && datos.spec_intercambiador === "T_salida"
+            ? Number(datos.T_salida ?? 0)
+            : null,
+        P_salida: datos.tipo === "valvula" ? Number(datos.P_salida ?? 0) : null,
       });
     }
 

@@ -42,6 +42,10 @@ function corrientesDe(nodo, edges) {
     const puertos = Array.from({ length: n }, (_, i) => (i === 0 ? "entrada" : `entrada_${i + 1}`));
     return { entradas: puertos.map(entradaDe).filter(Boolean), salida: salidaDe("salida") };
   }
+  if (d.tipo === "flash") {
+    // Dos salidas con nombre propio: no son intercambiables.
+    return { entrada: entradaDe("entrada"), vapor: salidaDe("vapor"), liquido: salidaDe("liquido") };
+  }
   return { entrada: entradaDe("entrada"), salida: salidaDe("salida") };
 }
 
@@ -68,6 +72,20 @@ function construirPeticion(p) {
       indice_HK: d.metodo === "fug" ? d.indice_HK ?? 1 : null,
       fracciones: d.tipo === "divisor" ? (d.fracciones ?? "0.5,0.5").split(",").map(Number) : null,
       con_balance_energia: d.con_balance_energia !== false,
+      // Equipos termicos: se manda SOLO la especificacion elegida. Mandar
+      // dos convertiria un diagrama valido en un error de
+      // sobre-especificacion (el nucleo las rechaza a proposito).
+      modo_energia: d.tipo === "reactor_cstr" ? (d.modo_energia ?? "isotermo") : "isotermo",
+      Q: d.tipo === "reactor_cstr" && d.modo_energia === "calor_dado" ? Number(d.Q ?? 0) : null,
+      T_operacion: d.tipo === "flash" && d.spec_flash === "isotermo" ? Number(d.T_operacion ?? 0) : null,
+      fraccion_vapor: d.tipo === "flash" && d.spec_flash === "fraccion" ? Number(d.fraccion_vapor ?? 0.5) : null,
+      Q_por_mol:
+        (d.tipo === "flash" && (d.spec_flash ?? "adiabatico") === "adiabatico") ||
+        (d.tipo === "intercambiador" && (d.spec_intercambiador ?? "Q_por_mol") !== "T_salida")
+          ? Number(d.Q_por_mol ?? 0)
+          : null,
+      T_salida: d.tipo === "intercambiador" && d.spec_intercambiador === "T_salida" ? Number(d.T_salida ?? 0) : null,
+      P_salida: d.tipo === "valvula" ? Number(d.P_salida ?? 0) : null,
       reaccion:
         d.tipo === "reactor_cstr" && (d.nu ?? "").trim()
           ? { nu: d.nu.split(",").map(Number), A: d.A ?? 1e4, Ea: d.Ea ?? 45000, componente_referencia: 0 }

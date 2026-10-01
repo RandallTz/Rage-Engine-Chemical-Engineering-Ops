@@ -107,9 +107,8 @@ equipo:
 - Sin dinámica: todo es estado estacionario.
 - Una sola reacción; sin equilibrio líquido-líquido; sin caída de presión.
 - Sin dimensionado ni costes: etapas teóricas, no una columna comprable.
-- Los equipos térmicos nuevos (flash, intercambiador, válvula) están en
-  el núcleo y la API de Python, **aún no en la interfaz web**: el núcleo
-  resuelve 10 tipos de equipo y la interfaz deja dibujar 5.
+- Sin dimensionado de equipos reales: el reactor da volumen de tanque,
+  pero no hay diámetros de columna, platos ni intercambiadores.
 
 ---
 

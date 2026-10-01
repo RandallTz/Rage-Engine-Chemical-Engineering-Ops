@@ -234,12 +234,17 @@ class ELVBinarioResponse(BaseModel):
 
 class OperacionDiagrama(BaseModel):
     nombre: str
-    tipo: Literal["columna", "mezclador", "divisor", "bomba", "reactor_cstr"]
+    tipo: Literal[
+        "columna", "mezclador", "divisor", "bomba", "reactor_cstr",
+        "flash", "intercambiador", "valvula",
+    ]
     corrientes: dict[str, Any] = Field(
         description=(
             "columna: alimentacion/destilado/fondos. mezclador: entradas (lista)/salida. "
             "divisor: entrada/salidas (lista). bomba: entrada/salida. "
-            "reactor_cstr: entradas (lista)/salida."
+            "reactor_cstr: entradas (lista)/salida. "
+            "flash: entrada/vapor/liquido. intercambiador: entrada/salida. "
+            "valvula: entrada/salida."
         )
     )
     metodo: Optional[Literal["mccabe_thiele", "ponchon_savarit", "fug"]] = None
@@ -257,8 +262,10 @@ class OperacionDiagrama(BaseModel):
     con_balance_energia: bool = Field(
         True,
         description=(
-            "Solo columna: incluir o no las cargas termicas. Separarlo permite resolver primero el "
-            "balance de materia y acoplar la energia solo cuando haga falta."
+            "columna: incluir o no las cargas termicas. reactor_cstr: incluir o no el balance de "
+            "energia -- OJO, encenderlo exige la T y la P de la corriente de entrada, porque sin "
+            "ellas no se puede calcular el calor. Separarlo permite resolver primero el balance de "
+            "materia y acoplar la energia solo cuando haga falta."
         ),
     )
     reaccion: Optional["ReaccionSpec"] = Field(
@@ -271,6 +278,37 @@ class OperacionDiagrama(BaseModel):
     con_cinetica: bool = Field(
         True,
         description="Solo reactor_cstr: si se incluye xi = V*r(T,x_salida) para poder dimensionar el tanque.",
+    )
+    modo_energia: Literal["isotermo", "adiabatico", "calor_dado"] = Field(
+        "isotermo",
+        description=(
+            "Solo reactor_cstr. isotermo: se da T y se calcula el calor que cuesta mantenerla. "
+            "adiabatico: Q=0 y se calcula la T que resulta. calor_dado: se da Q y se calcula T. "
+            "Los dos ultimos necesitan balance de energia (proveedor + calor de reaccion)."
+        ),
+    )
+    Q: Optional[float] = Field(
+        None,
+        description="Solo reactor_cstr con modo_energia='calor_dado' e intercambiador: calor [W].",
+    )
+    # --- flash
+    T_operacion: Optional[float] = Field(
+        None, description="Solo flash, spec isoterma: temperatura del recipiente [K].",
+    )
+    Q_por_mol: Optional[float] = Field(
+        None, description="Solo flash: calor por mol de alimentacion [J/mol]. 0 = adiabatico.",
+    )
+    fraccion_vapor: Optional[float] = Field(
+        None, ge=0.0, le=1.0,
+        description="Solo flash, spec de diseno: fraccion vaporizada V/F objetivo.",
+    )
+    # --- intercambiador
+    T_salida: Optional[float] = Field(
+        None, description="Solo intercambiador: temperatura de salida [K]. Alternativa a Q.",
+    )
+    # --- valvula
+    P_salida: Optional[float] = Field(
+        None, gt=0, description="Solo valvula: presion aguas abajo [Pa]. La expansion es isentalpica.",
     )
 
 

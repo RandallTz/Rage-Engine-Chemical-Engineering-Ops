@@ -1,0 +1,78 @@
+# Validación automática en cada push y cada pull request.
+#
+# Por qué: hasta ahora nada impedía subir un commit que rompiera la
+# física. Las suites eran buenas pero había que acordarse de correrlas, y
+# el fallo más caro de este proyecto es justo el que no revienta — el que
+# devuelve un número plausible construido sobre algo imposible.
+#
+# Las versiones van FIJAS en requirements.txt a propósito: varias
+# comprobaciones comparan contra valores exactos ("benceno/tolueno 50/50
+# = 365.515693 K, idéntico bit a bit"), y eso solo significa algo contra
+# una versión fija de 'thermo'. Si este workflow empieza a fallar sin que
+# nadie haya tocado el núcleo, lo primero que hay que mirar es si alguna
+# dependencia se movió.
+
+name: Validación
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  nucleo:
+    name: Núcleo (física y balances)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Correr las 11 suites de validación
+        # run_tests.py devuelve 0 o 1 de verdad: si una sola comprobación
+        # falla, el trabajo falla. No se lee la salida con los ojos.
+        env:
+          # core/mccabe_thiele.py importa matplotlib al cargar el módulo.
+          # En un runner sin pantalla hay que decirle que no busque una:
+          # es el mismo ajuste que hizo falta para desplegar en Render.
+          MPLBACKEND: Agg
+        run: python run_tests.py
+
+  frontend:
+    name: Frontend (compila y el enlace sobrevive)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Compilar
+        # Una URL cualquiera: aquí solo se comprueba que compile y que
+        # TypeScript esté limpio, no que hable con el backend.
+        env:
+          NEXT_PUBLIC_API_URL: https://ejemplo.invalid
+        run: npm run build
+
+      - name: Ida y vuelta del enlace compartible
+        # No necesita navegador: es lógica pura. Comprueba que lo que sale
+        # del enlace sea exactamente lo que entró.
+        run: node verificar_enlace.mjs
