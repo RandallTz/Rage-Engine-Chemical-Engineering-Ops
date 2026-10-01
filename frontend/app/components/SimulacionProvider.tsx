@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { PLANTILLAS } from "./plantillas";
+import { construirEnlace, decodificar } from "./enlaceCompartible";
 
 export interface Componente {
   nombre: string; // nombre canonico, el que entiende el backend
@@ -81,6 +82,10 @@ interface Contexto {
   guardarFlowsheet: (estado: EstadoFlowsheet) => void;
   exportar: (id: string) => void;
   importar: (texto: string) => { ok: true; id: string } | { ok: false; error: string };
+  /** URL con la simulacion entera dentro, para compartirla sin adjuntar nada. */
+  compartir: (id: string) => Promise<{ ok: true; url: string; largo: number } | { ok: false; error: string; largo: number }>;
+  /** Nombre de la simulacion que acaba de entrar por un enlace, si la hubo. */
+  reciboEnlace: string | null;
   // Compatibilidad con el codigo que ya existia: apuntan a la simulacion activa.
   componentes: Componente[];
   modelo: string;
@@ -122,6 +127,7 @@ function sanear(bruto: unknown, nombreSugerido?: string): Simulacion | null {
 export function SimulacionProvider({ children }: { children: ReactNode }) {
   const [almacen, setAlmacen] = useState<Almacen>({ activa: null, lista: [] });
   const [listo, setListo] = useState(false);
+  const [reciboEnlace, setReciboEnlace] = useState<string | null>(null);
 
   // Se lee despues del primer render a proposito: tocar localStorage
   // durante el render rompe la hidratacion (el servidor no lo tiene).
@@ -318,6 +324,46 @@ export function SimulacionProvider({ children }: { children: ReactNode }) {
     return () => { cancelado = true; };
   }, [listo, idActiva, componentes]);
 
+  const compartir = useCallback(
+    async (id: string) => {
+      const s = almacen.lista.find((x) => x.id === id);
+      if (!s) {
+        return { ok: false as const, largo: 0, error: "Esa simulación ya no existe." };
+      }
+      return construirEnlace(s);
+    },
+    [almacen.lista],
+  );
+
+  // UNA SIMULACION QUE LLEGA POR ENLACE.
+  //
+  // Se lee despues de cargar el localStorage (de ahi el guard de 'listo')
+  // para no pisar lo que el usuario ya tenia. Y entra como simulacion
+  // NUEVA, igual que importar un archivo: un enlace nunca sobrescribe
+  // trabajo existente.
+  //
+  // El fragmento se limpia en cuanto se usa, por dos motivos: recargar
+  // no debe duplicar la simulacion, y la URL deja de ser kilometrica.
+  useEffect(() => {
+    if (!listo) return;
+    const fragmento = window.location.hash;
+    if (!fragmento.startsWith("#s=")) return;
+    let cancelado = false;
+    (async () => {
+      const crudo = await decodificar(fragmento.slice(3));
+      // Se pasa por el MISMO saneador que los archivos: un enlace puede
+      // venir manipulado y no merece mas confianza que un .json editado.
+      const s = crudo ? sanear(crudo) : null;
+      if (cancelado) return;
+      history.replaceState(null, "", window.location.pathname + window.location.search);
+      if (!s) return;
+      const recibida: Simulacion = { ...s, id: nuevoId(), creada: ahora(), modificada: ahora() };
+      setAlmacen((a) => ({ activa: recibida.id, lista: [recibida, ...a.lista] }));
+      setReciboEnlace(recibida.nombre);
+    })();
+    return () => { cancelado = true; };
+  }, [listo]);
+
   return (
     <Ctx.Provider
       value={{
@@ -335,6 +381,8 @@ export function SimulacionProvider({ children }: { children: ReactNode }) {
         guardarFlowsheet,
         exportar,
         importar,
+        compartir,
+        reciboEnlace,
         componentes: simulacion?.componentes ?? [],
         modelo: simulacion?.modelo ?? "unifac_raoult",
         setComponentes: (c) => actualizar({ componentes: c }),

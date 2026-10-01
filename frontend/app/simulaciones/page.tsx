@@ -30,6 +30,7 @@ function resumen(s: Simulacion) {
 export default function SimulacionesPage() {
   const {
     listo, simulaciones, simulacion, crear, abrir, eliminar, renombrar, duplicar, exportar, importar,
+    compartir, reciboEnlace,
   } = useSimulacion();
   const router = useRouter();
 
@@ -44,6 +45,25 @@ export default function SimulacionesPage() {
     crear(nombreNuevo, plantilla);
     setNombreNuevo("");
     router.push("/flowsheet");
+  }
+
+  async function copiarEnlace(id: string) {
+    const r = await compartir(id);
+    if (!r.ok) {
+      setAviso({ tipo: "error", texto: r.error });
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(r.url);
+      setAviso({
+        tipo: "ok",
+        texto: `Enlace copiado (${r.largo} caracteres). Quien lo abra verá este mismo diagrama, con sus componentes y datos.`,
+      });
+    } catch {
+      // Sin permiso de portapapeles (o sin https) no se pierde el enlace:
+      // se deja a la vista para copiarlo a mano.
+      window.prompt("Copia este enlace:", r.url);
+    }
   }
 
   async function alSubirArchivo(archivo: File | undefined) {
@@ -153,6 +173,14 @@ export default function SimulacionesPage() {
           </div>
         </div>
 
+        {reciboEnlace && (
+          <div className="mb-4 rounded border border-emerald-800 bg-emerald-950/40 px-3 py-2 text-xs text-emerald-200">
+            Se abrió <strong>«{reciboEnlace}»</strong> desde un enlace y se guardó como una
+            simulación nueva, sin tocar las que ya tenías. Los resultados no viajan en el
+            enlace: al resolverla los calcula el mismo núcleo, aquí.
+          </div>
+        )}
+
         {aviso && (
           <div
             className={`mb-4 rounded border px-3 py-2 text-xs ${
@@ -221,6 +249,13 @@ export default function SimulacionesPage() {
                         className="rounded border border-zinc-700 px-2 py-1 text-[11px] text-zinc-200 hover:bg-zinc-800"
                       >
                         Abrir
+                      </button>
+                      <button
+                        onClick={() => copiarEnlace(s.id)}
+                        className="rounded border border-emerald-800 px-2 py-1 text-[11px] text-emerald-300 hover:bg-emerald-950/50"
+                        title="Copiar un enlace que lleva esta simulación dentro: no hace falta adjuntar nada"
+                      >
+                        Copiar enlace
                       </button>
                       <button
                         onClick={() => exportar(s.id)}
