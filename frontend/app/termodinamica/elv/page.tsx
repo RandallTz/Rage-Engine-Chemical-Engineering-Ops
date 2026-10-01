@@ -1,5 +1,7 @@
 "use client";
 
+import FichaMetodo from "../../components/FichaMetodo";
+
 import { useEffect, useState } from "react";
 import {
   LineChart,
@@ -89,6 +91,9 @@ export default function ELVPage() {
         Cada punto es un cálculo completo de punto de burbuja con UNIFAC (γ predictivo) + presiones de saturación de{" "}
         <code className="text-zinc-300">thermo</code> — no una correlación ajustada.
       </p>
+      <div className="mt-4">
+        <FichaMetodo metodo="elv" />
+      </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
         {PARES_COMUNES.map((par) => (

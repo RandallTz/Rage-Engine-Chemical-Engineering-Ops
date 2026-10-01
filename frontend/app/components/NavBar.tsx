@@ -8,6 +8,7 @@ import { useSimulacion } from "./SimulacionProvider";
 // vive en BarraSimulacion (segundo nivel), para no mezclar "cambiar de
 // documento" con "moverse dentro del documento".
 const MODOS = [
+  { href: "/", etiqueta: "Inicio", descripcion: "Qué es esto, qué hace y qué no hace" },
   { href: "/simulaciones", etiqueta: "Mis simulaciones", descripcion: "Crear, abrir, guardar y subir simulaciones" },
 ];
 
@@ -17,7 +18,7 @@ export default function NavBar() {
 
   return (
     <nav className="flex items-center gap-1 border-b border-zinc-800 bg-zinc-900 px-4 py-2">
-      <span className="mr-4 text-sm font-bold text-zinc-100">Simulador de Procesos</span>
+      <Link href="/" className="mr-4 text-sm font-bold text-zinc-100 hover:text-white">Simulador de Procesos</Link>
       {MODOS.map((modo) => {
         // /termodinamica tiene sub-rutas; la pestana sigue activa dentro de ellas.
         const activo = modo.href === "/" ? ruta === "/" : ruta.startsWith(modo.href);

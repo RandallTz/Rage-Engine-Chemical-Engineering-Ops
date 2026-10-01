@@ -586,9 +586,65 @@ No es física, pero sin esto lo anterior no se sostiene.
 - Existía `docs/README.md` (el índice de la matemática) pero nada en la raíz: la puerta de entrada al repositorio estaba vacía.
 - Incluye una sección **"Qué NO hace"** explícita, en la misma línea que `docs/12-validacion.md`: los límites del simulador son parte de lo que hay que saber antes de usar un número que produce.
 
-### ⬜ Repositorio remoto en GitHub (Pendiente, decisión del usuario)
-- El repositorio local está listo para empujar. Crearlo y publicarlo es una acción hacia fuera y queda a la espera de confirmación explícita.
-- Antes de hacerlo público conviene repasar la exclusión del libro de Yaws (ver arriba).
+### ✅ Repositorio remoto en GitHub (Completado)
+- Publicado en `RandallTz/Rage-Engine-Chemical-Engineering-Ops`, rama `main`.
+- Se verificó explícitamente antes de empujar que el manual de Yaws y las dos bases derivadas de él quedaban fuera del historial: el repositorio es público.
+- Desplegado: backend en Render (`/salud` responde, el azeótropo etanol/agua sale en 0.8926 contra el 0.894 de literatura) y frontend en Vercel.
+- Dos tropiezos del despliegue, por si vuelven: Vercel necesita **Root Directory = `frontend`** (la raíz del repo no tiene `package.json`), y el `*.svg` del `.gitignore` se tragaba `frontend/public/`, que al no quedar ningún archivo desaparecía entera del repositorio.
 
 ### ⬜ Integración continua (Pendiente)
 - Con `run_tests.py` devolviendo código de salida, un workflow de GitHub Actions es casi inmediato. No se ha montado.
+
+---
+
+# Fase 7: De herramienta propia a herramienta de otros (Adopción)
+
+Un cambio de objetivo, no solo de tareas. Hasta aquí el simulador se construyó para ser **correcto**. Esta fase es para que además sea **usable por alguien que no lo escribió**.
+
+El encuadre que la motiva: compitiendo en amplitud de funciones contra DWSIM, ChemSep o Aspen no hay carrera que ganar. Lo que este proyecto tiene y ellos no, todo junto, es: corre en el **navegador** sin instalar nada, **enseña sus grados de libertad**, **enseña sus ecuaciones y sus límites**, y está **en español**. No es "un Aspen pobre": es la herramienta con la que se APRENDE destilación, que es otra categoría.
+
+Nada de esta fase toca una ecuación. Verificado: el frontend no calcula física — ni un `Math.exp`, ni UNIFAC, ni un punto de burbuja. Solo dibuja lo que devuelve el núcleo validado.
+
+### ✅ A1 — Enlace compartible (Completado)
+- **El problema**: una simulación vivía en `localStorage` y la única forma de moverla era descargar un `.simproc.json` y mandarlo adjunto. Eso basta para llevártela a otra máquina, pero no para lo que hace falta en un curso: que un profesor mande un enlace con un problema planteado y el alumno lo abra y lo resuelva. Un adjunto se pierde; un enlace se pega donde sea. **Es lo que convierte una herramienta personal en una compartida.**
+- `frontend/app/components/enlaceCompartible.ts`. Decisiones:
+  - **Va en el FRAGMENTO (`#`), no en la query.** El fragmento no se envía al servidor: el diagrama de nadie acaba en los registros de Vercel ni de Render.
+  - **Todo el estado viaja en la URL, sin guardar nada en un servidor.** No hace falta base de datos, funciona con el frontend estático, y el enlace no caduca porque no depende de que conservemos nada.
+  - **Se comprime con deflate.** Un flowsheet es JSON con muchas claves repetidas, que es lo que mejor comprime. Medido: una simulación realista de 8 nodos pasa de 2627 caracteres de JSON a un enlace de **802** (31 %).
+  - **Viaja SOLO el planteamiento, nunca los resultados.** Quien abra el enlace los recalcula con el mismo núcleo validado. Mandar resultados precocinados permitiría enviar un enlace con cifras que el simulador no produce — justo lo contrario de lo que este proyecto defiende.
+  - Lo que llega pasa por el **mismo `sanear()`** que los archivos: un enlace puede venir manipulado y no merece más confianza que un JSON editado a mano.
+  - Entra como simulación **nueva** y limpia el fragmento: no pisa trabajo existente ni se duplica al recargar.
+- Tope de 8000 caracteres, no por los navegadores sino porque muchos clientes de correo cortan los enlaces largos en silencio — y un enlace cortado es peor que ninguno, porque falla en manos de otro sin que quien lo mandó se entere. Por encima se rechaza explicando y remitiendo al archivo.
+- `frontend/verificar_enlace.mjs`: ida y vuelta con acentos, componentes, unidades, diagrama entero y decimales sin redondear; que el id y los resultados NO viajen; seis enlaces corruptos que devuelven `null` sin tumbar nada; y el rechazo por tamaño.
+- **Hallazgo al escribir esa última prueba**: repetir 400 nodos iguales NO sirve para ejercitar el tope, porque deflate se come la repetición y caben de sobra (3994 caracteres). Hace falta contenido incompresible. La primera versión del test pasaba por el motivo equivocado.
+
+### ✅ A2 — `docs/` conectado a la aplicación (Completado)
+- **El problema**: la parte más valiosa del proyecto —12 documentos con la matemática de cada método y sus límites explícitos— era **invisible desde la aplicación**. Cero enlaces, medido. El usuario veía un número y no tenía forma de saber de dónde salía ni cuándo deja de valer. Eso es exactamente lo contrario de lo que diferencia a este simulador de una caja negra.
+- `frontend/app/components/metodos.ts`: catálogo de siete métodos (McCabe-Thiele, Ponchon-Savarit, FUG, flash, CSTR, curvas residuales, ELV) con su resumen, sus suposiciones, sus límites y el documento donde está la deducción. Es **datos, no lógica**: no calcula nada.
+- `frontend/app/components/FichaMetodo.tsx`, panel plegable junto a los resultados. Dos decisiones:
+  - **Plegado por defecto**: quien ya sabe no quiere leerlo cada vez; quien no, lo tiene a un clic. Lo que no puede pasar es que no esté.
+  - **Los LÍMITES van primero**, antes que las suposiciones y en ámbar. Es el orden contrario al habitual y es deliberado: lo que de verdad hace falta saber antes de usar un número es cuándo no vale.
+- Colocado en la columna suelta (según el método elegido), el mapa de curvas residuales y la página de ELV.
+- Enlaza a `docs/` en vez de duplicar la deducción: dos copias de una ecuación acaban divergiendo, y la del código no es la que se lee.
+
+### ✅ A3 — Portada (Completado)
+- **El problema**: la raíz `/` era directamente la herramienta de "columna suelta". Alguien que llegaba por un enlace aterrizaba en un formulario de parámetros sin saber qué era esto ni si podía fiarse. Con A1, llegar de fuera deja de ser la excepción y pasa a ser el caso normal.
+- La columna suelta se movió a `/columna` y `/` pasa a ser la portada. Tres cosas, en este orden: qué es y para quién; un clic hasta algo que funciona; y **qué NO hace**.
+- Esa tercera sección no es modestia, es lo mismo que hace `docs/12-validacion.md`: un simulador que no declara sus límites invita a usar un número donde no vale. Declara explícitamente que no hay MESH todavía.
+- Cita validaciones **concretas y comprobables** (azeótropo en 0.894, balance con reciclo a 4e-12, líquido del flash en su burbuja a 1e-9) en vez de decir "está validado".
+
+### Verificación de la fase
+- `frontend/verificar_portada_y_enlace.mjs`, en Edge real: 25 comprobaciones en verde.
+- La importante es la de extremo a extremo del enlace: se crea una simulación desde una plantilla en un contexto de navegador, se genera el fragmento con `CompressionStream` de verdad, y se abre en un **contexto limpio** —que es el escenario real de "se lo mando a alguien que nunca ha entrado"—. Se comprueba que se reconstruye con su nombre, sus 2 componentes y sus 4 nodos, que entra como simulación nueva y que el fragmento se limpia.
+- Sin regresiones: `verificar_simulaciones.mjs`, `verificar_topologia.mjs` y `verificar_plantillas.mjs` siguen pasando, y las 11 suites de Python siguen en verde.
+
+### ⬜ B — Que no se caiga delante de un desconocido (Pendiente)
+- **B1. Integración continua.** `run_tests.py` ya devuelve código de salida; son ~15 líneas de YAML. Hoy nada impide subir un commit que rompa la física en silencio.
+- **B2. Los 0.1 CPU de Render.** Un mapa residual tarda 85 s medidos en producción. Con A1, la primera impresión de un desconocido deja de ser un detalle.
+- **B3. Cerrar el hueco núcleo↔interfaz.** Medido: el núcleo resuelve 10 tipos de equipo y la interfaz deja dibujar 5. Flash, intercambiador y válvula están construidos y validados pero son **invisibles** desde la web, igual que los tres modos de energía del reactor.
+
+### ⬜ C — Biblioteca de problemas de libro (Pendiente)
+- Casos reconocibles (Seader, Kister, Doherty) con sus valores publicados. Hace tres cosas a la vez: es la **validación contra literatura** que hoy falta —toda la validación actual es consistencia interna, que demuestra coherencia pero no corrección—, es material de clase, y es lo que permite decir "reproduce estos casos publicados".
+
+### ⬜ D — MESH (Pendiente)
+- Ver Fase 4. El cimiento está puesto a propósito y, tras C, habría contra qué medirlo.

@@ -7,6 +7,7 @@ import DiagramaTernario, { type CurvaTernaria } from "../../components/DiagramaT
 import DiagramaCuaternario from "../../components/DiagramaCuaternario";
 import DescargarGrafico from "../../components/DescargarGrafico";
 import EsperaCalculo from "../../components/EsperaCalculo";
+import FichaMetodo from "../../components/FichaMetodo";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -132,6 +133,10 @@ export default function ResidualesPage() {
               detalle="Cada curva resuelve un punto de burbuja con UNIFAC en cada paso del integrador."
               segundosEsperados={25}
             />
+
+            <div className="mb-4">
+              <FichaMetodo metodo="curvas_residuales" />
+            </div>
 
             {error && (
               <div className="mb-4 rounded border border-red-800 bg-red-950/40 px-3 py-2 text-xs text-red-200">

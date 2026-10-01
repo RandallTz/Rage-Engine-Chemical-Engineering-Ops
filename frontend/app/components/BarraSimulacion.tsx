@@ -23,7 +23,7 @@ const SECCIONES = [
     descripcion: "Equipos y corrientes del proceso" },
   { href: "/termodinamica", etiqueta: "Termodinámica",
     descripcion: "Equilibrio, curvas residuales, mapas ternarios y destilación reactiva" },
-  { href: "/", etiqueta: "Columna suelta",
+  { href: "/columna", etiqueta: "Columna suelta",
     descripcion: "Una columna aislada, sin diagrama" },
 ];
 

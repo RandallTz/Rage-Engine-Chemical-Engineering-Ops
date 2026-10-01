@@ -108,7 +108,29 @@ equipo:
 - Una sola reacción; sin equilibrio líquido-líquido; sin caída de presión.
 - Sin dimensionado ni costes: etapas teóricas, no una columna comprable.
 - Los equipos térmicos nuevos (flash, intercambiador, válvula) están en
-  el núcleo y la API de Python, **aún no en la interfaz web**.
+  el núcleo y la API de Python, **aún no en la interfaz web**: el núcleo
+  resuelve 10 tipos de equipo y la interfaz deja dibujar 5.
+
+---
+
+## Compartir una simulación
+
+Cada simulación cabe dentro de un enlace. «Copiar enlace» en la lista de
+simulaciones genera una URL que lleva el diagrama entero —componentes,
+unidades, equipos y datos— y que se abre en cualquier navegador sin
+instalar ni registrar nada.
+
+Detalles que importan:
+
+- Va en el **fragmento** (`#`) de la URL, así que no se envía al servidor
+  ni aparece en sus registros.
+- **No viajan los resultados, solo el planteamiento.** Quien abra el
+  enlace los recalcula con el mismo núcleo validado — un enlace no puede
+  transportar cifras que el simulador no produzca.
+- No hay base de datos detrás: el enlace no caduca porque no depende de
+  que se conserve nada.
+- Un diagrama que no quepa (8000 caracteres) se rechaza explicándolo y
+  remite al archivo `.simproc.json`.
 
 ---
 
