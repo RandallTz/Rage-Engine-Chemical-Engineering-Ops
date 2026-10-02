@@ -584,7 +584,8 @@ class DiagramaCorrientes:
     def agregar_reactor_cstr(self, nombre, entrada, salida, nu, gestor_reaccion=None,
                               con_cinetica=True, entradas=None,
                               modo_energia="isotermo", Q=None,
-                              con_balance_energia=True):
+                              con_balance_energia=True,
+                              modo_reaccion="cinetico"):
         """
         Reactor CSTR en estado estacionario. Igual que el resto de
         operaciones, NO es forward-only: el balance por componente se
@@ -692,9 +693,36 @@ class DiagramaCorrientes:
         # Con cinetica Y sin ser isotermo, T y xi se necesitan mutuamente:
         # un solo bloque acoplado resuelve las dos a la vez (ver
         # _bloque_reactor_acoplado). En cualquier otro caso van separados.
-        acoplado = con_cinetica and hay_energia and modo_energia != "isotermo"
+        if modo_reaccion not in ("cinetico", "equilibrio"):
+            raise ValueError(
+                f"{nombre}: modo_reaccion desconocido {modo_reaccion!r}. "
+                "Usa 'cinetico' (xi = V*r, necesita Arrhenius y da el volumen) o "
+                "'equilibrio' (xi del equilibrio quimico, sin volumen)."
+            )
 
-        if con_cinetica:
+        # En equilibrio no hay cinetica que acoplar: xi sale de K_eq(T) y
+        # T es un dato (o la calcula el balance de energia a partir de xi,
+        # que entonces SI es un lazo -- ver abajo).
+        if modo_reaccion == "equilibrio":
+            if gestor_reaccion is None:
+                raise ValueError(
+                    f"{nombre}: el reactor de equilibrio necesita la reaccion "
+                    "(para K_eq); sin ella no hay equilibrio que calcular."
+                )
+            if modo_energia != "isotermo":
+                raise ValueError(
+                    f"{nombre}: el reactor de equilibrio solo esta implementado en modo "
+                    "isotermo. Adiabatico acopla K_eq(T) con el balance de energia en un "
+                    "lazo que aun no se resuelve aqui; usa el modo cinetico para eso."
+                )
+            self._bloques.append(
+                _bloque_equilibrio_cstr(nombre, entrada, self.n, evaluador)
+            )
+
+        acoplado = (modo_reaccion == "cinetico" and con_cinetica
+                    and hay_energia and modo_energia != "isotermo")
+
+        if modo_reaccion == "cinetico" and con_cinetica:
             if gestor_reaccion is None:
                 raise ValueError(
                     "Para resolver el CSTR por cinetica hace falta la reaccion "
@@ -755,7 +783,8 @@ class DiagramaCorrientes:
             )
 
         self._registrar_operacion(
-            nombre, "reactor_cstr", entradas=lista_entradas, salidas=[salida], desde=_ini,
+            nombre, "reactor_cstr" if modo_reaccion == "cinetico" else "reactor_equilibrio",
+            entradas=lista_entradas, salidas=[salida], desde=_ini,
             extra={"corrientes": {"entradas": lista_entradas, "entrada": entrada,
                                   "salida": salida}},
         )
@@ -984,9 +1013,22 @@ class DiagramaCorrientes:
             F = conocidos[f"{entrada}.F"]
             z = np.array([conocidos[f"{entrada}.x{i}"] for i in range(self.n)], dtype=float)
             suma = float(np.sum(z))
-            if F <= 0 or suma <= 0:
+            if suma <= 0:
                 return {}
             z = z / suma
+            if F <= 0:
+                T_vacio = float(T_operacion) if modo == "T_operacion" else conocidos[f"{entrada}.T"]
+                valores = {
+                    f"{vapor}.F": 0.0, f"{liquido}.F": 0.0,
+                    f"{vapor}.T": T_vacio, f"{liquido}.T": T_vacio,
+                    f"{vapor}.P": P_op, f"{liquido}.P": P_op,
+                    f"{nombre}.T": T_vacio, f"{nombre}.beta": 0.0,
+                    f"{nombre}.Q_por_mol": 0.0, f"{nombre}.Q": 0.0,
+                }
+                for i in range(self.n):
+                    valores[f"{vapor}.x{i}"] = float(z[i])
+                    valores[f"{liquido}.x{i}"] = float(z[i])
+                return valores
 
             T_in = conocidos[f"{entrada}.T"]
             P_in = conocidos[f"{entrada}.P"]
@@ -1079,10 +1121,20 @@ class DiagramaCorrientes:
             F = conocidos[f"{entrada}.F"]
             z = np.array([conocidos[f"{entrada}.x{i}"] for i in range(self.n)], dtype=float)
             suma = float(np.sum(z))
-            if F <= 0 or suma <= 0:
+            if suma <= 0:
                 return {}
             z = z / suma
             T_in, P = conocidos[f"{entrada}.T"], conocidos[f"{entrada}.P"]
+            if F <= 0:
+                T_vacio = float(T_salida) if T_salida is not None else T_in
+                valores = {
+                    f"{salida}.F": 0.0, f"{salida}.T": T_vacio, f"{salida}.P": P,
+                    f"{nombre}.Q_por_mol": 0.0, f"{nombre}.Q": 0.0,
+                    f"{nombre}.beta_salida": 0.0,
+                }
+                for i in range(self.n):
+                    valores[f"{salida}.x{i}"] = float(z[i])
+                return valores
             h_in = evaluador.entalpia_de_corriente(T_in, P, z)
 
             if T_salida is not None:
@@ -1115,6 +1167,184 @@ class DiagramaCorrientes:
             nombre, "intercambiador", entradas=[entrada], salidas=[salida], desde=_ini,
             extra={"corrientes": {"entrada": entrada, "salida": salida},
                    "modo": "T_salida" if T_salida is not None else "Q_por_mol"},
+        )
+        return nombre
+
+    def agregar_intercambiador_doble(self, nombre, caliente_entrada, caliente_salida,
+                                     frio_entrada, frio_salida,
+                                     Q=None, T_salida_caliente=None, T_salida_frio=None,
+                                     aproximacion_minima=5.0, contracorriente=True):
+        """
+        Intercambiador de DOS corrientes: lo que pierde la caliente lo gana
+        la fria.
+
+            F_cal * [h(T_cal_ent) - h(T_cal_sal)]  =  Q
+                                                   =  F_frio * [h(T_frio_sal) - h(T_frio_ent)]
+
+        Por que importa tener este y no solo el de una corriente. El
+        intercambiador simple recibe un Q de la nada, como si existiera un
+        servicio infinito. Este ACOPLA dos puntos del diagrama: la energia
+        que sale de un sitio tiene que entrar en otro. Es lo que permite
+        integracion energetica -- precalentar la alimentacion con el
+        producto caliente, que es el primer ahorro que se busca en
+        cualquier proceso real.
+
+        Y para el solver es el caso interesante: es el unico equipo cuyo
+        bloque necesita DOS corrientes de entrada que pueden venir de
+        ramas distintas del diagrama. Si el motor de punto fijo sabe
+        esperar a que las dos esten listas, sabe resolver casi cualquier
+        topologia.
+
+        Una sola especificacion de las tres (Q, T de salida caliente, T de
+        salida fria). Las otras dos salen del balance.
+
+        SEGUNDA LEY. Se comprueba que no haya cruce de temperaturas: el
+        calor no pasa de lo frio a lo caliente. En contracorriente la
+        condicion es que la aproximacion en los DOS extremos supere un
+        minimo; en co-corriente, que la salida caliente siga por encima de
+        la salida fria. Sin esta guarda el balance de energia se cumple
+        tan contento con un equipo imposible de construir, que es
+        exactamente el patron de fallo que este proyecto persigue: un
+        numero plausible sobre algo que no existe.
+        """
+        _ini = len(self._bloques)
+        for s in (caliente_entrada, caliente_salida, frio_entrada, frio_salida):
+            self._exigir_corriente(s)
+
+        dadas = [("Q", Q), ("T_salida_caliente", T_salida_caliente),
+                 ("T_salida_frio", T_salida_frio)]
+        activas = [n for n, v in dadas if v is not None]
+        if len(activas) != 1:
+            raise ValueError(
+                f"{nombre}: da EXACTAMENTE una de Q, T_salida_caliente o T_salida_frio "
+                f"(se dieron {len(activas)}: {', '.join(activas) or 'ninguna'}). Las otras "
+                "dos salen del balance de energia; fijar dos seria sobre-especificar el equipo."
+            )
+        modo = activas[0]
+
+        evaluador = self.flash()
+        if evaluador is None:
+            raise ValueError(
+                f"{nombre}: un intercambiador de dos corrientes necesita el "
+                "ProveedorTermodinamico del diagrama para medir entalpias."
+            )
+        aprox_min = float(aproximacion_minima)
+
+        def claves_de(s):
+            return (f"{s}.F", f"{s}.T", f"{s}.P", *[f"{s}.x{i}" for i in range(self.n)])
+
+        claves_entrada = claves_de(caliente_entrada) + claves_de(frio_entrada)
+        claves_salida = (claves_de(caliente_salida) + claves_de(frio_salida)
+                         + (f"{nombre}.Q", f"{nombre}.aproximacion"))
+
+        def resolver_fn(**c):
+            def leer(s):
+                F = c[f"{s}.F"]
+                x = np.array([c[f"{s}.x{i}"] for i in range(self.n)], dtype=float)
+                suma = float(np.sum(x))
+                if suma <= 0:
+                    return None   # sin composicion no hay entalpia que medir
+                return F, x / suma, c[f"{s}.T"], c[f"{s}.P"]
+
+            cal, fri = leer(caliente_entrada), leer(frio_entrada)
+            if cal is None or fri is None:
+                return {}
+            F_cal, x_cal, T_cal_ent, P_cal = cal
+            F_fri, x_fri, T_fri_ent, P_fri = fri
+
+            # Un lado seco significa que no hay nada que intercambiar: Q=0
+            # y cada corriente sale como entro. Importa mas aqui que en
+            # ningun otro equipo, porque este cierra un lazo el solito
+            # (precalentar la entrada de un reactor con su propia salida),
+            # y la primera vuelta de ese lazo arranca justamente con un
+            # lado a caudal cero. Sin esto, el lazo no llega a empezar.
+            if F_cal <= 0 or F_fri <= 0:
+                valores = {
+                    f"{caliente_salida}.F": max(F_cal, 0.0),
+                    f"{caliente_salida}.T": T_cal_ent, f"{caliente_salida}.P": P_cal,
+                    f"{frio_salida}.F": max(F_fri, 0.0),
+                    f"{frio_salida}.T": T_fri_ent, f"{frio_salida}.P": P_fri,
+                    f"{nombre}.Q": 0.0,
+                    f"{nombre}.aproximacion": float(T_cal_ent - T_fri_ent),
+                }
+                for i in range(self.n):
+                    valores[f"{caliente_salida}.x{i}"] = float(x_cal[i])
+                    valores[f"{frio_salida}.x{i}"] = float(x_fri[i])
+                return valores
+
+            h_cal_ent = evaluador.entalpia_de_corriente(T_cal_ent, P_cal, x_cal)
+            h_fri_ent = evaluador.entalpia_de_corriente(T_fri_ent, P_fri, x_fri)
+
+            if modo == "T_salida_caliente":
+                r_cal = evaluador.isotermico(float(T_salida_caliente), P_cal, x_cal)
+                calor = F_cal * (h_cal_ent - r_cal["h"])
+                r_fri = evaluador.a_entalpia(P_fri, x_fri, h_fri_ent + calor / F_fri)
+            elif modo == "T_salida_frio":
+                r_fri = evaluador.isotermico(float(T_salida_frio), P_fri, x_fri)
+                calor = F_fri * (r_fri["h"] - h_fri_ent)
+                r_cal = evaluador.a_entalpia(P_cal, x_cal, h_cal_ent - calor / F_cal)
+            else:
+                calor = float(Q)
+                r_cal = evaluador.a_entalpia(P_cal, x_cal, h_cal_ent - calor / F_cal)
+                r_fri = evaluador.a_entalpia(P_fri, x_fri, h_fri_ent + calor / F_fri)
+
+            if calor < 0:
+                raise ValueError(
+                    f"{nombre}: el balance da Q={calor/1000:.3f} kW, o sea calor pasando de la "
+                    "corriente FRIA a la CALIENTE. Eso no ocurre solo. Revisa cuál de las dos "
+                    "corrientes es la caliente, o la especificación."
+                )
+
+            T_cal_sal, T_fri_sal = r_cal["T"], r_fri["T"]
+            if contracorriente:
+                # En contracorriente los extremos se enfrentan cruzados:
+                # la salida caliente sale junto a la entrada fria.
+                aproximacion = min(T_cal_sal - T_fri_ent, T_cal_ent - T_fri_sal)
+            else:
+                aproximacion = T_cal_sal - T_fri_sal
+            if aproximacion < aprox_min:
+                raise ValueError(
+                    f"{nombre}: la aproximación de temperaturas sale {aproximacion:.2f} K, por "
+                    f"debajo del mínimo de {aprox_min:.2f} K"
+                    + (" (cruce de temperaturas: el equipo es imposible)" if aproximacion < 0 else
+                       " (haría falta un área enorme)")
+                    + f". Caliente {T_cal_ent:.2f}→{T_cal_sal:.2f} K, fría "
+                      f"{T_fri_ent:.2f}→{T_fri_sal:.2f} K."
+                )
+
+            valores = {
+                f"{caliente_salida}.F": F_cal, f"{caliente_salida}.T": T_cal_sal,
+                f"{caliente_salida}.P": P_cal,
+                f"{frio_salida}.F": F_fri, f"{frio_salida}.T": T_fri_sal,
+                f"{frio_salida}.P": P_fri,
+                f"{nombre}.Q": float(calor), f"{nombre}.aproximacion": float(aproximacion),
+            }
+            for i in range(self.n):
+                valores[f"{caliente_salida}.x{i}"] = float(x_cal[i])
+                valores[f"{frio_salida}.x{i}"] = float(x_fri[i])
+            return valores
+
+        self._bloques.append(
+            BloqueEcuaciones(
+                nombre=f"{nombre}: intercambio entre dos corrientes ({modo})",
+                variables=claves_entrada + claves_salida,
+                variables_entrada=claves_entrada,
+                puede_resolver=lambda n: n == 0,
+                resolver_fn=resolver_fn,
+            )
+        )
+        for s in (caliente_salida, frio_salida):
+            self._presion_fijada.add(f"{s}.P")
+            self._temperatura_fijada.add(f"{s}.T")
+        self._registrar_operacion(
+            nombre, "intercambiador_doble",
+            entradas=[caliente_entrada, frio_entrada],
+            salidas=[caliente_salida, frio_salida], desde=_ini,
+            extra={"corrientes": {"caliente_entrada": caliente_entrada,
+                                  "caliente_salida": caliente_salida,
+                                  "frio_entrada": frio_entrada,
+                                  "frio_salida": frio_salida},
+                   "modo": modo, "aproximacion_minima": aprox_min},
         )
         return nombre
 
@@ -1154,10 +1384,19 @@ class DiagramaCorrientes:
             F = conocidos[f"{entrada}.F"]
             z = np.array([conocidos[f"{entrada}.x{i}"] for i in range(self.n)], dtype=float)
             suma = float(np.sum(z))
-            if F <= 0 or suma <= 0:
+            if suma <= 0:
                 return {}
             z = z / suma
             T_in, P_in = conocidos[f"{entrada}.T"], conocidos[f"{entrada}.P"]
+            if F <= 0:
+                valores = {
+                    f"{salida}.F": 0.0, f"{salida}.T": T_in, f"{salida}.P": P_out,
+                    f"{nombre}.beta_salida": 0.0,
+                    f"{nombre}.caida_P": float(P_in - P_out),
+                }
+                for i in range(self.n):
+                    valores[f"{salida}.x{i}"] = float(z[i])
+                return valores
             if P_out > P_in:
                 raise ValueError(
                     f"{nombre}: una valvula no sube la presion. Entra a {P_in:.4g} Pa y se "
@@ -1187,6 +1426,241 @@ class DiagramaCorrientes:
         self._registrar_operacion(
             nombre, "valvula", entradas=[entrada], salidas=[salida], desde=_ini,
             extra={"corrientes": {"entrada": entrada, "salida": salida}, "P_salida": P_out},
+        )
+        return nombre
+
+    def agregar_separador(self, nombre, entrada, salida_ligeros, salida_pesados,
+                          recuperaciones):
+        """
+        Separador de componentes "de atajo": se dice QUE FRACCION de cada
+        componente se va por la primera salida, y el equipo reparte.
+
+        Para que sirve, y por que lo tiene todo simulador. Montar un
+        diagrama de proceso completo obliga a separar cosas en sitios
+        donde todavia no se ha decidido CON QUE equipo. Si lo unico
+        disponible es una columna rigurosa, hay que elegir metodo, claves,
+        reflujo y presion solo para seguir dibujando. Este bloque corta
+        ese nudo: separa como se le pida, y mas adelante se sustituye por
+        la columna de verdad.
+
+        Lo que NO es: fisica. No hay equilibrio ni etapas aqui. Es una
+        ESPECIFICACION de separacion, y una que puede ser imposible --
+        nada impide pedir que dos componentes con el mismo punto de
+        ebullicion se separen al 99.9 %. Por eso su ficha lo dice y por
+        eso no sustituye a una columna cuando lo que se quiere es saber
+        si la separacion se puede hacer.
+
+        recuperaciones: una por componente, en el mismo orden. r_i es la
+        fraccion del componente i que sale por 'salida_ligeros'.
+
+            F_lig * x_lig_i = r_i * F_in * z_i
+            F_pes * x_pes_i = (1 - r_i) * F_in * z_i
+
+        T y P: las dos salidas heredan las de la entrada. Es la convencion
+        habitual para un separador de atajo -- no hay un equipo real
+        detras al que pedirle un balance de energia.
+        """
+        _ini = len(self._bloques)
+        for s in (entrada, salida_ligeros, salida_pesados):
+            self._exigir_corriente(s)
+
+        recuperaciones = [float(r) for r in recuperaciones]
+        if len(recuperaciones) != self.n:
+            raise ValueError(
+                f"{nombre}: hacen falta {self.n} recuperaciones (una por componente) "
+                f"y se dieron {len(recuperaciones)}."
+            )
+        fuera = [i for i, r in enumerate(recuperaciones) if not (0.0 <= r <= 1.0)]
+        if fuera:
+            raise ValueError(
+                f"{nombre}: la recuperacion del componente {fuera[0]} es "
+                f"{recuperaciones[fuera[0]]}, y una recuperacion es una FRACCION: "
+                "tiene que estar entre 0 y 1."
+            )
+
+        claves_entrada = (f"{entrada}.F", f"{entrada}.T", f"{entrada}.P",
+                          *[f"{entrada}.x{i}" for i in range(self.n)])
+        claves_salida = tuple(
+            clave for s in (salida_ligeros, salida_pesados)
+            for clave in (f"{s}.F", f"{s}.T", f"{s}.P", *[f"{s}.x{i}" for i in range(self.n)])
+        )
+
+        def resolver_fn(**conocidos):
+            F = conocidos[f"{entrada}.F"]
+            z = np.array([conocidos[f"{entrada}.x{i}"] for i in range(self.n)], dtype=float)
+            suma = float(np.sum(z))
+            if suma <= 0:
+                return {}   # sin composicion no hay nada que repartir
+            z = z / suma
+            if F <= 0:
+                # Rama seca: no circula materia, pero el estado se propaga
+                # igual para que lo de aguas abajo pueda seguir.
+                valores = {
+                    f"{salida_ligeros}.F": 0.0, f"{salida_pesados}.F": 0.0,
+                    f"{salida_ligeros}.T": conocidos[f"{entrada}.T"],
+                    f"{salida_pesados}.T": conocidos[f"{entrada}.T"],
+                    f"{salida_ligeros}.P": conocidos[f"{entrada}.P"],
+                    f"{salida_pesados}.P": conocidos[f"{entrada}.P"],
+                }
+                for i in range(self.n):
+                    valores[f"{salida_ligeros}.x{i}"] = float(z[i])
+                    valores[f"{salida_pesados}.x{i}"] = float(z[i])
+                return valores
+            caudales = F * z
+            lig = caudales * np.array(recuperaciones)
+            pes = caudales - lig
+            F_lig, F_pes = float(np.sum(lig)), float(np.sum(pes))
+
+            valores = {
+                f"{salida_ligeros}.F": F_lig, f"{salida_pesados}.F": F_pes,
+                f"{salida_ligeros}.T": conocidos[f"{entrada}.T"],
+                f"{salida_pesados}.T": conocidos[f"{entrada}.T"],
+                f"{salida_ligeros}.P": conocidos[f"{entrada}.P"],
+                f"{salida_pesados}.P": conocidos[f"{entrada}.P"],
+            }
+            # Una salida con caudal cero no tiene composicion definida. Se
+            # reparte uniformemente en vez de dejar NaN: asi el diagrama
+            # sigue resolviendo y el caudal nulo ya dice lo que hay que saber.
+            for i in range(self.n):
+                valores[f"{salida_ligeros}.x{i}"] = float(lig[i] / F_lig) if F_lig > 0 else 1.0 / self.n
+                valores[f"{salida_pesados}.x{i}"] = float(pes[i] / F_pes) if F_pes > 0 else 1.0 / self.n
+            return valores
+
+        self._bloques.append(
+            BloqueEcuaciones(
+                nombre=f"{nombre}: separacion por recuperaciones",
+                variables=claves_entrada + claves_salida,
+                variables_entrada=claves_entrada,
+                puede_resolver=lambda n: n == 0,
+                resolver_fn=resolver_fn,
+            )
+        )
+        for s in (salida_ligeros, salida_pesados):
+            self._presion_fijada.add(f"{s}.P")
+            self._temperatura_fijada.add(f"{s}.T")
+        self._registrar_operacion(
+            nombre, "separador", entradas=[entrada],
+            salidas=[salida_ligeros, salida_pesados], desde=_ini,
+            extra={"corrientes": {"entrada": entrada, "ligeros": salida_ligeros,
+                                  "pesados": salida_pesados},
+                   "recuperaciones": recuperaciones},
+        )
+        return nombre
+
+    def agregar_compresor(self, nombre, entrada, salida, P_salida, eficiencia=0.75):
+        """
+        Compresor o turbina, segun hacia donde vaya la presion. Es el
+        mismo equipo: comprimir consume trabajo y expandir lo produce.
+
+        Relacion isentropica de gas ideal para la temperatura ideal, y
+        eficiencia isentropica para la real:
+
+            T2s = T1 * (P2/P1)^((k-1)/k)        con k = Cp/(Cp - R)
+            T2  = T1 + (T2s - T1) / eta        (compresion)
+            T2  = T1 + (T2s - T1) * eta        (expansion)
+
+        Los dos casos son la MISMA idea: la ineficiencia siempre calienta
+        respecto del ideal. Comprimiendo eso significa llegar mas caliente
+        de lo ideal (se divide); expandiendo, enfriarse menos de lo ideal
+        (se multiplica). Escribirlo con un solo signo es el error clasico
+        y da turbinas que enfrian de mas.
+
+        El trabajo sale de la entalpia ya validada del proyecto, no de una
+        formula aparte:
+
+            W = F * [h_V(T2, y) - h_V(T1, y)]
+
+        y eso es exactamente la integral de Cp del vapor, porque
+        h_V = h_L + DHvap y la derivada de esa suma es Cp_V por
+        definicion. Asi el compresor mide la energia con la misma regla
+        que el flash, el reactor y el mezclador.
+
+        LIMITE, y conviene tenerlo presente: supone que lo que entra es
+        GAS, y gas ideal. Comprimir un liquido con esto no tiene sentido
+        (para eso esta la bomba). No se comprueba la fase de la entrada:
+        es la misma frontera que ya tiene el resto del flowsheet.
+        """
+        _ini = len(self._bloques)
+        for s in (entrada, salida):
+            self._exigir_corriente(s)
+        P_out = float(P_salida)
+        eta = float(eficiencia)
+        if not (0.0 < eta <= 1.0):
+            raise ValueError(
+                f"{nombre}: la eficiencia isentropica es {eta} y tiene que estar en (0, 1]. "
+                "Con 1 el equipo seria reversible, que es el limite termodinamico."
+            )
+
+        evaluador = self.flash()
+        if evaluador is None:
+            raise ValueError(
+                f"{nombre}: un compresor necesita el ProveedorTermodinamico del diagrama "
+                "para el Cp del gas y las entalpias."
+            )
+        proveedor = self._proveedor
+        entalpia = evaluador.entalpia
+
+        claves_entrada = (f"{entrada}.F", f"{entrada}.T", f"{entrada}.P",
+                          *[f"{entrada}.x{i}" for i in range(self.n)])
+        claves_salida = (f"{salida}.F", f"{salida}.T", f"{salida}.P",
+                         *[f"{salida}.x{i}" for i in range(self.n)],
+                         f"{nombre}.W", f"{nombre}.T_ideal", f"{nombre}.razon_P")
+
+        def resolver_fn(**conocidos):
+            F = conocidos[f"{entrada}.F"]
+            y = np.array([conocidos[f"{entrada}.x{i}"] for i in range(self.n)], dtype=float)
+            suma = float(np.sum(y))
+            if suma <= 0:
+                return {}
+            y = y / suma
+            T1, P1 = conocidos[f"{entrada}.T"], conocidos[f"{entrada}.P"]
+            if P1 <= 0:
+                return {}
+            if F <= 0:
+                # Sin caudal no hay trabajo, pero la presion de descarga
+                # sigue siendo la del equipo y la corriente conserva su
+                # estado: la rama seca no bloquea el diagrama.
+                valores = {
+                    f"{salida}.F": 0.0, f"{salida}.T": T1, f"{salida}.P": P_out,
+                    f"{nombre}.W": 0.0, f"{nombre}.T_ideal": T1,
+                    f"{nombre}.razon_P": float(P_out / P1),
+                }
+                for i in range(self.n):
+                    valores[f"{salida}.x{i}"] = float(y[i])
+                return valores
+
+            k = proveedor.exponente_isentropico(T1, y)
+            razon = P_out / P1
+            T2s = T1 * razon ** ((k - 1.0) / k)
+            # Un solo signo para los dos casos: la ineficiencia SIEMPRE
+            # deja la salida mas caliente que la ideal.
+            T2 = T1 + (T2s - T1) / eta if razon >= 1.0 else T1 + (T2s - T1) * eta
+            W = F * (entalpia.h_vapor(T2, y) - entalpia.h_vapor(T1, y))
+
+            valores = {
+                f"{salida}.F": F, f"{salida}.T": float(T2), f"{salida}.P": P_out,
+                f"{nombre}.W": float(W), f"{nombre}.T_ideal": float(T2s),
+                f"{nombre}.razon_P": float(razon),
+            }
+            for i in range(self.n):
+                valores[f"{salida}.x{i}"] = float(y[i])
+            return valores
+
+        self._bloques.append(
+            BloqueEcuaciones(
+                nombre=f"{nombre}: compresion isentropica",
+                variables=claves_entrada + claves_salida,
+                variables_entrada=claves_entrada,
+                puede_resolver=lambda n: n == 0,
+                resolver_fn=resolver_fn,
+            )
+        )
+        self._presion_fijada.add(f"{salida}.P")
+        self._temperatura_fijada.add(f"{salida}.T")
+        self._registrar_operacion(
+            nombre, "compresor", entradas=[entrada], salidas=[salida], desde=_ini,
+            extra={"corrientes": {"entrada": entrada, "salida": salida},
+                   "P_salida": P_out, "eficiencia": eta},
         )
         return nombre
 
@@ -1330,6 +1804,21 @@ class DiagramaCorrientes:
             if candidatas:
                 candidatas_por_ciclo.append(candidatas)
 
+        # Equipos que participan en ALGUN lazo. Es contra esto que se mide
+        # si una entrada es "de fuera", y no contra el ciclo concreto que
+        # se este mirando.
+        #
+        # El fallo que esto corrige, encontrado con una planta de 10
+        # equipos y dos lazos entrelazados: 'mezcla' (la salida del
+        # mezclador) parecia tener anclaje externo porque la otra entrada
+        # de su consumidor venia de un equipo que no estaba en ESE ciclo
+        # -- pero si estaba en otro, o sea que tampoco era una
+        # alimentacion fresca. Con ese falso anclaje se elegia cortar la
+        # salida del mezclador, que es justo el corte que NO funciona
+        # (suponerla con F=0 deja sin caudal a todo lo que viene detras),
+        # y el lazo no arrancaba: "siguen sin determinarse 11 variables".
+        equipos_en_algun_ciclo = {eq for ciclo in ciclos for eq in ciclo}
+
         def tiene_anclaje_externo(corriente):
             """
             ¿El equipo que CONSUME esta corriente recibe ademas algo de
@@ -1349,16 +1838,16 @@ class DiagramaCorrientes:
             consumidor = consumidor_de.get(corriente)
             if consumidor is None:
                 return False
-            equipos = equipos_del_ciclo.get(corriente, set())
             for entrada in self._operaciones[consumidor].get("entradas", []):
                 if entrada == corriente:
                     continue
                 origen = productor.get(entrada)
-                if origen is None or origen not in equipos:
-                    return True   # viene de fuera del lazo: ancla la solucion
+                if origen is None or origen not in equipos_en_algun_ciclo:
+                    return True   # alimentacion fresca: ancla la solucion
             return False
 
         cortes = []
+        anclados = {}
         pendientes = list(candidatas_por_ciclo)
         while pendientes:
             frecuencia = {}
@@ -1373,7 +1862,12 @@ class DiagramaCorrientes:
                 key=lambda kv: (not tiene_anclaje_externo(kv[0]), -kv[1], kv[0]),
             )[0][0]
             cortes.append(elegida)
+            anclados[elegida] = tiene_anclaje_externo(elegida)
             pendientes = [c for c in pendientes if elegida not in c]
+        # Se guarda para que _estimacion_inicial sepa de que tipo de corte
+        # se trata: el supuesto bueno NO es el mismo para un reciclo que
+        # para una corriente interna de proceso.
+        self._cortes_anclados = anclados
         return cortes
 
     def _bloques_cortados(self, cortes):
@@ -1410,11 +1904,33 @@ class DiagramaCorrientes:
         """
         Supuesto de arranque de una corriente cortada.
 
-        F = 0 a proposito: equivale a "arranca la planta sin reciclo", que
-        es fisicamente lo que pasa y el punto de partida mas seguro (no
-        inventa materia que no existe). La presion NO puede ser 0 porque
-        el mezclador toma el minimo de sus entradas y arruinaria el
-        resultado; se usa la mayor presion conocida del diagrama.
+        Hay DOS casos, y usar el mismo supuesto para los dos no funciona.
+
+        1. Corte ANCLADO -- un reciclo que entra a un equipo que ademas
+           recibe alimentacion fresca. Aqui F = 0 es el supuesto correcto:
+           equivale a "arranca la planta sin recirculacion", que es
+           fisicamente lo que pasa, y la alimentacion fresca ancla la
+           solucion desde la primera vuelta.
+
+        2. Corte NO anclado -- una corriente interna de proceso, dentro de
+           un lazo que no toca ninguna alimentacion fresca. El caso tipico
+           es la INTEGRACION ENERGETICA: un intercambiador que precalienta
+           la entrada de un reactor con la salida del mismo reactor cierra
+           un lazo entre tres equipos sin una sola corriente fresca
+           dentro. Ahi F = 0 no significa "arrancar sin reciclo", significa
+           "no circula nada", y entonces todos los equipos del lazo se
+           niegan a calcular y la primera vuelta no determina nada: el
+           lazo no llega a arrancar. Se vio con una planta de 10 equipos y
+           dos reciclos.
+
+           El supuesto util es que por ahi circula aproximadamente lo que
+           entra fresco a la planta. No hace falta acertar -- es un punto
+           de partida, y Wegstein corrige -- pero tiene que ser distinto
+           de cero.
+
+        La presion NO puede ser 0 en ningun caso porque el mezclador toma
+        el minimo de sus entradas y arruinaria el resultado; se usa la
+        mayor presion conocida del diagrama.
         """
         presiones = [v for k, v in valores.items()
                      if k.endswith(".P") and isinstance(v, (int, float))]
@@ -1422,9 +1938,38 @@ class DiagramaCorrientes:
         temperaturas = [v for k, v in valores.items()
                         if k.endswith(".T") and isinstance(v, (int, float))]
         T = max(temperaturas) if temperaturas else 298.15
-        est = {f"{corriente}.F": 0.0, f"{corriente}.T": T, f"{corriente}.P": P}
+
+        anclada = getattr(self, "_cortes_anclados", {}).get(corriente, True)
+        if anclada:
+            F = 0.0
+            composicion = [1.0 / self.n] * self.n
+        else:
+            caudales = [v for k, v in valores.items()
+                        if k.endswith(".F") and isinstance(v, (int, float)) and v > 0]
+            F = sum(caudales) if caudales else 1.0
+            # Composicion de la corriente dada mas grande, que suele ser
+            # la alimentacion principal.
+            composicion = [1.0 / self.n] * self.n
+            mejor = None
+            for nombre_c in self.corrientes:
+                f = valores.get(f"{nombre_c}.F")
+                xs = [valores.get(f"{nombre_c}.x{i}") for i in range(self.n)]
+                dados = [x for x in xs if isinstance(x, (int, float))]
+                if isinstance(f, (int, float)) and f > 0 and len(dados) >= self.n - 1:
+                    if mejor is None or f > mejor:
+                        mejor = f
+                        falta = sum(x for x in dados)
+                        composicion = [
+                            x if isinstance(x, (int, float)) else max(0.0, 1.0 - falta)
+                            for x in xs
+                        ]
+            total = sum(composicion)
+            if total > 0:
+                composicion = [c / total for c in composicion]
+
+        est = {f"{corriente}.F": F, f"{corriente}.T": T, f"{corriente}.P": P}
         for i in range(self.n):
-            est[f"{corriente}.x{i}"] = 1.0 / self.n
+            est[f"{corriente}.x{i}"] = composicion[i]
         return est
 
     def resolver(self, max_iteraciones=None, tolerancia_reciclo=1e-8,
@@ -1869,6 +2414,54 @@ def _bloque_conversion_cstr(nombre, entrada, n_componentes, evaluador):
         puede_resolver=lambda n: n >= 0,
         resolver_fn=resolver_fn,
         n_ecuaciones=1,
+    )
+
+
+def _bloque_equilibrio_cstr(nombre, entrada, n_componentes, evaluador):
+    """
+    xi determinado por EQUILIBRIO QUIMICO a la temperatura del tanque:
+
+        prod_i a_i^nu_i = K_eq(T)
+
+    Sustituye al bloque de cinetica, no se suma a el: los dos calculan el
+    mismo xi por caminos distintos y tenerlos a la vez seria contar dos
+    veces la misma ecuacion.
+
+    La diferencia con la cinetica no es de precision sino de PREGUNTA. La
+    cinetica dice "con este tanque llego hasta aqui"; el equilibrio dice
+    "por mucho tanque que pongas, no pasas de aqui". Poder ver los dos
+    sobre el mismo diagrama es justo lo que hace falta para decidir si un
+    reactor merece la pena.
+
+    No necesita volumen: el equilibrio es independiente del tamano. Por eso
+    un reactor en este modo NO declara V.
+    """
+    clave_F_in = f"{entrada}.F"
+    claves_x_in = [f"{entrada}.x{i}" for i in range(n_componentes)]
+    clave_xi = f"{nombre}.xi"
+    clave_T = f"{nombre}.T"
+    clave_K = f"{nombre}.K_eq"
+    entradas = (clave_F_in, clave_T, *claves_x_in)
+    variables = entradas + (clave_xi, clave_K)
+
+    def resolver_fn(**c):
+        if any(c.get(k) is None for k in entradas):
+            return {}
+        F_in = c[clave_F_in]
+        x_in = np.array([c[k] for k in claves_x_in], dtype=float)
+        suma = float(np.sum(x_in))
+        if F_in <= 0 or suma <= 0:
+            return {}
+        r = evaluador.avance_de_equilibrio(F_in, x_in / suma, c[clave_T])
+        return {clave_xi: r["xi"], clave_K: r["K_eq"]}
+
+    return BloqueEcuaciones(
+        nombre=f"{nombre}: equilibrio quimico",
+        variables=variables,
+        variables_entrada=entradas,
+        puede_resolver=lambda n: n == 0,
+        resolver_fn=resolver_fn,
+        n_ecuaciones=2,
     )
 
 

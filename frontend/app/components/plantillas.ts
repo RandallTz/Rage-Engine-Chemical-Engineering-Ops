@@ -432,6 +432,75 @@ export const PLANTILLAS: Plantilla[] = [
       },
     },
   },
+  {
+    id: "integracion_energetica",
+    nombre: "Integración energética (listo)",
+    descripcion:
+      "El producto caliente del reactor precalienta su propia alimentación en un intercambiador de dos corrientes: 686 kW que no hay que comprar. Después, separador de componentes y compresor. Es el diagrama que más estresa al solver: el intercambiador toma sus dos entradas de ramas distintas.",
+    categoria: "combinado",
+    lista: true,
+    componentes: [C.isobuteno, C.metanol, C.mtbe],
+    modelo: "unifac_raoult",
+    flowsheet: {
+      nodes: [
+        corriente("fresco", 40, 240),
+        {
+          id: "ic1", type: "operacion", position: { x: 230, y: 220 },
+          data: {
+            clase: "operacion", tipo: "intercambiador_doble", P_sistema: 1013250,
+            spec_ic: "T_salida_caliente", T_salida_caliente: 345,
+            aproximacion_minima: 2, contracorriente: true,
+          },
+        },
+        corriente("precal", 440, 300),
+        {
+          id: "req1", type: "operacion", position: { x: 620, y: 280 },
+          data: {
+            clase: "operacion", tipo: "reactor_equilibrio", P_sistema: 1013250,
+            nu: "-1,-1,1", A: 10000, Ea: 45000, n_entradas: 1,
+            con_balance_energia: false,
+          },
+        },
+        corriente("crudo", 820, 300),
+        corriente("enfriado", 440, 130),
+        {
+          id: "sep1", type: "operacion", position: { x: 630, y: 110 },
+          data: {
+            clase: "operacion", tipo: "separador", P_sistema: 1013250,
+            recuperaciones: "0.03,0.05,0.97",
+          },
+        },
+        corriente("producto", 840, 40),
+        corriente("ligeros", 840, 180),
+        {
+          id: "k1", type: "operacion", position: { x: 1020, y: 160 },
+          data: {
+            clase: "operacion", tipo: "compresor", P_sistema: 1013250,
+            P_salida: 2026500, eficiencia: 0.75,
+          },
+        },
+        corriente("reciclables", 1210, 180),
+      ],
+      edges: [
+        arista("b1", "fresco", "ic1", undefined, "frio_entrada"),
+        arista("b2", "ic1", "precal", "frio_salida", undefined),
+        arista("b3", "precal", "req1", undefined, "entrada"),
+        arista("b4", "req1", "crudo", "salida", undefined),
+        arista("b5", "crudo", "ic1", undefined, "caliente_entrada"),
+        arista("b6", "ic1", "enfriado", "caliente_salida", undefined),
+        arista("b7", "enfriado", "sep1", undefined, "entrada"),
+        arista("b8", "sep1", "producto", "pesados", undefined),
+        arista("b9", "sep1", "ligeros", "ligeros", undefined),
+        arista("b10", "ligeros", "k1", undefined, "entrada"),
+        arista("b11", "k1", "reciclables", "salida", undefined),
+      ],
+      dados: {
+        "fresco.F": "100", "fresco.T": "320", "fresco.P": "1013250",
+        "fresco.x0": "0.5", "fresco.x1": "0.5",
+        "req1.T": "360",
+      },
+    },
+  },
 ];
 
 export const PLANTILLAS_POR_ID = Object.fromEntries(PLANTILLAS.map((p) => [p.id, p]));

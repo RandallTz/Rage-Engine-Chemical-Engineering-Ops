@@ -54,7 +54,7 @@ Zona libre de pint: solo floats/np.ndarray en SI.
 """
 
 import numpy as np
-from scipy.optimize import root
+from scipy.optimize import brentq, root
 
 _TOL_SINGULAR = 1e-12
 
@@ -163,6 +163,104 @@ class EvaluadorCSTR:
                 "ningun volumen finito da ese avance."
             )
         return xi / r
+
+    # ------------------------------------------------------------------
+    def avance_de_equilibrio(self, F_in, x_in, T, tolerancia=1e-12):
+        """
+        Avance al que la reaccion se DETIENE por equilibrio quimico, sin
+        cinetica ninguna:
+
+            prod_i a_i(x_out(xi))^nu_i  =  K_eq(T),     a_i = x_i * gamma_i
+
+        Es el reactor "de equilibrio" clasico, y responde a una pregunta
+        distinta a la del CSTR cinetico. El cinetico dice "con este tanque
+        y esta velocidad, llego hasta aqui"; este dice "por mucho tanque
+        que pongas, NO pasas de aqui". Son el limite practico y el limite
+        termodinamico, y conviene poder ver los dos.
+
+        Barato de anadir porque las dos piezas ya existian: K_eq(T) de
+        van't Hoff en GestorReaccion y gamma de UNIFAC en el proveedor.
+
+        BRACKET. El avance no se busca en (0, xi_max) sino entre los dos
+        limites estequiometricos REALES:
+
+          - hacia adelante, hasta que se agote un reactivo,
+          - hacia atras (xi < 0), hasta que se agote un producto.
+
+        Permitir xi negativo no es un capricho: si la alimentacion ya trae
+        producto por encima del equilibrio, la reaccion corre al REVES, y
+        un bracket que empiece en cero no encontraria esa raiz -- devolveria
+        "no hay equilibrio" sobre un caso perfectamente normal (p.ej. un
+        reciclo que devuelve producto al reactor).
+
+        En los extremos el residuo diverge con signos opuestos (en uno se
+        anula un reactivo y el productorio se va a infinito; en el otro se
+        anula un producto y se va a cero), asi que la raiz esta encerrada
+        por construccion.
+        """
+        if self.gestor_reaccion is None:
+            raise ValueError(
+                "El reactor de equilibrio necesita la reaccion (GestorReaccion): "
+                "sin K_eq(T) no hay equilibrio que calcular."
+            )
+        x_in = np.asarray(x_in, dtype=float)
+        K = float(self.gestor_reaccion.K_eq(T))
+        proveedor = self.gestor_reaccion.proveedor
+
+        # Limites estequiometricos: cuanto se puede avanzar antes de
+        # agotar algo, en cada sentido.
+        hacia_adelante = [F_in * x_in[i] / abs(self.nu[i])
+                          for i in np.where(self.nu < 0)[0]]
+        hacia_atras = [F_in * x_in[i] / abs(self.nu[i])
+                       for i in np.where(self.nu > 0)[0]]
+        if not hacia_adelante or not hacia_atras:
+            raise ValueError(
+                "La reaccion necesita al menos un reactivo y un producto con "
+                "coeficiente no nulo para tener equilibrio."
+            )
+        xi_max = min(hacia_adelante)
+        xi_min = -min(hacia_atras)
+
+        def residuo(xi):
+            F_out, x_out = self.salida_desde_entrada(F_in, x_in, xi)
+            gamma = proveedor.coeficientes_actividad(T, x_out)
+            actividad = np.clip(x_out * gamma, 1e-300, None)
+            # En logaritmos: el productorio de actividades elevadas a nu
+            # recorre varios ordenes de magnitud y multiplicarlo
+            # directamente pierde precision (o desborda) cerca de los
+            # extremos, que es justo donde hay que evaluarlo.
+            return float(np.dot(self.nu, np.log(actividad)) - np.log(K))
+
+        # Se entra un pelin por dentro: en los extremos exactos hay una
+        # fraccion molar nula y el logaritmo no esta definido.
+        margen = 1e-9 * max(xi_max - xi_min, 1.0)
+        a, b = xi_min + margen, xi_max - margen
+        try:
+            r_a, r_b = residuo(a), residuo(b)
+        except Exception as e:
+            raise ValueError(
+                f"No se pudo evaluar el equilibrio en los extremos del avance "
+                f"[{a:.6g}, {b:.6g}] mol/s: {e}"
+            ) from e
+
+        if np.sign(r_a) == np.sign(r_b):
+            raise ValueError(
+                f"No hay avance de equilibrio dentro del rango estequiometrico "
+                f"[{xi_min:.6g}, {xi_max:.6g}] mol/s a T={T:.2f} K "
+                f"(K_eq={K:.6g}). Con estos reactivos la reaccion se iria "
+                "entera hacia un lado: la composicion de equilibrio cae fuera "
+                "de lo que la alimentacion permite."
+            )
+
+        xi = float(brentq(residuo, a, b, xtol=tolerancia, rtol=1e-14))
+        F_out, x_out = self.salida_desde_entrada(F_in, x_in, xi)
+        gamma = proveedor.coeficientes_actividad(T, x_out)
+        producto = float(np.prod((x_out * gamma) ** self.nu))
+        return {
+            "xi": xi, "F_out": float(F_out), "x_out": x_out, "T": float(T),
+            "K_eq": K, "producto_actividades": producto,
+            "residual": abs(producto - K) / max(K, 1e-300),
+        }
 
     # ------------------------------------------------------------------
     # Balance de energia

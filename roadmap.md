@@ -678,3 +678,69 @@ Al reiniciar la API con el código actual (hasta entonces había un uvicorn viej
 
 ### ⬜ D — MESH (Pendiente)
 - Ver Fase 4. El cimiento está puesto a propósito y, tras C, habría contra qué medirlo.
+
+---
+
+# Fase 8: Más operaciones, y que se combinen
+
+Objetivo fijado explícitamente: **primero la mayor cantidad de operaciones posible, los métodos rigurosos al final** — y con la condición de que se puedan encadenar sin que el solver se atasque. El tamaño a garantizar: ~15 equipos con 2 reciclos. Los valores por defecto, típicos de libro, visibles y editables.
+
+El núcleo pasa de **10 a 14 tipos de equipo**, y los cuatro nuevos están en la interfaz desde el primer día (el hueco núcleo↔interfaz de la Fase 7 no se vuelve a abrir).
+
+### ✅ Separador de componentes (Completado)
+- Se dice qué fracción de cada componente sale por cada lado y el equipo reparte. Es el "atajo" universal que tiene todo simulador, y lo que permite montar un diagrama completo **antes** de haber decidido con qué equipo se separa cada cosa.
+- **No es física y la ficha lo dice**: nada impide pedir que dos componentes con el mismo punto de ebullición se separen al 99.9 %. No sustituye a una columna cuando la pregunta es si la separación se puede hacer.
+- Verificado: balance por componente a $10^{-10}$, recuperaciones respetadas exactamente, separación perfecta da productos puros, y una recuperación fuera de [0,1] se rechaza.
+
+### ✅ Compresor / turbina (Completado)
+- El mismo equipo en los dos sentidos: comprimir consume trabajo, expandir lo produce. Relación isentrópica de gas ideal más eficiencia isentrópica.
+- **Hizo falta Cp del GAS**, que el proyecto no tenía: hasta ahora solo necesitaba el del líquido, porque las entalpías de vapor se construyen como $h_L + \Delta H_{vap}$ y la derivada de esa suma YA es el $C_p$ del vapor. Lo que no se puede sacar de ahí es $k = C_p/(C_p-R)$ para la relación isentrópica. Nuevos: `capacidades_calorificas_gas` y `exponente_isentropico`.
+- El trabajo sale de la entalpía ya validada ($W = F[h_V(T_2)-h_V(T_1)]$), no de una fórmula aparte, así que el compresor mide la energía con la misma regla que el flash y el reactor.
+- **El detalle que es el error clásico**: la ineficiencia SIEMPRE deja la salida más caliente que la ideal. Comprimiendo eso significa llegar más caliente (se divide por $\eta$); expandiendo, enfriarse MENOS de lo ideal (se multiplica). Escribirlo con un solo signo da turbinas que enfrían de más. Verificado en los dos sentidos.
+- Con $\eta = 1$ la salida es exactamente la isentrópica, y el trabajo crece monótonamente al empeorar la eficiencia.
+
+### ✅ Reactor de equilibrio químico (Completado)
+- $\prod_i a_i^{\nu_i} = K_{eq}(T)$, sin cinética y **sin volumen**: el equilibrio no depende del tamaño del tanque. Responde a una pregunta distinta que el CSTR cinético — "por mucho tanque que pongas, no pasas de aquí" frente a "con este tanque llego hasta aquí". Son el límite termodinámico y el práctico, y conviene poder ver los dos.
+- Barato porque las dos piezas ya existían: van't Hoff en `GestorReaccion` y $\gamma$ de UNIFAC.
+- **Se resuelve en logaritmos**: el productorio de actividades elevadas a $\nu$ recorre varios órdenes de magnitud y multiplicarlo directamente pierde precisión (o desborda) cerca de los extremos, que es justo donde hay que evaluarlo.
+- **El bracket admite avance NEGATIVO**, y no es un capricho: si la alimentación ya trae producto por encima del equilibrio —un reciclo que lo devuelve, por ejemplo— la reacción corre al revés. Un bracket que empezara en cero devolvería "no hay equilibrio" sobre un caso normal. Verificado: con 90 % de MTBE en la entrada da $\xi = -57.17$ mol/s.
+- Verificado contra van't Hoff: la conversión de equilibrio cae de 86.1 % a 34.6 % entre 320 K y 380 K, y la salida cumple $\prod a_i^{\nu_i} = K_{eq}$ recalculado desde cero a $10^{-8}$.
+
+### ✅ Intercambiador de DOS corrientes (Completado)
+- Lo que pierde la caliente lo gana la fría. Frente al intercambiador de una corriente, que recibe un $Q$ de la nada como si existiera un servicio infinito, este **acopla dos puntos del diagrama**: es lo que permite integración energética.
+- Tres especificaciones (Q, T de salida caliente, T de salida fría), mutuamente consistentes: verificada la ida y vuelta entre ellas a $10^{-6}$ K.
+- **Guarda de segunda ley**: se comprueba que no haya cruce de temperaturas. Sin ella el balance de energía se cumple tan contento con un equipo imposible de construir. Verificado que un cruce se rechaza explicando cuál es la aproximación y dónde.
+- Y para el solver es el caso interesante: es el **único equipo cuyas dos entradas pueden venir de ramas distintas** del diagrama.
+
+### ⚠ Dos defectos del SOLVER, encontrados al combinar
+Los dos aparecieron montando la planta de prueba, no probando equipos sueltos. Es el patrón de siempre en este proyecto.
+
+**1. La heurística de corte mentía con lazos entrelazados.** `tiene_anclaje_externo` preguntaba si la otra entrada del consumidor venía de fuera **de ese ciclo concreto**. Con varios lazos que comparten equipos, una corriente que viene de OTRO lazo parecía "externa" — pero no es una alimentación fresca. Con ese falso anclaje se elegía cortar `mezcla`, la salida del mezclador, que es justo el corte que el roadmap ya documentaba como el malo: suponerla con F=0 deja sin caudal a todo lo que viene detrás. Síntoma: *"el lazo no se puede cerrar: siguen sin determinarse 11 variables"*, que apunta a datos que faltan cuando no falta ninguno. **Corregido**: se mide contra los equipos de TODOS los ciclos. Ahora corta `reciclo_v` y `reciclo_l`, que es lo correcto.
+
+**2. El supuesto inicial F=0 no vale para un corte que no es un reciclo.** Un intercambiador que precalienta la entrada de un reactor con la salida de ese mismo reactor cierra un lazo entre tres equipos **sin una sola corriente fresca dentro**. Ahí F=0 no significa "arrancar sin recirculación" sino "no circula nada", y todos los equipos del lazo se niegan a calcular. **Corregido**: `_estimacion_inicial` distingue los dos casos y, en el no anclado, supone que circula aproximadamente lo que entra fresco a la planta.
+
+### ⚠ Y una fragilidad general: una rama con caudal CERO atascaba el diagrama
+El flash de la planta de prueba vaporizaba toda la corriente ($\beta = 1$), así que su salida líquida salía con F=0; el separador de detrás se negaba a calcular y eso tumbaba el reciclo líquido entero.
+
+Una rama seca es **legítima**: una purga puesta a cero, una separación que se lo lleva todo por un lado, o la primera vuelta de un reciclo. El principio correcto, aplicado ahora a seis equipos (separador, compresor, flash, intercambiador, válvula e intercambiador doble):
+
+> F = 0 significa que no circula materia, **no** que no haya estado. La corriente conserva T, P y composición, las cantidades extensivas valen cero, y aguas abajo se sigue resolviendo.
+
+Lo que sí sigue siendo motivo para no calcular es que la **composición** no se conozca: sin ella no hay nada que propagar.
+
+### Verificación
+- `tests/validar_operaciones_nuevas.py`: los cuatro equipos por separado, más dos secciones que son el objetivo real de la fase.
+- **Planta combinada**: 10 equipos de 9 tipos distintos y dos reciclos. GL = 0 (108 incógnitas, 108 ecuaciones), los lazos convergen en 68 vueltas a $9\times10^{-11}$, y los balances globales por componente cierran con su término $\nu_i\xi$ a $10^{-5}$ mol/s. La integración energética recupera 686 kW y precalienta de 326.6 K a 337.8 K.
+- **Rama seca**: una cadena de cinco equipos alimentada con caudal cero resuelve igual, conservando estado y con las cantidades extensivas a cero.
+- Plantilla nueva «Integración energética (listo)», que resuelve de un clic y es la que más estresa al solver.
+- Sin regresiones: 12/12 suites de Python, 11/11 plantillas, 5 suites de navegador.
+
+### ✅ Las gráficas ya no abren ventanas (Completado)
+- `config/graficos.py` fija el backend `Agg` salvo que se defina `MPLBACKEND`. Los `graficar_*` de `core/` terminan en `plt.show()`, que con un backend interactivo abre una ventana y **bloquea** el proceso: aparecían encima de lo que el usuario estuviera haciendo cada vez que se importaba el módulo o se corría una suite.
+- Efecto secundario medido: McCabe-Thiele bajó de 8.5 s a 1.9 s y Ponchon-Savarit de 7.0 s a 3.1 s, porque ya no renderizan ventanas.
+
+### ⬜ Siguiente tanda de operaciones (Pendiente)
+- **PFR** (integración a lo largo del volumen) y **reactor batch**.
+- **Absorbedor** por el método de Kremser.
+- **Columna con extracciones laterales y varias alimentaciones**: hoy son una entrada y dos productos.
+- **Varias reacciones a la vez** ($\nu$ pasa a matriz): es el cambio estructural que falta para destilación reactiva real.

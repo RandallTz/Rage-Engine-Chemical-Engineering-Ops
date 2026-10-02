@@ -33,10 +33,16 @@ frontera, nunca dentro de los bucles numéricos.
 
 ## Equipos disponibles
 
-Columna binaria (McCabe-Thiele / Ponchon-Savarit) · columna
-multicomponente (FUG) · **flash** L-V · **intercambiador de calor** ·
-**válvula** de expansión isentálpica · reactor **CSTR** con balance de
-energía · mezclador · divisor · bomba.
+**Separación** — columna binaria (McCabe-Thiele / Ponchon-Savarit),
+columna multicomponente (FUG), flash L-V, separador de componentes.
+
+**Reacción** — CSTR con cinética y balance de energía, reactor de
+equilibrio químico.
+
+**Térmicos** — intercambiador de calor, intercambiador de dos corrientes
+(integración energética), válvula de expansión isentálpica.
+
+**Transporte y mezcla** — bomba, compresor/turbina, mezclador, divisor.
 
 El flowsheet detecta **reciclos** automáticamente, los corta (*tearing*)
 y los converge con Wegstein.

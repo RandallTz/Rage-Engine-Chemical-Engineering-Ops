@@ -368,6 +368,112 @@ function EditorElemento({
           )}
 
 
+          {/* -------------------------------------------- separador */}
+          {datosOp.tipo === "separador" && (
+            <>
+              <CampoConfig
+                etiqueta="recuperaciones"
+                valor={String(datosOp.recuperaciones ?? "")}
+                onChange={(v) => onDatos({ recuperaciones: v })}
+              />
+              <p className="text-[10px] text-zinc-500">
+                Fracción de cada componente que sale por «ligeros», en el orden{" "}
+                <span className="text-zinc-400">{componentes.join(", ") || "—"}</span>. El resto
+                se va por «pesados».
+              </p>
+              <p className="text-[10px] text-amber-500/70">
+                Es una especificación, no física: nada comprueba que un equipo real pudiera
+                conseguirla. Sirve para montar el diagrama antes de decidir con qué se separa.
+              </p>
+            </>
+          )}
+
+          {/* -------------------------------------------- compresor */}
+          {datosOp.tipo === "compresor" && (
+            <>
+              <CampoConfig
+                etiqueta="P salida [Pa]"
+                valor={String(datosOp.P_salida ?? 303975)}
+                onChange={(v) => onDatos({ P_salida: Number(v) })}
+              />
+              <CampoConfig
+                etiqueta="eficiencia isentr."
+                valor={String(datosOp.eficiencia ?? 0.75)}
+                onChange={(v) => onDatos({ eficiencia: Number(v) })}
+              />
+              <p className="text-[10px] text-zinc-500">
+                Si la presión de salida es MENOR que la de entrada, el mismo equipo funciona
+                como turbina y el trabajo sale negativo. Supone gas ideal.
+              </p>
+            </>
+          )}
+
+          {/* ------------------------------ intercambiador de dos corrientes */}
+          {datosOp.tipo === "intercambiador_doble" && (
+            <>
+              <label className="block text-[10px] text-zinc-500">especificación</label>
+              <select
+                className="w-full rounded border border-zinc-700 bg-zinc-800 p-1 text-xs"
+                value={String(datosOp.spec_ic ?? "T_salida_caliente")}
+                onChange={(e) => onDatos({ spec_ic: e.target.value })}
+              >
+                <option value="T_salida_caliente">T de salida del lado caliente</option>
+                <option value="T_salida_frio">T de salida del lado frío</option>
+                <option value="Q">Calor intercambiado</option>
+              </select>
+              {(datosOp.spec_ic ?? "T_salida_caliente") === "T_salida_caliente" && (
+                <CampoConfig
+                  etiqueta="T cal. salida [K]"
+                  valor={String(datosOp.T_salida_caliente ?? 350)}
+                  onChange={(v) => onDatos({ T_salida_caliente: Number(v) })}
+                />
+              )}
+              {datosOp.spec_ic === "T_salida_frio" && (
+                <CampoConfig
+                  etiqueta="T fría salida [K]"
+                  valor={String(datosOp.T_salida_frio ?? 340)}
+                  onChange={(v) => onDatos({ T_salida_frio: Number(v) })}
+                />
+              )}
+              {datosOp.spec_ic === "Q" && (
+                <CampoConfig
+                  etiqueta="Q [W]"
+                  valor={String(datosOp.Q ?? 100000)}
+                  onChange={(v) => onDatos({ Q: Number(v) })}
+                />
+              )}
+              <CampoConfig
+                etiqueta="aproximación mín. [K]"
+                valor={String(datosOp.aproximacion_minima ?? 5)}
+                onChange={(v) => onDatos({ aproximacion_minima: Number(v) })}
+              />
+              <label className="flex items-center gap-2 text-[11px] text-zinc-400">
+                <input
+                  type="checkbox"
+                  checked={datosOp.contracorriente !== false}
+                  onChange={(e) => onDatos({ contracorriente: e.target.checked })}
+                />
+                contracorriente
+              </label>
+              <p className="text-[10px] text-zinc-500">
+                Lo que pierde la corriente caliente lo gana la fría. Si las temperaturas se
+                cruzan, el equipo se rechaza: el calor no sube solo.
+              </p>
+            </>
+          )}
+
+          {/* ------------------------------------ reactor de equilibrio */}
+          {datosOp.tipo === "reactor_equilibrio" && (
+            <>
+              <EditorReaccion datos={datosOp} componentes={componentes} onDatos={onDatos} />
+              <p className="text-[10px] text-zinc-500">
+                El avance lo fija el equilibrio químico, ∏aᵢ^νᵢ = K_eq(T): no hace falta
+                cinética ni volumen. Responde a «por mucho tanque que pongas, no pasas de
+                aquí», que es el límite termodinámico del reactor cinético.
+              </p>
+            </>
+          )}
+
           <CampoConfig etiqueta="P operación [Pa]" valor={String(datosOp.P_sistema)} onChange={(v) => onDatos({ P_sistema: Number(v) })} />
         </div>
       )}

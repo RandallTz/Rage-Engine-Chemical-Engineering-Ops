@@ -237,6 +237,7 @@ class OperacionDiagrama(BaseModel):
     tipo: Literal[
         "columna", "mezclador", "divisor", "bomba", "reactor_cstr",
         "flash", "intercambiador", "valvula",
+        "separador", "compresor", "reactor_equilibrio", "intercambiador_doble",
     ]
     corrientes: dict[str, Any] = Field(
         description=(
@@ -244,7 +245,9 @@ class OperacionDiagrama(BaseModel):
             "divisor: entrada/salidas (lista). bomba: entrada/salida. "
             "reactor_cstr: entradas (lista)/salida. "
             "flash: entrada/vapor/liquido. intercambiador: entrada/salida. "
-            "valvula: entrada/salida."
+            "valvula: entrada/salida. separador: entrada/ligeros/pesados. "
+            "compresor: entrada/salida. reactor_equilibrio: entradas (lista)/salida. "
+            "intercambiador_doble: caliente_entrada/caliente_salida/frio_entrada/frio_salida."
         )
     )
     metodo: Optional[Literal["mccabe_thiele", "ponchon_savarit", "fug"]] = None
@@ -308,7 +311,44 @@ class OperacionDiagrama(BaseModel):
     )
     # --- valvula
     P_salida: Optional[float] = Field(
-        None, gt=0, description="Solo valvula: presion aguas abajo [Pa]. La expansion es isentalpica.",
+        None, gt=0,
+        description=(
+            "valvula: presion aguas abajo [Pa], expansion isentalpica. "
+            "compresor: presion de descarga [Pa]; si es menor que la de entrada el equipo "
+            "funciona como turbina y produce trabajo."
+        ),
+    )
+    # --- separador de componentes
+    recuperaciones: Optional[list[float]] = Field(
+        None,
+        description=(
+            "Solo separador: fraccion de cada componente que sale por la primera salida, "
+            "una por componente y en el mismo orden. Es una ESPECIFICACION de separacion, "
+            "no fisica: nada impide pedir una que ningun equipo real conseguiria."
+        ),
+    )
+    # --- compresor / turbina
+    eficiencia: Optional[float] = Field(
+        None, gt=0, le=1,
+        description="Solo compresor: eficiencia isentropica. 1 seria el limite reversible.",
+    )
+    # --- intercambiador de dos corrientes
+    T_salida_caliente: Optional[float] = Field(
+        None, description="Solo intercambiador_doble: T de salida del lado caliente [K].",
+    )
+    T_salida_frio: Optional[float] = Field(
+        None, description="Solo intercambiador_doble: T de salida del lado frio [K].",
+    )
+    aproximacion_minima: float = Field(
+        5.0, ge=0,
+        description=(
+            "Solo intercambiador_doble: diferencia minima de temperatura admitida [K]. "
+            "Por debajo se rechaza: si es negativa hay cruce de temperaturas y el equipo "
+            "no existe; si es muy pequena haria falta un area enorme."
+        ),
+    )
+    contracorriente: bool = Field(
+        True, description="Solo intercambiador_doble: contracorriente (por defecto) o co-corriente.",
     )
 
 

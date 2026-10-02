@@ -60,6 +60,10 @@ const CATALOGO: { tipo: TipoOperacion; etiqueta: string; grupo: string }[] = [
   { tipo: "flash", etiqueta: "Flash", grupo: "Separación" },
   { tipo: "intercambiador", etiqueta: "Intercambiador", grupo: "Térmicos" },
   { tipo: "valvula", etiqueta: "Válvula", grupo: "Térmicos" },
+  { tipo: "separador", etiqueta: "Separador", grupo: "Separación" },
+  { tipo: "compresor", etiqueta: "Compresor / turbina", grupo: "Transporte" },
+  { tipo: "reactor_equilibrio", etiqueta: "Reactor de equilibrio", grupo: "Reacción" },
+  { tipo: "intercambiador_doble", etiqueta: "Intercambiador 2 corrientes", grupo: "Térmicos" },
 ];
 
 export default function FlowsheetPage() {
@@ -164,7 +168,8 @@ export default function FlowsheetPage() {
   function agregarOperacion(tipo: TipoOperacion) {
     const PREFIJO: Partial<Record<TipoOperacion, string>> = {
       columna: "col", reactor_cstr: "r", flash: "fl",
-      intercambiador: "e", valvula: "v",
+      intercambiador: "e", valvula: "v", separador: "sep",
+      compresor: "k", reactor_equilibrio: "req", intercambiador_doble: "ic",
     };
     const opId = idLibre(PREFIJO[tipo] ?? tipo.slice(0, 3), nodes);
     const datos: DatosOperacion = {
@@ -192,6 +197,20 @@ export default function FlowsheetPage() {
       // Una valvula sin caida de presion no es una valvula: se arranca
       // con la mitad de la presion de operacion para que haga algo.
       ...(tipo === "valvula" ? { P_salida: 101325 / 2 } : {}),
+      // Valores tipicos de libro, visibles y editables: el equipo resuelve
+      // de inmediato y se ve que se supuso.
+      ...(tipo === "separador"
+        ? { recuperaciones: Array.from({ length: Math.max(nComp, 1) },
+              (_, i) => (i === 0 ? "0.95" : "0.05")).join(",") }
+        : {}),
+      ...(tipo === "compresor" ? { P_salida: 3 * 101325, eficiencia: 0.75 } : {}),
+      ...(tipo === "reactor_equilibrio"
+        ? { nu: "", A: 1e4, Ea: 45000, n_entradas: 1, con_balance_energia: false }
+        : {}),
+      ...(tipo === "intercambiador_doble"
+        ? { spec_ic: "T_salida_caliente", T_salida_caliente: 350,
+            aproximacion_minima: 5, contracorriente: true }
+        : {}),
     };
     setNodes((nds) => [
       ...nds,
@@ -288,7 +307,8 @@ export default function FlowsheetPage() {
         fracciones: datos.tipo === "divisor" ? (datos.fracciones ?? "0.5,0.5").split(",").map(Number) : null,
         con_balance_energia: datos.con_balance_energia !== false,
         reaccion:
-          datos.tipo === "reactor_cstr" && (datos.nu ?? "").trim()
+          (datos.tipo === "reactor_cstr" || datos.tipo === "reactor_equilibrio") &&
+          (datos.nu ?? "").trim()
             ? {
                 nu: (datos.nu ?? "").split(",").map((v) => Number(v.trim())),
                 A: datos.A ?? 1e4,
@@ -304,7 +324,8 @@ export default function FlowsheetPage() {
         // mandar las dos "por si acaso" convertiria un diagrama valido
         // en un error de sobre-especificacion.
         Q:
-          datos.tipo === "reactor_cstr" && datos.modo_energia === "calor_dado"
+          (datos.tipo === "reactor_cstr" && datos.modo_energia === "calor_dado") ||
+          (datos.tipo === "intercambiador_doble" && datos.spec_ic === "Q")
             ? Number(datos.Q ?? 0)
             : null,
         T_operacion:
@@ -324,7 +345,29 @@ export default function FlowsheetPage() {
           datos.tipo === "intercambiador" && datos.spec_intercambiador === "T_salida"
             ? Number(datos.T_salida ?? 0)
             : null,
-        P_salida: datos.tipo === "valvula" ? Number(datos.P_salida ?? 0) : null,
+        P_salida:
+          datos.tipo === "valvula" || datos.tipo === "compresor"
+            ? Number(datos.P_salida ?? 0)
+            : null,
+
+        // --- equipos nuevos
+        recuperaciones:
+          datos.tipo === "separador"
+            ? String(datos.recuperaciones ?? "").split(",").map((v) => Number(v.trim()))
+            : null,
+        eficiencia: datos.tipo === "compresor" ? Number(datos.eficiencia ?? 0.75) : null,
+        T_salida_caliente:
+          datos.tipo === "intercambiador_doble" && datos.spec_ic === "T_salida_caliente"
+            ? Number(datos.T_salida_caliente ?? 350)
+            : null,
+        T_salida_frio:
+          datos.tipo === "intercambiador_doble" && datos.spec_ic === "T_salida_frio"
+            ? Number(datos.T_salida_frio ?? 340)
+            : null,
+        aproximacion_minima:
+          datos.tipo === "intercambiador_doble" ? Number(datos.aproximacion_minima ?? 5) : 5,
+        contracorriente:
+          datos.tipo === "intercambiador_doble" ? datos.contracorriente !== false : true,
       });
     }
 

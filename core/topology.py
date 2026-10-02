@@ -19,6 +19,10 @@ Zona libre de pint: solo floats/np.ndarray en SI.
 import numpy as np
 from scipy.optimize import fsolve, root_scalar
 from scipy.integrate import solve_ivp
+# Backend sin ventana por defecto (ver config/graficos.py): los
+# graficar_* de aqui terminan en plt.show(), y eso bloqueaba el
+# proceso con una ventana cada vez que se importaba el modulo.
+import config.graficos  # noqa: F401  -- debe ir ANTES que pyplot
 import matplotlib.pyplot as plt
 import ternary
 import plotly.graph_objects as go

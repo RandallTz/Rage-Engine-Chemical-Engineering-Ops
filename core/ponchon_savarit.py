@@ -22,6 +22,10 @@ de la anterior), igual que en core/mccabe_thiele.py.
 """
 
 import numpy as np
+# Backend sin ventana por defecto (ver config/graficos.py): los
+# graficar_* de aqui terminan en plt.show(), y eso bloqueaba el
+# proceso con una ventana cada vez que se importaba el modulo.
+import config.graficos  # noqa: F401  -- debe ir ANTES que pyplot
 import matplotlib.pyplot as plt
 from scipy.interpolate import CubicSpline, PchipInterpolator
 from scipy.optimize import brentq, root_scalar

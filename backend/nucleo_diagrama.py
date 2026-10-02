@@ -133,6 +133,55 @@ def _construir(request):
             diagrama.agregar_valvula(
                 op.nombre, entrada=c["entrada"], salida=c["salida"], P_salida=op.P_salida,
             )
+        elif op.tipo == "separador":
+            diagrama.agregar_separador(
+                op.nombre, entrada=c["entrada"],
+                salida_ligeros=c["ligeros"], salida_pesados=c["pesados"],
+                recuperaciones=op.recuperaciones or [],
+            )
+        elif op.tipo == "compresor":
+            if op.P_salida is None:
+                raise ValueError(
+                    f"{op.nombre}: un compresor necesita la presion de descarga. "
+                    "Si es menor que la de entrada, funciona como turbina."
+                )
+            diagrama.agregar_compresor(
+                op.nombre, entrada=c["entrada"], salida=c["salida"],
+                P_salida=op.P_salida,
+                eficiencia=op.eficiencia if op.eficiencia is not None else 0.75,
+            )
+        elif op.tipo == "reactor_equilibrio":
+            if op.reaccion is None:
+                raise ValueError(
+                    f"{op.nombre}: un reactor de equilibrio necesita la reaccion "
+                    "(los coeficientes dan K_eq); sin ella no hay equilibrio que calcular."
+                )
+            if len(op.reaccion.nu) != len(request.componentes):
+                raise ValueError(
+                    f"{op.nombre}: la reaccion trae {len(op.reaccion.nu)} coeficientes y hay "
+                    f"{len(request.componentes)} componentes."
+                )
+            gestor_eq = GestorReaccion(
+                proveedor, np.asarray(op.reaccion.nu, dtype=float),
+                A=op.reaccion.A, Ea=op.reaccion.Ea,
+            )
+            entradas_eq = c.get("entradas") or ([c["entrada"]] if c.get("entrada") else [])
+            diagrama.agregar_reactor_cstr(
+                op.nombre, entrada=None, entradas=entradas_eq, salida=c["salida"],
+                nu=op.reaccion.nu, gestor_reaccion=gestor_eq,
+                modo_reaccion="equilibrio",
+                con_balance_energia=op.con_balance_energia,
+            )
+        elif op.tipo == "intercambiador_doble":
+            diagrama.agregar_intercambiador_doble(
+                op.nombre,
+                caliente_entrada=c["caliente_entrada"], caliente_salida=c["caliente_salida"],
+                frio_entrada=c["frio_entrada"], frio_salida=c["frio_salida"],
+                Q=op.Q, T_salida_caliente=op.T_salida_caliente,
+                T_salida_frio=op.T_salida_frio,
+                aproximacion_minima=op.aproximacion_minima,
+                contracorriente=op.contracorriente,
+            )
         else:
             raise ValueError(f"tipo de operacion desconocido: {op.tipo!r}")
 

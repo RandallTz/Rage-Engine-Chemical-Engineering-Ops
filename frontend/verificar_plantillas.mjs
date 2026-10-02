@@ -9,7 +9,7 @@
  */
 import { PLANTILLAS } from "./app/components/plantillas.ts";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
 const fallos = [];
 const comprobar = (c, m) => { console.log(c ? `    OK   ${m}` : `    FALLA ${m}`); if (!c) fallos.push(m); };
 
@@ -40,6 +40,20 @@ function corrientesDe(nodo, edges) {
   if (d.tipo === "reactor_cstr") {
     const n = Math.max(1, d.n_entradas ?? 1);
     const puertos = Array.from({ length: n }, (_, i) => (i === 0 ? "entrada" : `entrada_${i + 1}`));
+    return { entradas: puertos.map(entradaDe).filter(Boolean), salida: salidaDe("salida") };
+  }
+  if (d.tipo === "separador") {
+    return { entrada: entradaDe("entrada"), ligeros: salidaDe("ligeros"), pesados: salidaDe("pesados") };
+  }
+  if (d.tipo === "intercambiador_doble") {
+    return {
+      caliente_entrada: entradaDe("caliente_entrada"), caliente_salida: salidaDe("caliente_salida"),
+      frio_entrada: entradaDe("frio_entrada"), frio_salida: salidaDe("frio_salida"),
+    };
+  }
+  if (d.tipo === "reactor_equilibrio") {
+    const ne = Math.max(1, d.n_entradas ?? 1);
+    const puertos = Array.from({ length: ne }, (_, i) => (i === 0 ? "entrada" : `entrada_${i + 1}`));
     return { entradas: puertos.map(entradaDe).filter(Boolean), salida: salidaDe("salida") };
   }
   if (d.tipo === "flash") {
@@ -76,7 +90,7 @@ function construirPeticion(p) {
       // dos convertiria un diagrama valido en un error de
       // sobre-especificacion (el nucleo las rechaza a proposito).
       modo_energia: d.tipo === "reactor_cstr" ? (d.modo_energia ?? "isotermo") : "isotermo",
-      Q: d.tipo === "reactor_cstr" && d.modo_energia === "calor_dado" ? Number(d.Q ?? 0) : null,
+      Q: (d.tipo === "reactor_cstr" && d.modo_energia === "calor_dado") || (d.tipo === "intercambiador_doble" && d.spec_ic === "Q") ? Number(d.Q ?? 0) : null,
       T_operacion: d.tipo === "flash" && d.spec_flash === "isotermo" ? Number(d.T_operacion ?? 0) : null,
       fraccion_vapor: d.tipo === "flash" && d.spec_flash === "fraccion" ? Number(d.fraccion_vapor ?? 0.5) : null,
       Q_por_mol:
@@ -85,9 +99,15 @@ function construirPeticion(p) {
           ? Number(d.Q_por_mol ?? 0)
           : null,
       T_salida: d.tipo === "intercambiador" && d.spec_intercambiador === "T_salida" ? Number(d.T_salida ?? 0) : null,
-      P_salida: d.tipo === "valvula" ? Number(d.P_salida ?? 0) : null,
+      P_salida: (d.tipo === "valvula" || d.tipo === "compresor") ? Number(d.P_salida ?? 0) : null,
+      recuperaciones: d.tipo === "separador" ? String(d.recuperaciones ?? "").split(",").map((v) => Number(v.trim())) : null,
+      eficiencia: d.tipo === "compresor" ? Number(d.eficiencia ?? 0.75) : null,
+      T_salida_caliente: d.tipo === "intercambiador_doble" && (d.spec_ic ?? "T_salida_caliente") === "T_salida_caliente" ? Number(d.T_salida_caliente ?? 350) : null,
+      T_salida_frio: d.tipo === "intercambiador_doble" && d.spec_ic === "T_salida_frio" ? Number(d.T_salida_frio ?? 340) : null,
+      aproximacion_minima: d.tipo === "intercambiador_doble" ? Number(d.aproximacion_minima ?? 5) : 5,
+      contracorriente: d.tipo === "intercambiador_doble" ? d.contracorriente !== false : true,
       reaccion:
-        d.tipo === "reactor_cstr" && (d.nu ?? "").trim()
+        (d.tipo === "reactor_cstr" || d.tipo === "reactor_equilibrio") && (d.nu ?? "").trim()
           ? { nu: d.nu.split(",").map(Number), A: d.A ?? 1e4, Ea: d.Ea ?? 45000, componente_referencia: 0 }
           : null,
       con_cinetica: d.con_cinetica !== false,

@@ -2,7 +2,8 @@ import type { Edge, Node } from "@xyflow/react";
 
 export type TipoOperacion =
   | "columna" | "mezclador" | "divisor" | "bomba" | "reactor_cstr"
-  | "flash" | "intercambiador" | "valvula";
+  | "flash" | "intercambiador" | "valvula"
+  | "separador" | "compresor" | "reactor_equilibrio" | "intercambiador_doble";
 export type MetodoColumna = "mccabe_thiele" | "ponchon_savarit" | "fug";
 
 export interface DatosOperacion extends Record<string, unknown> {
@@ -54,6 +55,24 @@ export function puertosDe(datos: DatosOperacion): PuertosOperacion {
       return { entrada: ["entrada"], salida: ["salida"] };
     case "valvula":
       return { entrada: ["entrada"], salida: ["salida"] };
+    case "separador":
+      return { entrada: ["entrada"], salida: ["ligeros", "pesados"] };
+    case "compresor":
+      return { entrada: ["entrada"], salida: ["salida"] };
+    case "intercambiador_doble":
+      // Cuatro puertos: dos corrientes que se cruzan. Es el unico equipo
+      // cuyas dos entradas pueden venir de ramas distintas del diagrama.
+      return {
+        entrada: ["caliente_entrada", "frio_entrada"],
+        salida: ["caliente_salida", "frio_salida"],
+      };
+    case "reactor_equilibrio": {
+      const ne = Math.max(1, datos.n_entradas ?? 1);
+      return {
+        entrada: Array.from({ length: ne }, (_, i) => (i === 0 ? "entrada" : `entrada_${i + 1}`)),
+        salida: ["salida"],
+      };
+    }
     case "reactor_cstr": {
       // Un reactor real recibe varias corrientes (fresca + reciclo +
       // inyeccion). Los puertos se generan segun n_entradas.
@@ -101,6 +120,13 @@ export function variablesDeOperacion(datos: DatosOperacion): string[] {
   }
   if (datos.tipo === "intercambiador") return ["Q_por_mol", "Q", "beta_salida"];
   if (datos.tipo === "valvula") return ["beta_salida", "caida_P"];
+  if (datos.tipo === "separador") return [];  // todo queda en las corrientes
+  if (datos.tipo === "compresor") return ["W", "T_ideal", "razon_P"];
+  if (datos.tipo === "intercambiador_doble") return ["Q", "aproximacion"];
+  if (datos.tipo === "reactor_equilibrio") {
+    // Sin V: el equilibrio no depende del tamano del tanque.
+    return ["xi", "X", "T", "K_eq"];
+  }
   if (datos.tipo === "reactor_cstr") {
     // xi (avance) y X (conversion) son dos formas de decir lo mismo y el
     // sistema convierte entre ellas; V y T solo existen si se activa la
@@ -131,6 +157,10 @@ export const UNIDAD: Record<string, string> = {
   V_barra: "mol/s",
   xi: "mol/s",
   V: "m³",
+  W: "W",
+  Q: "W",
+  T_ideal: "K",
+  aproximacion: "K",
 };
 
 /**
@@ -228,6 +258,27 @@ export function corrientesDeOperacion(
     const liquido = salidaDe("liquido");
     if (!entrada || !vapor || !liquido) return null;
     return { entrada, vapor, liquido };
+  }
+  if (datos.tipo === "separador") {
+    const entrada = entradaDe("entrada");
+    const ligeros = salidaDe("ligeros");
+    const pesados = salidaDe("pesados");
+    if (!entrada || !ligeros || !pesados) return null;
+    return { entrada, ligeros, pesados };
+  }
+  if (datos.tipo === "intercambiador_doble") {
+    const ce = entradaDe("caliente_entrada");
+    const cs = salidaDe("caliente_salida");
+    const fe = entradaDe("frio_entrada");
+    const fs = salidaDe("frio_salida");
+    if (!ce || !cs || !fe || !fs) return null;
+    return { caliente_entrada: ce, caliente_salida: cs, frio_entrada: fe, frio_salida: fs };
+  }
+  if (datos.tipo === "reactor_equilibrio") {
+    const entradas = puertos.entrada.map(entradaDe).filter(Boolean) as string[];
+    const salida = salidaDe("salida");
+    if (entradas.length === 0 || !salida) return null;
+    return { entradas, salida };
   }
   const entrada = entradaDe("entrada");
   const salida = salidaDe("salida");

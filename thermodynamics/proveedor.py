@@ -9,6 +9,11 @@ import numpy as np
 from thermo.chemical import Chemical
 from thermo.unifac import UNIFAC
 
+#: Constante de los gases [J/(mol K)]. El mismo valor que usa
+#: thermodynamics/reaccion.py, para que k = Cp/(Cp-R) y van't Hoff no
+#: arrastren constantes distintas.
+R_GAS = 8.31446
+
 
 class ProveedorTermodinamico:
     def __init__(self, nombres_componentes):
@@ -36,6 +41,41 @@ class ProveedorTermodinamico:
         self.actualizar_estado(T_kelvin)
         # Cplm devuelve J/(mol*K) nativamente en thermo
         return np.array([comp.Cplm for comp in self.componentes], dtype=float)
+
+    def capacidades_calorificas_gas(self, T_kelvin):
+        """
+        Cp del GAS ideal [J/(mol K)] (Cpgm de 'thermo').
+
+        Hasta ahora el proyecto solo necesitaba el Cp del liquido: las
+        entalpias de vapor se construyen como h_L + DHvap, y la variacion
+        de esa suma con T ya ES el Cp del vapor, asi que no hacia falta
+        pedirlo aparte.
+
+        Lo necesita la COMPRESION: la relacion isentropica del gas ideal
+        pide k = Cp/Cv = Cp/(Cp - R), y eso no se puede sacar de las
+        entalpias de liquido.
+        """
+        self.actualizar_estado(T_kelvin)
+        return np.array([comp.Cpgm for comp in self.componentes], dtype=float)
+
+    def exponente_isentropico(self, T_kelvin, y_mezcla):
+        """
+        k = Cp/Cv del gas ideal para la mezcla, ponderando Cp por
+        composicion: k = Cp_mezcla / (Cp_mezcla - R).
+
+        Es la aproximacion de GAS IDEAL. Coherente con el resto del
+        proyecto, que ya supone fase vapor ideal en el equilibrio, y por
+        tanto hereda el mismo limite: a presiones altas o cerca de la
+        critica deja de valer.
+        """
+        y = np.asarray(y_mezcla, dtype=float)
+        cp = float(np.dot(y, self.capacidades_calorificas_gas(T_kelvin)))
+        if cp <= R_GAS:
+            raise ValueError(
+                f"El Cp de gas de esta mezcla a {T_kelvin:.2f} K sale {cp:.4g} J/(mol K), "
+                f"que no supera a R={R_GAS}. Sin Cp > R no hay un k = Cp/(Cp-R) fisico."
+            )
+        return cp / (cp - R_GAS)
 
     def propiedades_caloricas(self, T_kelvin):
         """
