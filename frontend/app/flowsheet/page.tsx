@@ -32,6 +32,7 @@ import {
   puertosDe,
   corrientesDeOperacion,
   metodoPorDefecto,
+  listaReacciones,
   type RespuestaResolver,
 } from "./modelo";
 import EsperaCalculo from "../components/EsperaCalculo";
@@ -315,17 +316,29 @@ export default function FlowsheetPage() {
         indice_HK: datos.metodo === "fug" ? datos.indice_HK ?? 1 : null,
         fracciones: datos.tipo === "divisor" ? (datos.fracciones ?? "0.5,0.5").split(",").map(Number) : null,
         con_balance_energia: datos.con_balance_energia !== false,
-        reaccion:
-          (datos.tipo === "reactor_cstr" || datos.tipo === "reactor_equilibrio" ||
-            datos.tipo === "reactor_pfr") &&
-          (datos.nu ?? "").trim()
-            ? {
-                nu: (datos.nu ?? "").split(",").map((v) => Number(v.trim())),
-                A: datos.A ?? 1e4,
-                Ea: datos.Ea ?? 45000,
-                componente_referencia: 0,
-              }
-            : null,
+        // La estequiometria, una reaccion o varias.
+        //
+        // Con UNA se manda en 'reaccion', exactamente como antes: asi la
+        // peticion de un diagrama que ya existia no cambia ni un byte, y
+        // el pool sigue diciendo 'r1.xi'. Con varias se manda en
+        // 'reacciones' y el servidor rechaza que lleguen los dos campos.
+        ...(() => {
+          const esReactor =
+            datos.tipo === "reactor_cstr" || datos.tipo === "reactor_equilibrio" ||
+            datos.tipo === "reactor_pfr";
+          if (!esReactor) return { reaccion: null, reacciones: null };
+          const lista = listaReacciones(datos)
+            .filter((r) => (r.nu ?? "").trim())
+            .map((r) => ({
+              nu: (r.nu ?? "").split(",").map((v) => Number(v.trim())),
+              A: r.A ?? 1e4,
+              Ea: r.Ea ?? 45000,
+              componente_referencia: 0,
+            }));
+          if (lista.length === 0) return { reaccion: null, reacciones: null };
+          if (lista.length === 1) return { reaccion: lista[0], reacciones: null };
+          return { reaccion: null, reacciones: lista };
+        })(),
         con_cinetica: datos.con_cinetica !== false,
         modo_energia: datos.tipo === "reactor_cstr" ? (datos.modo_energia ?? "isotermo") : "isotermo",
 

@@ -193,8 +193,9 @@ la misma definición**. Es la razón de existir de
 | `tests/validar_especificaciones.py` | Especificaciones de diseño contra el camino directo, a través de un reciclo, y barridos ([§13](13-especificaciones.md)) |
 | `tests/validar_api_especificaciones.py` | **La frontera HTTP de `/diagrama/*`**: que el endpoint dé el mismo número que el núcleo, los códigos de error, y que la respuesta serialice ([§13.10](13-especificaciones.md)) |
 | `tests/validar_api.py` | **La frontera HTTP del resto**: los presets se reenvían a su propio endpoint, los códigos de error, y que ninguna respuesta lleve `NaN` (que no es JSON válido) |
+| `tests/validar_varias_reacciones.py` | **Varias reacciones**: partir una en dos mitades idénticas da lo mismo que la entera; equilibrio simultáneo; el diagrama completo ([§9.16](09-reactor-cstr.md)) |
 | `tests/validar_termodinamica.py` | ELV, topología reactiva, azeótropos |
-| `frontend/verificar_*.mjs` | Interfaz real en navegador (14 suites). Se lanzan todas con `node verificar_todo.mjs`, que mira el **código de salida** y no la salida de texto |
+| `frontend/verificar_*.mjs` | Interfaz real en navegador (15 suites). Se lanzan todas con `node verificar_todo.mjs`, que mira el **código de salida** y no la salida de texto |
 
 Las suites de navegador usan `puppeteer-core`: **no comprueban que el
 componente renderice, sino que el número correcto llegue a la pantalla**.

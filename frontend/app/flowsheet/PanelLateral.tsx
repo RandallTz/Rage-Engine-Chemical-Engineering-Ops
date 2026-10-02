@@ -9,6 +9,11 @@ import {
   MetodoColumna,
   metodosDisponibles,
   ecuacionReaccion,
+  listaReacciones,
+  guardarReacciones,
+  A_POR_DEFECTO,
+  EA_POR_DEFECTO,
+  type ReaccionUI,
   variablesDeCorriente,
   variablesDeOperacion,
   etiquetaVariable,
@@ -741,24 +746,76 @@ function EditorReaccion({
   componentes: string[];
   onDatos: (cambio: Partial<DatosOperacion>) => void;
 }) {
-  const coefs = componentes.map((_, i) => {
-    const partes = (datos.nu ?? "").split(",");
-    const v = Number((partes[i] ?? "").trim());
-    return Number.isFinite(v) ? v : 0;
-  });
+  const reacciones = listaReacciones(datos);
+  const varias = reacciones.length > 1;
+  const nEntradas = Math.max(1, datos.n_entradas ?? 1);
 
-  const escribir = (indice: number, valor: number) => {
-    const nuevos = [...coefs];
-    nuevos[indice] = valor;
-    onDatos({ nu: nuevos.join(",") });
+  const coefsDe = (r: ReaccionUI) =>
+    componentes.map((_, i) => {
+      const partes = (r.nu ?? "").split(",");
+      const v = Number((partes[i] ?? "").trim());
+      return Number.isFinite(v) ? v : 0;
+    });
+
+  const cambiarReaccion = (j: number, cambio: Partial<ReaccionUI>) => {
+    onDatos(guardarReacciones(reacciones.map((r, k) => (k === j ? { ...r, ...cambio } : r))));
   };
 
-  const ecuacion = ecuacionReaccion(coefs.join(","), componentes);
-  const nEntradas = Math.max(1, datos.n_entradas ?? 1);
+  const escribirCoef = (j: number, indice: number, valor: number) => {
+    const nuevos = [...coefsDe(reacciones[j])];
+    nuevos[indice] = valor;
+    cambiarReaccion(j, { nu: nuevos.join(",") });
+  };
+
+  const anadirReaccion = () => {
+    // La nueva arranca VACIA, no copiando la anterior: dos reacciones con
+    // la misma estequiometria son indistinguibles y el sistema que reparte
+    // los avances sale singular. Copiarla parece un atajo amable y lleva
+    // derecho a un error que cuesta entender.
+    onDatos(guardarReacciones([
+      ...reacciones,
+      { nu: componentes.map(() => 0).join(","), A: A_POR_DEFECTO, Ea: EA_POR_DEFECTO },
+    ]));
+  };
+
+  const quitarReaccion = (j: number) => {
+    onDatos(guardarReacciones(reacciones.filter((_, k) => k !== j)));
+  };
 
   return (
     <>
-      <div className="text-[10px] uppercase tracking-wide text-zinc-500">Reacción</div>
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] uppercase tracking-wide text-zinc-500">
+          {varias ? `Reacciones (${reacciones.length})` : "Reacción"}
+        </span>
+        <button
+          onClick={anadirReaccion}
+          className="rounded border border-zinc-700 px-1.5 py-0.5 text-[10px] text-zinc-400 hover:border-emerald-500 hover:text-emerald-300"
+          title="Casi ningún sistema real tiene una sola reacción. Añadir otra hace que los avances pasen a llamarse ξ₀, ξ₁… y que el calor y el balance sumen las dos."
+        >
+          + reacción
+        </button>
+      </div>
+
+      {reacciones.map((reaccion, j) => {
+      const coefs = coefsDe(reaccion);
+      const escribir = (indice: number, valor: number) => escribirCoef(j, indice, valor);
+      const ecuacion = ecuacionReaccion(coefs.join(","), componentes);
+      return (
+      <div key={j} className={varias ? "space-y-1 rounded border border-zinc-800 bg-zinc-900/40 p-2" : "space-y-1"}>
+      {varias && (
+        <div className="flex items-center justify-between pb-0.5">
+          <span className="font-mono text-[10px] text-emerald-400">
+            ξ{"₀₁₂₃₄₅₆₇₈₉"[j] ?? j} — reacción {j + 1}
+          </span>
+          <button
+            onClick={() => quitarReaccion(j)}
+            className="text-[10px] text-zinc-500 hover:text-red-400"
+          >
+            quitar
+          </button>
+        </div>
+      )}
       <div className="space-y-1">
         {componentes.map((nombre, i) => {
           const papel = coefs[i] < 0 ? "reactivo" : coefs[i] > 0 ? "producto" : "ninguno";
@@ -812,6 +869,35 @@ function EditorReaccion({
         )}
       </div>
 
+      {/* Arrhenius va DENTRO de cada reacción: cada una tiene su propia
+          velocidad, y es justo esa diferencia la que decide la
+          selectividad. Tenerlo fuera sugeriría que lo comparten. */}
+      {datos.con_cinetica !== false && (
+        <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+          <CampoConfig
+            etiqueta="A (Arrhenius)"
+            valor={String(reaccion.A ?? A_POR_DEFECTO)}
+            onChange={(v) => cambiarReaccion(j, { A: Number(v) })}
+          />
+          <CampoConfig
+            etiqueta="Ea [J/mol]"
+            valor={String(reaccion.Ea ?? EA_POR_DEFECTO)}
+            onChange={(v) => cambiarReaccion(j, { Ea: Number(v) })}
+          />
+        </div>
+      )}
+      </div>
+      );
+      })}
+
+      {varias && (
+        <p className="text-[10px] leading-snug text-zinc-500">
+          Los avances se llaman ξ₀, ξ₁…, y hacen falta tantos datos como reacciones: los avances,
+          o las fracciones de salida de tantos componentes como reacciones. Una sola conversión X
+          no basta — no dice cómo se reparte el reactivo entre ellas.
+        </p>
+      )}
+
       <label className="block pt-1 text-[10px] text-zinc-500">corrientes de entrada</label>
       <div className="flex items-center gap-1.5">
         <button
@@ -843,12 +929,7 @@ function EditorReaccion({
         />
         resolver con cinética
       </label>
-      {datos.con_cinetica !== false ? (
-        <>
-          <CampoConfig etiqueta="A (Arrhenius)" valor={String(datos.A ?? 1e4)} onChange={(v) => onDatos({ A: Number(v) })} />
-          <CampoConfig etiqueta="Ea [J/mol]" valor={String(datos.Ea ?? 45000)} onChange={(v) => onDatos({ Ea: Number(v) })} />
-        </>
-      ) : (
+      {datos.con_cinetica === false && (
         <p className="text-[10px] leading-snug text-zinc-500">
           Sin cinética el reactor solo hace balances: hay que darle el avance ξ o la conversión X, y no se
           puede dimensionar el volumen.

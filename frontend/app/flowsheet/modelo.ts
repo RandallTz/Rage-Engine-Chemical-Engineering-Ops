@@ -9,6 +9,60 @@ export type TipoOperacion =
   | "reactor_pfr" | "absorbedor";
 export type MetodoColumna = "mccabe_thiele" | "ponchon_savarit" | "fug";
 
+/** Una reaccion tal y como la edita la interfaz. */
+export interface ReaccionUI {
+  /** Coeficientes como texto, uno por componente: "-1,-1,1,0". */
+  nu: string;
+  /** Factor preexponencial de Arrhenius. */
+  A: number;
+  /** Energia de activacion [J/mol]. */
+  Ea: number;
+}
+
+export const A_POR_DEFECTO = 1e4;
+export const EA_POR_DEFECTO = 45000;
+
+/**
+ * Las reacciones de una operacion, vengan de donde vengan.
+ *
+ * Un diagrama guardado antes de que existieran varias reacciones trae
+ * `nu`/`A`/`Ea` y nada mas; uno nuevo con varias trae `reacciones`. Esta
+ * funcion devuelve siempre una lista, asi que el resto del codigo no tiene
+ * que saber cual de los dos formatos esta leyendo -- y por tanto no puede
+ * olvidarse de uno.
+ */
+export function listaReacciones(datos: DatosOperacion): ReaccionUI[] {
+  if (datos.reacciones && datos.reacciones.length > 0) return datos.reacciones;
+  return [{
+    nu: datos.nu ?? "",
+    A: datos.A ?? A_POR_DEFECTO,
+    Ea: datos.Ea ?? EA_POR_DEFECTO,
+  }];
+}
+
+/**
+ * Guarda la lista, manteniendo `nu`/`A`/`Ea` sincronizados con la primera.
+ *
+ * Esa sincronia es lo que permite que un diagrama con UNA reaccion siga
+ * siendo exactamente el de antes: mismo campo, mismo enlace compartible,
+ * misma peticion al servidor. Y si alguien abre ese diagrama en una
+ * version anterior de la interfaz, la primera reaccion sigue ahi.
+ */
+export function guardarReacciones(lista: ReaccionUI[]): Partial<DatosOperacion> {
+  const primera = lista[0] ?? { nu: "", A: A_POR_DEFECTO, Ea: EA_POR_DEFECTO };
+  return {
+    reacciones: lista.length > 1 ? lista : undefined,
+    nu: primera.nu,
+    A: primera.A,
+    Ea: primera.Ea,
+  };
+}
+
+/** Cuantas reacciones tiene una operacion. */
+export function nReacciones(datos: DatosOperacion): number {
+  return listaReacciones(datos).length;
+}
+
 export interface DatosOperacion extends Record<string, unknown> {
   clase: "operacion";
   tipo: TipoOperacion;
@@ -19,11 +73,18 @@ export interface DatosOperacion extends Record<string, unknown> {
   indice_HK?: number; // solo fug: componente clave pesado
   fracciones?: string; // solo divisor
   con_balance_energia?: boolean; // solo columna: separar materia de energia
-  // solo reactor_cstr: la estequiometria se escribe como texto ("-1,-1,1")
-  // porque hay un coeficiente POR COMPONENTE y la lista puede cambiar.
+  // Reactores: la estequiometria se escribe como texto ("-1,-1,1") porque
+  // hay un coeficiente POR COMPONENTE y la lista puede cambiar.
+  //
+  // `nu`/`A`/`Ea` son la PRIMERA reaccion y siguen ahi por compatibilidad:
+  // estan dentro de cada diagrama guardado y de cada enlace compartido que
+  // alguien haya generado. `reacciones`, cuando existe, es la lista
+  // completa y manda sobre ellos. Se leen siempre con `listaReacciones`,
+  // que es lo que evita que haya dos sitios donde mirar.
   nu?: string;
   A?: number;
   Ea?: number;
+  reacciones?: ReaccionUI[];
   con_cinetica?: boolean;
   /** solo reactor_cstr: cuantas corrientes de entrada acepta (>= 1) */
   n_entradas?: number;
@@ -102,6 +163,27 @@ export function puertosDe(datos: DatosOperacion): PuertosOperacion {
 }
 
 /** Variables propias de la operacion (las de las corrientes viven en las corrientes). */
+/**
+ * Los nombres de los avances en el pool, con la MISMA regla que el nucleo
+ * (ver _claves_xi en core/diagrama_corrientes.py): `xi` con una reaccion,
+ * `xi0`, `xi1`, ... con varias.
+ *
+ * Que la regla este escrita dos veces -- aqui y en Python -- es una
+ * duplicacion real, y la alternativa seria pedirle al servidor la lista de
+ * variables antes de poder dibujar un reactor. Se elige duplicar la regla
+ * y que una suite de navegador compruebe que las dos coinciden, porque la
+ * interfaz necesita esos nombres ANTES de la primera resolucion.
+ */
+export function clavesAvance(datos: DatosOperacion): string[] {
+  const n = nReacciones(datos);
+  return n === 1 ? ["xi"] : Array.from({ length: n }, (_, j) => `xi${j}`);
+}
+
+function clavesEquilibrio(datos: DatosOperacion): string[] {
+  const n = nReacciones(datos);
+  return n === 1 ? ["K_eq"] : Array.from({ length: n }, (_, j) => `K_eq${j}`);
+}
+
 export function variablesDeOperacion(datos: DatosOperacion): string[] {
   if (datos.tipo === "columna") {
     if (datos.metodo === "fug") {
@@ -139,11 +221,11 @@ export function variablesDeOperacion(datos: DatosOperacion): string[] {
   if (datos.tipo === "separador") return [];  // todo queda en las corrientes
   if (datos.tipo === "compresor") return ["W", "T_ideal", "razon_P"];
   if (datos.tipo === "intercambiador_doble") return ["Q", "aproximacion"];
-  if (datos.tipo === "reactor_pfr") return ["xi", "X", "V", "T"];
+  if (datos.tipo === "reactor_pfr") return [...clavesAvance(datos), "X", "V", "T"];
   if (datos.tipo === "absorbedor") return ["N", "T"];
   if (datos.tipo === "reactor_equilibrio") {
     // Sin V: el equilibrio no depende del tamano del tanque.
-    return ["xi", "X", "T", "K_eq"];
+    return [...clavesAvance(datos), "X", "T", ...clavesEquilibrio(datos)];
   }
   if (datos.tipo === "reactor_cstr") {
     // xi (avance) y X (conversion) son dos formas de decir lo mismo y el
@@ -152,7 +234,7 @@ export function variablesDeOperacion(datos: DatosOperacion): string[] {
     // T siempre: un tanque tiene temperatura haya o no cinetica, y su
     // salida sale a esa T. V solo existe si hay cinetica (sin ella no hay
     // forma de relacionar tamano y avance).
-    const base = ["xi", "X", "T"];
+    const base = [...clavesAvance(datos), "X", "T"];
     return datos.con_cinetica === false ? base : [...base, "V"];
   }
   return [];
@@ -214,12 +296,29 @@ export function metodoPorDefecto(nComponentes: number): MetodoColumna {
   return nComponentes === 2 ? "mccabe_thiele" : "fug";
 }
 
+const SUBINDICES = "₀₁₂₃₄₅₆₇₈₉";
+
+function subindice(digitos: string): string {
+  return [...digitos].map((d) => SUBINDICES[Number(d)] ?? d).join("");
+}
+
 export function etiquetaVariable(variable: string, componentes: string[]): string {
   if (esFraccionMolar(variable)) {
     const i = Number(variable.slice(1));
     return `x ${componentes[i] ?? i}`;
   }
   if (variable === "xi") return "ξ (avance)";
+  // Con varias reacciones: ξ₀, ξ₁, ... Los subindices se escriben con los
+  // caracteres Unicode y no con <sub>, porque esta funcion devuelve texto
+  // plano y lo consumen tanto la tabla como los atributos title.
+  if (/^xi\d+$/.test(variable)) {
+    const j = variable.slice(2);
+    return `ξ${subindice(j)} (avance ${Number(j) + 1})`;
+  }
+  if (/^K_eq\d+$/.test(variable)) {
+    const j = variable.slice(4);
+    return `K_eq${subindice(j)} (reacción ${Number(j) + 1})`;
+  }
   if (variable === "X") return "X (conversión)";
   if (variable === "recuperacion_LK_D") return "recup. clave ligero → destilado";
   if (variable === "recuperacion_HK_B") return "recup. clave pesado → fondos";

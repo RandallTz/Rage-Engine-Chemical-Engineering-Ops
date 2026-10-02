@@ -1002,5 +1002,25 @@ No basta con el núcleo: el pool tiene que nombrarlas, el contador de grados de 
 
 **Un límite que ya existía y que conviene no confundir con esto:** la dirección «dados $T$ y $V$, hallar $\xi$» no la resuelve el motor de punto fijo, porque $\xi$ necesita $x_{salida}$ y $x_{salida}$ necesita $\xi$. **Pasa igual con una reacción** —se comprobó— y para eso está `resolver_con_cinetica`, que plantea las dos ecuaciones a la vez. No es una regresión del cambio a varias reacciones.
 
+### ✅ En la API y en la interfaz (Completado)
+- `OperacionDiagrama.reacciones` (lista) junto al `reaccion` de siempre. Mandar los dos **se rechaza**: no hay forma de saber cuál gana. Con una sola reacción la petición no cambia ni un byte, así que un diagrama guardado o un enlace compartido sigue funcionando igual.
+- **La validación estaba triplicada** —CSTR, reactor de equilibrio y PFR hacían cada uno su copia del mismo chequeo— y con el campo nuevo habrían sido seis copias. Ahora hay una: `_reaccion_de`, que además dice el motivo en los términos de cada equipo (el de equilibrio la necesita para $K_{eq}$, el PFR para tener algo que integrar).
+- **El editor del panel** permite añadir y quitar reacciones. La nueva arranca **vacía, no copiando la anterior**: dos reacciones con la misma estequiometría son indistinguibles y el sistema que reparte los avances sale singular. Copiarla parece un atajo amable y lleva derecho a un error que cuesta entender.
+- **Arrhenius va DENTRO de cada reacción.** Cada una tiene su propia velocidad, y es justo esa diferencia la que decide la selectividad; tenerlo fuera sugeriría que lo comparten.
+- `nu`/`A`/`Ea` se mantienen sincronizados con la primera reacción. Eso es lo que permite abrir un diagrama de varias reacciones en una versión anterior de la interfaz y que al menos la principal siga ahí.
+
+**La regla de nombres está escrita dos veces**, en `clavesAvance` (TypeScript) y `_claves_xi` (Python), y eso es una duplicación real. La alternativa sería pedirle al servidor la lista de variables antes de poder dibujar un reactor, y la interfaz las necesita **antes** de la primera resolución. Se elige duplicar la regla y que una suite de navegador compruebe que las dos coinciden.
+
+### Verificación de la interfaz
+`frontend/verificar_varias_reacciones.mjs`, 24 comprobaciones. La que justifica la suite: **el número de la pantalla es el del núcleo**. Se monta el reactor con las dos reacciones por la interfaz y se exige que aparezcan **ξ₀ = 8.240 y ξ₁ = 20.152**, etiquetados como tales y no como dos números sueltos, con sus dos $K_{eq}$ (4.139 y 487.983). Y que la petición mande `reacciones` **sin** mandar también `reaccion`.
+
+Arranca desde un diagrama en el formato ANTIGUO (`nu`/`A`/`Ea`, sin `reacciones`), que es exactamente donde está un diagrama ya guardado, y comprueba que no cambia nada hasta que se añade la segunda.
+
+### ⚠ Tres errores míos en esa suite, y uno que no era mío
+- El puerto de entrada se llama `entrada`, no `entrada0`. Con el nombre mal la arista no se mapea, `construirPeticion` lanza *«le faltan corrientes conectadas»* y el `waitForFunction` agotaba **tres minutos sin decir nada**. Se añadió a la espera que también reconozca el error y vuelque lo que hay en pantalla: un timeout ciego es el peor diagnóstico posible.
+- `innerText` **aplica `text-transform`**, y la cabecera del panel lleva `uppercase`: llega como «REACCIONES (2)». Las regex sensibles a mayúsculas comparaban contra un texto que el DOM no contiene.
+- La interfaz formatea con `formatear`, que redondea a tres decimales, así que hay que buscar `8.240` y no `8.2395`.
+- **Y el que no era mío:** las peticiones iban a un **socket huérfano**. Al detener un uvicorn anterior, el puerto 8001 se quedó con dos listeners —el nuevo proceso y el socket del muerto— y las peticiones caían en el viejo, que servía los modelos de Pydantic sin el campo `reacciones`. El síntoma era idéntico a un error de código: el adaptador nuevo respondía con su mensaje nuevo, pero `op.reacciones` llegaba vacío. Se vio al mirar `netstat` y encontrar **dos** líneas en el mismo puerto. Es el segundo puerto que este proyecto pierde así.
+
 ### ⬜ Lo que a propósito NO se generaliza
 La **transformación de Barbosa-Doherty** (`core/transformaciones.py`) y las curvas residuales reactivas siguen siendo de una sola reacción. Su extensión a varias **no es «el mismo código con un índice más»**: es otra construcción, con un conjunto de componentes de referencia en vez de uno. Se avisa con un error claro en vez de dejar que se use fuera de su rango.

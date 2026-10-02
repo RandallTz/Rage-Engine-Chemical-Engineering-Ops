@@ -25,6 +25,57 @@ from backend.schemas import (
 )
 
 
+def _reaccion_de(op, componentes, proveedor, que_necesita):
+    """
+    La estequiometria y la cinetica de una operacion, venga de 'reaccion'
+    (una) o de 'reacciones' (varias).
+
+    Existe porque esta validacion estaba TRIPLICADA -- CSTR, reactor de
+    equilibrio y PFR hacian cada uno su copia del mismo chequeo-- y tres
+    copias de una regla son tres sitios donde puede divergir. Con el campo
+    nuevo habrian sido seis.
+
+    Devuelve (nu, gestor): nu es un vector con una reaccion y una matriz
+    n_reacciones x n_componentes con varias, que es exactamente lo que
+    GestorReaccion y los reactores esperan.
+
+    `que_necesita` es el motivo por el que esa operacion no puede
+    funcionar sin reaccion, para poder decirlo en sus propios terminos: un
+    reactor de equilibrio la necesita para K_eq y un PFR para tener algo
+    que integrar.
+    """
+    if op.reaccion is not None and op.reacciones:
+        raise ValueError(
+            f"{op.nombre}: llegaron 'reaccion' y 'reacciones' a la vez. Usa uno de los dos: "
+            "'reaccion' para una sola, 'reacciones' para varias."
+        )
+    especificaciones = list(op.reacciones) if op.reacciones else (
+        [op.reaccion] if op.reaccion is not None else [])
+    if not especificaciones:
+        raise ValueError(f"{op.nombre}: {que_necesita}")
+
+    n = len(componentes)
+    for j, e in enumerate(especificaciones):
+        if len(e.nu) != n:
+            cual = f" (reaccion {j})" if len(especificaciones) > 1 else ""
+            raise ValueError(
+                f"{op.nombre}: la reaccion{cual} trae {len(e.nu)} coeficientes y hay {n} "
+                "componentes. Debe haber uno por componente, en el mismo orden."
+            )
+
+    filas = np.array([e.nu for e in especificaciones], dtype=float)
+    # Una sola reaccion viaja como VECTOR, no como matriz de una fila: es
+    # lo que mantiene el pool diciendo 'r1.xi' y no 'r1.xi0', y con ello
+    # todos los diagramas guardados y los enlaces ya compartidos.
+    nu = filas[0] if len(especificaciones) == 1 else filas
+    gestor = GestorReaccion(
+        proveedor, nu,
+        A=[e.A for e in especificaciones] if len(especificaciones) > 1 else especificaciones[0].A,
+        Ea=[e.Ea for e in especificaciones] if len(especificaciones) > 1 else especificaciones[0].Ea,
+    )
+    return nu, gestor
+
+
 def _construir(request):
     """Devuelve el diagrama y, aparte, los evaluadores de cada columna (para graficar despues)."""
     proveedor = ProveedorTermodinamico(request.componentes)
@@ -79,26 +130,16 @@ def _construir(request):
                 "evaluador": evaluador, "metodo": metodo, "corrientes": c, "q": op.q,
             }
         elif op.tipo == "reactor_cstr":
-            if op.reaccion is None:
-                raise ValueError(
-                    f"{op.nombre}: un reactor necesita una reaccion "
-                    "(coeficientes estequiometricos, uno por componente)."
-                )
-            if len(op.reaccion.nu) != len(request.componentes):
-                raise ValueError(
-                    f"{op.nombre}: la reaccion trae {len(op.reaccion.nu)} coeficientes y hay "
-                    f"{len(request.componentes)} componentes. Debe haber uno por componente, en el mismo orden."
-                )
-            gestor = GestorReaccion(
-                proveedor, np.asarray(op.reaccion.nu, dtype=float),
-                A=op.reaccion.A, Ea=op.reaccion.Ea,
-            )
+            nu, gestor = _reaccion_de(
+                op, request.componentes, proveedor,
+                "un reactor necesita una reaccion (coeficientes estequiometricos, uno por "
+                "componente).")
             # 'entradas' (lista) es lo normal ahora; 'entrada' se acepta
             # por compatibilidad con diagramas guardados antes.
             entradas = c.get("entradas") or ([c["entrada"]] if c.get("entrada") else [])
             diagrama.agregar_reactor_cstr(
                 op.nombre, entrada=None, entradas=entradas, salida=c["salida"],
-                nu=op.reaccion.nu, gestor_reaccion=gestor,
+                nu=nu, gestor_reaccion=gestor,
                 con_cinetica=op.con_cinetica,
                 modo_energia=op.modo_energia,
                 Q=op.Q if op.modo_energia == "calor_dado" else None,
@@ -156,24 +197,14 @@ def _construir(request):
                 eficiencia=op.eficiencia if op.eficiencia is not None else 0.75,
             )
         elif op.tipo == "reactor_equilibrio":
-            if op.reaccion is None:
-                raise ValueError(
-                    f"{op.nombre}: un reactor de equilibrio necesita la reaccion "
-                    "(los coeficientes dan K_eq); sin ella no hay equilibrio que calcular."
-                )
-            if len(op.reaccion.nu) != len(request.componentes):
-                raise ValueError(
-                    f"{op.nombre}: la reaccion trae {len(op.reaccion.nu)} coeficientes y hay "
-                    f"{len(request.componentes)} componentes."
-                )
-            gestor_eq = GestorReaccion(
-                proveedor, np.asarray(op.reaccion.nu, dtype=float),
-                A=op.reaccion.A, Ea=op.reaccion.Ea,
-            )
+            nu_eq, gestor_eq = _reaccion_de(
+                op, request.componentes, proveedor,
+                "un reactor de equilibrio necesita la reaccion (los coeficientes dan K_eq); "
+                "sin ella no hay equilibrio que calcular.")
             entradas_eq = c.get("entradas") or ([c["entrada"]] if c.get("entrada") else [])
             diagrama.agregar_reactor_cstr(
                 op.nombre, entrada=None, entradas=entradas_eq, salida=c["salida"],
-                nu=op.reaccion.nu, gestor_reaccion=gestor_eq,
+                nu=nu_eq, gestor_reaccion=gestor_eq,
                 modo_reaccion="equilibrio",
                 con_balance_energia=op.con_balance_energia,
             )
@@ -188,24 +219,14 @@ def _construir(request):
                 contracorriente=op.contracorriente,
             )
         elif op.tipo == "reactor_pfr":
-            if op.reaccion is None:
-                raise ValueError(
-                    f"{op.nombre}: un PFR necesita la cinetica (parametros de Arrhenius). "
-                    "Sin ella no hay nada que integrar a lo largo del tubo."
-                )
-            if len(op.reaccion.nu) != len(request.componentes):
-                raise ValueError(
-                    f"{op.nombre}: la reaccion trae {len(op.reaccion.nu)} coeficientes y hay "
-                    f"{len(request.componentes)} componentes."
-                )
-            gestor_pfr = GestorReaccion(
-                proveedor, np.asarray(op.reaccion.nu, dtype=float),
-                A=op.reaccion.A, Ea=op.reaccion.Ea,
-            )
+            nu_pfr, gestor_pfr = _reaccion_de(
+                op, request.componentes, proveedor,
+                "un PFR necesita la cinetica (parametros de Arrhenius). Sin ella no hay nada "
+                "que integrar a lo largo del tubo.")
             entradas_pfr = c.get("entradas") or ([c["entrada"]] if c.get("entrada") else [])
             diagrama.agregar_reactor_pfr(
                 op.nombre, entrada=None, entradas=entradas_pfr, salida=c["salida"],
-                nu=op.reaccion.nu, gestor_reaccion=gestor_pfr,
+                nu=nu_pfr, gestor_reaccion=gestor_pfr,
             )
         elif op.tipo == "absorbedor":
             diagrama.agregar_absorbedor(

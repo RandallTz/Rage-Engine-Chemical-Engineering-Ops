@@ -277,8 +277,21 @@ class OperacionDiagrama(BaseModel):
     reaccion: Optional["ReaccionSpec"] = Field(
         None,
         description=(
-            "Solo reactor_cstr: estequiometria y cinetica. Sin ella el reactor solo resuelve "
-            "balances de materia (hay que dar el avance o la conversion), que sigue siendo util."
+            "Reactores: estequiometria y cinetica de UNA reaccion. Sin ella el reactor solo "
+            "resuelve balances de materia (hay que dar el avance o la conversion), que sigue "
+            "siendo util. Para varias reacciones usa 'reacciones'."
+        ),
+    )
+    reacciones: Optional[list["ReaccionSpec"]] = Field(
+        None,
+        description=(
+            "Reactores: VARIAS reacciones a la vez, cada una con su nu, su A y su Ea. Casi "
+            "ningun sistema real tiene una sola -- el MTBE dimeriza isobuteno como secundaria, "
+            "y las dos compiten por el mismo reactivo. "
+            "Los avances pasan a llamarse '<nombre>.xi0', '<nombre>.xi1', ... en el pool (con "
+            "una sola reaccion sigue siendo '<nombre>.xi', para no romper los diagramas ya "
+            "guardados ni los enlaces compartidos). Mandar 'reaccion' Y 'reacciones' a la vez "
+            "se rechaza: no hay forma de saber cual gana."
         ),
     )
     con_cinetica: bool = Field(
