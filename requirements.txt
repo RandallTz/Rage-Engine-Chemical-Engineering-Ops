@@ -51,3 +51,12 @@ openpyxl==3.1.5
 fastapi==0.104.1
 uvicorn==0.24.0
 pydantic==2.13.4
+# httpx entra como dependencia de fastapi, pero tests/validar_api_*.py la
+# importa directamente para hablar con la app por el transporte ASGI (sin
+# abrir puerto): va fija por derecho propio.
+#
+# OJO con esta combinacion: fastapi.testclient NO funciona aqui. El
+# starlette que arrastra fastapi 0.104 le pasa `app=` a httpx.Client, y
+# httpx 0.28 quito ese argumento. Por eso la suite de API monta el cliente
+# a mano sobre httpx.ASGITransport en vez de usar TestClient.
+httpx==0.28.1

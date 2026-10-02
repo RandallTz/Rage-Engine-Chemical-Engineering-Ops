@@ -98,7 +98,7 @@ y $Q_c$ sube de 3.1 a 13.2 MW.
 
 ```bash
 pip install -r requirements.txt
-python run_tests.py          # las 13 suites de validación, ~280 s
+python run_tests.py          # las 14 suites de validación, ~310 s
 ```
 
 Las versiones de `requirements.txt` están **fijas a propósito**: las

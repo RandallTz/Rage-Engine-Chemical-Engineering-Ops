@@ -821,10 +821,29 @@ Vale la pena dejarlo escrito, porque explica por qué esto salió barato:
 - **Un punto que falla NO tumba el barrido**: se anota el motivo y se sigue. Es lo que se quiere al explorar — ver el rango útil con sus bordes, en vez de perder 19 puntos buenos porque el vigésimo pinchaba. Verificado con dos puntos por debajo de R_min.
 - El compromiso clásico sale solo: de R=1.6 a R=10, N baja de 19.5 a 7.5 y Q_c sube de 3.1 a 13.2 MW.
 
-### Verificación
-`tests/validar_especificaciones.py`: 13 comprobaciones. Una especificación contra el camino directo, una a través de dos equipos y un reciclo, dos a la vez, cinco casos que deben rechazarse (objetivo = manipulada, rango al revés, manipulada dada como dato, objetivo inalcanzable con el rango que sí se recorre, valor inviable), y los barridos.
+### ✅ Las dos cosas en la API (Completado)
+- `POST /diagrama/resolver` acepta `especificaciones`; si vienen vacías el camino es el de siempre. `POST /diagrama/grados-libertad` también, para que el aviso en vivo cuente igual que el resultado. Y `POST /diagrama/barrido`, nuevo.
+- **La frontera comprueba solo que los nombres existan.** Es el error más fácil de cometer por HTTP y el más opaco si no se detecta ahí: una errata haría que el lazo gastara resoluciones enteras para acabar diciendo que un objetivo *"no se determina"*, que suena a problema de física. El resto lo valida `core.especificaciones`, y duplicarlo crearía dos sitios donde la regla puede divergir.
+- **`/diagrama/barrido` hace lo contrario que el resto de la API, a propósito**: un punto que no converge devuelve **200** con el punto marcado y su motivo, no un 422. El borde de la zona viable es parte de lo que se quiere ver. El 422 queda para lo que invalida el barrido entero: variable inexistente, barrer una que también se da como dato, o pasar del tope de 40 puntos — tope que existe porque cada punto es una resolución completa del diagrama.
+- Se reporta `evaluaciones`: cuántas resoluciones completas costó el lazo. Es el coste real y no debe ser una sorpresa.
 
-13/13 suites de Python.
+### ⚠ Un defecto real que destapó la suite de la API
+`tests/validar_api_especificaciones.py` no duplica la física; comprueba lo único que la frontera puede romper sola. Y en la primera pasada encontró algo que **no estaba en la frontera sino en el núcleo**:
+
+`barrido` trataba "fallar" como una sola cosa —que `resolver` lance una excepción— cuando son dos. La segunda es que **resuelva sin lanzar nada y deje la variable seguida sin determinar**, que es exactamente lo que hace una columna por debajo de su reflujo mínimo: el bloque no revienta, se declara *no disparable*. Ese punto volvía con `_completo = False`, `_error = None` y `N = None`: **se contaba como bueno, y venía vacío.**
+
+Lo interesante es **por qué la suite del núcleo no lo vio**: contaba los fallos por `_completo`, que sí era `False`. La de la API contaba por `_error`, como hace la frontera de verdad, y reportó cuatro puntos resueltos con dos de ellos vacíos.
+
+Corregido en `core/diagrama_corrientes.py`: se comprueba si llegó lo que se pidió seguir (o, sin `seguir`, si el diagrama quedó completo) y el motivo se saca de `errores_bloque`, que ya lo tenía con el número que explica el borde — `R=1.0000 <= R_min=1.1115: requeriría etapas infinitas`. Inventar un mensaje nuevo habría perdido ese $R_{min}$. Y se añadieron cuatro comprobaciones al núcleo para que el agujero no vuelva.
+
+**Y una incompatibilidad de versiones anotada de paso**: `fastapi.testclient.TestClient` no arranca con las versiones fijas del proyecto — el starlette que arrastra fastapi 0.104 le pasa `app=` a `httpx.Client`, y httpx 0.28 quitó ese argumento. La suite monta el cliente sobre `httpx.ASGITransport`, que es lo mismo por debajo y prueba la app real sin abrir puerto. `httpx` pasa a estar fija en `requirements.txt` por derecho propio.
+
+### Verificación
+`tests/validar_especificaciones.py`: 21 comprobaciones. Una especificación contra el camino directo, una a través de dos equipos y un reciclo, dos a la vez, cinco casos que deben rechazarse (objetivo = manipulada, rango al revés, manipulada dada como dato, objetivo inalcanzable con el rango que sí se recorre, valor inviable), y los barridos con sus bordes.
+
+`tests/validar_api_especificaciones.py`: 37 comprobaciones sobre la frontera HTTP. La que más vale es la que compara el $R$ del endpoint con el del núcleo **construyendo el diagrama con la misma función que usa la API** — no contra una constante escrita a mano, que se quedaría obsoleta en silencio. Y una que parece tonta y no lo es: que la respuesta serialice a JSON de verdad, porque un `float32` de NumPy pasa los tipos de Pydantic y revienta al serializar.
+
+14/14 suites de Python.
 
 ### ⬜ Lo que sigue
 Con esto, **lo que queda ya no se puede añadir "por los lados"**:

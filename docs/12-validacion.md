@@ -191,6 +191,7 @@ la misma definición**. Es la razón de existir de
 | `tests/validar_ponchon_savarit.py` | Polos, colinearidad, $Q_c/D$ mínimo, cruce con MT |
 | `tests/validar_operaciones_nuevas.py` | Separador, compresor/turbina, integración energética, PFR, absorbedor |
 | `tests/validar_especificaciones.py` | Especificaciones de diseño contra el camino directo, a través de un reciclo, y barridos ([§13](13-especificaciones.md)) |
+| `tests/validar_api_especificaciones.py` | **La frontera HTTP**: que el endpoint dé el mismo número que el núcleo, los códigos de error, y que la respuesta serialice ([§13.10](13-especificaciones.md)) |
 | `tests/validar_termodinamica.py` | ELV, topología reactiva, azeótropos |
 | `frontend/verificar_*.mjs` | Interfaz real en navegador (13 suites) |
 

@@ -18,12 +18,13 @@ from backend.schemas import (
     ComponenteInfo, ModeloTermodinamico,
     ResolverDiagramaRequest, ResolverDiagramaResponse,
     GradosLibertadRequest, GradosLibertadResponse, TablaUnidades,
+    BarridoRequest, BarridoResponse,
     MapaResidualRequest, MapaResidualResponse,
     AzeotroposRequest, AzeotroposResponse,
     PropiedadesReaccionRequest, PropiedadesReaccionResponse,
 )
 from backend.nucleo_componentes import buscar_componente, MODELOS
-from backend.nucleo_diagrama import resolver_diagrama, grados_libertad
+from backend.nucleo_diagrama import resolver_diagrama, grados_libertad, barrido
 from backend.nucleo_unidades import tabla_unidades
 from backend.ejemplos import EJEMPLOS, EJEMPLOS_POR_ID
 from backend.ejemplos_flowsheet import EJEMPLOS_FLOWSHEET, EJEMPLOS_FLOWSHEET_POR_ID
@@ -112,6 +113,11 @@ def diagrama_resolver(request: ResolverDiagramaRequest):
     """
     Flowsheet con corrientes de primera clase: manda cualquier
     subconjunto de variables y resuelve en la direccion que haga falta.
+
+    Con 'especificaciones' resuelve la pregunta inversa ("que reflujo
+    hace falta para esta pureza") mediante un lazo exterior: el objetivo
+    y la variable manipulada pueden estar en equipos distintos, con un
+    reciclo en medio.
     """
     try:
         return resolver_diagrama(request)
@@ -121,9 +127,34 @@ def diagrama_resolver(request: ResolverDiagramaRequest):
 
 @app.post("/diagrama/grados-libertad", response_model=GradosLibertadResponse)
 def diagrama_grados_libertad(request: GradosLibertadRequest):
-    """Conteo de grados de libertad SIN resolver, para avisar mientras se editan datos."""
+    """
+    Conteo de grados de libertad SIN resolver, para avisar mientras se editan datos.
+
+    Si se mandan especificaciones de diseno, cada una suma UNA ecuacion:
+    un problema al que le faltaba un dato (GL = 1) queda cerrado (GL = 0).
+    """
     try:
         return grados_libertad(request)
+    except (ValueError, RuntimeError) as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+
+@app.post("/diagrama/barrido", response_model=BarridoResponse)
+def diagrama_barrido(request: BarridoRequest):
+    """
+    Mueve UNA variable y devuelve como responde el resto.
+
+    Cada punto es una resolucion completa del diagrama, reciclos
+    incluidos: por eso el numero de puntos esta acotado en el esquema.
+
+    Un punto que no se puede resolver NO da 422 -- vuelve con su motivo
+    dentro de la respuesta, porque el borde de la zona viable es parte de
+    lo que se quiere ver. El 422 queda para lo que invalida el barrido
+    entero: una variable que no existe, o barrer una que tambien se da
+    como dato.
+    """
+    try:
+        return barrido(request)
     except (ValueError, RuntimeError) as e:
         raise HTTPException(status_code=422, detail=str(e))
 

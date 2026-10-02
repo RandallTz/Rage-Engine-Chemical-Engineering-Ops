@@ -174,6 +174,32 @@ apuntando los números.
 rango útil **con sus bordes**, en vez de perder 19 puntos buenos porque el
 vigésimo pinchaba por estar bajo $R_{\min}$.
 
+### "Fallar" son dos cosas, y la primera versión solo veía una
+
+Esto lo destapó la suite de la API, no la del núcleo, y merece quedar
+escrito porque es el patrón del error:
+
+| Cómo falla un punto | Qué hacía la primera versión |
+|---|---|
+| `resolver` **lanza** una excepción | `_error` con el tipo y el mensaje. Correcto |
+| `resolver` **no lanza**, pero deja la variable seguida sin determinar | `_completo = False`, `_error = None`, `N = None`. **Se contaba como bueno, y venía vacío** |
+
+El segundo caso es exactamente lo que hace una columna por debajo de su
+reflujo mínimo: el bloque no revienta, se declara *no disparable*. La
+suite del núcleo no lo vio porque contaba los fallos por `_completo`, que
+sí era `False`. La de la API sí, porque la frontera HTTP cuenta por
+`_error` — y reportaba cuatro puntos resueltos, dos de ellos vacíos.
+
+Ahora se comprueba si llegó **lo que se pidió seguir** (o, sin `seguir`,
+si el diagrama quedó completo) y el motivo se toma de `errores_bloque`,
+que ya lo tenía con el número que explica el borde:
+
+```
+no se determinó col1.N. R=1.0000 <= R_min=1.1115: requeriría etapas infinitas.
+```
+
+Inventar un mensaje nuevo habría perdido precisamente ese $R_{\min}$.
+
 El compromiso clásico de la destilación sale solo, sin haberlo programado:
 
 | $R$ | $N$ | $Q_c$ (MW) |
@@ -210,7 +236,7 @@ balance de energía real.
 
 ## 13.9 Qué está verificado
 
-`tests/validar_especificaciones.py`, 13 comprobaciones:
+`tests/validar_especificaciones.py`, 21 comprobaciones:
 
 | Qué | Contra qué |
 |---|---|
@@ -224,6 +250,93 @@ balance de energía real.
 La comprobación que de verdad importa es la segunda: **es la única que
 demuestra que el lazo exterior no miente**, porque compara su respuesta con
 la del método invertido directamente, que nunca pasa por el lazo.
+
+---
+
+## 13.10 La frontera HTTP
+
+Las dos cosas se exponen en la API, y ahí aparece una decisión de diseño
+que no es obvia.
+
+### Especificaciones: un campo más
+
+`POST /diagrama/resolver` acepta `especificaciones`. Si viene vacío, el
+camino es el de siempre; si no, se resuelve con el lazo exterior.
+
+```json
+{
+  "componentes": ["benzene", "toluene"],
+  "corrientes": ["alim", "dest", "fondo"],
+  "operaciones": [{"tipo": "columna", "nombre": "col1",
+                   "corrientes": {"alimentacion": "alim",
+                                  "destilado": "dest", "fondos": "fondo"},
+                   "metodo": "mccabe_thiele"}],
+  "valores": {"alim.F": 100, "alim.P": 101325, "alim.x0": 0.5,
+              "dest.x0": 0.95, "fondo.x0": 0.05, "col1.q": 1.0},
+  "especificaciones": [{"objetivo": "col1.N", "valor": 12,
+                        "manipulada": "col1.R",
+                        "minimo": 1.6, "maximo": 10.0}]
+}
+```
+
+La respuesta trae el valor que hubo que dar a la manipulada y, además,
+**cuántas resoluciones completas costó** (`evaluaciones`). Se reporta
+porque es el coste real y no debe ser una sorpresa.
+
+`POST /diagrama/grados-libertad` también las acepta, para que el aviso en
+vivo mientras se editan datos cuente igual que el resultado: una
+especificación suma una ecuación, así que el contador baja uno.
+
+**Lo que la frontera comprueba por su cuenta** es solo que los nombres
+existan en el diagrama. Es el error más fácil de cometer por HTTP y el más
+opaco si no se detecta ahí: una errata haría que el lazo gastara
+resoluciones enteras para acabar diciendo que un objetivo *"no se
+determina"*, que suena a problema de física. El resto de la validación la
+hace `core.especificaciones`, y repetirla crearía dos sitios donde la
+regla puede divergir.
+
+### Barridos: el fallo forma parte de la respuesta
+
+`POST /diagrama/barrido` hace lo contrario que el resto de la API, a
+propósito:
+
+| Qué pasa | Respuesta |
+|---|---|
+| Un punto no se puede resolver | **200**, con ese punto marcado y su motivo |
+| La variable barrida no existe | 422 |
+| Se barre una variable que **también** se da como dato | 422 |
+| Más de 40 puntos, o menos de 2 | 422 (lo rechaza el esquema) |
+
+El tope de puntos no es arbitrario: **cada punto es una resolución
+completa del diagrama**, reciclos incluidos. Sin tope, una petición de mil
+puntos ocuparía el servidor durante horas.
+
+Y el 200 con puntos fallidos es la decisión importante. Convertir un punto
+inviable en un 422 destruiría el valor del barrido: el borde de la zona
+viable **es parte de lo que se quiere ver**.
+
+### Qué está verificado de la frontera
+
+`tests/validar_api_especificaciones.py`, 37 comprobaciones. No duplica la
+física; comprueba lo único que la frontera puede romper por su cuenta:
+
+- **Que el número no cambie al cruzarla.** El $R$ que devuelve el endpoint
+  se compara con el que da el núcleo construyendo el diagrama **con la
+  misma función** que usa la API — no contra una constante escrita a mano,
+  que se quedaría obsoleta en silencio.
+- **Que los errores salgan con el código correcto**, incluidos los cinco
+  casos de rechazo y los cuatro que invalidan un barrido entero.
+- **Que el conteo de grados de libertad por HTTP** sume una ecuación y no
+  una incógnita. Es el error que ya se cometió una vez en el núcleo.
+- **Que la respuesta sea JSON de verdad.** Un `float32` de NumPy pasa los
+  tipos de Pydantic y revienta al serializar; es un fallo que no se ve
+  llamando a las funciones de Python.
+
+> **Nota de versiones.** `fastapi.testclient.TestClient` no arranca con las
+> versiones fijas de este proyecto: el starlette que arrastra fastapi
+> 0.104 le pasa `app=` a `httpx.Client`, y httpx 0.28 quitó ese argumento.
+> La suite monta el cliente a mano sobre `httpx.ASGITransport`, que es lo
+> mismo por debajo y prueba la app real sin abrir ningún puerto.
 
 ---
 

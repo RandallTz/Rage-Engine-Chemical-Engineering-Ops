@@ -13,10 +13,15 @@ from thermodynamics.reaccion import GestorReaccion
 from core.mccabe_thiele import EvaluadorMcCabeThiele, SolucionadorMcCabeThiele
 from core.ponchon_savarit import EvaluadorPonchonSavarit, SolucionadorPonchonSavarit
 from core.diagrama_corrientes import DiagramaCorrientes
+from core.especificaciones import (
+    Especificacion, grados_de_libertad_con_especificaciones,
+)
 
 from backend.schemas import (
     ResolverDiagramaRequest, ResolverDiagramaResponse, DiagramaMcCabeThiele,
     DiagramaPonchonSavarit, GradosLibertadRequest, GradosLibertadResponse,
+    BarridoRequest, BarridoResponse, PuntoBarrido, InfoEspecificaciones,
+    EspecificacionCumplida,
 )
 
 
@@ -322,15 +327,65 @@ def _diagrama_ponchon_savarit(nombre, info, pool, n_puntos_curva=80):
     )
 
 
-def resolver_diagrama(request: ResolverDiagramaRequest) -> ResolverDiagramaResponse:
-    diagrama, columnas = _construir(request)
-    resultado = diagrama.resolver(**request.valores)
+def _especificaciones_de(request):
+    """
+    Traduce las especificaciones del request y comprueba lo que la capa
+    HTTP si puede comprobar antes de gastar una resolucion: que la
+    variable manipulada exista en el diagrama.
 
-    pool = {}
-    for clave, valor in resultado["pool"].items():
+    El resto de la validacion (rango al revés, objetivo = manipulada,
+    manipulada dada tambien como dato) la hace `core.especificaciones`,
+    y sus mensajes ya son buenos; repetirla aqui solo crearia dos
+    sitios donde la regla puede divergir.
+    """
+    return [
+        Especificacion(
+            objetivo=e.objetivo, valor=e.valor, manipulada=e.manipulada,
+            minimo=e.minimo, maximo=e.maximo, tolerancia=e.tolerancia,
+        )
+        for e in request.especificaciones
+    ]
+
+
+def _comprobar_nombres(diagrama, especificaciones):
+    """
+    Un nombre mal escrito es el error mas facil de cometer desde HTTP, y
+    el mas opaco si no se detecta aqui: el lazo exterior gastaria
+    resoluciones enteras para acabar diciendo que un objetivo "no se
+    determina", que suena a problema de fisica y no a una errata.
+    """
+    conocidas = set(diagrama.todas_las_variables())
+    for e in especificaciones:
+        for papel, nombre in (("objetivo", e.objetivo), ("manipulada", e.manipulada)):
+            if nombre not in conocidas:
+                raise ValueError(
+                    f"La variable {papel} '{nombre}' no existe en este diagrama. "
+                    "Comprueba el nombre: las del pool son 'corriente.variable' "
+                    "(s1.F, s1.x0) u 'operacion.variable' (col1.R)."
+                )
+
+
+def _pool_serializable(pool):
+    limpio = {}
+    for clave, valor in pool.items():
         if valor is None:
             continue
-        pool[clave] = float(valor) if isinstance(valor, (int, float, np.floating, np.integer)) else valor
+        limpio[clave] = (
+            float(valor) if isinstance(valor, (int, float, np.floating, np.integer)) else valor
+        )
+    return limpio
+
+
+def resolver_diagrama(request: ResolverDiagramaRequest) -> ResolverDiagramaResponse:
+    diagrama, columnas = _construir(request)
+    specs = _especificaciones_de(request)
+    if specs:
+        _comprobar_nombres(diagrama, specs)
+        resultado = diagrama.resolver_con_especificaciones(specs, **request.valores)
+    else:
+        resultado = diagrama.resolver(**request.valores)
+
+    pool = _pool_serializable(resultado["pool"])
 
     diagramas = {}
     for nombre, info in columnas.items():
@@ -349,6 +404,7 @@ def resolver_diagrama(request: ResolverDiagramaRequest) -> ResolverDiagramaRespo
         diagramas=diagramas,
         masas_molares_mezcla=diagrama.masas_molares_de_mezcla(resultado["pool"]),
         reciclo=resultado.get("reciclo"),
+        especificaciones=_informe_especificaciones(resultado.get("especificaciones")),
     )
 
 
@@ -360,4 +416,68 @@ def grados_libertad(request: GradosLibertadRequest) -> GradosLibertadResponse:
     asi que el frontend debe llamarlo con retardo, no en cada tecla.
     """
     diagrama, _ = _construir(request)
-    return GradosLibertadResponse(**diagrama.grados_de_libertad(request.valores))
+    specs = _especificaciones_de(request)
+    if not specs:
+        return GradosLibertadResponse(**diagrama.grados_de_libertad(request.valores))
+    _comprobar_nombres(diagrama, specs)
+    conteo = grados_de_libertad_con_especificaciones(diagrama, request.valores, specs)
+    return GradosLibertadResponse(**conteo)
+
+
+def _informe_especificaciones(info):
+    if not info:
+        return None
+    return InfoEspecificaciones(
+        cumplidas=[EspecificacionCumplida(**c) for c in info["cumplidas"]],
+        evaluaciones=info["evaluaciones"],
+    )
+
+
+def barrido(request: BarridoRequest) -> BarridoResponse:
+    """
+    Mueve UNA variable y devuelve como responde el resto.
+
+    Un punto que falla NO tumba la peticion: se devuelve con su motivo y
+    el barrido sigue. Esto es deliberado, y es lo contrario de lo que
+    hace el resto de la API (donde un fallo es un 422): aqui el borde de
+    la zona viable es parte de la respuesta -- es justo lo que se quiere
+    ver al explorar un rango. Perder 19 puntos buenos porque el vigesimo
+    cae por debajo del reflujo minimo seria el peor comportamiento
+    posible.
+    """
+    diagrama, _ = _construir(request)
+    if request.variable not in set(diagrama.todas_las_variables()):
+        raise ValueError(
+            f"La variable '{request.variable}' no existe en este diagrama. Las del pool son "
+            "'corriente.variable' (s1.F, s1.x0) u 'operacion.variable' (col1.R)."
+        )
+    if request.variable in request.valores:
+        raise ValueError(
+            f"'{request.variable}' se barre Y se da como dato. Quitala de 'valores': el barrido "
+            "es quien le pone valor en cada punto."
+        )
+
+    filas = diagrama.barrido(
+        request.variable, request.valores_barrido, seguir=request.seguir, **request.valores
+    )
+
+    puntos = []
+    for fila in filas:
+        error = fila.get("_error")
+        pool = {
+            k: (float(v) if isinstance(v, (int, float, np.floating, np.integer)) else v)
+            for k, v in fila.items()
+            if not k.startswith("_") and k != request.variable and v is not None
+        }
+        puntos.append(PuntoBarrido(
+            valor=float(fila[request.variable]),
+            pool=pool,
+            completo=bool(fila.get("_completo")),
+            error=error,
+        ))
+
+    fallidos = sum(1 for p in puntos if p.error is not None)
+    return BarridoResponse(
+        variable=request.variable, puntos=puntos,
+        resueltos=len(puntos) - fallidos, fallidos=fallidos,
+    )

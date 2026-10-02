@@ -270,6 +270,30 @@ check("5.4 Un punto inviable se anota y el barrido sigue",
       len(fallidas) >= 1 and len(tabla2) == 4,
       f"{len(fallidas)} punto(s) bajo R_min anotados, {4-len(fallidas)} resueltos")
 
+# 5.5 a 5.8 existen por un defecto que esta misma comprobacion 5.4 NO
+# veia, y que destapo la suite de la API: 5.4 mira `_completo`, y un punto
+# bajo R_min ya salia con `_completo = False`. Pero salia tambien con
+# `_error = None` y `N = None`, porque `resolver` no LANZA nada en ese
+# caso -- el bloque simplemente se declara no disparable. Resultado: quien
+# contara los fallos por `_error` (como hace la frontera HTTP) veia cuatro
+# puntos buenos, dos de ellos vacios. Un punto inutil tiene que decir POR
+# QUE lo es.
+check("5.5 Y el motivo no está vacío: un punto inútil dice por qué",
+      all(f["_error"] for f in fallidas),
+      f"motivos presentes: {sum(1 for f in fallidas if f['_error'])}/{len(fallidas)}")
+check("5.6 El motivo nombra la variable que no llegó Y trae el R_min",
+      all("col1.N" in f["_error"] and "R_min" in f["_error"] for f in fallidas),
+      fallidas[0]["_error"][:100] if fallidas else "")
+check("5.7 Un punto bueno NO se marca con motivo",
+      all(f["_error"] is None for f in tabla2 if f["_completo"]))
+
+# Sin 'seguir' el criterio tiene que ser otro -- que el diagrama quedara
+# completo -- porque un barrido que devuelve medio pool no informa de nada.
+tabla3 = columna().barrido("col1.R", [1.0, 3.0], **BASE)
+check("5.8 Sin 'seguir', un diagrama incompleto también trae motivo",
+      tabla3[0]["_error"] is not None and tabla3[1]["_error"] is None,
+      (tabla3[0]["_error"] or "")[:100])
+
 print("\n" + "=" * 74)
 if fallos:
     print(f"FALLARON {len(fallos)}:")

@@ -359,6 +359,48 @@ class OperacionDiagrama(BaseModel):
     )
 
 
+class EspecificacionDiseno(BaseModel):
+    """
+    Una ecuacion mas: 'objetivo == valor', moviendo 'manipulada'.
+
+    La variable manipulada NO se manda en 'valores': la especificacion
+    la convierte en incognita. Mandarla en los dos sitios es un error y
+    se rechaza, porque no hay manera de saber cual de las dos cosas se
+    queria.
+    """
+    objetivo: str = Field(description="Variable del pool que se quiere fijar ('producto.x2').")
+    valor: float = Field(description="Valor que debe tomar, en SI.")
+    manipulada: str = Field(description="Variable del pool que se mueve para conseguirlo ('col1.R').")
+    minimo: float = Field(description="Extremo inferior del rango de busqueda, en SI.")
+    maximo: float = Field(description="Extremo superior del rango de busqueda, en SI.")
+    tolerancia: float = Field(
+        1e-7,
+        gt=0.0,
+        description="Tolerancia sobre la variable manipulada (xtol de brentq).",
+    )
+
+
+class EspecificacionCumplida(BaseModel):
+    objetivo: str
+    pedido: float
+    obtenido: Optional[float] = None
+    error: Optional[float] = Field(
+        None, description="obtenido - pedido. Lo que de verdad dice si la especificacion se cumplio."
+    )
+    manipulada: str
+    valor: float = Field(description="Valor que hubo que darle a la variable manipulada.")
+
+
+class InfoEspecificaciones(BaseModel):
+    cumplidas: list[EspecificacionCumplida]
+    evaluaciones: int = Field(
+        description=(
+            "Resoluciones COMPLETAS del diagrama que costo el lazo exterior, reciclos incluidos. "
+            "Se reporta porque es el coste real y conviene que no sea una sorpresa."
+        )
+    )
+
+
 class ResolverDiagramaRequest(BaseModel):
     componentes: list[str]
     corrientes: list[str]
@@ -373,6 +415,14 @@ class ResolverDiagramaRequest(BaseModel):
             "Caudal de una corriente dado en MASA [kg/s], por nombre de corriente. Es otra forma de "
             "fijar la misma variable F: la conversion a moles depende de la composicion, asi que "
             "entra como restriccion y no como valor fijo."
+        ),
+    )
+    especificaciones: list[EspecificacionDiseno] = Field(
+        default_factory=list,
+        description=(
+            "Objetivos de diseno. Si viene alguno, se resuelve con lazo exterior: cada iteracion "
+            "es una resolucion completa del diagrama, asi que conviene que sean pocos y con rangos "
+            "estrechos."
         ),
     )
 
@@ -432,6 +482,9 @@ class ResolverDiagramaResponse(BaseModel):
     reciclo: Optional[InfoReciclo] = Field(
         None, description="Solo si el diagrama tiene lazos: como fue la convergencia del reciclo."
     )
+    especificaciones: Optional[InfoEspecificaciones] = Field(
+        None, description="Solo si se pidieron: que valor hubo que dar a cada variable manipulada."
+    )
 
 
 # ---------------------------------------------------------------------
@@ -473,6 +526,10 @@ class GradosLibertadRequest(BaseModel):
     operaciones: list[OperacionDiagrama] = Field(default_factory=list)
     valores: dict[str, float] = Field(default_factory=dict)
     caudales_masicos: dict[str, float] = Field(default_factory=dict)
+    especificaciones: list[EspecificacionDiseno] = Field(
+        default_factory=list,
+        description="Cada una suma UNA ecuacion al conteo. Ver el campo homonimo de la respuesta.",
+    )
 
 
 class Redundancia(BaseModel):
@@ -495,6 +552,14 @@ class GradosLibertadResponse(BaseModel):
         description=(
             "Ecuaciones con mas datos de los necesarios. El conteo global no ve la DISTRIBUCION: "
             "se puede tener GL<0 y a la vez variables sin determinar."
+        ),
+    )
+    especificaciones: int = Field(
+        0,
+        description=(
+            "Cuantas especificaciones se contaron. Cada una suma UNA ECUACION y nada mas: la "
+            "variable manipulada YA era incognita, porque no se da como dato. Contarla otra vez "
+            "haria que el conteo pidiera un dato de mas sobre un problema ya cerrado."
         ),
     )
 
@@ -652,3 +717,55 @@ class PropiedadesReaccionResponse(BaseModel):
 # este mismo archivo (el bloque de termodinamica). La referencia va como
 # string y hay que resolverla aqui, al final, cuando ya existe la clase.
 OperacionDiagrama.model_rebuild()
+
+
+# ---------------------------------------------------------------------
+# Barridos de sensibilidad: no es una herramienta de calculo sino de
+# comprension. La pregunta no es "cuanto da" sino "que pasa si subo el
+# reflujo".
+# ---------------------------------------------------------------------
+
+MAX_PUNTOS_BARRIDO = 40
+
+
+class BarridoRequest(BaseModel):
+    componentes: list[str]
+    corrientes: list[str]
+    operaciones: list[OperacionDiagrama] = Field(default_factory=list)
+    valores: dict[str, float] = Field(default_factory=dict)
+    caudales_masicos: dict[str, float] = Field(default_factory=dict)
+    variable: str = Field(description="La que se mueve ('col1.R').")
+    valores_barrido: list[float] = Field(
+        min_length=2,
+        max_length=MAX_PUNTOS_BARRIDO,
+        description=(
+            f"Valores que toma, en SI. El tope de {MAX_PUNTOS_BARRIDO} no es arbitrario: cada punto "
+            "es una resolucion completa del diagrama, reciclos incluidos."
+        ),
+    )
+    seguir: list[str] = Field(
+        default_factory=list,
+        description="Variables cuya respuesta interesa. Vacio = todas las que se determinen.",
+    )
+
+
+class PuntoBarrido(BaseModel):
+    """
+    Un punto del barrido. 'error' no vacio significa que ESE punto no se
+    pudo resolver, no que el barrido fallara: el resto de los puntos
+    siguen siendo validos y es justo lo que se quiere al explorar un
+    rango con sus bordes.
+    """
+    valor: float = Field(description="Valor de la variable barrida en este punto.")
+    pool: dict[str, Any] = Field(default_factory=dict)
+    completo: bool
+    error: Optional[str] = None
+
+
+class BarridoResponse(BaseModel):
+    variable: str
+    puntos: list[PuntoBarrido]
+    resueltos: int
+    fallidos: int = Field(
+        description="Puntos que no se pudieron resolver. Suelen marcar el borde de la zona viable."
+    )

@@ -2367,6 +2367,17 @@ class DiagramaCorrientes:
         sigue. Es lo que se quiere al explorar -- que el rango útil se vea
         con sus bordes, en vez de perder los 19 puntos buenos porque el
         vigésimo pinchaba.
+
+        Y "fallar" aquí son DOS cosas distintas, que es el error que tuvo
+        la primera versión. Una es que `resolver` lance una excepción. La
+        otra, más traicionera, es que resuelva sin lanzar nada y deje la
+        variable seguida SIN determinar: eso es lo que hace una columna
+        por debajo de su reflujo mínimo, donde el bloque no revienta sino
+        que se declara no disparable. Ese punto volvía con `_error = None`
+        y `N = None`, es decir, se contaba como bueno y venía vacío.
+        Ahora se mira si lo que se pidió seguir llegó de verdad, y si no,
+        se saca el motivo de `errores_bloque` -- que ya lo tenía, con el
+        valor de R_min incluido.
         """
         filas = []
         for x in valores_barrido:
@@ -2379,12 +2390,43 @@ class DiagramaCorrientes:
                 for k in claves:
                     fila[k] = pool.get(k)
                 fila["_completo"] = resultado["completo"]
-                fila["_error"] = None
+                fila["_error"] = self._motivo_punto_inutil(resultado, seguir)
             except Exception as e:
                 fila["_completo"] = False
                 fila["_error"] = f"{type(e).__name__}: {e}"
             filas.append(fila)
         return filas
+
+    @staticmethod
+    def _motivo_punto_inutil(resultado, seguir):
+        """
+        None si el punto sirve; si no, por qué no sirve.
+
+        Un punto sirve cuando llegó lo que se pidió seguir. Si no se pidió
+        nada concreto, el criterio es que el diagrama quedara completo:
+        un barrido que devuelve medio pool no informa de nada.
+
+        El motivo se toma de `errores_bloque`, que es donde el bloque dejó
+        escrito el diagnóstico útil ("R=1.0000 <= R_min=1.1115: requeriría
+        etapas infinitas"). Inventar un mensaje aquí sería perder
+        precisamente el número que explica el borde.
+        """
+        pool = resultado["pool"]
+        if seguir:
+            sin_valor = [k for k in seguir if pool.get(k) is None]
+            if not sin_valor:
+                return None
+            falta = f"no se determinó {', '.join(sin_valor)}"
+        else:
+            if resultado["completo"]:
+                return None
+            pendientes = sorted(str(v) for v in resultado["incognitas_restantes"])
+            falta = "quedaron sin determinar " + ", ".join(pendientes[:4])
+            if len(pendientes) > 4:
+                falta += f" (y {len(pendientes) - 4} más)"
+
+        motivos = [str(m) for m in (resultado.get("errores_bloque") or {}).values()]
+        return f"{falta}. {motivos[0]}" if motivos else falta
 
     def grados_de_libertad(self, valores_dados):
         """
