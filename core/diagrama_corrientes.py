@@ -465,6 +465,65 @@ class DiagramaCorrientes:
             n_ecuaciones=1,
         )
 
+    def _bloque_presion_salida(self, salida, entrada, caida_P, nombre):
+        """
+        P_salida = P_entrada - caida_P, en las dos direcciones.
+
+        Sustituye al `P_salida = P_entrada` que tenia todo el simulador.
+        Con caida_P = 0 es EXACTAMENTE la misma ecuacion, asi que ningun
+        diagrama ni ningun numero validado se mueve: el valor por omision
+        de todos los equipos sigue siendo cero.
+
+        Por que caida_P es un PARAMETRO del equipo y no una variable del
+        pool. Como variable seria mas elegante -- invertible en tres
+        direcciones, como todo lo demas -- pero entonces un diagrama que no
+        la diera se quedaria con P_salida sin determinar y se paralizaria.
+        Habria que meterle un valor por omision con su propio bloque, y
+        entonces darla como dato chocaria con ese bloque. Como parametro,
+        los grados de libertad no cambian (sigue siendo UNA ecuacion entre
+        dos presiones) y el caso de siempre no se entera.
+
+        Devuelve None si esa corriente ya tiene quien le fije la presion,
+        por el mismo motivo que `_bloque_presion_operacion`: una corriente
+        puede tocar dos equipos y entonces los dos le pondrian una
+        ecuacion.
+        """
+        clave = f"{salida}.P"
+        if clave in self._presion_fijada:
+            return None
+        self._presion_fijada.add(clave)
+
+        dP = float(caida_P or 0.0)
+        if dP < 0:
+            raise ValueError(
+                f"{nombre}: la caida de presion no puede ser negativa ({dP} Pa). "
+                "Un equipo no sube la presion por friccion; para subirla hay una bomba "
+                "o un compresor."
+            )
+        clave_in = f"{entrada}.P"
+
+        def resolver_fn(**c):
+            if c.get(clave) is None and c.get(clave_in) is not None:
+                P_salida = float(c[clave_in]) - dP
+                if P_salida <= 0:
+                    raise ValueError(
+                        f"{nombre}: con una caida de {dP:.4g} Pa la presion de salida seria "
+                        f"{P_salida:.4g} Pa, que no es fisica. La entrada esta a "
+                        f"{float(c[clave_in]):.4g} Pa."
+                    )
+                return {clave: P_salida}
+            if c.get(clave_in) is None and c.get(clave) is not None:
+                return {clave_in: float(c[clave]) + dP}
+            return {}
+
+        return BloqueEcuaciones(
+            nombre=nombre,
+            variables=(clave, clave_in),
+            puede_resolver=lambda n: n <= 1,
+            resolver_fn=resolver_fn,
+            n_ecuaciones=1,
+        )
+
     def _bloque_valor_fijo(self, clave, valor, nombre):
         """Mete en el pool un parametro que el usuario ya dio en el panel
         de la operacion (no es una incognita: cuenta como una ecuacion)."""
@@ -587,7 +646,7 @@ class DiagramaCorrientes:
                               con_cinetica=True, entradas=None,
                               modo_energia="isotermo", Q=None,
                               con_balance_energia=True,
-                              modo_reaccion="cinetico"):
+                              modo_reaccion="cinetico", caida_P=0.0):
         """
         Reactor CSTR en estado estacionario. Igual que el resto de
         operaciones, NO es forward-only: el balance por componente se
@@ -777,15 +836,13 @@ class DiagramaCorrientes:
                                       f"T de salida = T del tanque ({nombre})")
             )
 
-        # Sin caida de presion (el proyecto no la modela en ningun equipo).
-        # Se registra en _presion_fijada para que un equipo aguas abajo que
-        # reciba esta corriente NO le vuelva a poner otra ecuacion de P.
-        if f"{salida}.P" not in self._presion_fijada:
-            self._presion_fijada.add(f"{salida}.P")
-            self._bloques.append(
-                self._bloque_igualdad(f"{salida}.P", f"{entrada}.P",
-                                      f"Presion sin caida ({nombre})")
-            )
+        # Caida de presion en el vaso. Con caida_P = 0 (el valor por
+        # omision) es la igualdad de siempre.
+        bloque_P = self._bloque_presion_salida(
+            salida, entrada, caida_P,
+            f"Presion de salida ({nombre})" if caida_P else f"Presion sin caida ({nombre})")
+        if bloque_P is not None:
+            self._bloques.append(bloque_P)
 
         self._registrar_operacion(
             nombre, "reactor_cstr" if modo_reaccion == "cinetico" else "reactor_equilibrio",
@@ -1079,7 +1136,8 @@ class DiagramaCorrientes:
         )
         return nombre
 
-    def agregar_intercambiador(self, nombre, entrada, salida, Q_por_mol=None, T_salida=None):
+    def agregar_intercambiador(self, nombre, entrada, salida, Q_por_mol=None,
+                               T_salida=None, caida_P=0.0):
         """
         Intercambiador de calor: cambia la entalpia de la corriente sin
         tocar su caudal, su composicion ni su presion.
@@ -1116,6 +1174,8 @@ class DiagramaCorrientes:
                 "diagrama para medir entalpias."
             )
 
+        dP_ic = _caida(nombre, caida_P)
+
         claves_entrada = (f"{entrada}.F", f"{entrada}.T", f"{entrada}.P",
                           *[f"{entrada}.x{i}" for i in range(self.n)])
         claves_salida = (f"{salida}.F", f"{salida}.T", f"{salida}.P",
@@ -1130,10 +1190,22 @@ class DiagramaCorrientes:
                 return {}
             z = z / suma
             T_in, P = conocidos[f"{entrada}.T"], conocidos[f"{entrada}.P"]
+            # El estado de SALIDA se evalua a la presion de SALIDA, no a la
+            # de entrada. No es un detalle: la fraccion vaporizada depende
+            # mucho de P, y evaluarla a la presion de entrada subestimaria
+            # el vapor -- que es justo el error peligroso, porque esconder
+            # que la corriente sale en dos fases es lo que rompe lo que
+            # viene detras.
+            P_out = P - dP_ic
+            if P_out <= 0:
+                raise ValueError(
+                    f"{nombre}: con una caida de {dP_ic:.4g} Pa la presion de salida seria "
+                    f"{P_out:.4g} Pa, que no es fisica. La entrada esta a {P:.4g} Pa."
+                )
             if F <= 0:
                 T_vacio = float(T_salida) if T_salida is not None else T_in
                 valores = {
-                    f"{salida}.F": 0.0, f"{salida}.T": T_vacio, f"{salida}.P": P,
+                    f"{salida}.F": 0.0, f"{salida}.T": T_vacio, f"{salida}.P": P_out,
                     f"{nombre}.Q_por_mol": 0.0, f"{nombre}.Q": 0.0,
                     f"{nombre}.beta_salida": 0.0,
                 }
@@ -1143,13 +1215,13 @@ class DiagramaCorrientes:
             h_in = evaluador.entalpia_de_corriente(T_in, P, z)
 
             if T_salida is not None:
-                r = evaluador.isotermico(float(T_salida), P, z)
+                r = evaluador.isotermico(float(T_salida), P_out, z)
             else:
-                r = evaluador.a_entalpia(P, z, h_in + float(Q_por_mol))
+                r = evaluador.a_entalpia(P_out, z, h_in + float(Q_por_mol))
 
             q_especifico = r["h"] - h_in
             valores = {
-                f"{salida}.F": F, f"{salida}.T": r["T"], f"{salida}.P": P,
+                f"{salida}.F": F, f"{salida}.T": r["T"], f"{salida}.P": P_out,
                 f"{nombre}.Q_por_mol": q_especifico, f"{nombre}.Q": q_especifico * F,
                 f"{nombre}.beta_salida": r["beta"],
             }
@@ -1176,7 +1248,7 @@ class DiagramaCorrientes:
         return nombre
 
     def agregar_reactor_pfr(self, nombre, entrada, salida, nu, gestor_reaccion,
-                            entradas=None):
+                            entradas=None, caida_P=0.0):
         """
         Reactor de flujo piston. La misma estequiometria que el CSTR con
         otra relacion volumen-avance (ver core/reactor_pfr.py):
@@ -1232,12 +1304,14 @@ class DiagramaCorrientes:
                 self._bloque_igualdad(f"{salida}.T", f"{nombre}.T",
                                       f"T de salida = T del tubo ({nombre})")
             )
-        if f"{salida}.P" not in self._presion_fijada:
-            self._presion_fijada.add(f"{salida}.P")
-            self._bloques.append(
-                self._bloque_igualdad(f"{salida}.P", f"{entrada}.P",
-                                      f"Presion sin caida ({nombre})")
-            )
+        # En un tubo la caida de presion es lo normal, no la excepcion:
+        # es el precio de la friccion a lo largo del lecho. Con caida_P = 0
+        # es la igualdad de siempre.
+        bloque_P_pfr = self._bloque_presion_salida(
+            salida, entrada, caida_P,
+            f"Presion de salida ({nombre})" if caida_P else f"Presion sin caida ({nombre})")
+        if bloque_P_pfr is not None:
+            self._bloques.append(bloque_P_pfr)
 
         self._registrar_operacion(
             nombre, "reactor_pfr", entradas=lista_entradas, salidas=[salida], desde=_ini,
@@ -1248,10 +1322,17 @@ class DiagramaCorrientes:
 
     def agregar_absorbedor(self, nombre, gas_entrada, gas_salida,
                            liquido_entrada, liquido_salida,
-                           N_etapas=6, P_operacion=101325.0, T_operacion=None):
+                           N_etapas=6, P_operacion=101325.0, T_operacion=None,
+                           caida_P_gas=0.0):
         """
         Absorbedor / desorbedor por el metodo de Kremser
         (ver core/absorbedor.py).
+
+        caida_P_gas -- perdida de presion del GAS al atravesar el relleno
+        [Pa]. Va solo del lado del gas porque es donde ocurre: el gas sube
+        pagando la friccion y el liquido baja por gravedad. Un solo numero
+        para los dos lados sugeriria que la perdida es simetrica, y no lo
+        es.
 
         Cuatro puertos: el gas entra por abajo y sale por arriba, el
         liquido al reves. Como el intercambiador de dos corrientes, es un
@@ -1268,6 +1349,7 @@ class DiagramaCorrientes:
         _ini = len(self._bloques)
         for s in (gas_entrada, gas_salida, liquido_entrada, liquido_salida):
             self._exigir_corriente(s)
+        dP_gas = _caida(nombre, caida_P_gas, "del gas")
 
         evaluador_flash = self.flash()
         if evaluador_flash is None:
@@ -1309,7 +1391,7 @@ class DiagramaCorrientes:
             if V_gas <= 0 or L_liq <= 0:
                 valores = {
                     f"{gas_salida}.F": max(V_gas, 0.0), f"{gas_salida}.T": T,
-                    f"{gas_salida}.P": P_op,
+                    f"{gas_salida}.P": P_op - dP_gas,
                     f"{liquido_salida}.F": max(L_liq, 0.0), f"{liquido_salida}.T": T,
                     f"{liquido_salida}.P": P_op,
                     f"{nombre}.N": N, f"{nombre}.T": T,
@@ -1325,7 +1407,7 @@ class DiagramaCorrientes:
             )
             valores = {
                 f"{gas_salida}.F": r["V_salida"], f"{gas_salida}.T": T,
-                f"{gas_salida}.P": P_op,
+                f"{gas_salida}.P": P_op - dP_gas,
                 f"{liquido_salida}.F": r["L_salida"], f"{liquido_salida}.T": T,
                 f"{liquido_salida}.P": P_op,
                 f"{nombre}.N": N, f"{nombre}.T": T,
@@ -1361,10 +1443,16 @@ class DiagramaCorrientes:
     def agregar_intercambiador_doble(self, nombre, caliente_entrada, caliente_salida,
                                      frio_entrada, frio_salida,
                                      Q=None, T_salida_caliente=None, T_salida_frio=None,
-                                     aproximacion_minima=5.0, contracorriente=True):
+                                     aproximacion_minima=5.0, contracorriente=True,
+                                     caida_P_caliente=0.0, caida_P_frio=0.0):
         """
         Intercambiador de DOS corrientes: lo que pierde la caliente lo gana
         la fria.
+
+        Las caidas de presion van POR LADO (caida_P_caliente,
+        caida_P_frio) y no una sola: son dos circuitos distintos -- tubos y
+        carcasa -- con geometrias y caudales distintos. Un numero unico
+        obligaria a inventar un reparto entre ellos.
 
             F_cal * [h(T_cal_ent) - h(T_cal_sal)]  =  Q
                                                    =  F_frio * [h(T_frio_sal) - h(T_frio_ent)]
@@ -1398,6 +1486,8 @@ class DiagramaCorrientes:
         _ini = len(self._bloques)
         for s in (caliente_entrada, caliente_salida, frio_entrada, frio_salida):
             self._exigir_corriente(s)
+        dP_cal = _caida(nombre, caida_P_caliente, "del lado caliente")
+        dP_fri = _caida(nombre, caida_P_frio, "del lado frio")
 
         dadas = [("Q", Q), ("T_salida_caliente", T_salida_caliente),
                  ("T_salida_frio", T_salida_frio)]
@@ -1449,9 +1539,11 @@ class DiagramaCorrientes:
             if F_cal <= 0 or F_fri <= 0:
                 valores = {
                     f"{caliente_salida}.F": max(F_cal, 0.0),
-                    f"{caliente_salida}.T": T_cal_ent, f"{caliente_salida}.P": P_cal,
+                    f"{caliente_salida}.T": T_cal_ent,
+                    f"{caliente_salida}.P": P_cal - dP_cal,
                     f"{frio_salida}.F": max(F_fri, 0.0),
-                    f"{frio_salida}.T": T_fri_ent, f"{frio_salida}.P": P_fri,
+                    f"{frio_salida}.T": T_fri_ent,
+                    f"{frio_salida}.P": P_fri - dP_fri,
                     f"{nombre}.Q": 0.0,
                     f"{nombre}.aproximacion": float(T_cal_ent - T_fri_ent),
                 }
@@ -1502,9 +1594,9 @@ class DiagramaCorrientes:
 
             valores = {
                 f"{caliente_salida}.F": F_cal, f"{caliente_salida}.T": T_cal_sal,
-                f"{caliente_salida}.P": P_cal,
+                f"{caliente_salida}.P": P_cal - dP_cal,
                 f"{frio_salida}.F": F_fri, f"{frio_salida}.T": T_fri_sal,
-                f"{frio_salida}.P": P_fri,
+                f"{frio_salida}.P": P_fri - dP_fri,
                 f"{nombre}.Q": float(calor), f"{nombre}.aproximacion": float(aproximacion),
             }
             for i in range(self.n):
@@ -2590,6 +2682,26 @@ class DiagramaCorrientes:
 # "cuanto convierto con este volumen" como para "que volumen necesito
 # para esta pureza", que son las dos preguntas reales.
 # ---------------------------------------------------------------------
+
+def _caida(nombre, valor, de_que=""):
+    """
+    Una caida de presion valida: numero, no negativa.
+
+    Se comprueba al CONSTRUIR el equipo y no al resolverlo. La diferencia
+    importa: un valor negativo es un error de datos, y descubrirlo en medio
+    de un lazo de reciclos -- donde el mensaje sale envuelto en tres capas
+    de "el bloque no pudo disparar" -- cuesta mucho mas que descubrirlo al
+    montar el diagrama.
+    """
+    dP = float(valor or 0.0)
+    if dP < 0:
+        cual = f" {de_que}" if de_que else ""
+        raise ValueError(
+            f"{nombre}: la caida de presion{cual} no puede ser negativa ({dP} Pa). "
+            "La friccion no sube la presion; para subirla hay una bomba o un compresor."
+        )
+    return dP
+
 
 def _claves_xi(nombre, evaluador):
     """

@@ -88,6 +88,21 @@ export interface DatosOperacion extends Record<string, unknown> {
   con_cinetica?: boolean;
   /** solo reactor_cstr: cuantas corrientes de entrada acepta (>= 1) */
   n_entradas?: number;
+  /**
+   * Caida de presion del equipo [Pa]: P_salida = P_entrada - caida_P.
+   *
+   * Por omision 0, que es la igualdad que tenia todo el simulador, asi que
+   * un diagrama guardado no cambia. Aplica a reactores e intercambiador de
+   * una corriente; la valvula, el compresor y la bomba fijan la presion a
+   * proposito, y las columnas de atajo no pueden llevar un perfil de
+   * presion (su curva de equilibrio esta precalculada a UNA presion).
+   */
+  caida_P?: number;
+  /** solo intercambiador_doble: una por lado, son dos circuitos distintos */
+  caida_P_caliente?: number;
+  caida_P_frio?: number;
+  /** solo absorbedor: la del GAS al atravesar el relleno */
+  caida_P_gas?: number;
 }
 
 export interface DatosCorriente extends Record<string, unknown> {

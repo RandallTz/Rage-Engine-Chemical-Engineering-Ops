@@ -234,7 +234,13 @@ function EditorElemento({
             <CampoConfig etiqueta="fracciones" valor={datosOp.fracciones ?? "0.5,0.5"} onChange={(v) => onDatos({ fracciones: v })} />
           )}
           {datosOp.tipo === "reactor_cstr" && (
-            <EditorReaccion datos={datosOp} componentes={componentes} onDatos={onDatos} />
+            <>
+              <EditorReaccion datos={datosOp} componentes={componentes} onDatos={onDatos} />
+              <CampoCaidaPresion
+                valor={datosOp.caida_P}
+                onCambio={(v) => onDatos({ caida_P: v })}
+              />
+            </>
           )}
           {datosOp.tipo === "reactor_cstr" && (
             <>
@@ -350,6 +356,10 @@ function EditorElemento({
                   onChange={(v) => onDatos({ T_salida: Number(v) })}
                 />
               )}
+              <CampoCaidaPresion
+                valor={datosOp.caida_P}
+                onCambio={(v) => onDatos({ caida_P: v })}
+              />
               <p className="text-[10px] text-zinc-500">
                 Si calientas lo suficiente, la corriente vaporiza: β a la salida lo dice.
               </p>
@@ -452,6 +462,20 @@ function EditorElemento({
                 valor={String(datosOp.aproximacion_minima ?? 5)}
                 onChange={(v) => onDatos({ aproximacion_minima: Number(v) })}
               />
+              {/* Una por lado: son dos circuitos distintos (tubos y
+                  carcasa) con geometrías y caudales distintos. */}
+              <CampoCaidaPresion
+                etiqueta="ΔP lado caliente [Pa]"
+                valor={datosOp.caida_P_caliente}
+                onCambio={(v) => onDatos({ caida_P_caliente: v })}
+                nota={false}
+              />
+              <CampoCaidaPresion
+                etiqueta="ΔP lado frío [Pa]"
+                valor={datosOp.caida_P_frio}
+                onCambio={(v) => onDatos({ caida_P_frio: v })}
+                nota={false}
+              />
               <label className="flex items-center gap-2 text-[11px] text-zinc-400">
                 <input
                   type="checkbox"
@@ -471,6 +495,10 @@ function EditorElemento({
           {datosOp.tipo === "reactor_equilibrio" && (
             <>
               <EditorReaccion datos={datosOp} componentes={componentes} onDatos={onDatos} />
+              <CampoCaidaPresion
+                valor={datosOp.caida_P}
+                onCambio={(v) => onDatos({ caida_P: v })}
+              />
               <p className="text-[10px] text-zinc-500">
                 El avance lo fija el equilibrio químico, ∏aᵢ^νᵢ = K_eq(T): no hace falta
                 cinética ni volumen. Responde a «por mucho tanque que pongas, no pasas de
@@ -483,6 +511,12 @@ function EditorElemento({
           {datosOp.tipo === "reactor_pfr" && (
             <>
               <EditorReaccion datos={datosOp} componentes={componentes} onDatos={onDatos} />
+              {/* En un tubo la caída es lo normal, no la excepción: es el
+                  precio de la fricción a lo largo del lecho. */}
+              <CampoCaidaPresion
+                valor={datosOp.caida_P}
+                onCambio={(v) => onDatos({ caida_P: v })}
+              />
               <p className="text-[10px] text-zinc-500">
                 Flujo pistón: la composición cambia a lo largo del tubo y la velocidad se
                 integra, en vez de evaluarse en la salida como en el CSTR. Para el mismo
@@ -504,6 +538,14 @@ function EditorElemento({
                 etiqueta="T operación [K]"
                 valor={String(datosOp.T_operacion ?? "")}
                 onChange={(v) => onDatos({ T_operacion: v === "" ? undefined : Number(v) })}
+              />
+              {/* Del lado del gas: es donde ocurre. El gas sube pagando la
+                  fricción del relleno y el líquido baja por gravedad. */}
+              <CampoCaidaPresion
+                etiqueta="ΔP del gas [Pa]"
+                valor={datosOp.caida_P_gas}
+                onCambio={(v) => onDatos({ caida_P_gas: v })}
+                nota={false}
               />
               <p className="text-[10px] text-zinc-500">
                 Método de Kremser. El gas entra por abajo y el líquido por arriba. Si lo
@@ -739,6 +781,38 @@ function CampoConfig({ etiqueta, valor, onChange }: { etiqueta: string; valor: s
  * producto / no participa) elegido aparte del coeficiente, y la ecuacion
  * se ve escrita debajo mientras se edita.
  */
+/**
+ * El campo de caida de presion, y la nota que explica lo que no se ve.
+ *
+ * La nota no es decorativa: el estado de SALIDA se evalua a la presion de
+ * salida, asi que subir la caida aumenta la fraccion vaporizada. Quien no
+ * lo sepa puede leer el resultado como un error del simulador cuando es
+ * justo lo contrario -- evaluarlo a la presion de entrada esconderia que
+ * la corriente sale en dos fases.
+ */
+function CampoCaidaPresion({
+  valor, onCambio, etiqueta = "caída de presión [Pa]", nota = true,
+}: {
+  valor: number | undefined;
+  onCambio: (v: number) => void;
+  etiqueta?: string;
+  nota?: boolean;
+}) {
+  const dP = valor ?? 0;
+  return (
+    <>
+      <CampoConfig etiqueta={etiqueta} valor={String(dP)} onChange={(v) => onCambio(Number(v))} />
+      {nota && dP > 0 && (
+        <p className="text-[10px] leading-snug text-zinc-500">
+          El estado de salida se evalúa a la presión de <strong>salida</strong>, así que con
+          caída sale algo más de vapor. Es lo correcto: a la presión de entrada se
+          escondería que la corriente sale en dos fases.
+        </p>
+      )}
+    </>
+  );
+}
+
 function EditorReaccion({
   datos, componentes, onDatos,
 }: {

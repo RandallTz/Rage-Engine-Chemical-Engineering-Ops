@@ -391,6 +391,17 @@ export default function FlowsheetPage() {
             : null,
         aproximacion_minima:
           datos.tipo === "intercambiador_doble" ? Number(datos.aproximacion_minima ?? 5) : 5,
+
+        // --- caidas de presion. Se mandan SIEMPRE (0 por omision) y no
+        // solo cuando el equipo las admite: el esquema del servidor las
+        // ignora donde no aplican, y un condicional por tipo aqui seria un
+        // sitio mas donde olvidarse de un equipo al anadirlo.
+        caida_P: Number(datos.caida_P ?? 0),
+        caida_P_caliente:
+          datos.tipo === "intercambiador_doble" ? Number(datos.caida_P_caliente ?? 0) : 0,
+        caida_P_frio:
+          datos.tipo === "intercambiador_doble" ? Number(datos.caida_P_frio ?? 0) : 0,
+        caida_P_gas: datos.tipo === "absorbedor" ? Number(datos.caida_P_gas ?? 0) : 0,
         N_etapas: datos.tipo === "absorbedor" ? Number(datos.N_etapas ?? 6) : null,
         contracorriente:
           datos.tipo === "intercambiador_doble" ? datos.contracorriente !== false : true,

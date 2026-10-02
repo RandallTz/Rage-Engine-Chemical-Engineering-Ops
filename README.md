@@ -104,7 +104,7 @@ decisiones que no son obvias, en
 
 ```bash
 pip install -r requirements.txt
-python run_tests.py          # las 16 suites del núcleo y la API, ~290 s
+python run_tests.py          # las 17 suites del núcleo y la API, ~275 s
 ```
 
 Y las de la interfaz, que comprueban lo que ninguna suite de Python puede
@@ -179,7 +179,10 @@ equipo:
 
 - **Sin columna rigurosa MESH todavía** — solo el andamiaje.
 - Sin dinámica: todo es estado estacionario.
-- Una sola reacción; sin equilibrio líquido-líquido; sin caída de presión.
+- Sin equilibrio líquido-líquido.
+- Caída de presión **por equipo**, no un perfil interno: una columna de
+  atajo no puede llevarlo (su curva de equilibrio está precalculada a una
+  sola presión).
 - Sin dimensionado ni costes: etapas teóricas, no una columna comprable.
 - Sin dimensionado de equipos reales: el reactor da volumen de tanque,
   pero no hay diámetros de columna, platos ni intercambiadores.

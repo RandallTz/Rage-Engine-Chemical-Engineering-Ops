@@ -298,6 +298,37 @@ class OperacionDiagrama(BaseModel):
         True,
         description="Solo reactor_cstr: si se incluye xi = V*r(T,x_salida) para poder dimensionar el tanque.",
     )
+    caida_P: float = Field(
+        0.0, ge=0.0,
+        description=(
+            "Caida de presion del equipo [Pa]: P_salida = P_entrada - caida_P. Reactores "
+            "(CSTR, equilibrio, PFR) e intercambiador de una corriente. Por omision 0, que es "
+            "la igualdad P_salida = P_entrada que tenia todo el simulador, asi que un diagrama "
+            "guardado no cambia. NO aplica a valvula, compresor ni bomba, que fijan la presion "
+            "a proposito, ni al flash, al que se le da la presion del tambor; ni a las columnas "
+            "de atajo, cuya curva de equilibrio esta precalculada a UNA presion -- un perfil de "
+            "presion plato a plato necesita MESH."
+        ),
+    )
+    caida_P_caliente: float = Field(
+        0.0, ge=0.0,
+        description=(
+            "Solo intercambiador_doble: caida del lado caliente [Pa]. Va por lado y no una sola "
+            "porque son dos circuitos distintos (tubos y carcasa) con geometrias y caudales "
+            "distintos; un numero unico obligaria a inventar un reparto."
+        ),
+    )
+    caida_P_frio: float = Field(
+        0.0, ge=0.0, description="Solo intercambiador_doble: caida del lado frio [Pa].",
+    )
+    caida_P_gas: float = Field(
+        0.0, ge=0.0,
+        description=(
+            "Solo absorbedor: caida del GAS al atravesar el relleno [Pa]. Va del lado del gas "
+            "porque es donde ocurre -- el gas sube pagando la friccion y el liquido baja por "
+            "gravedad."
+        ),
+    )
     modo_energia: Literal["isotermo", "adiabatico", "calor_dado"] = Field(
         "isotermo",
         description=(

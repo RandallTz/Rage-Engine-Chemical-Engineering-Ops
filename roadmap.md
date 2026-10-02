@@ -1024,3 +1024,55 @@ Arranca desde un diagrama en el formato ANTIGUO (`nu`/`A`/`Ea`, sin `reacciones`
 
 ### ⬜ Lo que a propósito NO se generaliza
 La **transformación de Barbosa-Doherty** (`core/transformaciones.py`) y las curvas residuales reactivas siguen siendo de una sola reacción. Su extensión a varias **no es «el mismo código con un índice más»**: es otra construcción, con un conjunto de componentes de referencia en vez de uno. Se avisa con un error claro en vez de dejar que se use fuera de su rango.
+
+---
+
+# Fase 12: Caída de presión
+
+Hasta aquí la presión se propagaba por igualdad —`P_salida = P_entrada`— en **todos** los equipos salvo la válvula, el compresor y la bomba, que la fijan a propósito. Dos consecuencias, y la segunda es la grave:
+
+1. **Dos equipos en serie salían a la misma presión**, que es físicamente imposible.
+2. Un intercambiador podía **esconder que su corriente sale en dos fases**, porque la fracción vaporizada depende mucho de $P$ y se estaba evaluando a la presión equivocada.
+
+### ✅ El modelo (Completado)
+`P_{salida} = P_{entrada} - \Delta P`, con $\Delta P$ **parámetro del equipo** y valor por omisión **0**. Con cero es exactamente la ecuación de siempre, así que ningún diagrama guardado ni ningún número validado se mueve.
+
+**Por qué parámetro y no variable del pool.** Como variable sería más elegante —invertible en tres direcciones, como todo lo demás— pero entonces un diagrama que no la diera se quedaría con $P_{salida}$ sin determinar y se paralizaría. Habría que meterle un valor por omisión con su propio bloque, y entonces darla como dato chocaría con ese bloque. Como parámetro, los grados de libertad **no cambian** (sigue siendo una ecuación entre dos presiones) y el caso de siempre no se entera. Y la inversión se conserva igual: de la entrada se deduce la salida y al revés.
+
+### ✅ Dónde aplica, y dónde NO
+| Equipo | $\Delta P$ | Por qué |
+|---|---|---|
+| CSTR, reactor de equilibrio, PFR | `caida_P` | La pérdida en el vaso o a lo largo del lecho |
+| Intercambiador | `caida_P` | Fricción del lado del proceso |
+| Intercambiador de 2 corrientes | `caida_P_caliente`, `caida_P_frio` | **Dos y no una**: son dos circuitos distintos (tubos y carcasa) con geometrías y caudales distintos. Un número único obligaría a inventar un reparto |
+| Absorbedor | `caida_P_gas` | **Solo del lado del gas**: es donde ocurre. El gas sube pagando la fricción del relleno y el líquido baja por gravedad. Un número para los dos lados sugeriría que la pérdida es simétrica |
+| Válvula, compresor, bomba | — | Fijan la presión a propósito; una «caída» ahí no significa nada |
+| Flash | — | Se le da la presión del tambor directamente |
+| Columnas de atajo | — | **Su curva de equilibrio está precalculada a UNA presión.** Un perfil de presión plato a plato necesita MESH: añadir un $\Delta P$ aquí daría un número que el método no respalda |
+
+### El detalle con contenido físico
+**El estado de salida se evalúa a la presión de SALIDA**, no a la de entrada. No es un matiz: bajar la presión favorece la vaporización, así que evaluarlo a la presión de entrada **subestimaría el vapor** — y esconder que una corriente sale en dos fases es justo lo que rompe lo que viene detrás.
+
+Medido en un intercambiador de benceno/tolueno a 2 atm con 28 kJ/mol:
+
+| $\Delta P$ | $P_{salida}$ | $T_{salida}$ | $\beta$ |
+|---|---|---|---|
+| 0 | 2.000 atm | 398.481 K | 0.650986 |
+| 0.5 atm | 1.500 atm | 387.667 K | 0.697577 |
+| 0.9 atm | 1.100 atm | 376.744 K | 0.741824 |
+
+**9.08 puntos de vaporización** que un modelo sin caída no vería. Y la temperatura de salida baja 21.7 K, que tampoco es despreciable para lo que venga después.
+
+Por eso el campo lleva una **nota al lado** cuando $\Delta P > 0$: sin ella, el resultado se puede leer como un error del simulador cuando es exactamente lo contrario.
+
+### Dónde se rechaza, y cuándo
+- **ΔP negativa: al CONSTRUIR el equipo.** Es un error de datos, y descubrirlo en medio de un lazo de reciclos —envuelto en tres capas de *«el bloque no pudo disparar»*— cuesta mucho más que descubrirlo al montar el diagrama.
+- **ΔP mayor que la presión disponible: al resolver**, porque depende de la presión de entrada, que es un dato del pool. El mensaje trae **las tres cifras**: *«con una caída de 5.066e+05 Pa la presión de salida sería −3.04e+05 Pa, que no es física. La entrada está a 2.026e+05 Pa»*. Con las tres se ve de un golpe si el error está en la caída o en la alimentación; con una sola hay que ir a buscar las otras.
+
+### Verificación
+- `tests/validar_caida_presion.py`, 17 comprobaciones. La primera sección es la que garantiza que nada se mueva: **sin el parámetro y con `caida_P = 0` sale lo mismo, bit a bit**. Después: la caída en las dos direcciones, la acumulación al encadenar tres equipos (3.000 → 2.900 → 2.650 → 2.600 atm), el efecto sobre la vaporización, y los rechazos.
+- `frontend/verificar_caida_presion.mjs`, 18 comprobaciones. Mide los tres casos de punta a punta y comprueba que la nota aparece **solo** cuando hay caída: es una explicación, no un aviso.
+
+### ⚠ Dos tropiezos del camino
+- La suite de navegador raspaba los números de la pantalla con expresiones regulares y daba `null`: el panel los formatea y los reparte entre dos vistas, así que la primera cifra de seis dígitos que aparece no es necesariamente la que se busca. Reescrita para **leer el pool de la respuesta**, que trae las claves con nombre. Sigue comprobando el camino completo y además dice **qué** variable se mira.
+- Y una pérdida de tiempo que conviene anotar: la suite daba β constante en los tres casos porque **el servidor estaba corriendo código viejo** — se había arrancado sin `--reload` y antes de estos cambios. El síntoma era idéntico a «la caída no se aplica». Es el tercer puerto que este proyecto quema por el ciclo de vida de los servidores de desarrollo; la API va ya por el 8003.

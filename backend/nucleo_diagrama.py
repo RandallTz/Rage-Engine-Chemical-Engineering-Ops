@@ -144,6 +144,7 @@ def _construir(request):
                 modo_energia=op.modo_energia,
                 Q=op.Q if op.modo_energia == "calor_dado" else None,
                 con_balance_energia=op.con_balance_energia,
+                caida_P=op.caida_P,
             )
         elif op.tipo == "mezclador":
             diagrama.agregar_mezclador(op.nombre, entradas=c["entradas"], salida=c["salida"])
@@ -169,6 +170,7 @@ def _construir(request):
                 op.nombre, entrada=c["entrada"], salida=c["salida"],
                 Q_por_mol=op.Q_por_mol if op.T_salida is None else None,
                 T_salida=op.T_salida,
+                caida_P=op.caida_P,
             )
         elif op.tipo == "valvula":
             if op.P_salida is None:
@@ -207,6 +209,7 @@ def _construir(request):
                 nu=nu_eq, gestor_reaccion=gestor_eq,
                 modo_reaccion="equilibrio",
                 con_balance_energia=op.con_balance_energia,
+                caida_P=op.caida_P,
             )
         elif op.tipo == "intercambiador_doble":
             diagrama.agregar_intercambiador_doble(
@@ -217,6 +220,8 @@ def _construir(request):
                 T_salida_frio=op.T_salida_frio,
                 aproximacion_minima=op.aproximacion_minima,
                 contracorriente=op.contracorriente,
+                caida_P_caliente=op.caida_P_caliente,
+                caida_P_frio=op.caida_P_frio,
             )
         elif op.tipo == "reactor_pfr":
             nu_pfr, gestor_pfr = _reaccion_de(
@@ -227,6 +232,7 @@ def _construir(request):
             diagrama.agregar_reactor_pfr(
                 op.nombre, entrada=None, entradas=entradas_pfr, salida=c["salida"],
                 nu=nu_pfr, gestor_reaccion=gestor_pfr,
+                caida_P=op.caida_P,
             )
         elif op.tipo == "absorbedor":
             diagrama.agregar_absorbedor(
@@ -236,6 +242,7 @@ def _construir(request):
                 N_etapas=op.N_etapas if op.N_etapas is not None else 6.0,
                 P_operacion=op.P_sistema,
                 T_operacion=op.T_operacion,
+                caida_P_gas=op.caida_P_gas,
             )
         else:
             raise ValueError(f"tipo de operacion desconocido: {op.tipo!r}")
