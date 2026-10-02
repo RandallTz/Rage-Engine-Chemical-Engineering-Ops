@@ -92,6 +92,12 @@ que es lo que se quiere al explorar un rango con sus bordes. El
 compromiso clásico sale solo: de $R=1.6$ a $R=10$, $N$ baja de 19.5 a 7.5
 y $Q_c$ sube de 3.1 a 13.2 MW.
 
+Las dos están también en la API (`POST /diagrama/resolver` acepta
+`especificaciones`; `POST /diagrama/barrido` es nuevo) y en la interfaz, en
+la pestaña **«Diseño»** del flowsheet. El detalle completo, incluidas las
+decisiones que no son obvias, en
+[`docs/13-especificaciones.md`](docs/13-especificaciones.md).
+
 ---
 
 ## Instalación y uso

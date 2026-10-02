@@ -1,4 +1,6 @@
 import type { Edge, Node } from "@xyflow/react";
+import type { InformeBloque, Inconsistencia } from "./PanelLateral";
+import type { DatosDiagramaColumna } from "../components/DiagramaColumna";
 
 export type TipoOperacion =
   | "columna" | "mezclador" | "divisor" | "bomba" | "reactor_cstr"
@@ -348,4 +350,22 @@ export function formatear(valor: number, variable: string): string {
   // "0.009" y perdia toda la precision.
   if (magnitud !== 0 && (magnitud >= 10000 || magnitud < 0.01)) return valor.toPrecision(5);
   return valor.toFixed(3);
+}
+
+/**
+ * La parte de /diagrama/resolver que la pantalla del flowsheet consume.
+ *
+ * No es el esquema completo a proposito: lo que no se usa aqui no deberia
+ * obligar a tocar este tipo cuando el backend anada un campo. Vive en
+ * modelo.ts y no en page.tsx porque lo comparten la pagina y el panel de
+ * diseno, y tenerlo en la pagina obligaria a un import circular.
+ */
+export interface RespuestaResolver {
+  pool: Record<string, number>;
+  diagnostico: InformeBloque[];
+  incognitas_restantes: string[];
+  completo: boolean;
+  inconsistencias?: Inconsistencia[];
+  diagramas?: Record<string, DatosDiagramaColumna>;
+  masas_molares_mezcla?: Record<string, number>;
 }

@@ -4,7 +4,20 @@
  * 85.125 g/mol. Entonces 30645 kg/h deben ser exactamente 100 mol/s:
  *   30645 kg/h / 3600 = 8.5125 kg/s = 8512.5 g/s
  *   8512.5 / 85.125 = 100.0 mol/s
- * Se verifica interceptando lo que el frontend manda al backend.
+ *
+ * DONDE se hace esa division es lo que esta suite tuvo que corregir. La
+ * primera version daba por hecho que la hacia el navegador y miraba
+ * `valores["s1.F"]`. Ya no: masa <-> moles NO es una conversion afin
+ * (depende de la composicion de ESA corriente), asi que el caudal masico
+ * viaja aparte en `caudales_masicos` [kg/s] y la division es una ECUACION
+ * del nucleo, m = F*MW_mezcla(x). Ver el comentario de `aSI` en
+ * app/flowsheet/unidades.ts y `_bloque_caudal_masico` en
+ * core/diagrama_corrientes.py.
+ *
+ * El cambio de contrato no debilita la comprobacion: se siguen exigiendo
+ * los dos numeros, el que sale del navegador (8.5125 kg/s, conversion
+ * afin) y el que sale del nucleo (100 mol/s, la que necesita la MW de la
+ * mezcla). Antes solo se veia el segundo.
  */
 import puppeteer from "puppeteer-core";
 
@@ -18,6 +31,7 @@ const navegador = await puppeteer.launch({
 const pagina = await navegador.newPage();
 
 let ultimoEnvio = null;
+let ultimaResolucion = null;
 await pagina.setRequestInterception(true);
 pagina.on("request", (peticion) => {
   if (peticion.url().includes("/diagrama/") && peticion.method() === "POST") {
@@ -25,7 +39,33 @@ pagina.on("request", (peticion) => {
   }
   peticion.continue();
 });
+// La respuesta de /diagrama/resolver es la que trae el numero que de
+// verdad importa: el caudal en moles que el nucleo deduce de la masa.
+pagina.on("response", async (respuesta) => {
+  if (!respuesta.url().includes("/diagrama/resolver")) return;
+  try { ultimaResolucion = await respuesta.json(); } catch { /* ignorar */ }
+});
 
+// Hace falta una simulacion ABIERTA con los dos componentes. Sin ella la
+// pagina del flowsheet avisa de que no hay simulacion, "+ Corriente" no
+// hace nada y no se manda ninguna peticion que interceptar -- que es
+// exactamente como esta suite se quedo muda cuando las simulaciones
+// pasaron a vivir en el almacenamiento del navegador.
+await pagina.goto("http://localhost:3000/simulaciones", { waitUntil: "domcontentloaded" });
+await pagina.evaluate(() => {
+  const sim = {
+    id: "sim_masa", nombre: "Masa — benceno/tolueno",
+    creada: new Date().toISOString(), modificada: new Date().toISOString(),
+    componentes: [
+      { nombre: "benzene", formula: "C6H6", MW: 78.11, Tb: 353.22 },
+      { nombre: "toluene", formula: "C7H8", MW: 92.14, Tb: 383.75 },
+    ],
+    modelo: "unifac_raoult", unidades: {},
+    flowsheet: { nodes: [], edges: [], dados: {} },
+  };
+  localStorage.setItem("simulador.simulaciones",
+    JSON.stringify({ activa: sim.id, lista: [sim] }));
+});
 await pagina.goto("http://localhost:3000/flowsheet", { waitUntil: "networkidle0" });
 
 const clic = async (t) => {
@@ -83,13 +123,45 @@ await esperar(500);
 await escribir("F", "30645");
 await esperar(2800);
 
-const enviado = ultimoEnvio?.valores?.["s1.F"];
-console.log(`\n  escrito en la interfaz : 30645 kg/h`);
-console.log(`  enviado al backend     : ${enviado} mol/s`);
-console.log(`  esperado               : 100 mol/s`);
-const ok = enviado !== undefined && Math.abs(enviado - 100) < 0.01;
-console.log(ok ? "\n  OK: la conversion masica usa la masa molar de la mezcla\n"
-               : "\n  FALLA: la conversion no da el valor esperado\n");
+// Primer numero: la conversion AFIN que si hace el navegador, kg/h -> kg/s.
+const enviadoMasa = ultimoEnvio?.caudales_masicos?.["s1"];
+// Y no debe mandarse como valor fijo de F: eso seria decidir la division
+// sin saber la composicion.
+const comoValorFijo = ultimoEnvio?.valores?.["s1.F"];
+
+console.log(`\n  escrito en la interfaz    : 30645 kg/h`);
+console.log(`  enviado en caudales_masicos: ${enviadoMasa} kg/s   (esperado 8.5125)`);
+console.log(`  enviado en valores.s1.F    : ${comoValorFijo}   (debe ser undefined)`);
+
+// Segundo numero, el que necesita la masa molar de la MEZCLA: se resuelve
+// y se mira lo que deduce el nucleo.
+//
+// Sale 99.99985 y no 100.00000, y la diferencia tiene explicacion: las MW
+// de la cabecera (78.11 y 92.14) estan redondeadas, mientras que el nucleo
+// usa las de 'thermo' (Chemical.MW) a propósito -- asi el caudal masico es
+// una variable del sistema y no depende de que el navegador tenga la MW
+// cacheada. Por eso la tolerancia es 0.01 mol/s y no cero: lo que se
+// comprueba es que la division se hace con la MW de la MEZCLA, no que dos
+// tablas de masas atomicas coincidan.
+await clic("Resolver");
+await esperar(4000);
+const enMoles = ultimaResolucion?.pool?.["s1.F"];
+console.log(`  deducido por el núcleo     : ${enMoles} mol/s   (esperado 100)`);
+
+const fallos = [];
+if (enviadoMasa === undefined || Math.abs(enviadoMasa - 8.5125) > 1e-6) {
+  fallos.push("el caudal masico no llega como 8.5125 kg/s en caudales_masicos");
+}
+if (comoValorFijo !== undefined) {
+  fallos.push("el caudal masico se manda como valor fijo de F, convirtiendo sin la composicion");
+}
+if (enMoles === undefined || Math.abs(enMoles - 100) > 0.01) {
+  fallos.push("el nucleo no deduce 100 mol/s a partir de la masa y la composicion");
+}
+
+console.log(fallos.length === 0
+  ? "\n  OK: la masa viaja como restriccion y el nucleo cierra con la MW de la mezcla\n"
+  : "\n  FALLA:\n    - " + fallos.join("\n    - ") + "\n");
 
 await navegador.close();
-process.exit(ok ? 0 : 1);
+process.exit(fallos.length === 0 ? 0 : 1);

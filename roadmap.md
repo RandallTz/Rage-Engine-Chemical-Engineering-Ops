@@ -845,6 +845,26 @@ Corregido en `core/diagrama_corrientes.py`: se comprueba si llegó lo que se pid
 
 14/14 suites de Python.
 
+### ✅ La pestaña «Diseño» en la interfaz (Completado)
+`frontend/app/flowsheet/Diseno.tsx`. Las dos cosas en la pantalla, no solo en Python.
+
+- **Los desplegables se llenan en local**, con las mismas funciones que usa el panel lateral, en vez de pedir la lista de variables al servidor. Importa porque la lista hace falta **antes** de la primera resolución — que es justo cuando se plantea un objetivo de diseño.
+- **La frontera de unidades, con el detalle que es fácil pasar por alto**: el valor pedido está en la unidad del OBJETIVO y el rango en la de la MANIPULADA. Son variables distintas y pueden tener unidades distintas (pedir una temperatura en °C moviendo un caudal en kg/h).
+- **La vista avisa antes de gastar una petición** de lo que ya se sabe que está mal, y dice el arreglo. El caso que más desconcierta: la variable manipulada dada también como dato. La especificación la convierte en incógnita, así que las dos cosas a la vez son ambiguas; el botón se queda deshabilitado con el motivo escrito al lado.
+- **El resultado se vuelca al estado común**, así que una resolución con especificaciones se puede ver en «Resultados» con sus gráficas como cualquier otra.
+- **La gráfica del barrido corta el trazo en los puntos inviables** y los marca con una cruz en el eje, en vez de interpolar por encima. Una línea continua que cruza la zona inviable mentiría sobre justo lo que el barrido sirve para encontrar.
+- Se muestra el coste (`Costó 13 resoluciones completas del diagrama`) en lugar de esconderlo.
+
+`frontend/verificar_diseno.mjs`, 25 comprobaciones en navegador. **La que justifica la suite**: que el número de la pantalla sea el del núcleo — se pide N = 12 por la interfaz y se exige que aparezca R = 1.659379, el mismo valor que calcula Python. Un simulador que calcula bien y muestra otra cosa está roto igual.
+
+### ⚠ Dos suites que estaban rojas por motivos viejos
+- **`verificar_masa_numerica.mjs` llevaba roto desde que las simulaciones pasaron al almacenamiento del navegador**: entraba directo a `/flowsheet` sin simulación abierta, así que «+ Corriente» no hacía nada, no se mandaba ninguna petición y la suite se quedaba muda. Y además afirmaba un contrato que el proyecto ya había cambiado a propósito: daba por hecho que el navegador convertía kg/h → mol/s y mandaba `valores["s1.F"]`. No lo hace, porque **masa ↔ moles no es una conversión afín** — depende de la composición de esa corriente — así que el caudal másico viaja aparte en `caudales_masicos` [kg/s] y la división es una ECUACIÓN del núcleo. Corregida la suite al contrato real, y **exigiendo ahora los dos números** en vez de uno: 8.5125 kg/s desde el navegador (conversión afín) y 100 mol/s desde el núcleo (la que necesita la MW de la mezcla).
+- De paso, un número que explica algo: el núcleo deduce **99.99985** mol/s, no 100.00000. No es un error. Las MW de la interfaz están redondeadas (78.11, 92.14) y el núcleo usa las de `thermo` a propósito, para que el caudal másico sea una variable del sistema y no dependa de que el navegador tenga la MW cacheada.
+
+### Verificación de la tanda
+- 14/14 suites de Python.
+- 14/14 suites de navegador (una nueva, una resucitada).
+
 ### ⬜ Lo que sigue
 Con esto, **lo que queda ya no se puede añadir "por los lados"**:
 

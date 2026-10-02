@@ -22,6 +22,7 @@ import { useSimulacion, nombresDe } from "../components/SimulacionProvider";
 import { NodoCorriente, NodoOperacion, ValoresContext, type Modo } from "./nodos";
 import PanelLateral, { type InformeBloque, type Inconsistencia, type Redundancia } from "./PanelLateral";
 import Reporte from "./Reporte";
+import Diseno from "./Diseno";
 import { useUnidades, aSI } from "./unidades";
 import type { DatosDiagramaColumna } from "../components/DiagramaColumna";
 import {
@@ -31,6 +32,7 @@ import {
   puertosDe,
   corrientesDeOperacion,
   metodoPorDefecto,
+  type RespuestaResolver,
 } from "./modelo";
 import EsperaCalculo from "../components/EsperaCalculo";
 
@@ -76,7 +78,7 @@ export default function FlowsheetPage() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<DatosNodo>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [seleccionado, setSeleccionado] = useState<string | null>(null);
-  const [modo, setModo] = useState<Modo | "reporte">("editar");
+  const [modo, setModo] = useState<Modo | "reporte" | "diseno">("editar");
   const [menu, setMenu] = useState<{ nodoId: string; x: number; y: number } | null>(null);
 
   const [dados, setDados] = useState<Record<string, string>>({});
@@ -402,6 +404,26 @@ export default function FlowsheetPage() {
     return { componentes: nombresComponentes, corrientes, operaciones, valores, caudales_masicos };
   }
 
+  /**
+   * Volcado de una respuesta de /diagrama/resolver al estado comun.
+   *
+   * Vive aparte porque hay DOS caminos que la producen: el boton
+   * "Resolver" y el panel de diseno con sus especificaciones. Que los dos
+   * dejen el mismo estado es lo que permite resolver persiguiendo un
+   * objetivo y pasar a "Resultados" a verlo con sus graficas, como
+   * cualquier otra resolucion.
+   */
+  function aplicarRespuesta(datos: RespuestaResolver) {
+    setPool(datos.pool);
+    setDiagnostico(datos.diagnostico);
+    setIncognitas(datos.incognitas_restantes);
+    setCompleto(datos.completo);
+    setInconsistencias(datos.inconsistencias ?? []);
+    setDiagramas(datos.diagramas ?? {});
+    setMasasMolares(datos.masas_molares_mezcla ?? {});
+    setModo((m) => (m === "editar" ? "resultados" : m));
+  }
+
   async function resolver() {
     setCargando(true);
     setError(null);
@@ -417,15 +439,7 @@ export default function FlowsheetPage() {
         const detalle = await resp.json().catch(() => null);
         throw new Error(detalle?.detail ?? `Error HTTP ${resp.status}`);
       }
-      const datos = await resp.json();
-      setPool(datos.pool);
-      setDiagnostico(datos.diagnostico);
-      setIncognitas(datos.incognitas_restantes);
-      setCompleto(datos.completo);
-      setInconsistencias(datos.inconsistencias ?? []);
-      setDiagramas(datos.diagramas ?? {});
-      setMasasMolares(datos.masas_molares_mezcla ?? {});
-      setModo((m) => (m === "editar" ? "resultados" : m));
+      aplicarRespuesta(await resp.json());
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setCompleto(null);
@@ -469,7 +483,7 @@ export default function FlowsheetPage() {
             y mezclarlas en una sola vista fue lo que resulto confuso. */}
         <div className="flex items-center gap-3 border-b border-zinc-800 bg-zinc-900 px-3 py-1.5">
           <div className="flex rounded border border-zinc-700 p-0.5">
-            {([["editar", "Editar"], ["resultados", "Resultados"], ["reporte", "Reporte"]] as const).map(
+            {([["editar", "Editar"], ["resultados", "Resultados"], ["diseno", "Diseño"], ["reporte", "Reporte"]] as const).map(
               ([valor, etiqueta]) => (
                 <button
                   key={valor}
@@ -531,6 +545,8 @@ export default function FlowsheetPage() {
               ? "En ámbar: lo que falta por introducir"
               : modo === "resultados"
               ? "En azul: lo que calculó el simulador"
+              : modo === "diseno"
+              ? "La pregunta inversa: pedir el resultado y obtener el dato"
               : "Tabla completa de corrientes y equipos"}
           </span>
         </div>
@@ -539,6 +555,10 @@ export default function FlowsheetPage() {
           <Reporte nodos={nodes} componentes={nombresComponentes} dados={dados} pool={pool}
             inconsistencias={inconsistencias} diagramas={diagramas} unidades={unidades}
             masasMolares={masasMolares} />
+        ) : modo === "diseno" ? (
+          <Diseno nodos={nodes} componentes={nombresComponentes} dados={dados}
+            unidades={unidades} apiUrl={API_URL}
+            construirPeticion={construirPeticion} onResuelto={aplicarRespuesta} />
         ) : (
           <div className="grid min-h-0 flex-1 grid-cols-[1fr_340px]">
             <div className="relative min-h-0 min-w-0">

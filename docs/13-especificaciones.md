@@ -340,4 +340,39 @@ física; comprueba lo único que la frontera puede romper por su cuenta:
 
 ---
 
+## 13.11 En la interfaz
+
+La pestaña **«Diseño»** del flowsheet (`frontend/app/flowsheet/Diseno.tsx`)
+pone las dos cosas en la pantalla. Tres decisiones que no son obvias:
+
+**Los desplegables se llenan en local**, con las mismas funciones que usa
+el panel lateral, en vez de pedir la lista de variables al servidor. La
+lista hace falta **antes** de la primera resolución — que es justo cuando
+se plantea un objetivo de diseño, no después.
+
+**La frontera de unidades se cruza dos veces por especificación, con
+unidades distintas.** El valor pedido está en la unidad del *objetivo*; el
+rango, en la de la *manipulada*. Son variables distintas y pueden no
+compartir magnitud: pedir una temperatura en °C moviendo un caudal en kg/h
+es un caso perfectamente normal.
+
+**La gráfica del barrido corta el trazo en los puntos inviables** y los
+marca con una cruz sobre el eje, en vez de interpolar por encima. Una línea
+continua que cruza la zona inviable mentiría sobre justo lo que el barrido
+sirve para encontrar.
+
+Y la vista **avisa antes de gastar una petición**, con el arreglo escrito:
+el caso que más desconcierta es dar la variable manipulada *también* como
+dato. La especificación la convierte en incógnita, así que las dos cosas a
+la vez son ambiguas y el núcleo lo rechaza; la pantalla lo dice antes y
+deja el botón deshabilitado.
+
+`frontend/verificar_diseno.mjs`, 25 comprobaciones en navegador. La que
+justifica la suite: **que el número de la pantalla sea el del núcleo**. Se
+pide $N = 12$ por la interfaz y se exige que aparezca $R = 1.659379$, el
+mismo valor que calcula Python. Un simulador que calcula bien y muestra
+otra cosa está roto igual.
+
+---
+
 [← Validación](12-validacion.md) · [Índice](README.md)
