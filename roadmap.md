@@ -970,7 +970,7 @@ Y dos cosas más que cambian de fondo:
 - **El equilibrio simultáneo.** Con una reacción el avance se encierra entre dos límites estequiométricos y `brentq` no puede escaparse. **En $R$ dimensiones no existe el bracket**: la región factible es un politopo y no hay cambio de signo que encerrar. Se resuelve con `root`, en logaritmos, con residuo grande fuera del simplex, varios arranques (uno de ellos con avance **negativo**, para el caso de un reciclo que devuelve producto) y sin confiar en `sol.success`.
 
 ### Verificación
-`tests/validar_varias_reacciones.py`, 65 comprobaciones. **No hace falta literatura externa para esta capa**, porque hay invariantes que se comprueban contra el caso de una reacción, que ya estaba validado:
+`tests/validar_varias_reacciones.py`, 78 comprobaciones. **No hace falta literatura externa para esta capa**, porque hay invariantes que se comprueban contra el caso de una reacción, que ya estaba validado:
 
 - **Partir una reacción en dos mitades idénticas** ($A/2$ cada una) da el mismo resultado que la reacción entera. Es la prueba más fuerte que existe aquí: pasa por la estequiometría matricial, por las productorias por filas, por los arranques del solver y por el balance de energía, y solo sale igual si las cuatro están bien. Verificado en velocidad, calor, composición, volumen, caso acoplado, equilibrio y conversión.
 - **Dos reacciones con componentes disjuntos** dan exactamente lo mismo que resueltas por separado. Si las productorias se hicieran sobre la matriz entera en vez de por filas, aquí se vería.
@@ -989,6 +989,18 @@ $$r_2 \propto a_{iso}^2 \quad\text{(SEGUNDO orden)}$$
 La secundaria retira isobuteno extra, así que $a_{MeOH}/a_{iso}$ **crece** a lo largo del tubo (0.880 → 12.69, comprobado). Y como $r_2$ depende del cuadrado, agotar isobuteno la castiga **más** que a la principal: la selectividad *mejora* al principio. Luego la principal se acerca a su propio equilibrio ($K_1 = 4.14$, modesto) y se frena, mientras la secundaria ($K_2 = 488$) sigue corriendo, y entonces se desploma: de 0.9790 en el óptimo ($V = 3$ m³) a 0.2796 con $V = 10^4$ m³. **Control cinético pasando a control termodinámico**, que es un fenómeno de libro y que con una sola reacción no se puede ni plantear.
 
 Detalle que vale la pena: $a_{MeOH}/a_{iso}$ arranca en **0.880 con alimento 50/50**, no en 1. Los coeficientes de actividad no son 1, y haber razonado sobre fracciones molares en vez de actividades habría dado otra conclusión.
+
+### ✅ Las dos reacciones atraviesan el diagrama (Completado)
+No basta con el núcleo: el pool tiene que nombrarlas, el contador de grados de libertad contarlas y el solver resolver con ellas.
+
+- **El nombre en el pool.** Con una reacción sigue siendo `r1.xi`; con varias pasa a `r1.xi0`, `r1.xi1`, con la misma convención que `s1.x0`. Conservar `xi` en el caso de una **no es cosmética**: ese nombre está escrito en las plantillas, los ejemplos, las suites y dentro de cada enlace compartible ya generado. Renombrarlo a `xi0` los rompería todos a la vez, y a cambio de nada.
+- Igual con `K_eq` → `K_eq0`, `K_eq1`, y el bloque de equilibrio pasa a aportar **2 ecuaciones por reacción**.
+- **La dirección de diseño funciona**, y es la que importa: dadas dos fracciones del producto, salen los dos avances — exacto, sin iterar, porque el sistema sigue siendo lineal (ahora de $R \times R$). Verificado: $\xi = [18.000000000,\ 4.000000000]$.
+- **Dar solo la conversión ya no basta**, y se dice: una sola conversión no reparte el consumo del reactivo entre las reacciones que compiten por él. Antes de inventar un reparto —a partes iguales, por ejemplo, que sería una suposición presentada como resultado— se explica qué dar en su lugar.
+- **La cinética se niega cuando toca.** Con $\xi = [18, 4]$ el bloque informa: *«con V=4.68 m³ (fijado por la reacción 0) la reacción 1 daría 0.1506 mol/s y se pidió 4»*. Un solo tanque no entrega un juego cualquiera de avances, y el mensaje trae los números.
+- El calor sale **mayor** que el de la principal sola: −1.4796 MW frente a −1.0368 MW. Esa diferencia es exactamente la refrigeración que un modelo de una reacción no vería.
+
+**Un límite que ya existía y que conviene no confundir con esto:** la dirección «dados $T$ y $V$, hallar $\xi$» no la resuelve el motor de punto fijo, porque $\xi$ necesita $x_{salida}$ y $x_{salida}$ necesita $\xi$. **Pasa igual con una reacción** —se comprobó— y para eso está `resolver_con_cinetica`, que plantea las dos ecuaciones a la vez. No es una regresión del cambio a varias reacciones.
 
 ### ⬜ Lo que a propósito NO se generaliza
 La **transformación de Barbosa-Doherty** (`core/transformaciones.py`) y las curvas residuales reactivas siguen siendo de una sola reacción. Su extensión a varias **no es «el mismo código con un índice más»**: es otra construcción, con un conjunto de componentes de referencia en vez de uno. Se avisa con un error claro en vez de dejar que se use fuera de su rango.
