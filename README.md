@@ -104,7 +104,7 @@ decisiones que no son obvias, en
 
 ```bash
 pip install -r requirements.txt
-python run_tests.py          # las 15 suites del núcleo y la API, ~310 s
+python run_tests.py          # las 16 suites del núcleo y la API, ~290 s
 ```
 
 Y las de la interfaz, que comprueban lo que ninguna suite de Python puede

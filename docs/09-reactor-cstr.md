@@ -474,10 +474,152 @@ reacción limita su propia conversión**. Por eso $\xi$ se satura en
   implica que sea **estable**: la multiplicidad se detecta y se reporta,
   pero el análisis de estabilidad necesita el modelo dinámico, que no
   está implementado.
-- **Una sola reacción.** No hay reacciones en paralelo ni en serie.
 - **Mezclado perfecto.** No hay zonas muertas ni cortocircuitos.
 - **Sin caída de presión.**
-- **Solo CSTR.** No hay PFR ni reactor batch.
+- **Sin reactor batch.** CSTR y PFR sí; el batch es un transitorio y este
+  modelo es estacionario.
+- **Las curvas residuales reactivas siguen siendo de una sola reacción**
+  ([§9.16](#916-varias-reacciones-a-la-vez) y
+  [§10](10-destilacion-reactiva.md)), aunque los reactores ya admitan
+  varias.
+
+---
+
+---
+
+## 9.16 Varias reacciones a la vez
+
+Casi ningún sistema reactivo real tiene una sola reacción. El caso de
+referencia de este proyecto tampoco:
+
+$$\text{R1:}\quad \text{isobuteno} + \text{metanol} \rightarrow \text{MTBE}$$
+$$\text{R2:}\quad 2\,\text{isobuteno} \rightarrow \text{diisobuteno}$$
+
+Las dos consumen isobuteno. Ese acoplamiento —la **selectividad**— es la
+pregunta central del diseño de un reactor, y con una sola reacción no se
+puede ni plantear.
+
+### Lo que cambia en las ecuaciones
+
+$\nu$ pasa de vector a matriz $NU$ de $n_r \times n_c$, y $\xi$ de escalar
+a vector. Las ecuaciones son las mismas con un producto matriz-vector:
+
+| | Una reacción | Varias |
+|---|---|---|
+| Componente | $F_{out}x_{out,i} = F_{in}x_{in,i} + \nu_i\xi$ | $F_{out}x_{out,i} = F_{in}x_{in,i} + \sum_j \nu_{ji}\xi_j$ |
+| Total | $F_{out} = F_{in} + \nu_{tot}\xi$ | $F_{out} = F_{in} + \sum_j \nu_{tot,j}\xi_j$ |
+| Cinética (CSTR) | $\xi = V\,r$ | $\xi_j = V\,r_j$, con **el mismo $V$** |
+| Cinética (PFR) | $d\xi/dV = r$ | $d\xi_j/dV = r_j$, acopladas por $x(V)$ |
+| Energía | $\xi\,\Delta H_{rxn}$ | $\sum_j \xi_j\,\Delta H_{rxn,j}$ |
+| Equilibrio | $\prod_i a_i^{\nu_i} = K_{eq}$ | $\prod_i a_i^{\nu_{ji}} = K_{eq,j}$, para cada $j$ |
+
+Internamente se trabaja **siempre** con la matriz, también con una sola
+reacción, para que no haya dos caminos de código que puedan divergir. Lo
+único que cambia es la forma de lo que se devuelve.
+
+### Los nombres en singular lanzan error, y es deliberado
+
+`dH_rxn`, `K_eq()` y `velocidad_reaccion()` **no** devuelven el valor de
+la primera reacción cuando hay varias: lanzan `ValueError` diciendo qué
+usar en su lugar. La razón es la misma que gobierna el resto del proyecto:
+
+> Un balance escrito como `xi * dH_rxn` es correcto con una reacción y
+> **silenciosamente falso** con tres. Si devolviera el de la primera, ese
+> balance seguiría corriendo y dando un número plausible construido sobre
+> algo imposible.
+
+### Tres métodos cambian de significado, no solo de dimensión
+
+**`avances_desde_fracciones`.** Una fracción de salida determina un
+avance; $R$ reacciones necesitan $R$ fracciones. Sigue siendo **exacto,
+sin iterar**, porque el balance del componente $j$ es lineal en los
+avances también con varias reacciones:
+
+$$\sum_r \big(x_{out,j}\,\nu_{tot,r} - \nu_{rj}\big)\,\xi_r = F_{in}\big(x_{in,j} - x_{out,j}\big)$$
+
+que es $A\xi = b$ con $A$ de $R\times R$. Si $A$ sale singular, esas
+fracciones **no distinguen** entre las reacciones — el caso típico es
+elegir componentes que participan igual en todas — y se dice, en vez de
+devolver un avance con ruido amplificado.
+
+**`volumen_desde_avance`** deja de ser una inversión y pasa a ser una
+**comprobación**. Un solo volumen tiene que cumplir $\xi_j = V r_j$ para
+todas las reacciones a la vez: las $R$ ecuaciones comparten una única
+incógnita, así que un juego cualquiera de avances **no es alcanzable**. Lo
+honesto es fijar $V$ con una reacción y verificar que las demás cuadran,
+diciendo cuánto se desvían si no.
+
+**El límite estequiométrico** deja de existir como número. Cuál es el
+reactivo que se agota antes depende de cuánto haya avanzado cada reacción,
+así que el límite es una superficie en el espacio de avances. El PFR deja
+de vigilar un avance máximo y vigila la **composición**: para cuando algún
+componente se queda sin moles.
+
+### El equilibrio simultáneo pierde el bracket
+
+Con una reacción, $\xi$ se encierra entre dos límites estequiométricos y
+`brentq` no puede escaparse (§9.x). **En $R$ dimensiones no existe el
+bracket**: la región factible es un politopo y no hay cambio de signo que
+encerrar. Se resuelve con `root` sobre
+
+$$g_j(\boldsymbol{\xi}) = \sum_i \nu_{ji}\ln a_i\big(x_{out}(\boldsymbol{\xi})\big) - \ln K_{eq,j}(T) = 0$$
+
+y se protege de otra forma: en logaritmos (las productorias recorren
+varios órdenes de magnitud), residuo grande fuera del simplex en vez de
+reventar a mitad del root-finding, varios arranques —**uno con avance
+negativo**, para el caso de un reciclo que devuelve producto por encima
+del equilibrio— y sin confiar en `sol.success`.
+
+### El resultado que justifica todo esto
+
+El PFR con las dos reacciones del MTBE a 340 K, alimento 50/50:
+
+| $V$ [m³] | $\xi_1$ | $\xi_2$ | Selectividad | $a_{MeOH}/a_{iso}$ |
+|---|---|---|---|---|
+| 0.2 | 1.795 | 0.021 | 0.9776 | 0.880 |
+| 1 | 8.219 | 0.092 | 0.9782 | 0.953 |
+| **3** | 19.757 | 0.212 | **0.9790** | 1.143 |
+| 10 | 33.690 | 0.378 | 0.9781 | 1.584 |
+| 100 | 35.345 | 1.231 | 0.9349 | 1.882 |
+| $10^4$ | 13.271 | 17.099 | 0.2796 | 12.687 |
+
+La selectividad tiene un **máximo interior**: hay un volumen óptimo. Y el
+mecanismo está verificado, no supuesto:
+
+$$r_1 \propto a_{iso}\,a_{MeOH}, \qquad r_2 \propto a_{iso}^2$$
+
+La secundaria retira isobuteno extra, así que $a_{MeOH}/a_{iso}$ crece a
+lo largo del tubo. Y como $r_2$ es de **segundo orden** en isobuteno,
+agotarlo la castiga **más** que a la principal: la selectividad *mejora*
+al principio. Luego R1 se acerca a su propio equilibrio ($K_1 = 4.14$,
+modesto) y se frena, mientras R2 ($K_2 = 488$) sigue corriendo, y entonces
+se desploma. Es **control cinético pasando a control termodinámico**.
+
+Dos detalles que merecen quedar escritos:
+
+- $a_{MeOH}/a_{iso}$ arranca en **0.880 con alimento 50/50**, no en 1.
+  Razonar sobre fracciones molares en vez de actividades habría dado otra
+  conclusión.
+- Ignorar la secundaria **subestima la refrigeración un 24 %** en un caso
+  con $\xi_1 = 40$ y $\xi_2 = 5$ mol/s, porque la dimerización libera
+  −110.7 kJ/mol frente a los −57.6 de la principal. La refrigeración suele
+  ser la restricción de diseño de verdad.
+
+### Y la comprobación cruzada
+
+Un tubo muy largo ($V = 10^6$ m³) llega al equilibrio simultáneo de las
+dos reacciones: $\xi = [8.239583,\ 20.151557]$ por los dos caminos, con
+diferencia máxima **$1.8\times10^{-10}$ mol/s**. Integrar dos EDO
+acopladas y resolver un sistema $2\times2$ de van't Hoff no comparten ni
+una línea de código más allá de la estequiometría.
+
+### Lo que NO se generaliza
+
+La transformación de Barbosa-Doherty y las curvas residuales reactivas
+([§10](10-destilacion-reactiva.md)) siguen siendo de una sola reacción. Su
+extensión a varias **no es «el mismo código con un índice más»**: es otra
+construcción, con un conjunto de componentes de referencia en vez de uno.
+Se avisa con un error claro en vez de dejar que se use fuera de su rango.
 
 ---
 

@@ -24,9 +24,30 @@ class EspacioReactivo:
     def __init__(self, nu, k):
         """
         nu : vector estequiometrico (negativo=reactivo, positivo=producto).
+             UNA sola reaccion: ver la guarda de abajo.
         k  : indice (int) del componente de referencia.
         """
-        self.nu = np.asarray(nu, dtype=float)
+        nu = np.asarray(nu, dtype=float)
+        # Barbosa-Doherty es una transformacion de UNA reaccion, y su
+        # extension a varias NO es este mismo codigo con un indice mas: es
+        # otra construccion, con un CONJUNTO de componentes de referencia
+        # en vez de uno, y un denominador que deja de ser 1 - (nu_tot/nu_k) x_k.
+        #
+        # Sin esta guarda, pasarle una matriz no reventaba: construia un
+        # objeto con nan e inf dentro (porque nu/nu_k divide por una fila
+        # con ceros) y solo fallaba mucho despues, con un
+        # "truth value of an array is ambiguous" que no dice nada del
+        # problema real. Es exactamente el patron de fallo que este
+        # proyecto persigue.
+        if nu.ndim != 1:
+            raise ValueError(
+                f"La transformacion de Barbosa-Doherty es de UNA reaccion y se le dio un "
+                f"'nu' de {nu.ndim} dimensiones ({nu.shape}). Los reactores si admiten "
+                "varias reacciones (ver thermodynamics/reaccion.py), pero las curvas "
+                "residuales reactivas y el analisis de nodos todavia no: su generalizacion "
+                "a varias reacciones es otra construccion, no un indice mas."
+            )
+        self.nu = nu
         self.k = int(k)
 
         self.nu_tot = np.sum(self.nu)

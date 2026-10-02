@@ -925,3 +925,70 @@ Y una cuarta suposición mía que resultó enseñar algo: esperaba que buscar un
 ### Verificación de la tanda
 - 15/15 suites de Python.
 - 14/14 de navegador, y por primera vez **todas** desde un solo comando y desde CI.
+
+---
+
+# Fase 11: Varias reacciones a la vez
+
+El simulador se llama de destilación reactiva y hasta aquí admitía **una** reacción. Casi ningún sistema real tiene una sola, incluido el caso de referencia del propio proyecto:
+
+```
+R1:  isobuteno + metanol  →  MTBE          (la que se quiere)
+R2:  2 isobuteno          →  diisobuteno   (la que estorba)
+```
+
+Las dos consumen isobuteno, y ese acoplamiento —la **selectividad**— no se puede ni plantear con una reacción.
+
+### La decisión de diseño que gobierna todo lo demás
+`nu` pasa a admitir un vector (una reacción, como siempre) o una matriz `n_reacciones × n_componentes`. Internamente **siempre** se trabaja con la matriz, así que no hay dos caminos de código que puedan divergir.
+
+Lo importante es qué pasa con los nombres en singular. `dH_rxn`, `K_eq()`, `velocidad_reaccion()` **lanzan error** con varias reacciones en vez de devolver la de la primera o la suma. El motivo:
+
+> Un balance de energía escrito como `xi * dH_rxn` es correcto con una reacción y **silenciosamente falso** con tres. Si devolviera el de la primera, ese balance seguiría corriendo y dando un número plausible construido sobre algo imposible.
+
+Que reviente obliga a usar las versiones en plural, que son las correctas. Es el mismo criterio que gobierna el resto del proyecto, aplicado a una API en vez de a un cálculo.
+
+### ✅ Capa termodinámica (Completado)
+- `GestorReaccion` con `A` y `Ea` por reacción (un escalar significa «el mismo para todas», que es lo razonable al tantear).
+- `velocidades(T, x)` pide **γ una sola vez** y lo reparte entre todas las reacciones. No es un ahorro menor: UNIFAC es lo más caro de todo el cálculo, y pedirlo por reacción multiplicaría por $n_r$ el coste de cada evaluación — que ocurre dentro de un lazo de Newton, que ocurre dentro del lazo de reciclos.
+- `desplazamiento_composicion` y `calor_liberado` viven **aquí y no repetidos en cada reactor**, porque son las dos piezas que cambian de forma al pasar de una reacción a varias: $\nu\,\xi$ se convierte en $NU^T\xi$, y el calor en $\sum_j \xi_j \Delta H_j$. Tenerlas en un solo sitio es lo que evita que un reactor se quede con la versión escalar.
+
+### ✅ Los tres reactores (Completado)
+`EvaluadorCSTR` y `EvaluadorPFR` generalizados. Con una reacción se comportan **exactamente** igual que antes: los avances entran y salen como escalares y ningún número validado se mueve.
+
+Tres métodos **no se generalizan sin cambiar de significado**, y eso se dice en vez de disimularlo:
+
+| Método | Por qué cambia |
+|---|---|
+| `avance_desde_fraccion` | Una fracción de salida determina UN avance. Con $R$ reacciones hacen falta $R$ fracciones, y el sistema pasa a ser lineal de $R\times R$ → `avances_desde_fracciones`, todavía **exacto, sin iterar** |
+| `volumen_desde_avance` | Un solo volumen tiene que satisfacer las $R$ ecuaciones cinéticas a la vez, así que un juego cualquiera de avances **no es alcanzable**. Pasa de ser una inversión a ser una **comprobación**: se fija $V$ con una reacción y se verifica que las demás cuadren |
+| `_limite_estequiometrico` | Con varias no existe un avance máximo único: cuál es el reactivo que se agota antes depende de cuánto avance cada reacción. El límite es una superficie, no un escalar |
+
+Y dos cosas más que cambian de fondo:
+
+- **El evento terminal del PFR.** Con una reacción basta vigilar un avance; con varias se vigila la **composición**, parando cuando algún componente se queda sin moles. El camino de una reacción conserva su evento de siempre, para que sus números no se muevan por un cambio que no les afecta.
+- **El equilibrio simultáneo.** Con una reacción el avance se encierra entre dos límites estequiométricos y `brentq` no puede escaparse. **En $R$ dimensiones no existe el bracket**: la región factible es un politopo y no hay cambio de signo que encerrar. Se resuelve con `root`, en logaritmos, con residuo grande fuera del simplex, varios arranques (uno de ellos con avance **negativo**, para el caso de un reciclo que devuelve producto) y sin confiar en `sol.success`.
+
+### Verificación
+`tests/validar_varias_reacciones.py`, 65 comprobaciones. **No hace falta literatura externa para esta capa**, porque hay invariantes que se comprueban contra el caso de una reacción, que ya estaba validado:
+
+- **Partir una reacción en dos mitades idénticas** ($A/2$ cada una) da el mismo resultado que la reacción entera. Es la prueba más fuerte que existe aquí: pasa por la estequiometría matricial, por las productorias por filas, por los arranques del solver y por el balance de energía, y solo sale igual si las cuatro están bien. Verificado en velocidad, calor, composición, volumen, caso acoplado, equilibrio y conversión.
+- **Dos reacciones con componentes disjuntos** dan exactamente lo mismo que resueltas por separado. Si las productorias se hicieran sobre la matriz entera en vez de por filas, aquí se vería.
+- **Duplicar la estequiometría eleva $K_{eq}$ al cuadrado** (porque $\Delta G$ se duplica) e **invertir la reacción invierte $K$**. Son identidades termodinámicas, no convenciones del código.
+- **Dos reacciones opuestas con el mismo avance dan calor cero exacto.**
+- Y la comprobación cruzada que más vale: **un tubo muy largo llega al equilibrio simultáneo de las dos reacciones**, $\xi = [8.239583,\ 20.151557]$ por los dos caminos, con diferencia máxima **1.8e-10 mol/s**. Integrar dos EDO acopladas y resolver un sistema $2\times2$ de van't Hoff no comparten ni una línea de código más allá de la estequiometría.
+
+### ⚠ Dos resultados que contradijeron lo que yo esperaba
+**El calor.** La dimerización libera **−110.7 kJ/mol**, casi el doble que la reacción principal (−57.6). En un caso con $\xi_1 = 40$ y $\xi_2 = 5$ mol/s, ignorar la secundaria **subestima la refrigeración un 24 %**. Esto no es un detalle académico: la refrigeración suele ser la restricción de diseño.
+
+**La selectividad.** Escribí la comprobación como «la selectividad empeora al subir el volumen» y **falló**. Tiene un **máximo interior** — hay un volumen óptimo — y el mecanismo se verificó en vez de suponerlo:
+
+$$r_1 \propto a_{iso}\,a_{MeOH} \quad\text{(primer orden en isobuteno)}$$
+$$r_2 \propto a_{iso}^2 \quad\text{(SEGUNDO orden)}$$
+
+La secundaria retira isobuteno extra, así que $a_{MeOH}/a_{iso}$ **crece** a lo largo del tubo (0.880 → 12.69, comprobado). Y como $r_2$ depende del cuadrado, agotar isobuteno la castiga **más** que a la principal: la selectividad *mejora* al principio. Luego la principal se acerca a su propio equilibrio ($K_1 = 4.14$, modesto) y se frena, mientras la secundaria ($K_2 = 488$) sigue corriendo, y entonces se desploma: de 0.9790 en el óptimo ($V = 3$ m³) a 0.2796 con $V = 10^4$ m³. **Control cinético pasando a control termodinámico**, que es un fenómeno de libro y que con una sola reacción no se puede ni plantear.
+
+Detalle que vale la pena: $a_{MeOH}/a_{iso}$ arranca en **0.880 con alimento 50/50**, no en 1. Los coeficientes de actividad no son 1, y haber razonado sobre fracciones molares en vez de actividades habría dado otra conclusión.
+
+### ⬜ Lo que a propósito NO se generaliza
+La **transformación de Barbosa-Doherty** (`core/transformaciones.py`) y las curvas residuales reactivas siguen siendo de una sola reacción. Su extensión a varias **no es «el mismo código con un índice más»**: es otra construcción, con un conjunto de componentes de referencia en vez de uno. Se avisa con un error claro en vez de dejar que se use fuera de su rango.
