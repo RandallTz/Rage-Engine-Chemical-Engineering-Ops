@@ -367,7 +367,7 @@ dato. La especificación la convierte en incógnita, así que las dos cosas a
 la vez son ambiguas y el núcleo lo rechaza; la pantalla lo dice antes y
 deja el botón deshabilitado.
 
-`frontend/verificar_diseno.mjs`, 25 comprobaciones en navegador. La que
+`frontend/verificar_diseno.mjs`, 27 comprobaciones en navegador. La que
 justifica la suite: **que el número de la pantalla sea el del núcleo**. Se
 pide $N = 12$ por la interfaz y se exige que aparezca $R = 1.659379$, el
 mismo valor que calcula Python. Un simulador que calcula bien y muestra

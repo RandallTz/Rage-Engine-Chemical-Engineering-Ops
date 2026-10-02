@@ -193,7 +193,7 @@ la misma definición**. Es la razón de existir de
 | `tests/validar_especificaciones.py` | Especificaciones de diseño contra el camino directo, a través de un reciclo, y barridos ([§13](13-especificaciones.md)) |
 | `tests/validar_api_especificaciones.py` | **La frontera HTTP**: que el endpoint dé el mismo número que el núcleo, los códigos de error, y que la respuesta serialice ([§13.10](13-especificaciones.md)) |
 | `tests/validar_termodinamica.py` | ELV, topología reactiva, azeótropos |
-| `frontend/verificar_*.mjs` | Interfaz real en navegador (13 suites) |
+| `frontend/verificar_*.mjs` | Interfaz real en navegador (14 suites) |
 
 Las suites de navegador usan `puppeteer-core` contra el Edge del sistema:
 **no comprueban que el componente renderice, sino que el número correcto
