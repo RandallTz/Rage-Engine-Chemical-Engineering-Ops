@@ -2329,6 +2329,63 @@ class DiagramaCorrientes:
         resultado["inconsistencias"] = inconsistencias
         return resultado
 
+    def resolver_con_especificaciones(self, especificaciones, **valores):
+        """
+        Resuelve persiguiendo objetivos en vez de con todos los datos dados.
+
+            d.resolver_con_especificaciones(
+                [Especificacion(objetivo="dest.x0", valor=0.99,
+                                manipulada="col1.R", minimo=1.0, maximo=20.0)],
+                **datos_sin_R,
+            )
+
+        Ver core/especificaciones.py. La variable manipulada NO se da como
+        dato: la especificación la convierte en incógnita.
+        """
+        from core.especificaciones import ResolutorEspecificaciones
+        opciones = {k: valores.pop(k) for k in
+                    ("max_iteraciones", "tolerancia_reciclo", "max_ciclos_reciclo",
+                     "amortiguacion", "usar_wegstein", "estimaciones_reciclo")
+                    if k in valores}
+        return ResolutorEspecificaciones(self, especificaciones, valores, **opciones).resolver()
+
+    def barrido(self, variable, valores_barrido, seguir=(), **valores):
+        """
+        Varía UNA variable y devuelve cómo responde el resto.
+
+        No es una herramienta de cálculo sino de comprensión: la pregunta
+        que de verdad se hace quien aprende no es "¿cuánto da?" sino "¿qué
+        pasa si subo el reflujo?". Hasta ahora eso había que hacerlo a
+        mano, resolviendo una y otra vez y apuntando los números.
+
+        variable       : la que se mueve ("col1.R")
+        valores_barrido: los valores que toma
+        seguir         : variables cuya respuesta interesa. Vacío = todas
+                         las que se determinen.
+
+        Un punto que falle NO tumba el barrido: se anota el motivo y se
+        sigue. Es lo que se quiere al explorar -- que el rango útil se vea
+        con sus bordes, en vez de perder los 19 puntos buenos porque el
+        vigésimo pinchaba.
+        """
+        filas = []
+        for x in valores_barrido:
+            datos = {**valores, variable: float(x)}
+            fila = {variable: float(x)}
+            try:
+                resultado = self.resolver(**datos)
+                pool = resultado["pool"]
+                claves = seguir or [k for k, v in pool.items() if v is not None]
+                for k in claves:
+                    fila[k] = pool.get(k)
+                fila["_completo"] = resultado["completo"]
+                fila["_error"] = None
+            except Exception as e:
+                fila["_completo"] = False
+                fila["_error"] = f"{type(e).__name__}: {e}"
+            filas.append(fila)
+        return filas
+
     def grados_de_libertad(self, valores_dados):
         """
         Conteo en vivo: variables totales, cuantas estan dadas y cuantas

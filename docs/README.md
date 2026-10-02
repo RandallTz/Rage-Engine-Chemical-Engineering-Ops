@@ -41,6 +41,7 @@ sin tocarlos.
 | 10 | [Destilación reactiva](10-destilacion-reactiva.md) | Curvas residuales, mapeo discreto, transformación de Barbosa-Doherty, azeótropos reactivos |
 | 11 | [Unidades](11-unidades.md) | Tabla afín generada con `pint`, y por qué el caudal másico **no** es una unidad |
 | 12 | [Validación y límites](12-validacion.md) | Qué está comprobado, contra qué, y qué **no** hace el simulador |
+| 13 | [Especificaciones de diseño y barridos](13-especificaciones.md) | La pregunta inversa: pedir el resultado y obtener el dato. Grados de libertad con especificaciones, barridos de sensibilidad |
 
 ---
 

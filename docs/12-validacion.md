@@ -1,6 +1,6 @@
 # 12. Validación y límites
 
-[← Unidades](11-unidades.md) · [Índice](README.md)
+[← Unidades](11-unidades.md) · [Índice](README.md) · [Siguiente: Especificaciones de diseño →](13-especificaciones.md)
 
 ---
 
@@ -189,8 +189,10 @@ la misma definición**. Es la razón de existir de
 | `tests/validar_fug.py` | Fenske, Underwood (una y varias raíces), Gilliland |
 | `tests/validar_mccabe_thiele.py` | Escalonamiento, diseño inverso, Murphree, cargas |
 | `tests/validar_ponchon_savarit.py` | Polos, colinearidad, $Q_c/D$ mínimo, cruce con MT |
+| `tests/validar_operaciones_nuevas.py` | Separador, compresor/turbina, integración energética, PFR, absorbedor |
+| `tests/validar_especificaciones.py` | Especificaciones de diseño contra el camino directo, a través de un reciclo, y barridos ([§13](13-especificaciones.md)) |
 | `tests/validar_termodinamica.py` | ELV, topología reactiva, azeótropos |
-| `frontend/verificar_*.mjs` | Interfaz real en navegador (10 suites) |
+| `frontend/verificar_*.mjs` | Interfaz real en navegador (13 suites) |
 
 Las suites de navegador usan `puppeteer-core` contra el Edge del sistema:
 **no comprueban que el componente renderice, sino que el número correcto
@@ -322,4 +324,4 @@ Para mantener la coherencia del sistema:
 
 ---
 
-[← Unidades](11-unidades.md) · [Índice](README.md)
+[← Unidades](11-unidades.md) · [Índice](README.md) · [Siguiente: Especificaciones de diseño →](13-especificaciones.md)

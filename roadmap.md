@@ -780,7 +780,56 @@ Lo que queda **no es "otro equipo más"**, son las piezas de física que faltan 
 
 Sólidos (cristalizadores, secadores, filtros) quedan fuera a propósito: distribución de tamaño e hidrodinámica son otro proyecto.
 
-Lo siguiente que más multiplica lo ya construido NO es un equipo:
+Lo siguiente que más multiplica lo ya construido NO es un equipo, y es lo que hace la Fase 9:
 
 - **Especificaciones de diseño a nivel de diagrama** — hoy se puede invertir dentro de un bloque (dar N y obtener R), pero no decir "ajusta el reciclo hasta que el producto salga al 99 %". La arquitectura es inusualmente buena para esto: ya existen el pool, el contador de grados de libertad y la detección de redundancias.
 - **Barridos de sensibilidad** — no hay ninguno, y la pregunta real de un alumno no es "¿cuánto da?" sino "¿qué pasa si subo el reflujo?".
+
+---
+
+# Fase 9: De calcular a diseñar
+
+Hasta aquí el simulador contestaba *"con estos datos, ¿cuánto da?"*. Las dos piezas de esta fase contestan las dos preguntas que de verdad se hacen al diseñar: *"¿qué hace falta para conseguir esto?"* y *"¿qué pasa si cambio aquello?"*.
+
+Ninguna de las dos es un equipo. Son las que más multiplican los 14 que ya hay.
+
+### Por qué esta arquitectura lo permitía casi sin esfuerzo
+Vale la pena dejarlo escrito, porque explica por qué esto salió barato:
+
+- **El pool es plano y las variables tienen nombre global** (`s1.F`, `col1.R`, `r1.xi`). Una especificación es literalmente un par de nombres. Si cada equipo guardara su propio estado haría falta tubería para cruzar el diagrama.
+- **El conteo de grados de libertad ya existía y es estructural.** Una especificación añade una ecuación y el contador lo confirma solo. En un simulador secuencial-modular eso se razona a mano.
+- **8 bloques ya son invertibles** (`puede_resolver` admitiendo incógnitas), así que cuando la variable manipulada vive dentro de uno de ellos puede no hacer falta lazo exterior ninguno.
+- **El motor de reciclos tiene exactamente esta forma**: suponer, resolver, mirar el error, corregir. Esto reutiliza maquinaria ya validada en vez de inventar otra.
+- `verificar_consistencia` ya hacía *"recalcula esta variable desde su bloque y compara"*, que es la evaluación de residuo que una especificación necesita.
+
+### ✅ Especificaciones de diseño (Completado)
+- `core/especificaciones.py`. Una especificación es `objetivo == valor` moviendo una variable manipulada, con un rango de búsqueda.
+- **El rango no es un detalle de implementación**: casi toda variable de proceso tiene un rango físico (un reflujo no es negativo, una fracción no pasa de 1), y acotar la búsqueda es lo que evita que el solver se vaya a un sitio donde el diagrama ni se puede resolver.
+- Una sola especificación se resuelve con `brentq` —sin derivadas, que aquí costarían una resolución completa del diagrama cada una— y varias con `root`.
+- **Los residuos de varias especificaciones se ESCALAN por el valor objetivo.** Sin escalar, una sobre una fracción molar (orden 1) y otra sobre un calor (orden 10^6) no pesan lo mismo y el solver sacrifica la primera. Es el mismo problema que ya apareció en el reactor acoplado de la Fase 4.
+
+**Error de contabilidad, encontrado al medirlo.** La primera versión sumaba una ecuación Y una incógnita por especificación, razonando que "se libera la variable manipulada". Falso: esa variable **ya estaba contada** como incógnita, precisamente porque no se da como dato. El contador decía GL = 1 sobre un problema perfectamente cerrado. Lo correcto es que una especificación suma **solo una ecuación**: no reformula el problema, lo CIERRA. Verificado: GL = 1 sin ella, GL = 0 con ella.
+
+**Verificado contra el camino directo**, que es lo único que demuestra que el lazo exterior no miente: pedir N=12 da R=2.241647, y evaluar McCabe-Thiele con ese R devuelve N=12.00000000 sin pasar por el lazo.
+
+**Y el caso que justifica haberlo construido**: objetivo y variable manipulada en equipos distintos, con reciclo en medio. Pedir 0.9055 de MTBE en el producto —que está tras un reactor, un flash y un separador— ajustando la temperatura del reactor da 348.97 K en 12 resoluciones, cada una con sus reciclos convergidos. Error 5.7e-12. Es lo que un simulador secuencial-modular hace con dificultad.
+
+**Mensajes de error en tres niveles**, que resultó valer: al probar un rango hasta 380 K la cadena dijo *especificación falló* → *el diagrama no determina 'producto.x2'* → *h_V(T) deja de crecer cerca de 408.9 K, zona cercana a la crítica*. Cada capa aporta algo. Un primer intento del mensaje mandaba a "buscar datos que faltaran", que es justo donde NO estaba el problema; se corrigió para señalar la causa real (el valor de la manipulada no es viable).
+
+### ✅ Barridos de sensibilidad (Completado)
+- `DiagramaCorrientes.barrido(variable, valores, seguir=...)`. No es una herramienta de cálculo sino de comprensión: la pregunta de quien aprende no es *"¿cuánto da?"* sino *"¿qué pasa si subo el reflujo?"*.
+- **Un punto que falla NO tumba el barrido**: se anota el motivo y se sigue. Es lo que se quiere al explorar — ver el rango útil con sus bordes, en vez de perder 19 puntos buenos porque el vigésimo pinchaba. Verificado con dos puntos por debajo de R_min.
+- El compromiso clásico sale solo: de R=1.6 a R=10, N baja de 19.5 a 7.5 y Q_c sube de 3.1 a 13.2 MW.
+
+### Verificación
+`tests/validar_especificaciones.py`: 13 comprobaciones. Una especificación contra el camino directo, una a través de dos equipos y un reciclo, dos a la vez, cinco casos que deben rechazarse (objetivo = manipulada, rango al revés, manipulada dada como dato, objetivo inalcanzable con el rango que sí se recorre, valor inviable), y los barridos.
+
+13/13 suites de Python.
+
+### ⬜ Lo que sigue
+Con esto, **lo que queda ya no se puede añadir "por los lados"**:
+
+- **Varias reacciones a la vez** ($\nu$ a matriz) — el cambio estructural que falta para destilación reactiva real.
+- **MESH** — y con él las columnas de extracciones laterales y varias alimentaciones.
+- **Equilibrio líquido-líquido** — y con él la extracción y los sistemas con agua.
+- **Fase vapor no ideal** — el compresor supone gas ideal y el reactor de MTBE opera a 5–30 atm, que es donde esa suposición empieza a fallar.

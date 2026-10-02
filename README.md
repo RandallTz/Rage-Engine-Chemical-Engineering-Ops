@@ -50,11 +50,55 @@ y los converge con Wegstein.
 
 ---
 
+## Diseñar, no solo calcular
+
+Lo anterior contesta *"con estos datos, ¿cuánto da?"*. Las dos
+herramientas siguientes contestan las preguntas que de verdad se hacen al
+diseñar.
+
+**Especificaciones de diseño.** En vez de dar el reflujo y obtener la
+pureza, se pide la pureza y el simulador busca el reflujo:
+
+```python
+from core.especificaciones import Especificacion
+
+resultado = diagrama.resolver_con_especificaciones(
+    [Especificacion(objetivo="producto.x2", valor=0.9055,
+                    manipulada="r1.T_salida", minimo=330.0, maximo=370.0)],
+    **datos,   # sin r1.T_salida: la especificación la convierte en incógnita
+)
+```
+
+El objetivo y la variable que se mueve **pueden estar en equipos
+distintos, con un reciclo en medio**: cada evaluación resuelve el diagrama
+completo, reciclos convergidos. El rango no es decoración — acota la
+búsqueda a la zona donde el diagrama se puede resolver.
+
+Y el conteo de grados de libertad lo tiene en cuenta: cada
+especificación suma **una ecuación**, así que un problema al que le
+faltaba un dato (GL = 1) queda cerrado (GL = 0). La variable manipulada ya
+era incógnita; sumarla otra vez es el error fácil de cometer aquí.
+
+**Barridos de sensibilidad.** Mover una variable y ver cómo responde el
+resto:
+
+```python
+filas = diagrama.barrido("col1.R", [1.6, 2.0, 3.0, 5.0, 10.0],
+                         seguir=["col1.N", "col1.Q_c"], **datos)
+```
+
+Un punto que falle **no tumba el barrido**: se anota el motivo y sigue,
+que es lo que se quiere al explorar un rango con sus bordes. El
+compromiso clásico sale solo: de $R=1.6$ a $R=10$, $N$ baja de 19.5 a 7.5
+y $Q_c$ sube de 3.1 a 13.2 MW.
+
+---
+
 ## Instalación y uso
 
 ```bash
 pip install -r requirements.txt
-python run_tests.py          # las 11 suites de validación, ~60 s
+python run_tests.py          # las 13 suites de validación, ~280 s
 ```
 
 Las versiones de `requirements.txt` están **fijas a propósito**: las
@@ -99,6 +143,9 @@ No cuenta como validación *"devuelve un array de la forma correcta"* ni
 - Un reactor adiabático con volumen grande alcanza el equilibrio químico
   *a la temperatura que el propio balance de energía produjo*
   ($\prod a_i^{\nu_i}/K_{eq} \to 0.987$).
+- Una especificación de diseño se comprueba **contra el camino directo**:
+  pedir $N = 12$ devuelve $R = 2.241647$, y evaluar McCabe-Thiele con ese
+  $R$ —sin pasar por el lazo— devuelve $N = 12.00000000$.
 
 El detalle completo, y **los límites**, en
 [`docs/12-validacion.md`](docs/12-validacion.md).
