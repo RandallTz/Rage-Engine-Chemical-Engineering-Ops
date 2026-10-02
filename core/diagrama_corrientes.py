@@ -675,7 +675,10 @@ class DiagramaCorrientes:
         hay_energia = (
             con_balance_energia
             and evaluador.entalpia is not None
-            and evaluador.dH_rxn is not None
+            # La version en PLURAL: la propiedad en singular lanza error con
+            # varias reacciones, y aqui solo se quiere saber si hay calor
+            # de reaccion o no.
+            and evaluador.dH_rxn_de_cada_una is not None
         )
         if not hay_energia and modo_energia != "isotermo":
             raise ValueError(
@@ -2588,6 +2591,37 @@ class DiagramaCorrientes:
 # para esta pureza", que son las dos preguntas reales.
 # ---------------------------------------------------------------------
 
+def _claves_xi(nombre, evaluador):
+    """
+    Como se llaman los avances en el pool.
+
+    Con UNA reaccion se llama `r1.xi`, igual que siempre. Con varias,
+    `r1.xi0`, `r1.xi1`, ... siguiendo la misma convencion que las
+    fracciones molares (`s1.x0`, `s1.x1`).
+
+    Conservar el nombre `xi` cuando hay una sola reaccion no es cosmetica:
+    ese nombre esta escrito en las plantillas, en los ejemplos, en las
+    suites, y dentro de cada enlace compartible que alguien haya generado.
+    Renombrarlo a `xi0` romperia todos a la vez, y a cambio de nada.
+    """
+    if getattr(evaluador, "una_sola", True):
+        return [f"{nombre}.xi"]
+    return [f"{nombre}.xi{j}" for j in range(evaluador.n_reacciones)]
+
+
+def _leer_xi(c, claves):
+    """Los avances del pool, o None si falta alguno."""
+    if any(c.get(k) is None for k in claves):
+        return None
+    return [float(c[k]) for k in claves]
+
+
+def _escribir_xi(claves, valores):
+    """Los avances al pool, con la forma que toque."""
+    v = np.atleast_1d(np.asarray(valores, dtype=float))
+    return {k: float(x) for k, x in zip(claves, v)}
+
+
 def _bloque_balance_cstr(nombre, entrada, salida, n_componentes, evaluador):
     """
     F_out*x_out_i = F_in*x_in_i + nu_i*xi, para los n componentes.
@@ -2607,16 +2641,17 @@ def _bloque_balance_cstr(nombre, entrada, salida, n_componentes, evaluador):
     clave_F_out = f"{salida}.F"
     claves_x_in = [f"{entrada}.x{i}" for i in range(n_componentes)]
     claves_x_out = [f"{salida}.x{i}" for i in range(n_componentes)]
-    clave_xi = f"{nombre}.xi"
-    variables = (clave_F_in, clave_F_out, clave_xi, *claves_x_in, *claves_x_out)
+    claves_xi = _claves_xi(nombre, evaluador)
+    n_reacciones = len(claves_xi)
+    variables = (clave_F_in, clave_F_out, *claves_xi, *claves_x_in, *claves_x_out)
 
     def resolver_fn(**c):
         tiene = lambda k: c.get(k) is not None
         x_in_completo = all(tiene(k) for k in claves_x_in)
         x_out_completo = all(tiene(k) for k in claves_x_out)
-        xi = c.get(clave_xi)
+        xi = _leer_xi(c, claves_xi)
 
-        # 1. adelante: alimento completo + avance -> salida
+        # 1. adelante: alimento completo + avance(s) -> salida
         if xi is not None and tiene(clave_F_in) and x_in_completo:
             F_out, x_out = evaluador.salida_desde_entrada(
                 c[clave_F_in], [c[k] for k in claves_x_in], xi
@@ -2624,7 +2659,7 @@ def _bloque_balance_cstr(nombre, entrada, salida, n_componentes, evaluador):
             return {clave_F_out: float(F_out),
                     **{k: float(v) for k, v in zip(claves_x_out, x_out)}}
 
-        # 2. atras: salida completa + avance -> alimento
+        # 2. atras: salida completa + avance(s) -> alimento
         if xi is not None and tiene(clave_F_out) and x_out_completo:
             F_in, x_in = evaluador.entrada_desde_salida(
                 c[clave_F_out], [c[k] for k in claves_x_out], xi
@@ -2632,19 +2667,31 @@ def _bloque_balance_cstr(nombre, entrada, salida, n_componentes, evaluador):
             return {clave_F_in: float(F_in),
                     **{k: float(v) for k, v in zip(claves_x_in, x_in)}}
 
-        # 3. el avance a partir de UNA fraccion de salida conocida
+        # 3. los avances a partir de las fracciones de salida conocidas.
+        # Hacen falta tantas como reacciones: cada fraccion aporta una
+        # ecuacion y cada reaccion una incognita. Con una reaccion basta
+        # una, que es el caso de siempre.
         if xi is None and tiene(clave_F_in) and x_in_completo:
-            for j, clave in enumerate(claves_x_out):
-                if not tiene(clave):
-                    continue
-                xi_hallado = evaluador.avance_desde_fraccion(
-                    c[clave_F_in], c[claves_x_in[j]], c[clave], j
-                )
-                F_out, x_out = evaluador.salida_desde_entrada(
-                    c[clave_F_in], [c[k] for k in claves_x_in], xi_hallado
-                )
-                return {clave_xi: float(xi_hallado), clave_F_out: float(F_out),
-                        **{k: float(v) for k, v in zip(claves_x_out, x_out)}}
+            conocidas = {j: c[clave] for j, clave in enumerate(claves_x_out) if tiene(clave)}
+            if len(conocidas) >= n_reacciones:
+                # Si sobran, se prueban combinaciones: unas distinguen
+                # entre las reacciones y otras no (el sistema sale
+                # singular), y cual lo hace depende de la estequiometria.
+                from itertools import combinations
+                for eleccion in combinations(sorted(conocidas), n_reacciones):
+                    subconjunto = {j: conocidas[j] for j in eleccion}
+                    try:
+                        xi_hallado = evaluador.avances_desde_fracciones(
+                            c[clave_F_in], [c[k] for k in claves_x_in], subconjunto
+                        )
+                        F_out, x_out = evaluador.salida_desde_entrada(
+                            c[clave_F_in], [c[k] for k in claves_x_in], xi_hallado
+                        )
+                    except ValueError:
+                        continue
+                    return {**_escribir_xi(claves_xi, xi_hallado),
+                            clave_F_out: float(F_out),
+                            **{k: float(v) for k, v in zip(claves_x_out, x_out)}}
         return {}
 
     return BloqueEcuaciones(
@@ -2667,9 +2714,9 @@ def _bloque_conversion_cstr(nombre, entrada, n_componentes, evaluador):
     """
     clave_F_in = f"{entrada}.F"
     claves_x_in = [f"{entrada}.x{i}" for i in range(n_componentes)]
-    clave_xi = f"{nombre}.xi"
+    claves_xi = _claves_xi(nombre, evaluador)
     clave_X = f"{nombre}.X"
-    variables = (clave_F_in, clave_xi, clave_X, *claves_x_in)
+    variables = (clave_F_in, *claves_xi, clave_X, *claves_x_in)
 
     def resolver_fn(**c):
         tiene = lambda k: c.get(k) is not None
@@ -2677,19 +2724,33 @@ def _bloque_conversion_cstr(nombre, entrada, n_componentes, evaluador):
             return {}
         F_in = c[clave_F_in]
         x_in = [c[k] for k in claves_x_in]
+        xi = _leer_xi(c, claves_xi)
 
-        if tiene(clave_xi) and not tiene(clave_X):
-            X, _ = evaluador.conversion(F_in, x_in, c[clave_xi])
+        if xi is not None and not tiene(clave_X):
+            X, _ = evaluador.conversion(F_in, x_in, xi)
             return {clave_X: float(X)}
 
-        if tiene(clave_X) and not tiene(clave_xi):
+        if tiene(clave_X) and xi is None:
             # xi desde X: se necesita saber cual es el limitante, y eso
             # depende solo del alimento, que ya se conoce aqui.
+            #
+            # Con VARIAS reacciones esta direccion no existe: una sola
+            # conversion no reparte el consumo entre las reacciones que
+            # compiten por ese reactivo. Se dice, en vez de inventar un
+            # reparto -- por ejemplo a partes iguales, que seria una
+            # suposicion sin fundamento presentada como resultado.
+            if len(claves_xi) > 1:
+                raise ValueError(
+                    f"{nombre}: dar la conversion no determina los avances cuando hay "
+                    f"{len(claves_xi)} reacciones. Una sola conversion no dice como se "
+                    f"reparte el consumo del reactivo entre ellas. Da los avances "
+                    f"({', '.join(claves_xi)}), o las fracciones de salida de tantos "
+                    "componentes como reacciones."
+                )
             _, limitante = evaluador.conversion(F_in, x_in, 0.0)
-            import numpy as _np
-            consumo_unitario = abs(float(_np.asarray(evaluador.nu)[limitante]))
-            xi = c[clave_X] * F_in * x_in[limitante] / consumo_unitario
-            return {clave_xi: float(xi)}
+            consumo_unitario = abs(float(np.asarray(evaluador.NU)[0, limitante]))
+            xi_calc = c[clave_X] * F_in * x_in[limitante] / consumo_unitario
+            return _escribir_xi(claves_xi, [xi_calc])
         return {}
 
     return BloqueEcuaciones(
@@ -2717,8 +2778,9 @@ def _bloque_cinetica_pfr(nombre, entrada, n_componentes, evaluador):
     """
     clave_F_in = f"{entrada}.F"
     claves_x_in = [f"{entrada}.x{i}" for i in range(n_componentes)]
-    clave_xi, clave_V, clave_T = f"{nombre}.xi", f"{nombre}.V", f"{nombre}.T"
-    variables = (clave_F_in, clave_xi, clave_V, clave_T, *claves_x_in)
+    claves_xi = _claves_xi(nombre, evaluador)
+    clave_V, clave_T = f"{nombre}.V", f"{nombre}.T"
+    variables = (clave_F_in, *claves_xi, clave_V, clave_T, *claves_x_in)
 
     def resolver_fn(**c):
         tiene = lambda k: c.get(k) is not None
@@ -2733,12 +2795,14 @@ def _bloque_cinetica_pfr(nombre, entrada, n_componentes, evaluador):
             return {}
         x_in = x_in / suma
 
-        if tiene(clave_V) and not tiene(clave_xi):
+        xi = _leer_xi(c, claves_xi)
+        if tiene(clave_V) and xi is None:
             r = evaluador.avance_desde_volumen(F_in, x_in, c[clave_T], c[clave_V])
-            return {clave_xi: r["xi"]}
-        if tiene(clave_xi) and not tiene(clave_V):
+            return _escribir_xi(claves_xi, r["xi"])
+        if xi is not None and not tiene(clave_V):
+            indice = None if len(claves_xi) == 1 else 0
             V = evaluador.volumen_desde_avance(
-                c[clave_xi], c[clave_T], F_in=F_in, x_in=x_in
+                xi, c[clave_T], F_in=F_in, x_in=x_in, indice=indice
             )
             return {clave_V: float(V)}
         return {}
@@ -2773,11 +2837,13 @@ def _bloque_equilibrio_cstr(nombre, entrada, n_componentes, evaluador):
     """
     clave_F_in = f"{entrada}.F"
     claves_x_in = [f"{entrada}.x{i}" for i in range(n_componentes)]
-    clave_xi = f"{nombre}.xi"
+    claves_xi = _claves_xi(nombre, evaluador)
     clave_T = f"{nombre}.T"
-    clave_K = f"{nombre}.K_eq"
+    # Una K_eq por reaccion, con la misma convencion que los avances.
+    claves_K = ([f"{nombre}.K_eq"] if len(claves_xi) == 1
+                else [f"{nombre}.K_eq{j}" for j in range(len(claves_xi))])
     entradas = (clave_F_in, clave_T, *claves_x_in)
-    variables = entradas + (clave_xi, clave_K)
+    variables = entradas + (*claves_xi, *claves_K)
 
     def resolver_fn(**c):
         if any(c.get(k) is None for k in entradas):
@@ -2788,7 +2854,10 @@ def _bloque_equilibrio_cstr(nombre, entrada, n_componentes, evaluador):
         if F_in <= 0 or suma <= 0:
             return {}
         r = evaluador.avance_de_equilibrio(F_in, x_in / suma, c[clave_T])
-        return {clave_xi: r["xi"], clave_K: r["K_eq"]}
+        salida = _escribir_xi(claves_xi, r["xi"])
+        K = np.atleast_1d(np.asarray(r["K_eq"], dtype=float))
+        salida.update({k: float(v) for k, v in zip(claves_K, K)})
+        return salida
 
     return BloqueEcuaciones(
         nombre=f"{nombre}: equilibrio quimico",
@@ -2796,7 +2865,9 @@ def _bloque_equilibrio_cstr(nombre, entrada, n_componentes, evaluador):
         variables_entrada=entradas,
         puede_resolver=lambda n: n == 0,
         resolver_fn=resolver_fn,
-        n_ecuaciones=2,
+        # Dos ecuaciones POR REACCION: la condicion de equilibrio y la
+        # definicion de su K_eq. Con una reaccion son las dos de siempre.
+        n_ecuaciones=2 * len(claves_xi),
     )
 
 
@@ -2820,16 +2891,17 @@ def _bloque_energia_cstr(nombre, entrada, salida, n_componentes, evaluador, P_co
     claves_x_in = [f"{entrada}.x{i}" for i in range(n_componentes)]
     clave_T_in, clave_T_out = f"{entrada}.T", f"{salida}.T"
     clave_P = f"{P_conocida_de}.P"
-    clave_xi = f"{nombre}.xi"
+    claves_xi = _claves_xi(nombre, evaluador)
     clave_Q = f"{nombre}.Q"
     clave_Q_rxn = f"{nombre}.Q_reaccion"
 
-    entradas = (clave_F_in, clave_T_in, clave_xi, *claves_x_in)
+    entradas = (clave_F_in, clave_T_in, *claves_xi, *claves_x_in)
     variables = entradas + (clave_T_out, clave_Q, clave_Q_rxn, clave_P, clave_F_out)
 
     def resolver_fn(**c):
         tiene = lambda k: c.get(k) is not None
-        if not (tiene(clave_F_in) and tiene(clave_T_in) and tiene(clave_xi)
+        xi = _leer_xi(c, claves_xi)
+        if not (tiene(clave_F_in) and tiene(clave_T_in) and xi is not None
                 and all(tiene(k) for k in claves_x_in)):
             return {}
         F_in = c[clave_F_in]
@@ -2838,7 +2910,7 @@ def _bloque_energia_cstr(nombre, entrada, salida, n_componentes, evaluador, P_co
         if F_in <= 0 or suma <= 0:
             return {}
         x_in = x_in / suma
-        T_in, xi = c[clave_T_in], c[clave_xi]
+        T_in = c[clave_T_in]
         P = c.get(clave_P)
 
         if tiene(clave_T_out) and not tiene(clave_Q):
@@ -2891,11 +2963,12 @@ def _bloque_reactor_acoplado(nombre, entrada, salida, n_componentes, evaluador, 
     clave_T_in = f"{entrada}.T"
     clave_P = f"{P_conocida_de}.P"
     clave_V, clave_Q = f"{nombre}.V", f"{nombre}.Q"
-    clave_xi, clave_T = f"{nombre}.xi", f"{nombre}.T"
+    claves_xi = _claves_xi(nombre, evaluador)
+    clave_T = f"{nombre}.T"
     clave_Q_rxn = f"{nombre}.Q_reaccion"
 
     entradas = (clave_F_in, clave_T_in, clave_V, clave_Q, *claves_x_in)
-    variables = entradas + (clave_xi, clave_T, clave_Q_rxn, clave_P)
+    variables = entradas + (*claves_xi, clave_T, clave_Q_rxn, clave_P)
 
     def resolver_fn(**c):
         tiene = lambda k: c.get(k) is not None
@@ -2903,7 +2976,7 @@ def _bloque_reactor_acoplado(nombre, entrada, salida, n_componentes, evaluador, 
             return {}
         if not all(tiene(k) for k in claves_x_in):
             return {}
-        if tiene(clave_xi) and tiene(clave_T):
+        if _leer_xi(c, claves_xi) is not None and tiene(clave_T):
             return {}
         F_in = c[clave_F_in]
         x_in = np.array([c[k] for k in claves_x_in], dtype=float)
@@ -2914,7 +2987,8 @@ def _bloque_reactor_acoplado(nombre, entrada, salida, n_componentes, evaluador, 
             F_in, x_in / suma, c[clave_T_in], c[clave_V],
             Q=c[clave_Q], P=c.get(clave_P),
         )
-        return {clave_xi: r["xi"], clave_T: r["T_salida"], clave_Q_rxn: r["Q_reaccion"]}
+        return {**_escribir_xi(claves_xi, r["xi"]),
+                clave_T: r["T_salida"], clave_Q_rxn: r["Q_reaccion"]}
 
     return BloqueEcuaciones(
         nombre=f"{nombre}: cinetica + energia acopladas",
@@ -2940,21 +3014,29 @@ def _bloque_cinetica_cstr(nombre, salida, n_componentes, evaluador):
     y xi dado V (simular un tanque que ya existe).
     """
     claves_x_out = [f"{salida}.x{i}" for i in range(n_componentes)]
-    clave_xi = f"{nombre}.xi"
+    claves_xi = _claves_xi(nombre, evaluador)
     clave_V = f"{nombre}.V"
     clave_T = f"{nombre}.T"
-    variables = (clave_xi, clave_V, clave_T, *claves_x_out)
+    variables = (*claves_xi, clave_V, clave_T, *claves_x_out)
 
     def resolver_fn(**c):
         tiene = lambda k: c.get(k) is not None
         if not tiene(clave_T) or not all(tiene(k) for k in claves_x_out):
             return {}
         x_out = [c[k] for k in claves_x_out]
+        xi = _leer_xi(c, claves_xi)
 
-        if tiene(clave_V) and not tiene(clave_xi):
-            return {clave_xi: float(evaluador.avance_desde_cinetica(c[clave_V], c[clave_T], x_out))}
-        if tiene(clave_xi) and not tiene(clave_V):
-            return {clave_V: float(evaluador.volumen_desde_avance(c[clave_xi], c[clave_T], x_out))}
+        if tiene(clave_V) and xi is None:
+            return _escribir_xi(
+                claves_xi,
+                evaluador.avance_desde_cinetica(c[clave_V], c[clave_T], x_out))
+        if xi is not None and not tiene(clave_V):
+            # Con varias reacciones el volumen lo fija la PRIMERA y se
+            # comprueba que las demas cuadren: un solo tanque no puede dar
+            # un juego cualquiera de avances (ver volumen_desde_avance).
+            indice = None if len(claves_xi) == 1 else 0
+            return {clave_V: float(
+                evaluador.volumen_desde_avance(xi, c[clave_T], x_out, indice=indice))}
         return {}
 
     return BloqueEcuaciones(

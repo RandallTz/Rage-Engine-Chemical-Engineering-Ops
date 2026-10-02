@@ -609,6 +609,126 @@ except Exception as e:
     check("8.2 Y con una sola reacción sigue funcionando igual", False, str(e)[:80])
 
 
+# ======================================================================
+print("\n" + "=" * 74)
+print("9. EL DIAGRAMA COMPLETO CON DOS REACCIONES")
+print("=" * 74)
+# ======================================================================
+# Hasta aqui todo era el nucleo. Esto comprueba que las dos reacciones
+# atraviesan el DIAGRAMA: que el pool las nombra, que el contador de
+# grados de libertad las cuenta, y que el solver resuelve en las
+# direcciones que de verdad se usan.
+#
+# El nombre en el pool importa mas de lo que parece. Con una reaccion
+# sigue siendo `r1.xi`, igual que siempre; con varias pasa a `r1.xi0`,
+# `r1.xi1`, con la misma convencion que las fracciones molares. Conservar
+# `xi` en el caso de una no es cosmetica: ese nombre esta escrito en las
+# plantillas, los ejemplos, las suites y dentro de cada enlace compartible
+# que alguien haya generado.
+
+from core.diagrama_corrientes import DiagramaCorrientes
+
+masas = [float(c.MW) for c in prov4.componentes]
+G_DOS = GestorReaccion(prov4, [NU_MTBE, NU_DIM], [A_RAPIDA, 2 * A_RAPIDA], [EA1, EA2])
+BASE_D = {"alim.F": 100.0, "alim.T": 330.0, "alim.P": 30 * 101325.0,
+          "alim.x0": 0.5, "alim.x1": 0.5, "alim.x2": 0.0, "alim.x3": 0.0,
+          "r1.T": 340.0}
+
+
+def diagrama_reactor(**kw):
+    d = DiagramaCorrientes(MTBE4, masas_molares=masas, proveedor=prov4)
+    d.agregar_corriente("alim")
+    d.agregar_corriente("prod")
+    d.agregar_reactor_cstr("r1", "alim", "prod", [NU_MTBE, NU_DIM],
+                           gestor_reaccion=G_DOS, **kw)
+    return d
+
+
+d_cin = diagrama_reactor(con_cinetica=True, modo_energia="isotermo")
+vars_r1 = sorted(v for v in d_cin.todas_las_variables() if v.startswith("r1."))
+check("9.1 El pool declara un avance por reacción",
+      "r1.xi0" in vars_r1 and "r1.xi1" in vars_r1 and "r1.xi" not in vars_r1,
+      ", ".join(vars_r1))
+
+# Y con UNA reaccion el nombre no cambia: `xi`, como siempre.
+d_una = DiagramaCorrientes(MTBE4, masas_molares=masas, proveedor=prov4)
+d_una.agregar_corriente("alim")
+d_una.agregar_corriente("prod")
+d_una.agregar_reactor_cstr("r1", "alim", "prod", NU_MTBE,
+                           gestor_reaccion=GestorReaccion(prov4, NU_MTBE, A_RAPIDA, EA1),
+                           con_cinetica=True, modo_energia="isotermo")
+check("9.2 Con una sola reacción el pool sigue diciendo 'r1.xi'",
+      "r1.xi" in d_una.todas_las_variables()
+      and "r1.xi0" not in d_una.todas_las_variables())
+
+# --- la direccion de SIMULACION: dados los avances, todo lo demas
+res = d_cin.resolver(**BASE_D, **{"r1.xi0": 18.0, "r1.xi1": 4.0})
+pool = res["pool"]
+check("9.3 Dados los dos avances, sale la composición de producto",
+      all(pool.get(f"prod.x{i}") is not None for i in range(4)),
+      " ".join(f"{pool[f'prod.x{i}']:.5f}" for i in range(4)))
+# Balance por componente, comprobado a mano contra la estequiometria.
+n_esperado = np.array([100 * 0.5 - 18 - 8, 100 * 0.5 - 18, 18.0, 4.0])
+F_esp = float(np.sum(n_esperado))
+check("9.4 Y el balance por componente cuadra con NUᵗ·ξ",
+      abs(pool["prod.F"] - F_esp) < 1e-9
+      and np.allclose([pool[f"prod.x{i}"] for i in range(4)], n_esperado / F_esp, atol=1e-12),
+      f"F_prod = {pool['prod.F']:.6f} mol/s (esperado {F_esp:.6f})")
+check("9.5 El calor suma las dos reacciones, no solo la principal",
+      pool.get("r1.Q") is not None and pool["r1.Q"] < 0,
+      f"Q = {pool['r1.Q']/1e6:.4f} MW (hay que refrigerar)")
+Q_solo_R1 = 18.0 * float(G_DOS.dH_rxn_de_cada_una[0])
+check("9.6 Y es MAYOR en magnitud que el de la principal sola",
+      abs(pool["r1.Q_reaccion"]) > abs(Q_solo_R1),
+      f"{pool['r1.Q_reaccion']/1e6:.4f} MW frente a {Q_solo_R1/1e6:.4f} MW si se ignorara R2")
+
+# --- la cinetica se NIEGA, y eso es lo correcto: un solo tanque no puede
+# entregar un juego cualquiera de avances.
+errores = res.get("errores_bloque") or {}
+check("9.7 La cinética rechaza un par de avances inalcanzable en un solo tanque",
+      any("no es alcanzable" in str(v) for v in errores.values()),
+      next((str(v)[:95] for v in errores.values() if "no es alcanzable" in str(v)), ""))
+
+# --- la direccion de DISEÑO: dadas las fracciones de producto, los avances
+res_b = d_cin.resolver(**BASE_D, **{"prod.x2": pool["prod.x2"], "prod.x3": pool["prod.x3"]})
+pb = res_b["pool"]
+check("9.8 Al revés: dos fracciones de producto determinan los dos avances",
+      pb.get("r1.xi0") is not None and pb.get("r1.xi1") is not None
+      and abs(pb["r1.xi0"] - 18.0) < 1e-9 and abs(pb["r1.xi1"] - 4.0) < 1e-9,
+      f"ξ = [{pb['r1.xi0']:.9f}, {pb['r1.xi1']:.9f}] — es la pregunta de diseño real")
+
+# --- dar la conversion NO basta con varias reacciones, y se explica
+res_c = d_cin.resolver(**BASE_D, **{"r1.X": 0.52})
+errores_c = res_c.get("errores_bloque") or {}
+check("9.9 Dar solo la conversión no reparte el consumo, y lo dice",
+      any("no determina los avances" in str(v) for v in errores_c.values()),
+      next((str(v)[:95] for v in errores_c.values() if "no determina" in str(v)), ""))
+
+# --- modo equilibrio de punta a punta
+d_eq = diagrama_reactor(modo_reaccion="equilibrio", modo_energia="isotermo")
+res_eq = d_eq.resolver(**BASE_D)
+pe = res_eq["pool"]
+check("9.10 El modo equilibrio resuelve el diagrama completo",
+      res_eq["completo"] is True,
+      f"ξ = [{pe['r1.xi0']:.6f}, {pe['r1.xi1']:.6f}]")
+check("9.11 Y declara una K_eq por reacción",
+      pe.get("r1.K_eq0") is not None and pe.get("r1.K_eq1") is not None,
+      f"K = [{pe['r1.K_eq0']:.4f}, {pe['r1.K_eq1']:.4f}]")
+# El mismo numero que el nucleo, por el camino del diagrama.
+eq_nucleo = mtbe_eq.avance_de_equilibrio(100.0, np.array([0.5, 0.5, 0.0, 0.0]), 340.0)
+check("9.12 Y es el MISMO avance que calcula el núcleo directamente",
+      np.allclose([pe["r1.xi0"], pe["r1.xi1"]],
+                  np.atleast_1d(eq_nucleo["xi"]), rtol=0, atol=1e-9),
+      "el diagrama no cambia el número")
+
+# --- grados de libertad: cada reaccion suma su incognita
+gl_dos = d_cin.grados_de_libertad(BASE_D)
+gl_una = d_una.grados_de_libertad(BASE_D)
+check("9.13 El contador ve una incógnita más por reacción",
+      gl_dos["incognitas"] == gl_una["incognitas"] + 1,
+      f"{gl_una['incognitas']} con una reacción, {gl_dos['incognitas']} con dos")
+
+
 print("\n" + "=" * 74)
 if fallos:
     print(f"FALLARON {len(fallos)}:")
