@@ -191,13 +191,18 @@ la misma definición**. Es la razón de existir de
 | `tests/validar_ponchon_savarit.py` | Polos, colinearidad, $Q_c/D$ mínimo, cruce con MT |
 | `tests/validar_operaciones_nuevas.py` | Separador, compresor/turbina, integración energética, PFR, absorbedor |
 | `tests/validar_especificaciones.py` | Especificaciones de diseño contra el camino directo, a través de un reciclo, y barridos ([§13](13-especificaciones.md)) |
-| `tests/validar_api_especificaciones.py` | **La frontera HTTP**: que el endpoint dé el mismo número que el núcleo, los códigos de error, y que la respuesta serialice ([§13.10](13-especificaciones.md)) |
+| `tests/validar_api_especificaciones.py` | **La frontera HTTP de `/diagrama/*`**: que el endpoint dé el mismo número que el núcleo, los códigos de error, y que la respuesta serialice ([§13.10](13-especificaciones.md)) |
+| `tests/validar_api.py` | **La frontera HTTP del resto**: los presets se reenvían a su propio endpoint, los códigos de error, y que ninguna respuesta lleve `NaN` (que no es JSON válido) |
 | `tests/validar_termodinamica.py` | ELV, topología reactiva, azeótropos |
-| `frontend/verificar_*.mjs` | Interfaz real en navegador (14 suites) |
+| `frontend/verificar_*.mjs` | Interfaz real en navegador (14 suites). Se lanzan todas con `node verificar_todo.mjs`, que mira el **código de salida** y no la salida de texto |
 
-Las suites de navegador usan `puppeteer-core` contra el Edge del sistema:
-**no comprueban que el componente renderice, sino que el número correcto
-llegue a la pantalla**.
+Las suites de navegador usan `puppeteer-core`: **no comprueban que el
+componente renderice, sino que el número correcto llegue a la pantalla**.
+La ruta del navegador se resuelve en `frontend/navegador.mjs` (Edge o
+Chrome en Windows, Chromium en Linux, o lo que diga `NAVEGADOR_PRUEBAS`).
+Antes iba escrita a mano en cada suite, y esa línea era justamente lo que
+impedía ejecutarlas en CI: trece de las catorce no se corrían nunca de
+forma automática.
 
 ### Cómo se lanzan
 

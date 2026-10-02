@@ -3,11 +3,12 @@
  * simulacion". Se comprueba que YA NO, que los componentes viven dentro
  * de la simulacion, y que se puede descargar y volver a subir.
  */
-import puppeteer from "puppeteer-core";
+import { lanzarNavegador, urlBase } from "./navegador.mjs";
+
+const URL_BASE = urlBase();
 import fs from "node:fs";
 import path from "node:path";
 
-const EDGE = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
 const DESCARGAS = path.resolve("./_descargas_test");
 const fallos = [];
 const comprobar = (c, m) => { console.log(c ? `  OK   ${m}` : `  FALLA ${m}`); if (!c) fallos.push(m); };
@@ -16,10 +17,7 @@ const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 fs.rmSync(DESCARGAS, { recursive: true, force: true });
 fs.mkdirSync(DESCARGAS, { recursive: true });
 
-const navegador = await puppeteer.launch({
-  executablePath: EDGE, headless: "new",
-  args: ["--no-sandbox"], defaultViewport: { width: 1700, height: 1000 },
-});
+const navegador = await lanzarNavegador({ defaultViewport: { width: 1700, height: 1000 } });
 const pagina = await navegador.newPage();
 const cdp = await pagina.createCDPSession();
 await cdp.send("Page.setDownloadBehavior", { behavior: "allow", downloadPath: DESCARGAS });
@@ -33,7 +31,7 @@ const clic = async (t, ms = 500) => {
 const texto = () => pagina.evaluate(() => document.body.innerText);
 
 console.log("=== Crear una simulación ===");
-await pagina.goto("http://localhost:3000/simulaciones", { waitUntil: "networkidle0" });
+await pagina.goto(`${URL_BASE}/simulaciones`, { waitUntil: "networkidle0" });
 await pagina.evaluate(() => {
   const i = document.querySelector('input[placeholder="Nombre (opcional)"]');
   Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set.call(i, "Caso de prueba");
@@ -54,11 +52,11 @@ console.log("  nodos en el lienzo:", nodosTrasCrear);
 comprobar(nodosTrasCrear === 4, "la plantilla trae la columna y sus tres corrientes ya conectadas");
 
 console.log("\n=== Cambiar de panel NO debe borrarla (el bug reportado) ===");
-await pagina.goto("http://localhost:3000/termodinamica", { waitUntil: "networkidle0" });
+await pagina.goto(`${URL_BASE}/termodinamica`, { waitUntil: "networkidle0" });
 await esperar(600);
-await pagina.goto("http://localhost:3000/configuracion", { waitUntil: "networkidle0" });
+await pagina.goto(`${URL_BASE}/configuracion`, { waitUntil: "networkidle0" });
 await esperar(600);
-await pagina.goto("http://localhost:3000/flowsheet", { waitUntil: "networkidle0" });
+await pagina.goto(`${URL_BASE}/flowsheet`, { waitUntil: "networkidle0" });
 await esperar(2000);
 const nodosTrasNavegar = await pagina.evaluate(() => document.querySelectorAll(".react-flow__node").length);
 console.log("  nodos tras pasear por tres paneles:", nodosTrasNavegar);
@@ -73,7 +71,7 @@ const nodosTrasRecargar = await pagina.evaluate(() => document.querySelectorAll(
 comprobar(nodosTrasRecargar === 4, "sobrevive a recargar el navegador");
 
 console.log("\n=== Dos simulaciones con componentes distintos ===");
-await pagina.goto("http://localhost:3000/simulaciones", { waitUntil: "networkidle0" });
+await pagina.goto(`${URL_BASE}/simulaciones`, { waitUntil: "networkidle0" });
 await pagina.evaluate(() => {
   const i = document.querySelector('input[placeholder="Nombre (opcional)"]');
   Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set.call(i, "Segunda, en blanco");
@@ -91,7 +89,7 @@ t = await texto();
 comprobar(t.includes("sin componentes"), "y sin componentes: son propios de cada simulación");
 
 console.log("\n=== Volver a la primera la recupera intacta ===");
-await pagina.goto("http://localhost:3000/simulaciones", { waitUntil: "networkidle0" });
+await pagina.goto(`${URL_BASE}/simulaciones`, { waitUntil: "networkidle0" });
 await esperar(500);
 await pagina.evaluate(() => {
   const fila = [...document.querySelectorAll("div")].find(
@@ -104,7 +102,7 @@ const nodosVuelta = await pagina.evaluate(() => document.querySelectorAll(".reac
 comprobar(nodosVuelta === 4, "al reabrir la primera vuelve su diagrama completo");
 
 console.log("\n=== Descargar y volver a subir ===");
-await pagina.goto("http://localhost:3000/simulaciones", { waitUntil: "networkidle0" });
+await pagina.goto(`${URL_BASE}/simulaciones`, { waitUntil: "networkidle0" });
 await esperar(500);
 await pagina.evaluate(() => {
   const fila = [...document.querySelectorAll("div")].find(

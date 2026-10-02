@@ -872,3 +872,56 @@ Con esto, **lo que queda ya no se puede añadir "por los lados"**:
 - **MESH** — y con él las columnas de extracciones laterales y varias alimentaciones.
 - **Equilibrio líquido-líquido** — y con él la extracción y los sistemas con agua.
 - **Fase vapor no ideal** — el compresor supone gas ideal y el reactor de MTBE opera a 5–30 atm, que es donde esa suposición empieza a fallar.
+
+---
+
+# Fase 10: Lo que decía algo falso
+
+Cuatro cosas que no eran huecos de física, sino afirmaciones incorrectas en el producto, en el CI o en el contrato de la API. Se agrupan porque comparten un patrón: **ninguna rompía nada al ejecutarse, y por eso ninguna se había notado.**
+
+### ✅ La interfaz decía «Reactor — pendiente» (Completado)
+Con tres reactores en el catálogo (CSTR, equilibrio, PFR). Era una afirmación falsa sobre la propia capacidad del programa, de las peores que puede tener una interfaz: quien la leyera concluiría que el simulador no reacciona.
+
+Se conserva el hueco, porque declarar los límites a la vista es una costumbre que vale, pero diciendo **lo que sí está pendiente y por qué**: «Extracción lateral — necesita MESH». Una columna con extracciones laterales o varias alimentaciones no se puede resolver con métodos de atajo. Lo que falta no es una entrada en el catálogo, es la física.
+
+### ✅ Dos motores igual de visibles, sin decir cuál es el de ahora (Completado)
+`/flowsheet/*` usa el modelo ANTIGUO (`core/diagrama_flujo.py`), donde las corrientes no son objetos de primera clase y la información fluye en una sola dirección. `/diagrama/*` lo sustituyó. En `/docs` los dos salían igual, así que cualquiera podía empezar por el equivocado — y **los ejemplos de un modelo no valen en el otro**.
+
+Marcados los tres endpoints con `deprecated=True`, que la documentación automática pinta tachados. **No se borran**: `core/diagrama_flujo.py` sigue teniendo dos consumidores legítimos — `OperacionUnitaria`, que `core/columna_destilacion.py` importa, y `tests/validar_diagrama_flujo.py`, que comprueba los mismos números por otro camino. Borrarlo quitaría esa red.
+
+### ✅ Trece de las catorce suites de navegador no se ejecutaban nunca (Completado)
+El CI corría **una**: la única que no necesita navegador. Las otras trece —las que comprueban lo que ninguna suite de Python puede ver, que el número correcto llegue a la pantalla— solo se ejecutaban cuando alguien se acordaba. Tenerlas así es casi lo mismo que no tenerlas.
+
+**Lo que lo impedía era una línea**, repetida catorce veces:
+
+```js
+const EDGE = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
+```
+
+Ahora la ruta se resuelve en `frontend/navegador.mjs`: `NAVEGADOR_PRUEBAS` si está puesta, y si no la primera de una lista por sistema operativo. El error, cuando no hay ninguno, dice dónde se buscó y cómo arreglarlo — un `Browser was not found at the configured executablePath` con una ruta sola no aclara si falta el navegador o si la ruta está mal escrita.
+
+Con eso, el CI gana un trabajo que levanta la API, compila y sirve el frontend, instala Chromium y corre las catorce. Espera a que cada servidor **responda** en vez de dormir un número inventado de segundos: la primera carga importa `thermo`, que no es rápida.
+
+### ✅ El lanzador leía los resultados con `grep` (Completado)
+`frontend/verificar_todo.mjs`, el equivalente de `run_tests.py` para el navegador. Importa por una razón concreta: **cada suite termina con un mensaje distinto** (`TODO OK`, `TODAS LAS PLANTILLAS OK`, `OK: la conversion...`), así que buscar una frase en la salida **da por buena una suite que acaba de reventar con otra frase**. Todas devuelven `process.exit(0|1)` correctamente, así que el código de salida es lo único que hay que mirar.
+
+Además declara qué necesita cada suite —nada, la API, o la API más el frontend más un navegador— y lo comprueba **antes** de correr ninguna. Un servidor caído no es «fallan las suites», es que no se han podido correr, y decirlo así ahorra leer doce rastros de pila idénticos para descubrir que faltaba levantar `uvicorn`.
+
+### ✅ Dieciséis endpoints sin prueba de frontera (Completado)
+Solo `/diagrama/*` la tenía. Los demás estaban cubiertos de refilón —las suites de navegador los usan al pasar— pero eso significa que un fallo de frontera se manifestaba como «la gráfica no aparece», a ocho capas de la causa.
+
+`tests/validar_api.py`, 42 comprobaciones. La idea que más rinde: **encadenar en vez de inventar cargas.** Los presets de `/ejemplos` ya SON peticiones válidas de `/columna/resolver`, y los de `/flowsheet/ejemplos` lo son de `/flowsheet/resolver`. La suite los pide y los reenvía. Eso prueba dos endpoints de una vez y, sobre todo, prueba algo que una carga escrita a mano no puede probar: **que el preset que la interfaz le ofrece al usuario de verdad se resuelva.** Un preset roto es un fallo que se encuentra en el primer clic.
+
+Y una comprobación que parece tonta: que cada respuesta serialice con `allow_nan=False`. `json.dumps` acepta NaN por omisión y escribe `NaN`, que **no es JSON válido** y que el `JSON.parse` del navegador rechaza. Un hueco numérico mal gestionado llega hasta ahí con esa cara.
+
+### ⚠ Lo que encontró, y mis propias suposiciones equivocadas
+De los cuatro fallos de la primera ejecución, **tres eran de la suite y uno del contrato**:
+
+- **Del contrato:** el campo `requiere_masa_molar` de `/unidades` describía lo contrario de lo que hace. Decía *«si es true, la conversión NO es afín»*, y desde que el caudal másico pasó a ser una ECUACIÓN del diagrama ya nunca es true. La descripción se quedó señalando a un modelo que el proyecto había abandonado a propósito. Corregida para decir que es siempre `false`, por qué, y **qué debe mirar el cliente en su lugar** (`variables["F"]`, donde se ve que F admite base másica).
+- **Mías:** el parámetro se llama `q`, no `nombre`; `/elv/binario` devuelve `n_puntos` **interiores** más los dos componentes puros, así que 20 dan 22; y `x = 0.5` no cae en la malla salvo que `n_puntos` sea impar, así que el punto de burbuja del 50/50 hay que interpolarlo (365.5236 interpolado contra 365.5157 exacto — y por eso la tolerancia es 0.1 K y no 1e-9: se comprueba que el endpoint devuelva LA MISMA curva, no que acierte un punto que no calculó).
+
+Y una cuarta suposición mía que resultó enseñar algo: esperaba que buscar un componente inexistente diera 404. Da **200 con `encontrado: false`**, y es deliberado — esto es una BÚSQUEDA, y «no existe» es una respuesta válida que el buscador debe poder mostrar mientras se teclea. Un 404 convertiría cada pulsación en un error. Mejor aún, el endpoint separa dos banderas que son distintas: el metano **se encuentra** (existe, tiene MW) pero **no es apto** (sin grupos UNIFAC no hay γ). Si estuvieran fundidas en una, el usuario elegiría metano y el fallo saldría mucho después, al resolver. Eso ahora está comprobado.
+
+### Verificación de la tanda
+- 15/15 suites de Python.
+- 14/14 de navegador, y por primera vez **todas** desde un solo comando y desde CI.

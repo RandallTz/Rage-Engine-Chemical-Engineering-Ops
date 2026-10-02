@@ -7,18 +7,16 @@
  * Sistema: el de las primeras pruebas -- isobutylene/methanol/mtbe,
  * ν = [-1,-1,3], A = 1e6, Ea = 6e4, Da = 5, T_ref = 350 K.
  */
-import puppeteer from "puppeteer-core";
+import { lanzarNavegador, urlBase } from "./navegador.mjs";
+
+const URL_BASE = urlBase();
 import { prepararSimulacion } from "./preparar_simulacion.mjs";
 
-const EDGE = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
 const fallos = [];
 const comprobar = (c, m) => { console.log(c ? `  OK   ${m}` : `  FALLA ${m}`); if (!c) fallos.push(m); };
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const navegador = await puppeteer.launch({
-  executablePath: EDGE, headless: "new",
-  args: ["--no-sandbox"], defaultViewport: { width: 1700, height: 1100 },
-});
+const navegador = await lanzarNavegador({ defaultViewport: { width: 1700, height: 1100 } });
 const pagina = await navegador.newPage();
 pagina.on("pageerror", (e) => console.log("   [pageerror]", String(e).slice(0, 140)));
 
@@ -27,7 +25,7 @@ await prepararSimulacion(pagina, [
   { nombre: "methanol", MW: 32.042 },
   { nombre: "mtbe", MW: 88.148 },
 ]);
-await pagina.goto("http://localhost:3000/termodinamica/reactiva", { waitUntil: "networkidle0" });
+await pagina.goto(`${URL_BASE}/termodinamica/reactiva`, { waitUntil: "networkidle0" });
 await esperar(900);
 
 const texto = () => pagina.evaluate(() => document.body.innerText);

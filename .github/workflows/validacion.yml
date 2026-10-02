@@ -36,7 +36,7 @@ jobs:
       - name: Instalar dependencias
         run: pip install -r requirements.txt
 
-      - name: Correr las 11 suites de validación
+      - name: Correr las suites de validación del núcleo
         # run_tests.py devuelve 0 o 1 de verdad: si una sola comprobación
         # falla, el trabajo falla. No se lee la salida con los ojos.
         env:
@@ -76,3 +76,84 @@ jobs:
         # No necesita navegador: es lógica pura. Comprueba que lo que sale
         # del enlace sea exactamente lo que entró.
         run: node verificar_enlace.mjs
+
+  interfaz:
+    # El trabajo que faltaba. Trece de las catorce suites de verificación
+    # necesitan un navegador y los dos servidores vivos, así que no se
+    # ejecutaban NUNCA en CI: el trabajo de arriba corría la única que no
+    # los necesita. Y son precisamente las que comprueban lo que ninguna
+    # suite de Python puede ver — que el número correcto llegue a la
+    # pantalla. Tenerlas sin ejecutar automáticamente es tanto como no
+    # tenerlas.
+    #
+    # Lo que lo impedía era una línea: la ruta de Edge escrita a mano en
+    # cada suite. Ahora se resuelve en frontend/navegador.mjs, y aquí basta
+    # con decir dónde está el Chromium del runner.
+    name: Interfaz (el número llega a la pantalla)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar dependencias del núcleo
+        run: pip install -r requirements.txt
+
+      - name: Instalar dependencias del frontend
+        working-directory: frontend
+        run: npm ci
+
+      - name: Instalar Chromium
+        # puppeteer-core no trae navegador a propósito (de ahí el "-core").
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chromium-browser || sudo apt-get install -y chromium
+          which chromium-browser || which chromium
+
+      - name: Levantar la API
+        env:
+          MPLBACKEND: Agg
+        run: |
+          python -m uvicorn backend.main:app --host 127.0.0.1 --port 8001 &
+          # Esperar a que responda, en vez de dormir un número inventado de
+          # segundos: la primera carga importa 'thermo', que no es rápida.
+          for i in $(seq 1 60); do
+            curl -sf http://127.0.0.1:8001/salud && break
+            sleep 2
+          done
+          curl -sf http://127.0.0.1:8001/salud
+
+      - name: Compilar y servir el frontend
+        working-directory: frontend
+        env:
+          # La URL se hornea en tiempo de compilación, así que tiene que
+          # ser la de la API que acabamos de levantar y no un valor de
+          # relleno.
+          NEXT_PUBLIC_API_URL: http://127.0.0.1:8001
+        run: |
+          npm run build
+          npm run start -- -p 3000 &
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:3000/ && break
+            sleep 2
+          done
+          curl -sf http://127.0.0.1:3000/ >/dev/null
+
+      - name: Correr las 14 suites de interfaz
+        working-directory: frontend
+        env:
+          URL_PRUEBAS: http://127.0.0.1:3000
+          NEXT_PUBLIC_API_URL: http://127.0.0.1:8001
+        run: |
+          export NAVEGADOR_PRUEBAS="$(which chromium-browser || which chromium)"
+          node verificar_todo.mjs

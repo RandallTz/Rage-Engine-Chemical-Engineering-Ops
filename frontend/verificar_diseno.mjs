@@ -22,10 +22,9 @@
  * Uso:  node verificar_diseno.mjs [url]
  * Necesita la API viva (por defecto en el puerto que diga .env.local).
  */
-import puppeteer from "puppeteer-core";
+import { lanzarNavegador, urlBase } from "./navegador.mjs";
 
-const URL_BASE = process.argv[2] ?? "http://localhost:3000";
-const EDGE = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
+const URL_BASE = urlBase();
 
 const fallos = [];
 const comprobar = (c, m, detalle = "") => {
@@ -150,11 +149,7 @@ async function escribir(p, campo, valor) {
   return true;
 }
 
-const navegador = await puppeteer.launch({
-  executablePath: EDGE,
-  headless: "new",
-  args: ["--no-sandbox"],
-});
+const navegador = await lanzarNavegador();
 
 try {
   // =================================================================

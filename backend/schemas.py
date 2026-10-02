@@ -501,8 +501,17 @@ class UnidadInfo(BaseModel):
     requiere_masa_molar: bool = Field(
         False,
         description=(
-            "Si es true, la conversion NO es afin: pasar de masa a moles necesita la masa molar de "
-            "LA MEZCLA de esa corriente, que depende de su composicion."
+            "SIEMPRE false en el modelo actual, y conviene saber por que. Significaria que la "
+            "conversion no es afin. Hubo un tiempo en que el caudal masico se trataba como otra "
+            "unidad de F, y entonces este campo valia true para avisar de que pasar de masa a "
+            "moles necesita la masa molar de LA MEZCLA. Ya no: ese paso es una ECUACION del "
+            "diagrama (m = F*MW_mezcla(x), ver _bloque_caudal_masico en "
+            "core/diagrama_corrientes.py), asi que todas las unidades que esta tabla ofrece son "
+            "afines y el cliente puede convertirlas en local sin saber nada de composiciones. Lo "
+            "que si tiene que mirar el cliente es 'variables': ahi se ve que F admite las "
+            "magnitudes 'flujo_molar' Y 'flujo_masico', y un caudal dado en la segunda viaja al "
+            "servidor en 'caudales_masicos' [kg/s], no en 'valores'. El campo se conserva para no "
+            "romper a quien ya lo leyera."
         ),
     )
 

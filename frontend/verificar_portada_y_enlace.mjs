@@ -11,10 +11,9 @@
  *
  * Uso:  node verificar_portada_y_enlace.mjs [url]
  */
-import puppeteer from "puppeteer-core";
+import { lanzarNavegador, urlBase } from "./navegador.mjs";
 
-const URL_BASE = process.argv[2] ?? "http://localhost:3100";
-const EDGE = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
+const URL_BASE = urlBase();
 
 const fallos = [];
 const comprobar = (c, m, detalle = "") => {
@@ -22,11 +21,7 @@ const comprobar = (c, m, detalle = "") => {
   if (!c) fallos.push(m);
 };
 
-const navegador = await puppeteer.launch({
-  executablePath: EDGE,
-  headless: "new",
-  args: ["--no-sandbox"],
-});
+const navegador = await lanzarNavegador();
 
 try {
   // ----------------------------------------------------------- portada

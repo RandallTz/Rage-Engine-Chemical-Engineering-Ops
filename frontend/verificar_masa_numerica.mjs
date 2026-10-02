@@ -19,15 +19,13 @@
  * afin) y el que sale del nucleo (100 mol/s, la que necesita la MW de la
  * mezcla). Antes solo se veia el segundo.
  */
-import puppeteer from "puppeteer-core";
+import { lanzarNavegador, urlBase } from "./navegador.mjs";
 
-const EDGE = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
+const URL_BASE = urlBase();
+
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const navegador = await puppeteer.launch({
-  executablePath: EDGE, headless: "new",
-  args: ["--no-sandbox"], defaultViewport: { width: 1700, height: 950 },
-});
+const navegador = await lanzarNavegador({ defaultViewport: { width: 1700, height: 950 } });
 const pagina = await navegador.newPage();
 
 let ultimoEnvio = null;
@@ -51,7 +49,7 @@ pagina.on("response", async (respuesta) => {
 // hace nada y no se manda ninguna peticion que interceptar -- que es
 // exactamente como esta suite se quedo muda cuando las simulaciones
 // pasaron a vivir en el almacenamiento del navegador.
-await pagina.goto("http://localhost:3000/simulaciones", { waitUntil: "domcontentloaded" });
+await pagina.goto(`${URL_BASE}/simulaciones`, { waitUntil: "domcontentloaded" });
 await pagina.evaluate(() => {
   const sim = {
     id: "sim_masa", nombre: "Masa — benceno/tolueno",
@@ -66,7 +64,7 @@ await pagina.evaluate(() => {
   localStorage.setItem("simulador.simulaciones",
     JSON.stringify({ activa: sim.id, lista: [sim] }));
 });
-await pagina.goto("http://localhost:3000/flowsheet", { waitUntil: "networkidle0" });
+await pagina.goto(`${URL_BASE}/flowsheet`, { waitUntil: "networkidle0" });
 
 const clic = async (t) => {
   await pagina.evaluate((x) => [...document.querySelectorAll("button")].find((z) => z.textContent.trim() === x)?.click(), t);

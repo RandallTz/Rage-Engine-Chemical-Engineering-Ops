@@ -9,17 +9,15 @@
  *
  * 2. Renombrar cualquier elemento debe arrastrar aristas, datos y unidades.
  */
-import puppeteer from "puppeteer-core";
+import { lanzarNavegador, urlBase } from "./navegador.mjs";
 
-const EDGE = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
+const URL_BASE = urlBase();
+
 const fallos = [];
 const comprobar = (c, m) => { console.log(c ? `  OK   ${m}` : `  FALLA ${m}`); if (!c) fallos.push(m); };
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const navegador = await puppeteer.launch({
-  executablePath: EDGE, headless: "new",
-  args: ["--no-sandbox"], defaultViewport: { width: 1700, height: 1000 },
-});
+const navegador = await lanzarNavegador({ defaultViewport: { width: 1700, height: 1000 } });
 const pagina = await navegador.newPage();
 pagina.on("pageerror", (e) => console.log("   [pageerror]", String(e).slice(0, 140)));
 
@@ -30,7 +28,7 @@ const clic = async (t, ms = 600) => {
   await esperar(ms);
 };
 const abrirPlantilla = async (fragmento) => {
-  await pagina.goto("http://localhost:3000/simulaciones", { waitUntil: "networkidle0" });
+  await pagina.goto(`${URL_BASE}/simulaciones`, { waitUntil: "networkidle0" });
   await esperar(500);
   await pagina.evaluate((f) => {
     [...document.querySelectorAll("button")].find((b) => b.innerText.includes(f))?.click();

@@ -6,11 +6,12 @@
  *  4. FUG en el flowsheet y métodos binarios bloqueados con >2 componentes
  *  5. líneas rectas en el diagrama
  */
-import puppeteer from "puppeteer-core";
+import { lanzarNavegador, urlBase } from "./navegador.mjs";
+
+const URL_BASE = urlBase();
 import fs from "node:fs";
 import path from "node:path";
 
-const EDGE = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
 const DESCARGAS = path.resolve("./_descargas_menu");
 const fallos = [];
 const comprobar = (c, m) => { console.log(c ? `  OK   ${m}` : `  FALLA ${m}`); if (!c) fallos.push(m); };
@@ -19,10 +20,7 @@ const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 fs.rmSync(DESCARGAS, { recursive: true, force: true });
 fs.mkdirSync(DESCARGAS, { recursive: true });
 
-const navegador = await puppeteer.launch({
-  executablePath: EDGE, headless: "new",
-  args: ["--no-sandbox"], defaultViewport: { width: 1700, height: 1000 },
-});
+const navegador = await lanzarNavegador({ defaultViewport: { width: 1700, height: 1000 } });
 const pagina = await navegador.newPage();
 const cdp = await pagina.createCDPSession();
 await cdp.send("Page.setDownloadBehavior", { behavior: "allow", downloadPath: DESCARGAS });
@@ -51,7 +49,7 @@ const LISTAS = [
 
 for (const caso of LISTAS) {
   console.log(`\n=== Proceso listo: ${caso.plantilla} ===`);
-  await pagina.goto("http://localhost:3000/simulaciones", { waitUntil: "networkidle0" });
+  await pagina.goto(`${URL_BASE}/simulaciones`, { waitUntil: "networkidle0" });
   await esperar(500);
   await elegirPlantilla(caso.plantilla);
   await clic("Crear y abrir", 3000);
@@ -110,7 +108,7 @@ if (archivos.length) {
 
 // ========================================= 4. FUG y guarda de métodos
 console.log("\n=== FUG y bloqueo de métodos binarios con >2 componentes ===");
-await pagina.goto("http://localhost:3000/simulaciones", { waitUntil: "networkidle0" });
+await pagina.goto(`${URL_BASE}/simulaciones`, { waitUntil: "networkidle0" });
 await esperar(500);
 await elegirPlantilla("Columna multicomponente FUG (lista)");
 await clic("Crear y abrir", 3000);

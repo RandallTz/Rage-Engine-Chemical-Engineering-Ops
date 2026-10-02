@@ -87,12 +87,25 @@ def resolver(request: ResolverColumnaRequest):
         raise HTTPException(status_code=422, detail=str(e))
 
 
-@app.get("/flowsheet/ejemplos", response_model=list[EjemploFlowsheet])
+OBSOLETO_FLOWSHEET = (
+    "OBSOLETO. Este es el modelo ANTIGUO de flowsheet (core/diagrama_flujo.py), "
+    "donde las corrientes no son objetos de primera clase y la informacion fluye en "
+    "una sola direccion. Usa /diagrama/* en su lugar: ahi las variables del pool son "
+    "escalares por corriente, se puede mandar cualquier subconjunto y el sistema "
+    "resuelve en la direccion que haga falta. Se mantiene porque "
+    "tests/validar_diagrama_flujo.py lo usa como comprobacion cruzada contra los "
+    "mismos numeros por otro camino; los ejemplos de un modelo NO valen en el otro."
+)
+
+
+@app.get("/flowsheet/ejemplos", response_model=list[EjemploFlowsheet],
+         deprecated=True, description=OBSOLETO_FLOWSHEET)
 def listar_ejemplos_flowsheet():
     return EJEMPLOS_FLOWSHEET
 
 
-@app.get("/flowsheet/ejemplos/{ejemplo_id}", response_model=EjemploFlowsheet)
+@app.get("/flowsheet/ejemplos/{ejemplo_id}", response_model=EjemploFlowsheet,
+         deprecated=True, description=OBSOLETO_FLOWSHEET)
 def obtener_ejemplo_flowsheet(ejemplo_id: str):
     ejemplo = EJEMPLOS_FLOWSHEET_POR_ID.get(ejemplo_id)
     if ejemplo is None:
@@ -100,7 +113,8 @@ def obtener_ejemplo_flowsheet(ejemplo_id: str):
     return ejemplo
 
 
-@app.post("/flowsheet/resolver", response_model=ResolverFlowsheetResponse)
+@app.post("/flowsheet/resolver", response_model=ResolverFlowsheetResponse,
+          deprecated=True, description=OBSOLETO_FLOWSHEET)
 def resolver_flowsheet_endpoint(request: ResolverFlowsheetRequest):
     try:
         return resolver_flowsheet(request)

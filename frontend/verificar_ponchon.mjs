@@ -3,22 +3,20 @@
  * checkbox decorativo (antes se dibujaba pero solo lo leia la rama de
  * McCabe-Thiele) y la construccion entalpica debe dibujarse.
  */
-import puppeteer from "puppeteer-core";
+import { lanzarNavegador, urlBase } from "./navegador.mjs";
+
+const URL_BASE = urlBase();
 import { prepararSimulacion } from "./preparar_simulacion.mjs";
 
-const EDGE = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
 const fallos = [];
 const comprobar = (c, m) => { console.log(c ? `  OK   ${m}` : `  FALLA ${m}`); if (!c) fallos.push(m); };
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const navegador = await puppeteer.launch({
-  executablePath: EDGE, headless: "new",
-  args: ["--no-sandbox"], defaultViewport: { width: 1700, height: 1000 },
-});
+const navegador = await lanzarNavegador({ defaultViewport: { width: 1700, height: 1000 } });
 const pagina = await navegador.newPage();
 pagina.on("console", (m) => { if (m.type() === "error") console.log("   [consola]", m.text().slice(0, 160)); });
 await prepararSimulacion(pagina);
-await pagina.goto("http://localhost:3000/flowsheet", { waitUntil: "networkidle0" });
+await pagina.goto(`${URL_BASE}/flowsheet`, { waitUntil: "networkidle0" });
 
 const clic = async (t) => {
   await pagina.evaluate((x) => [...document.querySelectorAll("button")].find((z) => z.textContent.trim() === x)?.click(), t);

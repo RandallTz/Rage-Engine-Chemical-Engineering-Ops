@@ -6,21 +6,17 @@
  *
  * Uso:  node verificar_ui.mjs [url]
  */
-import puppeteer from "puppeteer-core";
+import { lanzarNavegador, urlBase } from "./navegador.mjs";
 import { prepararSimulacion } from "./preparar_simulacion.mjs";
 
-const URL_BASE = process.argv[2] ?? "http://localhost:3000";
-const EDGE = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
+const URL_BASE = urlBase();
 
 const fallos = [];
 const avisos = [];
 const comprobar = (c, m) => { console.log(c ? `  OK   ${m}` : `  FALLA ${m}`); if (!c) fallos.push(m); };
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const navegador = await puppeteer.launch({
-  executablePath: EDGE, headless: "new",
-  args: ["--no-sandbox"], defaultViewport: { width: 1600, height: 950 },
-});
+const navegador = await lanzarNavegador({ defaultViewport: { width: 1600, height: 950 } });
 const pagina = await navegador.newPage();
 pagina.on("console", (m) => { if (m.type() === "error" || m.text().includes("[React Flow]")) avisos.push(m.text()); });
 pagina.on("pageerror", (e) => avisos.push(`pageerror: ${e.message}`));

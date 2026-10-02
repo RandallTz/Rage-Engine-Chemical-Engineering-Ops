@@ -4,25 +4,23 @@
  *   - Poder elegir la unidad POR CORRIENTE (una en kg/h, otra en mol/s)
  *     y que la conversion se haga por dentro.
  */
-import puppeteer from "puppeteer-core";
+import { lanzarNavegador, urlBase } from "./navegador.mjs";
+
+const URL_BASE = urlBase();
 import { prepararSimulacion } from "./preparar_simulacion.mjs";
 
-const EDGE = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
 const fallos = [];
 const comprobar = (c, m) => { console.log(c ? `  OK   ${m}` : `  FALLA ${m}`); if (!c) fallos.push(m); };
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const navegador = await puppeteer.launch({
-  executablePath: EDGE, headless: "new",
-  args: ["--no-sandbox"], defaultViewport: { width: 1700, height: 980 },
-});
+const navegador = await lanzarNavegador({ defaultViewport: { width: 1700, height: 980 } });
 const pagina = await navegador.newPage();
 let envio = null;
 pagina.on("request", (r) => {
   if (r.url().includes("/diagrama/resolver")) { try { envio = JSON.parse(r.postData()); } catch { /* */ } }
 });
 await prepararSimulacion(pagina);
-await pagina.goto("http://localhost:3000/flowsheet", { waitUntil: "networkidle0" });
+await pagina.goto(`${URL_BASE}/flowsheet`, { waitUntil: "networkidle0" });
 
 const clic = async (t) => {
   await pagina.evaluate((x) => [...document.querySelectorAll("button")].find((z) => z.textContent.trim() === x)?.click(), t);

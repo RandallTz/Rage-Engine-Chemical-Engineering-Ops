@@ -586,9 +586,9 @@ export default function FlowsheetPage() {
                   </button>
                   <span
                     className="rounded border border-dashed border-zinc-800 bg-zinc-900/95 px-2 py-1 text-[10px] text-zinc-600"
-                    title="Agregar un reactor es una entrada en este catálogo y un método en DiagramaCorrientes. El motor no cambia."
+                    title="Una columna con extracciones laterales o varias alimentaciones no se puede resolver con métodos de atajo (McCabe-Thiele, FUG): necesita el sistema MESH plato a plato, que todavía no está. Lo que falta no es una entrada en este catálogo, es la física."
                   >
-                    Reactor — pendiente
+                    Extracción lateral — necesita MESH
                   </span>
                 </div>
               )}

@@ -2,17 +2,15 @@
  * Reactor CSTR dentro del flowsheet (debe resolver hacia adelante y
  * hacia atras, como el resto) y modulo de termodinamica.
  */
-import puppeteer from "puppeteer-core";
+import { lanzarNavegador, urlBase } from "./navegador.mjs";
 
-const EDGE = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
+const URL_BASE = urlBase();
+
 const fallos = [];
 const comprobar = (c, m) => { console.log(c ? `  OK   ${m}` : `  FALLA ${m}`); if (!c) fallos.push(m); };
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const navegador = await puppeteer.launch({
-  executablePath: EDGE, headless: "new",
-  args: ["--no-sandbox"], defaultViewport: { width: 1700, height: 1000 },
-});
+const navegador = await lanzarNavegador({ defaultViewport: { width: 1700, height: 1000 } });
 const pagina = await navegador.newPage();
 pagina.on("console", (m) => { if (m.type() === "error") console.log("   [consola]", m.text().slice(0, 150)); });
 pagina.on("pageerror", (e) => console.log("   [pageerror]", String(e).slice(0, 150)));
@@ -69,7 +67,7 @@ const conectar = async (no, po, nd, pd) => {
 
 // ---- simulacion nueva, ternaria (MTBE)
 console.log("=== Preparar una simulación ternaria ===");
-await pagina.goto("http://localhost:3000/simulaciones", { waitUntil: "networkidle0" });
+await pagina.goto(`${URL_BASE}/simulaciones`, { waitUntil: "networkidle0" });
 await pagina.evaluate(() => {
   const i = document.querySelector('input[placeholder="Nombre (opcional)"]');
   Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set.call(i, "Reactor MTBE");
@@ -91,7 +89,7 @@ await pagina.evaluate(() => {
   ];
   localStorage.setItem(clave, JSON.stringify(a));
 });
-await pagina.goto("http://localhost:3000/flowsheet", { waitUntil: "networkidle0" });
+await pagina.goto(`${URL_BASE}/flowsheet`, { waitUntil: "networkidle0" });
 await esperar(1500);
 let t = await texto();
 comprobar(t.includes("isobutene") && t.includes("mtbe"), "la simulación tiene los 3 componentes");
@@ -165,7 +163,7 @@ comprobar(/0\.2500/.test(s2), "y x_MTBE = 0.2500");
 if (!/80\.000/.test(s2)) console.log("   [diagnóstico]", t.slice(0, 500));
 
 console.log("\n=== Módulo de termodinámica ===");
-await pagina.goto("http://localhost:3000/termodinamica", { waitUntil: "networkidle0" });
+await pagina.goto(`${URL_BASE}/termodinamica`, { waitUntil: "networkidle0" });
 await esperar(900);
 t = await texto();
 comprobar(t.includes("Curvas residuales"), "el índice ofrece curvas residuales");
@@ -174,7 +172,7 @@ comprobar(t.includes("Equilibrio líquido–vapor"), "y el ELV de siempre");
 comprobar(t.includes("isobutene"), "muestra la mezcla de la simulación abierta");
 
 console.log("\n=== Curvas residuales (es el cálculo caro: puede tardar) ===");
-await pagina.goto("http://localhost:3000/termodinamica/residuales", { waitUntil: "networkidle0" });
+await pagina.goto(`${URL_BASE}/termodinamica/residuales`, { waitUntil: "networkidle0" });
 await esperar(700);
 await pagina.evaluate(() => {
   const inputs = [...document.querySelectorAll("input")]

@@ -104,8 +104,22 @@ decisiones que no son obvias, en
 
 ```bash
 pip install -r requirements.txt
-python run_tests.py          # las 14 suites de validación, ~310 s
+python run_tests.py          # las 15 suites del núcleo y la API, ~310 s
 ```
+
+Y las de la interfaz, que comprueban lo que ninguna suite de Python puede
+ver —que el número correcto llegue a la pantalla— necesitan los dos
+servidores vivos y un navegador:
+
+```bash
+python -m uvicorn backend.main:app --port 8001 --reload   # en una terminal
+cd frontend && npm run dev                                 # en otra
+cd frontend && node verificar_todo.mjs                     # las 14 suites
+```
+
+El lanzador mira el **código de salida** de cada suite, no su salida de
+texto: cada una termina con un mensaje distinto, así que buscar «TODO OK»
+daba por buena una suite que acababa de reventar con otra frase.
 
 Las versiones de `requirements.txt` están **fijas a propósito**: las
 validaciones comparan contra valores exactos (`365.515693 K, idéntico bit
