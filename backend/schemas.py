@@ -238,6 +238,7 @@ class OperacionDiagrama(BaseModel):
         "columna", "mezclador", "divisor", "bomba", "reactor_cstr",
         "flash", "intercambiador", "valvula",
         "separador", "compresor", "reactor_equilibrio", "intercambiador_doble",
+        "reactor_pfr", "absorbedor",
     ]
     corrientes: dict[str, Any] = Field(
         description=(
@@ -247,7 +248,9 @@ class OperacionDiagrama(BaseModel):
             "flash: entrada/vapor/liquido. intercambiador: entrada/salida. "
             "valvula: entrada/salida. separador: entrada/ligeros/pesados. "
             "compresor: entrada/salida. reactor_equilibrio: entradas (lista)/salida. "
-            "intercambiador_doble: caliente_entrada/caliente_salida/frio_entrada/frio_salida."
+            "intercambiador_doble: caliente_entrada/caliente_salida/frio_entrada/frio_salida. "
+            "reactor_pfr: entradas (lista)/salida. "
+            "absorbedor: gas_entrada/gas_salida/liquido_entrada/liquido_salida."
         )
     )
     metodo: Optional[Literal["mccabe_thiele", "ponchon_savarit", "fug"]] = None
@@ -349,6 +352,10 @@ class OperacionDiagrama(BaseModel):
     )
     contracorriente: bool = Field(
         True, description="Solo intercambiador_doble: contracorriente (por defecto) o co-corriente.",
+    )
+    # --- absorbedor
+    N_etapas: Optional[float] = Field(
+        None, gt=0, description="Solo absorbedor: etapas teoricas del metodo de Kremser.",
     )
 
 

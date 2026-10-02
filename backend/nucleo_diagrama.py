@@ -182,6 +182,35 @@ def _construir(request):
                 aproximacion_minima=op.aproximacion_minima,
                 contracorriente=op.contracorriente,
             )
+        elif op.tipo == "reactor_pfr":
+            if op.reaccion is None:
+                raise ValueError(
+                    f"{op.nombre}: un PFR necesita la cinetica (parametros de Arrhenius). "
+                    "Sin ella no hay nada que integrar a lo largo del tubo."
+                )
+            if len(op.reaccion.nu) != len(request.componentes):
+                raise ValueError(
+                    f"{op.nombre}: la reaccion trae {len(op.reaccion.nu)} coeficientes y hay "
+                    f"{len(request.componentes)} componentes."
+                )
+            gestor_pfr = GestorReaccion(
+                proveedor, np.asarray(op.reaccion.nu, dtype=float),
+                A=op.reaccion.A, Ea=op.reaccion.Ea,
+            )
+            entradas_pfr = c.get("entradas") or ([c["entrada"]] if c.get("entrada") else [])
+            diagrama.agregar_reactor_pfr(
+                op.nombre, entrada=None, entradas=entradas_pfr, salida=c["salida"],
+                nu=op.reaccion.nu, gestor_reaccion=gestor_pfr,
+            )
+        elif op.tipo == "absorbedor":
+            diagrama.agregar_absorbedor(
+                op.nombre,
+                gas_entrada=c["gas_entrada"], gas_salida=c["gas_salida"],
+                liquido_entrada=c["liquido_entrada"], liquido_salida=c["liquido_salida"],
+                N_etapas=op.N_etapas if op.N_etapas is not None else 6.0,
+                P_operacion=op.P_sistema,
+                T_operacion=op.T_operacion,
+            )
         else:
             raise ValueError(f"tipo de operacion desconocido: {op.tipo!r}")
 

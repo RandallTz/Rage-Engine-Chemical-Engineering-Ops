@@ -34,10 +34,11 @@ frontera, nunca dentro de los bucles numéricos.
 ## Equipos disponibles
 
 **Separación** — columna binaria (McCabe-Thiele / Ponchon-Savarit),
-columna multicomponente (FUG), flash L-V, separador de componentes.
+columna multicomponente (FUG), flash L-V, separador de componentes,
+absorbedor/desorbedor (Kremser).
 
 **Reacción** — CSTR con cinética y balance de energía, reactor de
-equilibrio químico.
+equilibrio químico, reactor de flujo pistón (PFR).
 
 **Térmicos** — intercambiador de calor, intercambiador de dos corrientes
 (integración energética), válvula de expansión isentálpica.

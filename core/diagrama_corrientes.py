@@ -34,6 +34,8 @@ import numpy as np
 
 from core.balance_materia import BalanceMateriaGlobal
 from core.reactor_cstr import EvaluadorCSTR
+from core.reactor_pfr import EvaluadorPFR
+from core.absorbedor import EvaluadorAbsorbedor
 from core.flash import EvaluadorFlash
 from thermodynamics.elv import CalculadoraELV
 from thermodynamics.entalpia import entalpia_de
@@ -1167,6 +1169,189 @@ class DiagramaCorrientes:
             nombre, "intercambiador", entradas=[entrada], salidas=[salida], desde=_ini,
             extra={"corrientes": {"entrada": entrada, "salida": salida},
                    "modo": "T_salida" if T_salida is not None else "Q_por_mol"},
+        )
+        return nombre
+
+    def agregar_reactor_pfr(self, nombre, entrada, salida, nu, gestor_reaccion,
+                            entradas=None):
+        """
+        Reactor de flujo piston. La misma estequiometria que el CSTR con
+        otra relacion volumen-avance (ver core/reactor_pfr.py):
+
+            CSTR:  xi = V * r(T, x_salida)       algebraica
+            PFR:   d(xi)/dV = r(T, x(xi))        diferencial
+
+        Invertible en las dos direcciones utiles, igual que el CSTR: dado
+        V se integra el avance, y dado el avance se busca el volumen (con
+        un evento terminal, una sola integracion en vez de una por
+        iteracion).
+
+        Variables propias:
+            <nombre>.xi  avance [mol/s]   <nombre>.X  conversion
+            <nombre>.V   volumen [m^3]    <nombre>.T  temperatura [K]
+        """
+        _ini = len(self._bloques)
+        lista_entradas = [e for e in (list(entradas) if entradas else [entrada]) if e]
+        if not lista_entradas:
+            raise ValueError(f"{nombre}: el reactor necesita al menos una entrada.")
+        for s in lista_entradas:
+            self._exigir_corriente(s)
+        self._exigir_corriente(salida)
+        if gestor_reaccion is None:
+            raise ValueError(
+                f"{nombre}: un PFR necesita la cinetica (parametros de Arrhenius). "
+                "Sin ella no hay nada que integrar a lo largo del tubo."
+            )
+
+        if len(lista_entradas) == 1:
+            entrada = lista_entradas[0]
+        else:
+            entrada = f"{nombre}{self.SUFIJO_INTERNO}entrada"
+            self.agregar_corriente(entrada)
+            self.agregar_mezclador(f"{nombre}: mezcla de entradas",
+                                   entradas=lista_entradas, salida=entrada)
+
+        evaluador = EvaluadorPFR(nu, gestor_reaccion, evaluador_flash=self.flash())
+
+        self._bloques.append(
+            _bloque_balance_cstr(nombre, entrada, salida, self.n, evaluador)
+        )
+        self._bloques.append(
+            _bloque_conversion_cstr(nombre, entrada, self.n, evaluador)
+        )
+        self._bloques.append(
+            _bloque_cinetica_pfr(nombre, entrada, self.n, evaluador)
+        )
+
+        if f"{salida}.T" not in self._temperatura_fijada:
+            self._temperatura_fijada.add(f"{salida}.T")
+            self._bloques.append(
+                self._bloque_igualdad(f"{salida}.T", f"{nombre}.T",
+                                      f"T de salida = T del tubo ({nombre})")
+            )
+        if f"{salida}.P" not in self._presion_fijada:
+            self._presion_fijada.add(f"{salida}.P")
+            self._bloques.append(
+                self._bloque_igualdad(f"{salida}.P", f"{entrada}.P",
+                                      f"Presion sin caida ({nombre})")
+            )
+
+        self._registrar_operacion(
+            nombre, "reactor_pfr", entradas=lista_entradas, salidas=[salida], desde=_ini,
+            extra={"corrientes": {"entradas": lista_entradas, "entrada": entrada,
+                                  "salida": salida}},
+        )
+        return nombre
+
+    def agregar_absorbedor(self, nombre, gas_entrada, gas_salida,
+                           liquido_entrada, liquido_salida,
+                           N_etapas=6, P_operacion=101325.0, T_operacion=None):
+        """
+        Absorbedor / desorbedor por el metodo de Kremser
+        (ver core/absorbedor.py).
+
+        Cuatro puertos: el gas entra por abajo y sale por arriba, el
+        liquido al reves. Como el intercambiador de dos corrientes, es un
+        equipo que toma DOS entradas que pueden venir de ramas distintas
+        del diagrama.
+
+        El mismo bloque absorbe y desorbe: si el liquido entra mas cargado
+        de lo que el equilibrio admite, el transferido sale negativo y el
+        componente pasa del liquido al gas.
+
+        Variables propias:
+            <nombre>.N  etapas teoricas     <nombre>.T  temperatura [K]
+        """
+        _ini = len(self._bloques)
+        for s in (gas_entrada, gas_salida, liquido_entrada, liquido_salida):
+            self._exigir_corriente(s)
+
+        evaluador_flash = self.flash()
+        if evaluador_flash is None:
+            raise ValueError(
+                f"{nombre}: un absorbedor necesita el ProveedorTermodinamico del diagrama "
+                "para las constantes de equilibrio K."
+            )
+        evaluador = EvaluadorAbsorbedor(evaluador_flash.calculadora_elv,
+                                        P_sistema=float(P_operacion))
+        N = float(N_etapas)
+        P_op = float(P_operacion)
+
+        def claves_de(s):
+            return (f"{s}.F", f"{s}.T", f"{s}.P", *[f"{s}.x{i}" for i in range(self.n)])
+
+        claves_entrada = claves_de(gas_entrada) + claves_de(liquido_entrada)
+        claves_salida = (claves_de(gas_salida) + claves_de(liquido_salida)
+                         + (f"{nombre}.N", f"{nombre}.T"))
+
+        def resolver_fn(**c):
+            def leer(s):
+                F = c[f"{s}.F"]
+                x = np.array([c[f"{s}.x{i}"] for i in range(self.n)], dtype=float)
+                suma = float(np.sum(x))
+                if suma <= 0:
+                    return None
+                return F, x / suma, c[f"{s}.T"]
+
+            gas, liq = leer(gas_entrada), leer(liquido_entrada)
+            if gas is None or liq is None:
+                return {}
+            V_gas, y_ent, T_gas = gas
+            L_liq, x_ent, T_liq = liq
+
+            T = float(T_operacion) if T_operacion is not None else T_liq
+
+            # Rama seca: sin gas o sin disolvente no hay transferencia, y
+            # cada corriente sale como entro.
+            if V_gas <= 0 or L_liq <= 0:
+                valores = {
+                    f"{gas_salida}.F": max(V_gas, 0.0), f"{gas_salida}.T": T,
+                    f"{gas_salida}.P": P_op,
+                    f"{liquido_salida}.F": max(L_liq, 0.0), f"{liquido_salida}.T": T,
+                    f"{liquido_salida}.P": P_op,
+                    f"{nombre}.N": N, f"{nombre}.T": T,
+                }
+                for i in range(self.n):
+                    valores[f"{gas_salida}.x{i}"] = float(y_ent[i])
+                    valores[f"{liquido_salida}.x{i}"] = float(x_ent[i])
+                return valores
+
+            r = evaluador.resolver(
+                V_gas=V_gas, y_entrada=y_ent, L_liquido=L_liq, x_entrada=x_ent,
+                N_etapas=N, T_operacion=T, P=P_op,
+            )
+            valores = {
+                f"{gas_salida}.F": r["V_salida"], f"{gas_salida}.T": T,
+                f"{gas_salida}.P": P_op,
+                f"{liquido_salida}.F": r["L_salida"], f"{liquido_salida}.T": T,
+                f"{liquido_salida}.P": P_op,
+                f"{nombre}.N": N, f"{nombre}.T": T,
+            }
+            for i in range(self.n):
+                valores[f"{gas_salida}.x{i}"] = float(r["y_salida"][i])
+                valores[f"{liquido_salida}.x{i}"] = float(r["x_salida"][i])
+            return valores
+
+        self._bloques.append(
+            BloqueEcuaciones(
+                nombre=f"{nombre}: absorcion (Kremser, N={N:g})",
+                variables=claves_entrada + claves_salida,
+                variables_entrada=claves_entrada,
+                puede_resolver=lambda n: n == 0,
+                resolver_fn=resolver_fn,
+            )
+        )
+        for s in (gas_salida, liquido_salida):
+            self._presion_fijada.add(f"{s}.P")
+            self._temperatura_fijada.add(f"{s}.T")
+        self._registrar_operacion(
+            nombre, "absorbedor",
+            entradas=[gas_entrada, liquido_entrada],
+            salidas=[gas_salida, liquido_salida], desde=_ini,
+            extra={"corrientes": {"gas_entrada": gas_entrada, "gas_salida": gas_salida,
+                                  "liquido_entrada": liquido_entrada,
+                                  "liquido_salida": liquido_salida},
+                   "N_etapas": N, "P_operacion": P_op},
         )
         return nombre
 
@@ -2410,6 +2595,57 @@ def _bloque_conversion_cstr(nombre, entrada, n_componentes, evaluador):
 
     return BloqueEcuaciones(
         nombre=f"{nombre}: conversion",
+        variables=variables,
+        puede_resolver=lambda n: n >= 0,
+        resolver_fn=resolver_fn,
+        n_ecuaciones=1,
+    )
+
+
+def _bloque_cinetica_pfr(nombre, entrada, n_componentes, evaluador):
+    """
+    d(xi)/dV = r(T, x(xi)), integrado a lo largo del tubo.
+
+    Es el gemelo de _bloque_cinetica_cstr y, como el, invertible en las
+    dos direcciones: con V se integra hasta la salida; con xi se busca el
+    volumen que lo produce.
+
+    La diferencia de firma con el CSTR no es cosmetica. Alli el volumen
+    sale de V = xi/r, que solo necesita la composicion de SALIDA. Aqui la
+    velocidad cambia a lo largo del tubo, asi que hace falta el ALIMENTO
+    para saber por donde empieza la integracion -- por eso este bloque lee
+    la corriente de entrada y el del CSTR lee la de salida.
+    """
+    clave_F_in = f"{entrada}.F"
+    claves_x_in = [f"{entrada}.x{i}" for i in range(n_componentes)]
+    clave_xi, clave_V, clave_T = f"{nombre}.xi", f"{nombre}.V", f"{nombre}.T"
+    variables = (clave_F_in, clave_xi, clave_V, clave_T, *claves_x_in)
+
+    def resolver_fn(**c):
+        tiene = lambda k: c.get(k) is not None
+        if not tiene(clave_T) or not tiene(clave_F_in):
+            return {}
+        if not all(tiene(k) for k in claves_x_in):
+            return {}
+        F_in = c[clave_F_in]
+        x_in = np.array([c[k] for k in claves_x_in], dtype=float)
+        suma = float(np.sum(x_in))
+        if F_in <= 0 or suma <= 0:
+            return {}
+        x_in = x_in / suma
+
+        if tiene(clave_V) and not tiene(clave_xi):
+            r = evaluador.avance_desde_volumen(F_in, x_in, c[clave_T], c[clave_V])
+            return {clave_xi: r["xi"]}
+        if tiene(clave_xi) and not tiene(clave_V):
+            V = evaluador.volumen_desde_avance(
+                c[clave_xi], c[clave_T], F_in=F_in, x_in=x_in
+            )
+            return {clave_V: float(V)}
+        return {}
+
+    return BloqueEcuaciones(
+        nombre=f"{nombre}: cinetica (flujo piston)",
         variables=variables,
         puede_resolver=lambda n: n >= 0,
         resolver_fn=resolver_fn,

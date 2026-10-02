@@ -739,8 +739,48 @@ Lo que sí sigue siendo motivo para no calcular es que la **composición** no se
 - `config/graficos.py` fija el backend `Agg` salvo que se defina `MPLBACKEND`. Los `graficar_*` de `core/` terminan en `plt.show()`, que con un backend interactivo abre una ventana y **bloquea** el proceso: aparecían encima de lo que el usuario estuviera haciendo cada vez que se importaba el módulo o se corría una suite.
 - Efecto secundario medido: McCabe-Thiele bajó de 8.5 s a 1.9 s y Ponchon-Savarit de 7.0 s a 3.1 s, porque ya no renderizan ventanas.
 
-### ⬜ Siguiente tanda de operaciones (Pendiente)
-- **PFR** (integración a lo largo del volumen) y **reactor batch**.
-- **Absorbedor** por el método de Kremser.
-- **Columna con extracciones laterales y varias alimentaciones**: hoy son una entrada y dos productos.
-- **Varias reacciones a la vez** ($\nu$ pasa a matriz): es el cambio estructural que falta para destilación reactiva real.
+### ✅ Reactor de flujo pistón (PFR) (Completado)
+- `core/reactor_pfr.py`. La diferencia con el CSTR no es de detalle, es de modelo, y cabe en una línea: $\xi = V\,r(T,x_{salida})$ frente a $d\xi/dV = r(T, x(\xi))$. En un tanque mezclado la reacción ocurre en todo el volumen a la velocidad de la composición de SALIDA, que es la más pobre y por tanto la más lenta; en un tubo la entrada reacciona a la velocidad del alimento.
+- **Hereda de `EvaluadorCSTR`**, porque el balance por componente, la conversión y el balance de energía son exactamente los mismos. Un PFR es la misma estequiometría con otra ley de velocidad integrada.
+- **Se integra el AVANCE, no los caudales por componente.** Con una sola variable de estado la estequiometría se cumple por construcción en cada paso; integrando $n_i$ por separado los errores del integrador podrían sacar la composición del simplex.
+- El límite estequiométrico se vigila con un **evento terminal**, no dejando que el integrador lo cruce: pasado ese punto las actividades no están definidas y lo que devuelva UNIFAC no significa nada. Misma precaución que ya toman las curvas residuales.
+- `volumen_desde_avance` también usa un evento terminal en vez de root-finding sobre V: **una sola integración** en lugar de una por iteración, y el volumen sale exacto en el punto del evento.
+- Verificado: a igual volumen el PFR convierte más que el CSTR (razón 1.14–1.29), ida y vuelta $V \to \xi \to V$ exacta, y volumen cero da avance cero.
+- **La comprobación cruzada que más vale**: con $V$ grande el PFR alcanza $\xi = 27.2532$ mol/s, y el reactor de EQUILIBRIO da 27.2532 por otro camino completamente distinto (van't Hoff en vez de integrar la cinética). Dos módulos, el mismo número.
+
+### ✅ Absorbedor / desorbedor (Kremser) (Completado)
+- `core/absorbedor.py`. Abre una familia de equipos que no existía: lavado de gases, absorción, desorción. Es un método de atajo, igual que FUG lo es para destilación.
+- **El mismo bloque absorbe y desorbe.** Se escribe la fuerza impulsora como $y_{ent} - K x_{ent}$ y no solo como $y_{ent}$: si el líquido entra más cargado de lo que el equilibrio admite, el transferido sale NEGATIVO y el componente pasa del líquido al gas. Un absorbedor y un stripper son el mismo equipo con el gradiente al revés, y así no hay que escribir dos.
+- **Las tres ramas de la fórmula de Kremser, cada una con su problema numérico:**
+  - $A = 1$ es $0/0$. Y no es un caso de laboratorio: es donde se diseñan muchas columnas. Se trata aparte con el límite $N/(N+1)$.
+  - $A > 1$ con $N$ grande **DESBORDA**: $A^{N+1}$ se va al infinito y da `inf/inf = NaN`. Medido: con $A=2.8$ revienta hacia $N\sim1000$. Se arregla dividiendo arriba y abajo por $A^{N+1}$, que es lo mismo algebraicamente pero hace aparecer $A^{-N}$, que tiende a cero.
+  - $A < 1$ con la forma original ya es estable.
+- Verificado en los tres regímenes: $A<1$ tiende a $A$ aunque $N\to\infty$ (más etapas no compensan un disolvente insuficiente), $A>1$ tiende a 1 sin desbordar ni con $N=10^5$, y $A=1$ da $N/(N+1)$ exacto.
+- Las cotas físicas se comprueban: si Kremser predice transferir más de lo que hay disponible, significa que se está usando fuera de su rango (sistema no diluido) y **se avisa** en vez de recortar en silencio.
+- Balance por componente exacto (0.00e+00).
+
+### ⚠ Un error opaco corregido de paso
+Al probar el absorbedor con metano como gas portador salió `'NoneType' object has no attribute 'items'`, que no menciona ni el componente culpable ni la causa.
+
+El motivo: **UNIFAC es por contribución de grupos**, y `thermo` no sabe descomponer los gases permanentes (metano, nitrógeno, hidrógeno, aire). `ProveedorTermodinamico` comprueba ahora los grupos al construirse y lo dice con nombre y propuesta. Es una limitación REAL del modelo del proyecto, no un fallo: sin grupos no hay $\gamma$ que calcular.
+
+### Verificación de la tanda
+- 12/12 suites de Python (la nueva, `validar_operaciones_nuevas.py`, cubre ya ocho secciones).
+- 11/11 plantillas y 5 suites de navegador.
+- Los dos equipos nuevos están en la API y en la interfaz desde el primer día.
+
+**El núcleo llega a 14 métodos de equipo** (15 tipos contando los dos modos del reactor): columna binaria, columna FUG, flash, separador, absorbedor, CSTR, reactor de equilibrio, PFR, intercambiador, intercambiador de dos corrientes, válvula, bomba, compresor/turbina, mezclador, divisor.
+
+### ⬜ Y aquí se acaban las operaciones fáciles
+Lo que queda **no es "otro equipo más"**, son las piezas de física que faltan disfrazadas de equipos:
+
+- **Extracción líquido-líquido** necesita equilibrio líquido-líquido.
+- **Columnas con extracciones laterales y varias alimentaciones** necesitan MESH: los métodos de atajo no las admiten.
+- **Destilación azeotrópica y extractiva** necesitan las dos cosas.
+
+Sólidos (cristalizadores, secadores, filtros) quedan fuera a propósito: distribución de tamaño e hidrodinámica son otro proyecto.
+
+Lo siguiente que más multiplica lo ya construido NO es un equipo:
+
+- **Especificaciones de diseño a nivel de diagrama** — hoy se puede invertir dentro de un bloque (dar N y obtener R), pero no decir "ajusta el reciclo hasta que el producto salga al 99 %". La arquitectura es inusualmente buena para esto: ya existen el pool, el contador de grados de libertad y la detección de redundancias.
+- **Barridos de sensibilidad** — no hay ninguno, y la pregunta real de un alumno no es "¿cuánto da?" sino "¿qué pasa si subo el reflujo?".

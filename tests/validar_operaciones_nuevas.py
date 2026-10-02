@@ -401,6 +401,171 @@ check("6.5 La rama con caudal sigue igual",
       abs(pz["humedo.F"] - 100.0) < 1e-12)
 
 
+
+# ======================================================================
+print("\n" + "=" * 74)
+print("7. REACTOR DE FLUJO PISTON (PFR)")
+print("=" * 74)
+
+from core.reactor_pfr import EvaluadorPFR
+from core.reactor_cstr import EvaluadorCSTR
+from core.flash import EvaluadorFlash as _EF
+from thermodynamics.elv import CalculadoraELV as _CE
+from scipy.optimize import brentq as _brentq
+
+FLASH_M = _EF(_CE(PROV_M))
+NU_A = np.array(NU)
+CSTR = EvaluadorCSTR(NU_A, gestor_reaccion=GESTOR, evaluador_flash=FLASH_M)
+PFR = EvaluadorPFR(NU_A, gestor_reaccion=GESTOR, evaluador_flash=FLASH_M)
+F0, X0, T0 = 100.0, np.array([0.5, 0.5, 0.0]), 360.0
+
+
+def xi_cstr(V):
+    """El CSTR hay que resolverlo: xi = V*r(x_salida(xi)) es implicita."""
+    lim = min(F0 * X0[i] / abs(NU_A[i]) for i in (0, 1))
+    f = lambda xi: xi - V * float(GESTOR.velocidad_reaccion(T0, CSTR.salida_desde_entrada(F0, X0, xi)[1]))
+    return _brentq(f, 1e-9, lim * 0.999999)
+
+
+print()
+ratios = []
+for V in (5e3, 2e4, 5e4):
+    xc = xi_cstr(V)
+    xp = PFR.avance_desde_volumen(F0, X0, T0, V)["xi"]
+    ratios.append(xp / xc)
+    print(f"  V={V:8.0f} m3 -> CSTR xi={xc:7.3f}   PFR xi={xp:7.3f}   PFR/CSTR={xp/xc:.3f}")
+check("7.1 A igual volumen, el PFR convierte MAS que el CSTR",
+      all(r > 1.0 for r in ratios),
+      "la entrada del tubo reacciona a la velocidad del alimento, la mas alta")
+
+check("7.2 Volumen cero, avance cero",
+      PFR.avance_desde_volumen(F0, X0, T0, 0.0)["xi"] == 0.0)
+
+V_ref = 2e4
+xi_ref = PFR.avance_desde_volumen(F0, X0, T0, V_ref)["xi"]
+V_vuelta = PFR.volumen_desde_avance(xi_ref, T0, F_in=F0, x_in=X0)
+check("7.3 Ida y vuelta V -> xi -> V", abs(V_vuelta - V_ref) / V_ref < 1e-6,
+      f"{V_vuelta:.4f} m3 frente a {V_ref:.0f}")
+
+# La comprobacion cruzada fuerte: un tubo infinito llega al EQUILIBRIO, y
+# ese numero lo da otro modulo (el reactor de equilibrio) por otro camino.
+r_largo = PFR.avance_desde_volumen(F0, X0, T0, 5e5)
+r_eq = CSTR.avance_de_equilibrio(F0, X0, T0)
+check("7.4 Con V enorme, el PFR alcanza el avance de EQUILIBRIO",
+      abs(r_largo['xi'] - r_eq['xi']) / r_eq['xi'] < 1e-3,
+      f"PFR {r_largo['xi']:.4f} frente a equilibrio {r_eq['xi']:.4f} mol/s "
+      "(dos módulos distintos, mismo número)")
+
+try:
+    PFR.volumen_desde_avance(50.5, T0, F_in=F0, x_in=X0)
+    check("7.5 Pedir un avance por encima del límite estequiométrico se rechaza", False, "no lanzó")
+except ValueError as e:
+    check("7.5 Pedir un avance por encima del límite estequiométrico se rechaza",
+          "estequiometrico" in str(e) or "infinito" in str(e))
+
+# En el flowsheet
+dp = DiagramaCorrientes(MTBE, proveedor=PROV_M)
+for c in ("e", "s"):
+    dp.agregar_corriente(c)
+dp.agregar_reactor_pfr("P1", "e", "s", NU, gestor_reaccion=GESTOR)
+datos_p = {"e.F": F0, "e.T": T0, "e.P": PR, "e.x0": 0.5, "e.x1": 0.5,
+           "P1.T": T0, "P1.V": V_ref}
+res_p = dp.resolver(**datos_p)
+check("7.6 En el flowsheet: GL = 0 y resuelve",
+      dp.grados_de_libertad(datos_p)["grados_de_libertad"] == 0 and res_p["completo"],
+      f"xi={res_p['pool']['P1.xi']:.4f}, X={res_p['pool']['P1.X']*100:.2f}%")
+
+# ======================================================================
+print("\n" + "=" * 74)
+print("8. ABSORBEDOR (KREMSER)")
+print("=" * 74)
+
+from core.absorbedor import EvaluadorAbsorbedor
+
+ACEITE = ["n-butane", "n-pentane", "n-decane"]
+PROV_A = ProveedorTermodinamico(ACEITE)
+PA = 5 * P1
+ABS = EvaluadorAbsorbedor(CalculadoraELV(PROV_A), P_sistema=PA)
+Y_GAS = np.array([0.15, 0.05, 0.80])
+X_SOLV = np.array([0.0, 0.0, 1.0])
+
+# Las tres ramas de la formula de Kremser, cada una con su limite.
+print()
+check("8.1 A = 1 exacto da el límite N/(N+1)",
+      all(abs(EvaluadorAbsorbedor._recuperacion(np.array([1.0]), n)[0] - n / (n + 1)) < 1e-12
+          for n in (1, 9, 99)))
+check("8.2 Con A < 1, la recuperación tiende a A aunque N → ∞",
+      abs(EvaluadorAbsorbedor._recuperacion(np.array([0.53]), 1000)[0] - 0.53) < 1e-9,
+      "más etapas no compensan un disolvente insuficiente")
+phi_grande = EvaluadorAbsorbedor._recuperacion(np.array([2.8]), 100000)[0]
+check("8.3 Con A > 1 tiende a 1 SIN desbordar",
+      np.isfinite(phi_grande) and abs(phi_grande - 1.0) < 1e-9,
+      "A^(N+1) desbordaba hacia N~1000; se reescribe como A^(-N)")
+
+print()
+recuperaciones = []
+for Ne in (1, 3, 6, 12):
+    r = ABS.resolver(V_gas=100.0, y_entrada=Y_GAS, L_liquido=150.0,
+                     x_entrada=X_SOLV, N_etapas=Ne, T_operacion=310.0)
+    recuperaciones.append(r["recuperacion"][0])
+    print(f"  N={Ne:2d}: A_butano={r['A'][0]:6.3f}  butano recuperado {r['recuperacion'][0]*100:6.2f}%")
+check("8.4 Más etapas, más recuperación", all(np.diff(recuperaciones) > 0))
+
+por_disolvente = []
+for L in (50.0, 100.0, 200.0, 400.0):
+    r = ABS.resolver(V_gas=100.0, y_entrada=Y_GAS, L_liquido=L,
+                     x_entrada=X_SOLV, N_etapas=6, T_operacion=310.0)
+    por_disolvente.append(r["recuperacion"][0])
+check("8.5 Más disolvente, más recuperación", all(np.diff(por_disolvente) > 0),
+      f"{por_disolvente[0]*100:.1f}% → {por_disolvente[-1]*100:.1f}% al cuadruplicar L")
+
+r = ABS.resolver(V_gas=100.0, y_entrada=Y_GAS, L_liquido=150.0,
+                 x_entrada=X_SOLV, N_etapas=6, T_operacion=310.0)
+entra = 100.0 * Y_GAS + 150.0 * X_SOLV
+sale = r["V_salida"] * r["y_salida"] + r["L_salida"] * r["x_salida"]
+check("8.6 Balance por componente", float(np.max(np.abs(entra - sale))) < 1e-9,
+      f"max dif {float(np.max(np.abs(entra - sale))):.2e} mol/s")
+
+# El mismo bloque DESORBE: disolvente cargado por encima del equilibrio.
+r_strip = ABS.resolver(V_gas=100.0, y_entrada=np.array([0.0, 0.0, 1.0]),
+                       L_liquido=150.0, x_entrada=np.array([0.3, 0.2, 0.5]),
+                       N_etapas=6, T_operacion=330.0)
+# OJO al criterio: NO vale pedir que crezca el caudal de gas. En este
+# caso el gas entra como decano puro y el decano se absorbe en masa, asi
+# que el neto BAJA aunque el butano este desorbiendo. Lo que distingue
+# desorcion de absorcion es el signo del transferido de ESE componente, y
+# que aparezca en el gas donde antes no estaba.
+check("8.7 El mismo equipo DESORBE si el líquido entra cargado",
+      r_strip["transferido"][0] < 0 and r_strip["y_salida"][0] > 0.0,
+      f"butano transferido {r_strip['transferido'][0]:.3f} mol/s (negativo = del líquido "
+      f"al gas), y aparece en el gas con y={r_strip['y_salida'][0]:.4f}")
+
+# En el flowsheet
+da = DiagramaCorrientes(ACEITE, proveedor=PROV_A)
+for c in ("gi", "go", "li", "lo"):
+    da.agregar_corriente(c)
+da.agregar_absorbedor("AB", "gi", "go", "li", "lo",
+                      N_etapas=6, P_operacion=PA, T_operacion=310.0)
+datos_a = {"gi.F": 100.0, "gi.T": 320.0, "gi.P": PA, "gi.x0": 0.15, "gi.x1": 0.05,
+           "li.F": 150.0, "li.T": 310.0, "li.P": PA, "li.x0": 0.0, "li.x1": 0.0}
+res_a = da.resolver(**datos_a)
+pa = res_a["pool"]
+check("8.8 En el flowsheet: GL = 0 y resuelve",
+      da.grados_de_libertad(datos_a)["grados_de_libertad"] == 0 and res_a["completo"],
+      f"gas 100 → {pa['go.F']:.3f}, líquido 150 → {pa['lo.F']:.3f} mol/s")
+check("8.9 Y el balance total cierra",
+      abs(pa["go.F"] + pa["lo.F"] - 250.0) < 1e-9)
+
+# Guarda: un componente sin grupos UNIFAC no puede entrar al modelo.
+try:
+    ProveedorTermodinamico(["acetone", "methane"])
+    check("8.10 Un componente sin grupos UNIFAC se rechaza con motivo", False, "no lanzó")
+except ValueError as e:
+    check("8.10 Un componente sin grupos UNIFAC se rechaza con motivo",
+          "UNIFAC" in str(e) and "methane" in str(e),
+          "antes salía un AttributeError de NoneType que no decía nada")
+
+
 print("\n" + "=" * 74)
 if fallos:
     print(f"FALLARON {len(fallos)}:")

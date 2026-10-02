@@ -474,6 +474,47 @@ function EditorElemento({
             </>
           )}
 
+          {/* ------------------------------------------------- PFR */}
+          {datosOp.tipo === "reactor_pfr" && (
+            <>
+              <EditorReaccion datos={datosOp} componentes={componentes} onDatos={onDatos} />
+              <p className="text-[10px] text-zinc-500">
+                Flujo pistón: la composición cambia a lo largo del tubo y la velocidad se
+                integra, en vez de evaluarse en la salida como en el CSTR. Para el mismo
+                volumen convierte más, porque la entrada reacciona a la velocidad del
+                alimento.
+              </p>
+            </>
+          )}
+
+          {/* ------------------------------------------ absorbedor */}
+          {datosOp.tipo === "absorbedor" && (
+            <>
+              <CampoConfig
+                etiqueta="etapas teóricas"
+                valor={String(datosOp.N_etapas ?? 6)}
+                onChange={(v) => onDatos({ N_etapas: Number(v) })}
+              />
+              <CampoConfig
+                etiqueta="T operación [K]"
+                valor={String(datosOp.T_operacion ?? "")}
+                onChange={(v) => onDatos({ T_operacion: v === "" ? undefined : Number(v) })}
+              />
+              <p className="text-[10px] text-zinc-500">
+                Método de Kremser. El gas entra por abajo y el líquido por arriba. Si lo
+                dejas en blanco, opera a la temperatura del líquido que entra.
+              </p>
+              <p className="text-[10px] text-zinc-500">
+                El mismo equipo DESORBE: si el líquido entra más cargado de lo que el
+                equilibrio admite, el componente pasa al gas.
+              </p>
+              <p className="text-[10px] text-amber-500/70">
+                Supone sistema diluido, caudales constantes y operación isoterma. Si se
+                absorbe una fracción grande del gas, el método deja de valer y lo dice.
+              </p>
+            </>
+          )}
+
           <CampoConfig etiqueta="P operación [Pa]" valor={String(datosOp.P_sistema)} onChange={(v) => onDatos({ P_sistema: Number(v) })} />
         </div>
       )}

@@ -3,7 +3,8 @@ import type { Edge, Node } from "@xyflow/react";
 export type TipoOperacion =
   | "columna" | "mezclador" | "divisor" | "bomba" | "reactor_cstr"
   | "flash" | "intercambiador" | "valvula"
-  | "separador" | "compresor" | "reactor_equilibrio" | "intercambiador_doble";
+  | "separador" | "compresor" | "reactor_equilibrio" | "intercambiador_doble"
+  | "reactor_pfr" | "absorbedor";
 export type MetodoColumna = "mccabe_thiele" | "ponchon_savarit" | "fug";
 
 export interface DatosOperacion extends Record<string, unknown> {
@@ -66,6 +67,19 @@ export function puertosDe(datos: DatosOperacion): PuertosOperacion {
         entrada: ["caliente_entrada", "frio_entrada"],
         salida: ["caliente_salida", "frio_salida"],
       };
+    case "absorbedor":
+      // El gas sube y el liquido baja: cuatro puertos en contracorriente.
+      return {
+        entrada: ["gas_entrada", "liquido_entrada"],
+        salida: ["gas_salida", "liquido_salida"],
+      };
+    case "reactor_pfr": {
+      const np_ = Math.max(1, datos.n_entradas ?? 1);
+      return {
+        entrada: Array.from({ length: np_ }, (_, i) => (i === 0 ? "entrada" : `entrada_${i + 1}`)),
+        salida: ["salida"],
+      };
+    }
     case "reactor_equilibrio": {
       const ne = Math.max(1, datos.n_entradas ?? 1);
       return {
@@ -123,6 +137,8 @@ export function variablesDeOperacion(datos: DatosOperacion): string[] {
   if (datos.tipo === "separador") return [];  // todo queda en las corrientes
   if (datos.tipo === "compresor") return ["W", "T_ideal", "razon_P"];
   if (datos.tipo === "intercambiador_doble") return ["Q", "aproximacion"];
+  if (datos.tipo === "reactor_pfr") return ["xi", "X", "V", "T"];
+  if (datos.tipo === "absorbedor") return ["N", "T"];
   if (datos.tipo === "reactor_equilibrio") {
     // Sin V: el equilibrio no depende del tamano del tanque.
     return ["xi", "X", "T", "K_eq"];
@@ -274,11 +290,19 @@ export function corrientesDeOperacion(
     if (!ce || !cs || !fe || !fs) return null;
     return { caliente_entrada: ce, caliente_salida: cs, frio_entrada: fe, frio_salida: fs };
   }
-  if (datos.tipo === "reactor_equilibrio") {
+  if (datos.tipo === "reactor_equilibrio" || datos.tipo === "reactor_pfr") {
     const entradas = puertos.entrada.map(entradaDe).filter(Boolean) as string[];
     const salida = salidaDe("salida");
     if (entradas.length === 0 || !salida) return null;
     return { entradas, salida };
+  }
+  if (datos.tipo === "absorbedor") {
+    const ge = entradaDe("gas_entrada");
+    const gs = salidaDe("gas_salida");
+    const le = entradaDe("liquido_entrada");
+    const ls = salidaDe("liquido_salida");
+    if (!ge || !gs || !le || !ls) return null;
+    return { gas_entrada: ge, gas_salida: gs, liquido_entrada: le, liquido_salida: ls };
   }
   const entrada = entradaDe("entrada");
   const salida = salidaDe("salida");

@@ -20,6 +20,26 @@ class ProveedorTermodinamico:
         self.componentes = [Chemical(nombre) for nombre in nombres_componentes]
         self.grupos_unifac = [comp.UNIFAC_groups for comp in self.componentes]
 
+        # UNIFAC es por contribucion de grupos: si 'thermo' no sabe
+        # descomponer una molecula, no hay gamma que calcular. Tipico en
+        # gases permanentes (metano, nitrogeno, hidrogeno), que no tienen
+        # grupos definidos.
+        #
+        # Sin esta comprobacion el fallo aparecia mucho mas abajo y
+        # disfrazado: UNIFAC.from_subgroups recibia un None y lanzaba
+        # "'NoneType' object has no attribute 'items'", que no menciona ni
+        # el componente culpable ni la causa.
+        sin_grupos = [n for n, g in zip(nombres_componentes, self.grupos_unifac) if not g]
+        if sin_grupos:
+            raise ValueError(
+                f"'thermo' no tiene grupos UNIFAC para: {', '.join(sin_grupos)}. "
+                "El modelo de este simulador es UNIFAC predictivo, que descompone cada "
+                "molecula en grupos funcionales, y sin ellos no puede calcular coeficientes "
+                "de actividad. Suele pasar con gases permanentes (metano, nitrogeno, "
+                "hidrogeno, aire). Usa componentes condensables, o un portador como un "
+                "hidrocarburo ligero que si tenga grupos."
+            )
+
     def actualizar_estado(self, T_kelvin, P_pascal=101325.0):
         """
         Obliga a los objetos Chemical a recalcular sus propiedades dependientes de T y P.

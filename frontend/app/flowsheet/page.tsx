@@ -64,6 +64,8 @@ const CATALOGO: { tipo: TipoOperacion; etiqueta: string; grupo: string }[] = [
   { tipo: "compresor", etiqueta: "Compresor / turbina", grupo: "Transporte" },
   { tipo: "reactor_equilibrio", etiqueta: "Reactor de equilibrio", grupo: "Reacción" },
   { tipo: "intercambiador_doble", etiqueta: "Intercambiador 2 corrientes", grupo: "Térmicos" },
+  { tipo: "reactor_pfr", etiqueta: "Reactor PFR", grupo: "Reacción" },
+  { tipo: "absorbedor", etiqueta: "Absorbedor", grupo: "Separación" },
 ];
 
 export default function FlowsheetPage() {
@@ -170,6 +172,7 @@ export default function FlowsheetPage() {
       columna: "col", reactor_cstr: "r", flash: "fl",
       intercambiador: "e", valvula: "v", separador: "sep",
       compresor: "k", reactor_equilibrio: "req", intercambiador_doble: "ic",
+      reactor_pfr: "pfr", absorbedor: "ab",
     };
     const opId = idLibre(PREFIJO[tipo] ?? tipo.slice(0, 3), nodes);
     const datos: DatosOperacion = {
@@ -207,6 +210,10 @@ export default function FlowsheetPage() {
       ...(tipo === "reactor_equilibrio"
         ? { nu: "", A: 1e4, Ea: 45000, n_entradas: 1, con_balance_energia: false }
         : {}),
+      ...(tipo === "reactor_pfr"
+        ? { nu: "", A: 1e4, Ea: 45000, n_entradas: 1 }
+        : {}),
+      ...(tipo === "absorbedor" ? { N_etapas: 6 } : {}),
       ...(tipo === "intercambiador_doble"
         ? { spec_ic: "T_salida_caliente", T_salida_caliente: 350,
             aproximacion_minima: 5, contracorriente: true }
@@ -307,7 +314,8 @@ export default function FlowsheetPage() {
         fracciones: datos.tipo === "divisor" ? (datos.fracciones ?? "0.5,0.5").split(",").map(Number) : null,
         con_balance_energia: datos.con_balance_energia !== false,
         reaccion:
-          (datos.tipo === "reactor_cstr" || datos.tipo === "reactor_equilibrio") &&
+          (datos.tipo === "reactor_cstr" || datos.tipo === "reactor_equilibrio" ||
+            datos.tipo === "reactor_pfr") &&
           (datos.nu ?? "").trim()
             ? {
                 nu: (datos.nu ?? "").split(",").map((v) => Number(v.trim())),
@@ -329,9 +337,11 @@ export default function FlowsheetPage() {
             ? Number(datos.Q ?? 0)
             : null,
         T_operacion:
-          datos.tipo === "flash" && datos.spec_flash === "isotermo"
+          (datos.tipo === "flash" && datos.spec_flash === "isotermo")
             ? Number(datos.T_operacion ?? 0)
-            : null,
+            : datos.tipo === "absorbedor" && datos.T_operacion
+              ? Number(datos.T_operacion)
+              : null,
         fraccion_vapor:
           datos.tipo === "flash" && datos.spec_flash === "fraccion"
             ? Number(datos.fraccion_vapor ?? 0.5)
@@ -366,6 +376,7 @@ export default function FlowsheetPage() {
             : null,
         aproximacion_minima:
           datos.tipo === "intercambiador_doble" ? Number(datos.aproximacion_minima ?? 5) : 5,
+        N_etapas: datos.tipo === "absorbedor" ? Number(datos.N_etapas ?? 6) : null,
         contracorriente:
           datos.tipo === "intercambiador_doble" ? datos.contracorriente !== false : true,
       });
