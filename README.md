@@ -104,7 +104,7 @@ decisiones que no son obvias, en
 
 ```bash
 pip install -r requirements.txt
-python run_tests.py          # las 18 suites del núcleo y la API, ~300 s
+python run_tests.py          # las 19 suites del núcleo y la API, ~285 s
 ```
 
 Y las de la interfaz, que comprueban lo que ninguna suite de Python puede
@@ -195,9 +195,11 @@ equipo:
 - Caída de presión **por equipo**, no un perfil interno: una columna de
   atajo no puede llevarlo (su curva de equilibrio está precalculada a una
   sola presión).
-- Sin dimensionado ni costes: etapas teóricas, no una columna comprable.
-- Sin dimensionado de equipos reales: el reactor da volumen de tanque,
-  pero no hay diámetros de columna, platos ni intercambiadores.
+- **Dimensionado parcial**: diámetro de columna de platos por la
+  correlación de Fair y área de intercambiador por U·A·LMTD, ambos
+  validados contra el Ejemplo 9 de Perry's. Sin platos reales desde las
+  teóricas, sin columnas de relleno, y **sin costes** — un diámetro y un
+  área no son un precio.
 
 ---
 

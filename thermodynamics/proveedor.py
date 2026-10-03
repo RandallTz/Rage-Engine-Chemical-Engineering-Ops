@@ -111,6 +111,101 @@ class ProveedorTermodinamico:
         Hvap = np.array([comp.Hvapm for comp in self.componentes], dtype=float)
         return Cp, Hvap
 
+    # ------------------------------------------------------------------
+    # Propiedades que hacen falta para DIMENSIONAR, no para equilibrar.
+    #
+    # Van aqui y no en core/dimensionado.py a proposito: ese modulo son
+    # correlaciones empiricas de geometria y no debe saber nada de
+    # 'thermo'. Separarlos es lo que permite decir de donde viene la
+    # incertidumbre de un resultado -- del modelo o del ajuste.
+    # ------------------------------------------------------------------
+    def densidades_liquido(self, T_kelvin):
+        """Densidad del liquido puro de cada componente [kg/m3]."""
+        self.actualizar_estado(T_kelvin)
+        valores = []
+        for comp in self.componentes:
+            rho = getattr(comp, "rhol", None)
+            if rho is None or not np.isfinite(rho) or rho <= 0:
+                raise ValueError(
+                    f"'thermo' no da densidad de liquido para {comp.name} a "
+                    f"{T_kelvin:.2f} K. Puede que esa temperatura este por encima de su "
+                    "punto critico, donde no hay liquido que medir."
+                )
+            valores.append(float(rho))
+        return np.array(valores, dtype=float)
+
+    def tensiones_superficiales(self, T_kelvin):
+        """Tension superficial del liquido puro de cada componente [N/m]."""
+        self.actualizar_estado(T_kelvin)
+        valores = []
+        for comp in self.componentes:
+            sigma = getattr(comp, "sigma", None)
+            if sigma is None or not np.isfinite(sigma) or sigma <= 0:
+                raise ValueError(
+                    f"'thermo' no da tension superficial para {comp.name} a "
+                    f"{T_kelvin:.2f} K. Sin ella no se puede corregir la correlacion de "
+                    "inundacion, que depende de sigma^0.2."
+                )
+            valores.append(float(sigma))
+        return np.array(valores, dtype=float)
+
+    def densidad_liquido_mezcla(self, T_kelvin, x_mezcla):
+        """
+        Densidad de la mezcla liquida [kg/m3], por volumenes aditivos:
+
+            1/rho = sum_i (w_i / rho_i)        con w_i la fraccion MASICA
+
+        Es la regla de Amagat, que para liquidos organicos parecidos
+        acierta dentro de un pequeno porcentaje. No es exacta: el exceso
+        de volumen de mezcla existe y puede llegar al 2-3 % en mezclas
+        polares. Se elige asi, y se dice, porque la alternativa -- un
+        modelo de volumen de exceso -- aportaria una precision que la
+        correlacion de inundacion que consume este numero no puede
+        aprovechar: esa correlacion tiene un +-10 % de su propio ajuste.
+        """
+        x = np.asarray(x_mezcla, dtype=float)
+        x = x / float(np.sum(x))
+        rho_i = self.densidades_liquido(T_kelvin)
+        MW = np.array([float(c.MW) for c in self.componentes], dtype=float)
+        masa = x * MW
+        w = masa / float(np.sum(masa))
+        return float(1.0 / np.sum(w / rho_i))
+
+    def tension_superficial_mezcla(self, T_kelvin, x_mezcla):
+        """
+        Tension superficial de la mezcla [N/m], media molar.
+
+        Una media molar simple es grosera -- la tension superficial de una
+        mezcla la domina el componente que se acumula en la superficie, y
+        en mezclas con agua eso hace que caiga mucho mas rapido de lo que
+        la media sugiere. Se usa igual por la misma razon que arriba: la
+        correlacion que la consume la eleva a 0.2, asi que un error del
+        20 % en sigma se convierte en un 4 % en la velocidad de
+        inundacion, por debajo de la incertidumbre del propio ajuste.
+        """
+        x = np.asarray(x_mezcla, dtype=float)
+        x = x / float(np.sum(x))
+        return float(np.dot(x, self.tensiones_superficiales(T_kelvin)))
+
+    def densidad_vapor_ideal(self, T_kelvin, P_pascal, y_mezcla):
+        """
+        Densidad del vapor [kg/m3] suponiendo GAS IDEAL:
+
+            rho = P * MW_mezcla / (R T)
+
+        Es coherente con el resto del simulador, que supone fase vapor
+        ideal en todas partes (ver docs/03-termodinamica.md). A presion
+        atmosferica el error es de decimas de porcentaje; a 10 atm puede
+        ser del 5-10 %, y como el diametro va con 1/sqrt(rho_V), eso es un
+        2-5 % en el diametro. Esta documentado como limite en vez de
+        corregido a medias.
+        """
+        y = np.asarray(y_mezcla, dtype=float)
+        y = y / float(np.sum(y))
+        MW = np.array([float(c.MW) for c in self.componentes], dtype=float)
+        MW_mezcla = float(np.dot(y, MW)) / 1000.0        # kg/mol
+        return float(P_pascal) * MW_mezcla / (R_GAS * float(T_kelvin))
+
     def coeficientes_actividad(self, T_kelvin, x_mezcla):
         """
         Coeficientes de actividad gamma_i(T, x) via UNIFAC predictivo puro.

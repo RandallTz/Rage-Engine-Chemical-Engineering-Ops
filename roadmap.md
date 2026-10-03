@@ -1238,3 +1238,76 @@ De paso, **mi propia expectativa en la prueba estaba mal**: esperaba 30645 kg/h,
 `frontend/verificar_exportar.mjs`, 22 comprobaciones. Las descargas se capturan leyendo el `href` del `<a>` que se crea, en vez de dejar que el navegador escriba un fichero: en headless la carpeta de descargas es un detalle del entorno, y lo que se quiere comprobar es el **contenido**.
 
 17/17 suites de navegador.
+
+---
+
+# Fase 15: Dimensionado — de etapas teóricas a hardware
+
+Hasta aquí el simulador daba etapas teóricas, cargas térmicas y volúmenes de tanque. Nada de eso es un equipo:
+
+- **«12 etapas teóricas» no es una columna.** Falta el diámetro, que es lo que decide si se inunda y la dimensión que manda en el coste.
+- **«4.1 MW en el condensador» no es un intercambiador.** Falta el área.
+
+Sin esos dos números no se pueden comparar dos diseños, que es para lo que sirve un simulador.
+
+### Por qué este módulo necesita literatura y el resto del proyecto no tanto
+Las correlaciones de aquí **no se derivan de nada**: son ajustes empíricos a datos de plantas. No hay invariante interno que las valide — no se puede comprobar que un diámetro «cierre un balance». La única forma de saber si están bien transcritas es **reproducir un caso resuelto por la fuente**.
+
+Por eso `core/dimensionado.py` cita cada ecuación con su número de Perry's, y por eso no contiene termodinámica: recibe densidades, tensiones superficiales y cargas ya calculadas, y devuelve geometría. Esa separación permite decir **de dónde viene la incertidumbre** de un resultado — del modelo o del ajuste.
+
+### ✅ El diámetro de una columna de platos (Completado)
+Correlación de Fair, con la forma algebraica de su gráfica:
+
+$$F_{LG} = \frac{L}{G}\sqrt{\frac{\rho_G}{\rho_L}} \qquad \text{(Perry's 14-89)}$$
+$$C_{sbf} = 0.0105 + 8.127\times10^{-4}\,TS^{0.755}\exp\!\left[-1.463\,F_{LG}^{0.842}\right] \qquad \text{(14-90)}$$
+$$U_{nf} = C_{sbf}\left(\frac{\sigma}{20}\right)^{0.2}\sqrt{\frac{\rho_L-\rho_G}{\rho_G}} \qquad \text{(14-91)}$$
+
+La 14-90 es de Lygeros y Magoulas, *Hydrocarbon Proc.* **65**(12), 43 (1986). Tener la **ecuación** y no la gráfica es lo que permite calcular sin leer puntos a ojo.
+
+**Tres formas de equivocarse aquí, y las tres se vigilan:**
+
+1. **$L/G$ en base másica, no molar.** El error no revienta: da un diámetro plausible. Por eso los argumentos se llaman `caudal_masico_*` y no `L` y `G`.
+2. **El espaciado en milímetros, no en metros.** La correlación está ajustada así, y pasarle 0.5 en vez de 500 daría un número 180 veces menor sin avisar. Lo caza el rango del ajuste (150–900 mm), y el mensaje dice que el problema es que el valor no está respaldado por los datos.
+3. **El área NETA no es la sección total.** La correlación usa la neta; confundirlas da una columna un 12 % más estrecha de lo que toca.
+
+### ✅ El área de un intercambiador (Completado)
+$A = |Q| / (U \cdot \text{LMTD} \cdot F)$, con dos guardas que importan:
+
+- **Se toma el valor absoluto de $Q$.** El signo dice si calienta o enfría; un área no tiene signo. Sin eso, un condensador ($Q<0$) daría un área negativa — el tipo de número que se cuela en una hoja de cálculo y no se nota.
+- **$F \le 1$ siempre.** Un factor mayor que 1 significaría que el equipo aprovecha la diferencia de temperaturas *mejor* que la contracorriente pura, que es el límite.
+
+Y la LMTD tiene sus dos casos degenerados tratados en vez de confiados: un **cruce de temperaturas** da el logaritmo de un cociente negativo (se rechaza nombrando los dos extremos que se cruzan) y **$\Delta T_1 = \Delta T_2$** da 0/0 (se devuelve el límite, que es $\Delta T$).
+
+**Los coeficientes globales vienen con su rango, no como un número suelto.** Es deliberado: el área hereda la incertidumbre del $U$, y presentarla como un valor único sería esconderla. Medido: para un condensador orgánico/agua el rango tabulado va de 280 a 800 W/m²K, y eso son **de 13.95 a 39.85 m² para la misma carga — un factor 2.9 solo por la incertidumbre del coeficiente.**
+
+### Verificación contra Perry's Ejemplo 9
+Sección 14, «Flooding of a Distillation Tray»: etilbenceno/estireno en una columna de platos de tamiz de 2.5 m. Perry's publica los **números intermedios**, así que se compara paso a paso y, si uno se desvía, se sabe cuál.
+
+| | Perry's | calculado | |
+|---|---|---|---|
+| $F_{LG}$ (Eq. 14-89) | 0.021 | **0.020633** | |
+| $C_{sbf}$ (leído de la Fig. 14-31) | 0.095 m/s | **0.094340** | −0.7 % |
+| $C_{SB}$ corregido por $\sigma$ | 0.0993 | **0.098645** | −0.7 % |
+| **factor C de operación** | **0.0756** | **0.075597** | exacto a 4 cifras |
+
+Y un detalle que vale la pena: Perry's concluye *«about 80 percent of flood»*, pero **sus propios números dan 0.0756/0.0993 = 76.1 %**. El valor calculado aquí, 76.64 %, concuerda con su aritmética mejor que con su redondeo — así que la comprobación se escribe contra su aritmética y no contra su frase.
+
+La inversa también cierra: el diámetro necesario al 80 % de inundación sale **2.541 m** frente a los 2.5 m que la columna ya tiene (+1.7 %), coherente con que el ejemplo opere por debajo del 80 % y Perry's diga que *«the proposed column is entirely adequate»*.
+
+### Y se comporta como debe
+- **Más espaciado entre platos, columna más estrecha**: de 3.004 m a 300 mm hasta 2.078 m a 900 mm. Es el compromiso clásico — estrecha y alta, o ancha y baja.
+- **Vapor más denso, columna más estrecha**: con $\rho_V = 0.481$ hacen falta 2.541 m; con 10 kg/m³, 1.272 m. Por eso **las columnas de vacío son enormes**.
+- **Diseñar al 60 % en vez de al 80 %** cuesta un 15.5 % de diámetro, que son un **33 % más de sección**.
+
+### Las propiedades que hacían falta
+En `thermodynamics/proveedor.py`, y con sus aproximaciones declaradas:
+
+- **Densidad de la mezcla líquida** por volúmenes aditivos (Amagat). No es exacta: el volumen de exceso puede llegar al 2–3 % en mezclas polares. Se elige así porque la alternativa aportaría una precisión que la correlación de inundación **no puede aprovechar**: ese ajuste tiene su propio ±10 %.
+- **Tensión superficial** como media molar, que es grosera — en mezclas con agua cae mucho más rápido de lo que la media sugiere. Pero la correlación la eleva a 0.2, así que un error del 20 % en $\sigma$ se convierte en un **4 % en la velocidad de inundación**, por debajo de la incertidumbre del propio ajuste.
+- **Densidad del vapor por gas ideal**, coherente con el resto del simulador. A 1 atm el error es de décimas de porcentaje; **a 10 atm puede ser del 5–10 %, y como el diámetro va con $1/\sqrt{\rho_V}$, eso es un 2–5 % en el diámetro.** Documentado como límite en vez de corregido a medias — y es otra razón para la fase vapor no ideal, que viene después.
+
+### ⬜ Lo que falta
+- Conectarlo al diagrama y a la interfaz: hoy es Python.
+- **Platos reales** a partir de las teóricas. La eficiencia de Murphree ya existe en McCabe-Thiele, así que falta la correlación que la estime cuando no se da.
+- Columnas de **relleno** (HETP y la correlación de caída de presión de Eckert), que es la otra mitad del mercado.
+- Sin costes: un diámetro y un área no son un precio.
