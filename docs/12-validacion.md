@@ -198,7 +198,7 @@ la misma definición**. Es la razón de existir de
 | `tests/validar_ell.py` | **Equilibrio líquido-líquido**: invariancia de la línea de reparto, regla de la palanca, descenso de la energía de Gibbs, la trampa de los dos juegos de parámetros UNIFAC, y el error **medido** contra Perry's tabla 15-8 |
 | `tests/validar_caida_presion.py` | **Caída de presión**: que con 0 nada cambie, que se acumule al encadenar, y su efecto sobre la vaporización |
 | `tests/validar_termodinamica.py` | ELV, topología reactiva, azeótropos |
-| `frontend/verificar_*.mjs` | Interfaz real en navegador (17 suites). Se lanzan todas con `node verificar_todo.mjs`, que mira el **código de salida** y no la salida de texto |
+| `frontend/verificar_*.mjs` | Interfaz real en navegador (18 suites). Se lanzan todas con `node verificar_todo.mjs`, que mira el **código de salida** y no la salida de texto |
 
 Las suites de navegador usan `puppeteer-core`: **no comprueban que el
 componente renderice, sino que el número correcto llegue a la pantalla**.

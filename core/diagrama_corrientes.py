@@ -32,6 +32,10 @@ comparten la misma corriente, o sea literalmente las mismas variables.
 
 import numpy as np
 
+from core.dimensionado import (
+    diametro_columna, diferencia_media_logaritmica, area_intercambiador,
+)
+
 from core.balance_materia import BalanceMateriaGlobal
 from core.reactor_cstr import EvaluadorCSTR
 from core.reactor_pfr import EvaluadorPFR
@@ -236,7 +240,11 @@ class DiagramaCorrientes:
 
     # ------------------------------------------------------------------
     def agregar_columna_binaria(self, nombre, solucionador, alimentacion, destilado, fondos,
-                                 metodo="mccabe_thiele", q_fijo=None, con_cargas_termicas=True):
+                                 metodo="mccabe_thiele", q_fijo=None, con_cargas_termicas=True,
+                                 con_dimensionado=False,
+                                 espaciado_platos_mm=600.0,
+                                 fraccion_de_inundacion=0.80,
+                                 fraccion_bajantes=0.12):
         """
         Conecta una columna binaria a tres corrientes ya declaradas. Las
         ecuaciones de la columna se renombran para operar directamente
@@ -390,6 +398,41 @@ class DiagramaCorrientes:
             self._temperatura_fijada.add(f"{alimentacion}.T")
             self._bloques.append(
                 self._bloque_T_alimentacion(alimentacion, f"{nombre}.q", evaluador)
+            )
+
+        # DIMENSIONADO, apagado por omision.
+        #
+        # Va detras de todo y en su propio bloque por la misma razon que
+        # las cargas termicas: es una capa que CONSUME el resultado de la
+        # columna (R, q, T_D, T_B y las composiciones de producto) y no
+        # aporta nada a resolverla. Encendido siempre, obligaria a tener
+        # densidades y tensiones superficiales para cualquier columna,
+        # incluso cuando a nadie le interesa el diametro.
+        #
+        # Y necesita el proveedor: las correlaciones de inundacion piden
+        # propiedades fisicas que una columna de atajo no calcula.
+        if con_dimensionado:
+            if self._proveedor is None:
+                raise ValueError(
+                    f"{nombre}: el dimensionado necesita el ProveedorTermodinamico del "
+                    "diagrama (DiagramaCorrientes(..., proveedor=...)). La correlacion de "
+                    "inundacion pide densidades y tension superficial, que una columna de "
+                    "atajo no calcula por su cuenta."
+                )
+            if metodo == "fug":
+                raise ValueError(
+                    f"{nombre}: el dimensionado por la correlacion de Fair esta escrito "
+                    "para la columna binaria. Una columna FUG no publica T_D ni T_B de la "
+                    "misma forma, asi que se rechaza en vez de dimensionar con numeros que "
+                    "no son los suyos."
+                )
+            self._bloques.append(
+                _bloque_diametro_columna(
+                    nombre, alimentacion, destilado, fondos, self.n,
+                    self._proveedor, solucionador.evaluador.calculadora_elv,
+                    solucionador.evaluador.P_sistema,
+                    espaciado_platos_mm, fraccion_de_inundacion, fraccion_bajantes,
+                )
             )
 
         self._registrar_operacion(
@@ -1594,7 +1637,9 @@ class DiagramaCorrientes:
                                      frio_entrada, frio_salida,
                                      Q=None, T_salida_caliente=None, T_salida_frio=None,
                                      aproximacion_minima=5.0, contracorriente=True,
-                                     caida_P_caliente=0.0, caida_P_frio=0.0):
+                                     caida_P_caliente=0.0, caida_P_frio=0.0,
+                                     coeficiente_global_U=None,
+                                     factor_correccion_F=1.0):
         """
         Intercambiador de DOS corrientes: lo que pierde la caliente lo gana
         la fria.
@@ -1623,6 +1668,20 @@ class DiagramaCorrientes:
 
         Una sola especificacion de las tres (Q, T de salida caliente, T de
         salida fria). Las otras dos salen del balance.
+
+        AREA. Si se da `coeficiente_global_U` [W/(m2 K)], el equipo
+        publica tambien `<nombre>.lmtd` y `<nombre>.area`, por
+        A = |Q| / (U LMTD F). Sin U no hay area: el coeficiente global
+        depende del ensuciamiento, de la geometria y de la velocidad, y
+        inventarle un valor por omision seria dar como resultado lo que es
+        una suposicion. `core.dimensionado.coeficiente_global_tipico` da
+        ordenes de magnitud con su rango para tantear.
+
+        Y es el UNICO intercambiador que puede tener area, porque es el
+        unico que tiene las dos corrientes. El de una sola recibe un Q de
+        la nada, como si hubiera un servicio infinito: sin la temperatura
+        de ese servicio no hay diferencia media de temperaturas que
+        calcular, y por tanto no hay area.
 
         SEGUNDA LEY. Se comprueba que no haya cruce de temperaturas: el
         calor no pasa de lo frio a lo caliente. En contracorriente la
@@ -1663,7 +1722,9 @@ class DiagramaCorrientes:
 
         claves_entrada = claves_de(caliente_entrada) + claves_de(frio_entrada)
         claves_salida = (claves_de(caliente_salida) + claves_de(frio_salida)
-                         + (f"{nombre}.Q", f"{nombre}.aproximacion"))
+                         + (f"{nombre}.Q", f"{nombre}.aproximacion")
+                         + ((f"{nombre}.lmtd", f"{nombre}.area")
+                            if coeficiente_global_U is not None else ()))
 
         def resolver_fn(**c):
             def leer(s):
@@ -1696,6 +1757,12 @@ class DiagramaCorrientes:
                     f"{frio_salida}.P": P_fri - dP_fri,
                     f"{nombre}.Q": 0.0,
                     f"{nombre}.aproximacion": float(T_cal_ent - T_fri_ent),
+                    # Rama seca: sin caudal no hay calor que transferir, asi
+                    # que el area es cero. No se omite la clave -- omitirla
+                    # dejaria la variable sin determinar y paralizaria a
+                    # quien la mire, cuando la respuesta es "cero".
+                    **({f"{nombre}.lmtd": 0.0, f"{nombre}.area": 0.0}
+                       if coeficiente_global_U is not None else {}),
                 }
                 for i in range(self.n):
                     valores[f"{caliente_salida}.x{i}"] = float(x_cal[i])
@@ -1748,6 +1815,9 @@ class DiagramaCorrientes:
                 f"{frio_salida}.F": F_fri, f"{frio_salida}.T": T_fri_sal,
                 f"{frio_salida}.P": P_fri - dP_fri,
                 f"{nombre}.Q": float(calor), f"{nombre}.aproximacion": float(aproximacion),
+                **_area_del_intercambiador(
+                    nombre, coeficiente_global_U, factor_correccion_F, calor,
+                    T_cal_ent, T_cal_sal, T_fri_ent, T_fri_sal, contracorriente),
             }
             for i in range(self.n):
                 valores[f"{caliente_salida}.x{i}"] = float(x_cal[i])
@@ -3460,4 +3530,145 @@ def _bloque_cargas_fug_corrientes(nombre, alimentacion, destilado, fondos, n, co
         puede_resolver=lambda n_inc: n_inc == 0,
         resolver_fn=resolver_fn,
         n_ecuaciones=len(claves_salida),
+    )
+
+def _area_del_intercambiador(nombre, U, F, Q, T_cal_ent, T_cal_sal,
+                             T_fri_ent, T_fri_sal, contracorriente):
+    """
+    El area del intercambiador, si se dio el coeficiente global.
+
+    Devuelve un diccionario vacio cuando no se dio U: asi el bloque que
+    lo llama no tiene que repetir el condicional en sus dos ramas, y no
+    puede quedarse una sin el.
+
+    El cruce de temperaturas ya lo rechaza la guarda de segunda ley del
+    propio equipo, asi que aqui la LMTD no deberia poder fallar. Se
+    protege igual: si fallara, el mensaje de `diferencia_media_logaritmica`
+    nombra los dos extremos que se cruzan, y perderlo para devolver un
+    area vacia convertiria un diagnostico claro en una variable sin
+    determinar.
+    """
+    if U is None:
+        return {}
+    lmtd = diferencia_media_logaritmica(
+        T_cal_ent, T_cal_sal, T_fri_ent, T_fri_sal, contracorriente=contracorriente)
+    return {
+        f"{nombre}.lmtd": float(lmtd),
+        f"{nombre}.area": float(area_intercambiador(Q, U, lmtd, F)),
+    }
+
+
+def _bloque_diametro_columna(nombre, alimentacion, destilado, fondos, n_componentes,
+                             proveedor, calculadora_elv, P_sistema,
+                             espaciado_platos_mm, fraccion_de_inundacion,
+                             fraccion_bajantes):
+    """
+    El diametro de la columna, por la correlacion de Fair.
+
+    POR QUE DIMENSIONA LOS DOS EXTREMOS Y NO UNO
+    --------------------------------------------
+    El caudal de vapor NO es el mismo arriba y abajo salvo que la
+    alimentacion entre como liquido saturado (q = 1):
+
+        V       = (R + 1) D                 seccion de rectificacion
+        V_barra = V + (q - 1) F             seccion de agotamiento
+
+    Con q = 0 (alimentacion vapor saturado) V_barra = V - F, o sea que
+    arriba circula MAS vapor. Y con q > 1 (alimentacion subenfriada) pasa
+    lo contrario. Dimensionar siempre por un extremo subdimensionaria la
+    columna la mitad de las veces.
+
+    Y las propiedades fisicas tampoco son las mismas: arriba esta el
+    producto ligero a T_D y abajo el pesado a T_B, con densidades y
+    tensiones superficiales distintas. Asi que se calculan los dos
+    diametros con sus propias propiedades y se reporta el que MANDA,
+    junto con los dos, para que se vea de donde sale.
+
+    La composicion del vapor en el fondo se saca del punto de burbuja de
+    x_B, no se aproxima por x_B: en el rehervidor el vapor esta en
+    equilibrio con el liquido del fondo, y en un binario con alfa ~ 2.4
+    confundirlos cambia la masa molar un 5 %.
+    """
+    claves_x_D = [f"{destilado}.x{i}" for i in range(n_componentes)]
+    claves_x_B = [f"{fondos}.x{i}" for i in range(n_componentes)]
+    entradas = (f"{nombre}.R", f"{nombre}.q", f"{nombre}.T_D", f"{nombre}.T_B",
+                f"{destilado}.F", f"{alimentacion}.F", *claves_x_D, *claves_x_B)
+    salidas = (f"{nombre}.diametro", f"{nombre}.diametro_cabeza",
+               f"{nombre}.diametro_cola", f"{nombre}.area_total",
+               f"{nombre}.velocidad_inundacion")
+
+    MW = np.array([float(c.MW) for c in proveedor.componentes], dtype=float)
+
+    def un_extremo(T, x_liquido, y_vapor, caudal_molar_vapor, caudal_molar_liquido):
+        x = np.asarray(x_liquido, dtype=float)
+        x = x / float(np.sum(x))
+        y = np.asarray(y_vapor, dtype=float)
+        y = y / float(np.sum(y))
+        rho_L = proveedor.densidad_liquido_mezcla(T, x)
+        rho_V = proveedor.densidad_vapor_ideal(T, P_sistema, y)
+        sigma = proveedor.tension_superficial_mezcla(T, x) * 1000.0   # N/m -> mN/m
+        # De moles a masa: cada fase con SU masa molar, que es distinta.
+        G = caudal_molar_vapor * float(np.dot(y, MW)) / 1000.0        # kg/s
+        L = caudal_molar_liquido * float(np.dot(x, MW)) / 1000.0      # kg/s
+        return diametro_columna(
+            G, L, rho_V, rho_L,
+            espaciado_platos_mm=espaciado_platos_mm,
+            tension_superficial_mN_m=sigma,
+            fraccion_de_inundacion=fraccion_de_inundacion,
+            fraccion_bajantes=fraccion_bajantes,
+        )
+
+    def resolver_fn(**c):
+        if any(c.get(k) is None for k in entradas):
+            return {}
+        R, q = float(c[f"{nombre}.R"]), float(c[f"{nombre}.q"])
+        D, F = float(c[f"{destilado}.F"]), float(c[f"{alimentacion}.F"])
+        if D <= 0 or R < 0:
+            return {}
+        x_D = np.array([c[k] for k in claves_x_D], dtype=float)
+        x_B = np.array([c[k] for k in claves_x_B], dtype=float)
+        if float(np.sum(x_D)) <= 0 or float(np.sum(x_B)) <= 0:
+            return {}
+
+        V = (R + 1.0) * D                 # vapor en rectificacion
+        L = R * D                         # liquido en rectificacion
+        V_barra = V + (q - 1.0) * F       # vapor en agotamiento
+        L_barra = L + q * F               # liquido en agotamiento
+
+        # Cabeza: condensador total, asi que el vapor que llega tiene la
+        # composicion del destilado y el reflujo tambien.
+        cabeza = un_extremo(float(c[f"{nombre}.T_D"]), x_D, x_D, V, L)
+
+        # Cola: el vapor del rehervidor esta en EQUILIBRIO con x_B.
+        T_B = float(c[f"{nombre}.T_B"])
+        try:
+            _, y_B = calculadora_elv.burbuja_T(P_sistema, x_B / float(np.sum(x_B)))
+        except Exception:
+            # Sin el equilibrio no se inventa una composicion de vapor: se
+            # dimensiona solo la cabeza y se dice en el resultado.
+            y_B = None
+        cola = (un_extremo(T_B, x_B, y_B, V_barra, L_barra)
+                if (y_B is not None and V_barra > 0) else None)
+
+        candidatos = [cabeza] + ([cola] if cola else [])
+        manda = max(candidatos, key=lambda r: r["diametro"])
+        salida = {
+            f"{nombre}.diametro": manda["diametro"],
+            f"{nombre}.area_total": manda["area_total"],
+            f"{nombre}.velocidad_inundacion": manda["velocidad_inundacion"],
+            f"{nombre}.diametro_cabeza": cabeza["diametro"],
+        }
+        if cola:
+            salida[f"{nombre}.diametro_cola"] = cola["diametro"]
+        return salida
+
+    return BloqueEcuaciones(
+        nombre=f"{nombre}: diametro (correlacion de Fair)",
+        variables=entradas + salidas,
+        variables_entrada=entradas,
+        puede_resolver=lambda n: n == 0,
+        resolver_fn=resolver_fn,
+        # Cinco variables de geometria, cinco ecuaciones: cada una se
+        # calcula de las demas, ninguna es un grado de libertad nuevo.
+        n_ecuaciones=len(salidas),
     )

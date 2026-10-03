@@ -402,6 +402,20 @@ export default function FlowsheetPage() {
         caida_P_frio:
           datos.tipo === "intercambiador_doble" ? Number(datos.caida_P_frio ?? 0) : 0,
         caida_P_gas: datos.tipo === "absorbedor" ? Number(datos.caida_P_gas ?? 0) : 0,
+
+        // --- dimensionado. El de la columna solo existe para la binaria:
+        // una FUG no publica T_D ni T_B de la misma forma.
+        con_dimensionado:
+          datos.tipo === "columna" && datos.metodo !== "fug"
+            ? datos.con_dimensionado === true : false,
+        espaciado_platos_mm: Number(datos.espaciado_platos_mm ?? 600),
+        fraccion_de_inundacion: Number(datos.fraccion_de_inundacion ?? 0.8),
+        coeficiente_global_U:
+          datos.tipo === "intercambiador_doble" && datos.coeficiente_global_U
+            ? Number(datos.coeficiente_global_U) : null,
+        factor_correccion_F:
+          datos.tipo === "intercambiador_doble"
+            ? Number(datos.factor_correccion_F ?? 1) : 1,
         N_etapas: datos.tipo === "absorbedor" ? Number(datos.N_etapas ?? 6) : null,
         contracorriente:
           datos.tipo === "intercambiador_doble" ? datos.contracorriente !== false : true,

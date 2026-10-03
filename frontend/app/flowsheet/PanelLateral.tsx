@@ -462,6 +462,34 @@ function EditorElemento({
                 valor={String(datosOp.aproximacion_minima ?? 5)}
                 onChange={(v) => onDatos({ aproximacion_minima: Number(v) })}
               />
+              {/* El área, solo si se da el coeficiente global. */}
+              <CampoConfig
+                etiqueta="U [W/m²K] (vacío = sin área)"
+                valor={datosOp.coeficiente_global_U === undefined
+                  ? "" : String(datosOp.coeficiente_global_U)}
+                onChange={(v) => onDatos({
+                  coeficiente_global_U: v === "" ? undefined : Number(v),
+                })}
+              />
+              {datosOp.coeficiente_global_U ? (
+                <>
+                  <CampoConfig
+                    etiqueta="F (corrección LMTD, ≤ 1)"
+                    valor={String(datosOp.factor_correccion_F ?? 1)}
+                    onChange={(v) => onDatos({ factor_correccion_F: Number(v) })}
+                  />
+                  <p className="text-[10px] leading-snug text-zinc-500">
+                    A = |Q| / (U·ΔT<sub>ml</sub>·F). El coeficiente global depende del
+                    ensuciamiento, la geometría y la velocidad: su rango típico es un factor
+                    2 o más, y el área hereda esa incertidumbre.
+                  </p>
+                </>
+              ) : (
+                <p className="text-[10px] leading-snug text-zinc-500">
+                  Sin U no hay área. Inventarle un valor por omisión sería dar como
+                  resultado una suposición.
+                </p>
+              )}
               {/* Una por lado: son dos circuitos distintos (tubos y
                   carcasa) con geometrías y caudales distintos. */}
               <CampoCaidaPresion
@@ -488,6 +516,44 @@ function EditorElemento({
                 Lo que pierde la corriente caliente lo gana la fría. Si las temperaturas se
                 cruzan, el equipo se rechaza: el calor no sube solo.
               </p>
+            </>
+          )}
+
+          {/* -------------------------- dimensionado de la columna */}
+          {datosOp.tipo === "columna" && datosOp.metodo !== "fug" && (
+            <>
+              <label className="flex items-center gap-2 text-[11px] text-zinc-300">
+                <input
+                  type="checkbox"
+                  checked={datosOp.con_dimensionado === true}
+                  onChange={(e) => onDatos({ con_dimensionado: e.target.checked })}
+                />
+                calcular el diámetro
+              </label>
+              {datosOp.con_dimensionado ? (
+                <>
+                  <CampoConfig
+                    etiqueta="espaciado de platos [mm]"
+                    valor={String(datosOp.espaciado_platos_mm ?? 600)}
+                    onChange={(v) => onDatos({ espaciado_platos_mm: Number(v) })}
+                  />
+                  <CampoConfig
+                    etiqueta="fracción de inundación"
+                    valor={String(datosOp.fraccion_de_inundacion ?? 0.8)}
+                    onChange={(v) => onDatos({ fraccion_de_inundacion: Number(v) })}
+                  />
+                  <p className="text-[10px] leading-snug text-zinc-500">
+                    Correlación de Fair. Se dimensionan los <strong>dos extremos</strong> y
+                    manda el mayor: el caudal de vapor no es el mismo arriba y abajo salvo
+                    que q = 1, y las propiedades del fondo tampoco son las de la cabeza.
+                  </p>
+                  <p className="text-[10px] leading-snug text-zinc-500">
+                    El espaciado va en <strong>milímetros</strong> y entre 150 y 900: es el
+                    rango en el que la correlación está ajustada. Diseñar al 60 % en vez del
+                    80 % cuesta un 15 % de diámetro, que son un 33 % más de sección.
+                  </p>
+                </>
+              ) : null}
             </>
           )}
 

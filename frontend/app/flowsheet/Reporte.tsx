@@ -184,7 +184,14 @@ export default function Reporte({
                     {variables.map((v) => (
                       <tr key={v}>
                         <td className="border-b border-zinc-800 px-2 py-1 text-xs text-zinc-400">
-                          {v}{unidades.etiquetaDe(v) ? <span className="text-zinc-600"> [{unidades.etiquetaDe(v)}]</span> : null}
+                          {/* La tabla de corrientes ya humanizaba los nombres
+                              y esta no: mostraba "diametro" y "velocidad_inundacion"
+                              en crudo. Era una inconsistencia anterior que las
+                              variables de geometria hicieron visible. */}
+                          {etiquetaVariable(v, componentes)}
+                          {unidades.etiquetaDe(v)
+                            ? <span className="text-zinc-600"> [{unidades.etiquetaDe(v)}]</span>
+                            : null}
                         </td>
                         {celda(`${op.id}.${v}`, v)}
                       </tr>

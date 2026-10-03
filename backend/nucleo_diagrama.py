@@ -125,6 +125,14 @@ def _construir(request):
                 alimentacion=c["alimentacion"], destilado=c["destilado"], fondos=c["fondos"],
                 metodo=metodo, q_fijo=op.q,
                 con_cargas_termicas=op.con_balance_energia,
+                # El dimensionado solo esta escrito para la columna
+                # binaria: una FUG no publica T_D ni T_B de la misma
+                # forma. Se filtra aqui en vez de dejar que el nucleo
+                # lance el error, para que el mensaje llegue como un 422
+                # con la operacion nombrada.
+                con_dimensionado=op.con_dimensionado and metodo != "fug",
+                espaciado_platos_mm=op.espaciado_platos_mm,
+                fraccion_de_inundacion=op.fraccion_de_inundacion,
             )
             columnas[op.nombre] = {
                 "evaluador": evaluador, "metodo": metodo, "corrientes": c, "q": op.q,
@@ -222,6 +230,8 @@ def _construir(request):
                 contracorriente=op.contracorriente,
                 caida_P_caliente=op.caida_P_caliente,
                 caida_P_frio=op.caida_P_frio,
+                coeficiente_global_U=op.coeficiente_global_U,
+                factor_correccion_F=op.factor_correccion_F,
             )
         elif op.tipo == "reactor_pfr":
             nu_pfr, gestor_pfr = _reaccion_de(

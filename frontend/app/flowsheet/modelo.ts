@@ -103,6 +103,23 @@ export interface DatosOperacion extends Record<string, unknown> {
   caida_P_frio?: number;
   /** solo absorbedor: la del GAS al atravesar el relleno */
   caida_P_gas?: number;
+  /**
+   * solo columna binaria: calcular el diámetro por la correlación de Fair.
+   *
+   * Apagado por omisión. Es una capa que CONSUME el resultado de la
+   * columna y no aporta nada a resolverla, así que encendida siempre
+   * obligaría a tener densidades y tensión superficial para cualquier
+   * columna, incluso cuando a nadie le interesa el diámetro.
+   */
+  con_dimensionado?: boolean;
+  /** solo con dimensionado: espaciado entre platos en MILÍMETROS */
+  espaciado_platos_mm?: number;
+  /** solo con dimensionado: a qué fracción de la inundación se diseña */
+  fraccion_de_inundacion?: number;
+  /** solo intercambiador_doble: coeficiente global [W/(m²·K)] */
+  coeficiente_global_U?: number;
+  /** solo intercambiador_doble con U: corrección de la LMTD, ≤ 1 */
+  factor_correccion_F?: number;
 }
 
 export interface DatosCorriente extends Record<string, unknown> {
@@ -223,7 +240,15 @@ export function variablesDeOperacion(datos: DatosOperacion): string[] {
     const base = ["q", "R", "N"];
     // Si el balance de energia esta apagado, esas variables no existen
     // en el diagrama: no se muestran ni cuentan para grados de libertad.
-    return datos.con_balance_energia === false ? base : [...base, "Q_c", "Q_R", "R_int", "V_barra"];
+    const conEnergia = datos.con_balance_energia === false
+      ? base : [...base, "Q_c", "Q_R", "R_int", "V_barra"];
+    // La geometría tampoco existe si el dimensionado está apagado. Se
+    // dimensionan los DOS extremos y se publica el que manda, porque el
+    // caudal de vapor no es el mismo arriba y abajo salvo que q = 1.
+    return datos.con_dimensionado
+      ? [...conEnergia, "diametro", "diametro_cabeza", "diametro_cola",
+         "area_total", "velocidad_inundacion"]
+      : conEnergia;
   }
   if (datos.tipo === "bomba") return ["factor_P"];
   if (datos.tipo === "flash") {
@@ -235,7 +260,13 @@ export function variablesDeOperacion(datos: DatosOperacion): string[] {
   if (datos.tipo === "valvula") return ["beta_salida", "caida_P"];
   if (datos.tipo === "separador") return [];  // todo queda en las corrientes
   if (datos.tipo === "compresor") return ["W", "T_ideal", "razon_P"];
-  if (datos.tipo === "intercambiador_doble") return ["Q", "aproximacion"];
+  if (datos.tipo === "intercambiador_doble") {
+    const base = ["Q", "aproximacion"];
+    // Sin coeficiente global no hay área: U depende del ensuciamiento, la
+    // geometría y la velocidad, e inventarle un valor sería dar como
+    // resultado una suposición.
+    return datos.coeficiente_global_U ? [...base, "lmtd", "area"] : base;
+  }
   if (datos.tipo === "reactor_pfr") return [...clavesAvance(datos), "X", "V", "T"];
   if (datos.tipo === "absorbedor") return ["N", "T"];
   if (datos.tipo === "reactor_equilibrio") {
@@ -335,6 +366,13 @@ export function etiquetaVariable(variable: string, componentes: string[]): strin
     return `K_eq${subindice(j)} (reacción ${Number(j) + 1})`;
   }
   if (variable === "X") return "X (conversión)";
+  if (variable === "diametro") return "D (diámetro)";
+  if (variable === "diametro_cabeza") return "D en cabeza";
+  if (variable === "diametro_cola") return "D en cola";
+  if (variable === "area_total") return "sección de la columna";
+  if (variable === "velocidad_inundacion") return "u de inundación";
+  if (variable === "lmtd") return "ΔT medio logarítmico";
+  if (variable === "area") return "A (área de intercambio)";
   if (variable === "recuperacion_LK_D") return "recup. clave ligero → destilado";
   if (variable === "recuperacion_HK_B") return "recup. clave pesado → fondos";
   return variable;

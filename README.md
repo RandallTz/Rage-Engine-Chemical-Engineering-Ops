@@ -114,7 +114,7 @@ servidores vivos y un navegador:
 ```bash
 python -m uvicorn backend.main:app --port 8001 --reload   # en una terminal
 cd frontend && npm run dev                                 # en otra
-cd frontend && node verificar_todo.mjs                     # las 17 suites
+cd frontend && node verificar_todo.mjs                     # las 18 suites
 ```
 
 El lanzador mira el **código de salida** de cada suite, no su salida de
@@ -196,10 +196,12 @@ equipo:
   atajo no puede llevarlo (su curva de equilibrio está precalculada a una
   sola presión).
 - **Dimensionado parcial**: diámetro de columna de platos por la
-  correlación de Fair y área de intercambiador por U·A·LMTD, ambos
-  validados contra el Ejemplo 9 de Perry's. Sin platos reales desde las
-  teóricas, sin columnas de relleno, y **sin costes** — un diámetro y un
-  área no son un precio.
+  correlación de Fair (los dos extremos, manda el mayor) y área del
+  intercambiador de dos corrientes por U·A·LMTD, validados contra el
+  Ejemplo 9 de Perry's. Sin platos reales desde las teóricas, sin columnas
+  de relleno, sin área de condensador ni rehervidor (haría falta modelar
+  los servicios para tener su temperatura), y **sin costes** — un diámetro
+  y un área no son un precio.
 
 ---
 

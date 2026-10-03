@@ -329,6 +329,55 @@ class OperacionDiagrama(BaseModel):
             "gravedad."
         ),
     )
+    # --- dimensionado
+    con_dimensionado: bool = Field(
+        False,
+        description=(
+            "Solo columna binaria: calcular el DIAMETRO por la correlacion de Fair. Apagado "
+            "por omision porque es una capa que CONSUME el resultado de la columna y no "
+            "aporta nada a resolverla; encendida siempre, obligaria a tener densidades y "
+            "tension superficial para cualquier columna. Publica '<nombre>.diametro', "
+            "'.diametro_cabeza', '.diametro_cola', '.area_total' y '.velocidad_inundacion'. "
+            "Se dimensionan los DOS extremos y manda el mayor: el caudal de vapor no es el "
+            "mismo arriba y abajo salvo que q = 1."
+        ),
+    )
+    espaciado_platos_mm: float = Field(
+        600.0, ge=150.0, le=900.0,
+        description=(
+            "Solo con dimensionado: espaciado entre platos en MILIMETROS. El rango es el del "
+            "ajuste de la correlacion de Fair (Perry's Fig. 14-31); fuera de el el numero no "
+            "estaria respaldado por los datos. Mas espaciado da una columna mas estrecha y "
+            "mas alta."
+        ),
+    )
+    fraccion_de_inundacion: float = Field(
+        0.80, gt=0.0, le=1.0,
+        description=(
+            "Solo con dimensionado: a que fraccion de la velocidad de inundacion se disena. "
+            "Perry's recomienda 0.60 a 0.80 y senala que las columnas reales operan al "
+            "0.80-0.90. Subirlo no es un error de calculo, es una decision de riesgo."
+        ),
+    )
+    coeficiente_global_U: Optional[float] = Field(
+        None, gt=0.0,
+        description=(
+            "Solo intercambiador_doble: coeficiente global de transferencia [W/(m2 K)]. Si se "
+            "da, el equipo publica '<nombre>.lmtd' y '<nombre>.area'. Sin el no hay area: U "
+            "depende del ensuciamiento, la geometria y la velocidad, e inventarle un valor por "
+            "omision seria dar como resultado una suposicion. El intercambiador de UNA "
+            "corriente no puede tener area porque no tiene la temperatura del servicio, asi "
+            "que no hay diferencia media que calcular."
+        ),
+    )
+    factor_correccion_F: float = Field(
+        1.0, gt=0.0, le=1.0,
+        description=(
+            "Solo intercambiador_doble con U: correccion de la LMTD cuando el flujo no es "
+            "contracorriente pura. Como mucho 1, que es la contracorriente: por encima el "
+            "equipo aprovecharia la diferencia de temperaturas mejor que el limite."
+        ),
+    )
     modo_energia: Literal["isotermo", "adiabatico", "calor_dado"] = Field(
         "isotermo",
         description=(

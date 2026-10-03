@@ -305,6 +305,165 @@ except ValueError as e:
           "agua-agua" in str(e), f"{len(COEFICIENTES_GLOBALES_TIPICOS)} servicios tabulados")
 
 
+# ======================================================================
+print("\n" + "=" * 74)
+print("6. EL DIMENSIONADO EN EL DIAGRAMA")
+print("=" * 74)
+# ======================================================================
+# Lo anterior son funciones puras. Esto comprueba que atraviesan el
+# diagrama: que el pool publique la geometria, que no cambie los grados de
+# libertad cuando esta apagado, y que el extremo que MANDA se elija bien.
+
+import numpy as np
+
+from thermodynamics.proveedor import ProveedorTermodinamico
+from thermodynamics.elv import CalculadoraELV
+from core.mccabe_thiele import EvaluadorMcCabeThiele, SolucionadorMcCabeThiele
+from core.diagrama_corrientes import DiagramaCorrientes
+
+BT = ["benzene", "toluene"]
+prov_bt = ProveedorTermodinamico(BT)
+EV_MT = EvaluadorMcCabeThiele(CalculadoraELV(prov_bt), BT)
+MASAS = [float(c.MW) for c in prov_bt.componentes]
+
+
+def columna(dimensionado, **kw):
+    d = DiagramaCorrientes(BT, masas_molares=MASAS, proveedor=prov_bt)
+    for s in ("alim", "dest", "fondo"):
+        d.agregar_corriente(s)
+    d.agregar_columna_binaria("col1", SolucionadorMcCabeThiele(EV_MT),
+                              "alim", "dest", "fondo",
+                              con_dimensionado=dimensionado, **kw)
+    return d
+
+
+DATOS = {"alim.F": 100.0, "alim.P": 101325.0, "alim.x0": 0.5,
+         "dest.x0": 0.95, "fondo.x0": 0.05, "col1.R": 3.0}
+
+# --- apagado por omision: ni variables nuevas ni grados de libertad nuevos
+sin_dim = columna(False)
+con_dim = columna(True)
+check("6.1 Apagado, la columna no declara geometría",
+      not any(v.endswith(".diametro") for v in sin_dim.todas_las_variables()))
+check("6.2 Encendido, sí",
+      {"col1.diametro", "col1.area_total", "col1.velocidad_inundacion"}
+      <= set(con_dim.todas_las_variables()))
+
+gl_sin = sin_dim.grados_de_libertad({**DATOS, "col1.q": 1.0})
+gl_con = con_dim.grados_de_libertad({**DATOS, "col1.q": 1.0})
+check("6.3 Y no cambia los grados de libertad: la geometría no es un dato nuevo",
+      gl_sin["grados_de_libertad"] == gl_con["grados_de_libertad"],
+      f"GL = {gl_sin['grados_de_libertad']} en los dos; "
+      f"{gl_con['incognitas']-gl_sin['incognitas']} incógnitas y "
+      f"{gl_con['ecuaciones']-gl_sin['ecuaciones']} ecuaciones más")
+
+# --- el extremo que manda depende de q, y eso es LO que justifica
+# dimensionar los dos. Con q = 1 los caudales de vapor son iguales arriba
+# y abajo, y manda el extremo con las propiedades menos favorables; con
+# q = 0 arriba circula F mol/s MAS de vapor, y manda la cabeza.
+resultados = {}
+for q in (1.0, 0.0):
+    r = columna(True).resolver(**DATOS, **{"col1.q": q})
+    p = r["pool"]
+    resultados[q] = p
+    print(f"     q = {q}:  cabeza {p['col1.diametro_cabeza']:.4f} m   "
+          f"cola {p.get('col1.diametro_cola', float('nan')):.4f} m   "
+          f"→ manda {p['col1.diametro']:.4f} m")
+
+check("6.4 Con alimentación líquida saturada manda la COLA",
+      abs(resultados[1.0]["col1.diametro"] - resultados[1.0]["col1.diametro_cola"]) < 1e-12,
+      "mismo caudal de vapor arriba y abajo, pero el fondo está más caliente")
+check("6.5 Con alimentación vapor saturado manda la CABEZA",
+      abs(resultados[0.0]["col1.diametro"] - resultados[0.0]["col1.diametro_cabeza"]) < 1e-12,
+      "arriba circula F mol/s más de vapor: V_barra = V − F")
+check("6.6 Y por eso dimensionar un solo extremo subdimensionaría la mitad de las veces",
+      resultados[1.0]["col1.diametro_cola"] > resultados[1.0]["col1.diametro_cabeza"]
+      and resultados[0.0]["col1.diametro_cabeza"] > resultados[0.0]["col1.diametro_cola"],
+      "el extremo crítico cambia de sitio según cómo entre la alimentación")
+
+# --- el diametro responde a lo que debe, ya dentro del diagrama
+anchos = {}
+for esp in (300.0, 600.0, 900.0):
+    p = columna(True, espaciado_platos_mm=esp).resolver(**DATOS, **{"col1.q": 1.0})["pool"]
+    anchos[esp] = p["col1.diametro"]
+check("6.7 Más espaciado entre platos, columna más estrecha, también aquí",
+      anchos[300.0] > anchos[600.0] > anchos[900.0],
+      "  >  ".join(f"{anchos[e]:.3f} m" for e in (300.0, 600.0, 900.0)))
+
+# --- y lo que se rechaza al construir
+try:
+    sin_prov = DiagramaCorrientes(BT, masas_molares=MASAS)
+    for s in ("alim", "dest", "fondo"):
+        sin_prov.agregar_corriente(s)
+    sin_prov.agregar_columna_binaria("col1", SolucionadorMcCabeThiele(EV_MT),
+                                     "alim", "dest", "fondo", con_dimensionado=True)
+    check("6.8 Dimensionar sin proveedor termodinámico se rechaza", False, "no reventó")
+except ValueError as e:
+    check("6.8 Dimensionar sin proveedor termodinámico se rechaza",
+          "densidades" in str(e), str(e)[:100])
+
+
+# ======================================================================
+print("\n" + "=" * 74)
+print("7. EL AREA EN EL INTERCAMBIADOR DE DOS CORRIENTES")
+print("=" * 74)
+# ======================================================================
+# Es el UNICO intercambiador que puede tener area, porque es el unico que
+# tiene las dos corrientes. El de una sola recibe un Q de la nada, como si
+# hubiera un servicio infinito: sin la temperatura de ese servicio no hay
+# diferencia media que calcular.
+
+def doble(U=None, **kw):
+    d = DiagramaCorrientes(BT, masas_molares=MASAS, proveedor=prov_bt)
+    for s in ("ce", "cs", "fe", "fs"):
+        d.agregar_corriente(s)
+    d.agregar_intercambiador_doble(
+        "ic", caliente_entrada="ce", caliente_salida="cs",
+        frio_entrada="fe", frio_salida="fs", T_salida_caliente=360.0,
+        coeficiente_global_U=U, **kw)
+    return d
+
+
+DATOS_IC = {"ce.F": 100.0, "ce.T": 390.0, "ce.P": 101325.0, "ce.x0": 0.5, "ce.x1": 0.5,
+            "fe.F": 120.0, "fe.T": 320.0, "fe.P": 101325.0, "fe.x0": 0.5, "fe.x1": 0.5}
+
+sin_U = doble().resolver(**DATOS_IC)
+check("7.1 Sin coeficiente global no hay área, y el diagrama sigue completo",
+      sin_U["completo"] and sin_U["pool"].get("ic.area") is None,
+      "inventarle un U por omisión sería dar como resultado una suposición")
+
+con_U = doble(U=250.0).resolver(**DATOS_IC)
+pu = con_U["pool"]
+check("7.2 Con U, el equipo publica LMTD y área",
+      con_U["completo"] and pu.get("ic.lmtd") is not None and pu.get("ic.area") is not None,
+      f"LMTD = {pu['ic.lmtd']:.4f} K, área = {pu['ic.area']:.4f} m²")
+check("7.3 Y el área cuadra con A = |Q|/(U·LMTD)",
+      abs(pu["ic.area"] - abs(pu["ic.Q"]) / (250.0 * pu["ic.lmtd"])) < 1e-9,
+      f"Q = {pu['ic.Q']/1e6:.4f} MW")
+check("7.4 La LMTD queda entre las dos aproximaciones de los extremos",
+      0 < pu["ic.lmtd"] < max(390.0 - pu["fs.T"], 360.0 - 320.0),
+      f"{pu['ic.lmtd']:.4f} K")
+
+# Y la incertidumbre del U se propaga al area. Es el mismo rango tabulado
+# de la seccion 5, ahora dentro del diagrama.
+u_rango = coeficiente_global_tipico("organico-organico")
+areas = {}
+for etiqueta, U in (("mínimo", u_rango["minimo"]), ("típico", u_rango["tipico"]),
+                    ("máximo", u_rango["maximo"])):
+    areas[etiqueta] = doble(U=U).resolver(**DATOS_IC)["pool"]["ic.area"]
+print(f"     U de {u_rango['minimo']:.0f} a {u_rango['maximo']:.0f} W/m²K  ->  "
+      f"área de {areas['máximo']:.1f} a {areas['mínimo']:.1f} m²")
+check("7.5 El rango del coeficiente se traduce en un rango de área",
+      areas["mínimo"] > areas["típico"] > areas["máximo"],
+      f"un factor {areas['mínimo']/areas['máximo']:.1f} solo por el coeficiente")
+
+# Un factor de correccion menor que 1 exige mas area, tambien aqui.
+con_F = doble(U=250.0, factor_correccion_F=0.8).resolver(**DATOS_IC)["pool"]
+check("7.6 Y el factor de corrección de la LMTD exige más área",
+      con_F["ic.area"] > pu["ic.area"],
+      f"{con_F['ic.area']:.2f} m² con F = 0.8 frente a {pu['ic.area']:.2f} con F = 1")
+
+
 print("\n" + "=" * 74)
 if fallos:
     print(f"FALLARON {len(fallos)}:")

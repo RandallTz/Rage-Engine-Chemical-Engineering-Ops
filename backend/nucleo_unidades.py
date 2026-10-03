@@ -26,6 +26,20 @@ _CANDIDATAS = {
     "potencia": ["W", "kW", "MW", "BTU/h", "cal/s"],
     "energia_molar": ["J/mol", "kJ/mol", "cal/mol"],
     "flujo_masico": ["kg/s", "kg/h", "g/s", "t/h", "lb/h"],
+    # Dimensionado: geometria. Van aqui y no como adimensionales porque un
+    # diametro en pulgadas y un area en pies cuadrados son lo que pide
+    # media industria, y convertirlos a mano es justo el tipo de paso
+    # donde se cuelan los errores.
+    "longitud": ["m", "cm", "mm", "in", "ft"],
+    "area": ["m**2", "cm**2", "ft**2", "in**2"],
+    "velocidad": ["m/s", "cm/s", "ft/s", "ft/min"],
+    "coef_transferencia": ["W/(m**2*K)", "kW/(m**2*K)", "BTU/(h*ft**2*degR)"],
+    # Una DIFERENCIA de temperatura NO es una temperatura, y la distincion
+    # no es pedante: convertir 28.74 K a grados Celsius como si fuera una
+    # temperatura daria -244.4 C, que es un numero absurdo presentado con
+    # toda naturalidad. Las unidades delta de pint tienen el factor pero
+    # no el desplazamiento, que es exactamente la diferencia.
+    "temperatura_diferencia": ["K", "delta_degC", "delta_degF"],
 }
 
 # Ya ninguna magnitud necesita masa molar para convertirse: el paso de
@@ -37,6 +51,10 @@ _REQUIEREN_MASA_MOLAR = set()
 # Nombre legible de cada unidad (pint acepta el simbolo; esto es para la UI).
 _ETIQUETAS = {
     "degC": "°C", "degF": "°F", "degR": "°R",
+    "delta_degC": "ΔC", "delta_degF": "ΔF",
+    "m**2": "m²", "cm**2": "cm²", "ft**2": "ft²", "in**2": "in²",
+    "W/(m**2*K)": "W/m²K", "kW/(m**2*K)": "kW/m²K",
+    "BTU/(h*ft**2*degR)": "BTU/h·ft²·°R",
     "mol/s": "mol/s", "kmol/h": "kmol/h", "mol/h": "mol/h", "kmol/s": "kmol/s",
     "BTU/h": "BTU/h", "cal/s": "cal/s", "cal/mol": "cal/mol",
     "kg/s": "kg/s", "kg/h": "kg/h", "g/s": "g/s", "t/h": "t/h", "lb/h": "lb/h",
@@ -45,6 +63,14 @@ _ETIQUETAS = {
 # Que magnitud tiene cada variable. Lo que no aparezca es adimensional
 # (fracciones molares, q, R, N, R_int) y no ofrece cambio de unidades.
 MAGNITUD_POR_VARIABLE = {
+    # --- dimensionado
+    "diametro": ["longitud"],
+    "diametro_cabeza": ["longitud"],
+    "diametro_cola": ["longitud"],
+    "area_total": ["area"],
+    "area": ["area"],
+    "velocidad_inundacion": ["velocidad"],
+    "lmtd": ["temperatura_diferencia"],
     # El caudal es UNA sola variable; que se exprese en moles o en masa
     # es cosa de la unidad elegida. La conversion a masa necesita la
     # composicion de la corriente, asi que el cliente manda los caudales

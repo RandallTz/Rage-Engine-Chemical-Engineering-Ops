@@ -1306,8 +1306,46 @@ En `thermodynamics/proveedor.py`, y con sus aproximaciones declaradas:
 - **Tensión superficial** como media molar, que es grosera — en mezclas con agua cae mucho más rápido de lo que la media sugiere. Pero la correlación la eleva a 0.2, así que un error del 20 % en $\sigma$ se convierte en un **4 % en la velocidad de inundación**, por debajo de la incertidumbre del propio ajuste.
 - **Densidad del vapor por gas ideal**, coherente con el resto del simulador. A 1 atm el error es de décimas de porcentaje; **a 10 atm puede ser del 5–10 %, y como el diámetro va con $1/\sqrt{\rho_V}$, eso es un 2–5 % en el diámetro.** Documentado como límite en vez de corregido a medias — y es otra razón para la fase vapor no ideal, que viene después.
 
+### ✅ Conectado al diagrama, la API y la interfaz (Completado)
+`con_dimensionado` en la columna binaria (apagado por omisión) y `coeficiente_global_U` en el intercambiador de dos corrientes.
+
+**Apagado por omisión, y eso importa.** El dimensionado es una capa que **consume** el resultado de la columna y no aporta nada a resolverla; encendida siempre, obligaría a tener densidades y tensión superficial para cualquier columna, incluso cuando a nadie le interesa el diámetro. Y se comprobó que **no cambia los grados de libertad**: suma cinco incógnitas y cinco ecuaciones, así que la geometría no es un dato nuevo.
+
+**El diámetro se calcula en LOS DOS EXTREMOS y manda el mayor.** No es prudencia: el caudal de vapor no es el mismo arriba y abajo salvo que $q = 1$,
+
+$$V = (R+1)D \qquad \bar{V} = V + (q-1)F$$
+
+y las propiedades físicas tampoco — arriba está el producto ligero a $T_D$ y abajo el pesado a $T_B$. Medido en benceno/tolueno con $R = 3$:
+
+| | cabeza | cola | manda |
+|---|---|---|---|
+| $q = 1$ (líquido saturado) | 2.4287 m | **2.7025 m** | la cola |
+| $q = 0$ (vapor saturado) | **2.4287 m** | 1.9348 m | la cabeza |
+
+**El extremo crítico cambia de sitio según cómo entre la alimentación**, así que dimensionar por uno solo subdimensionaría la mitad de las veces.
+
+Un detalle que no se podía aproximar: la composición del vapor en el fondo sale del **punto de burbuja de $x_B$**, no de $x_B$. En el rehervidor el vapor está en equilibrio con el líquido del fondo, y en un binario con $\alpha \approx 2.4$ confundirlos cambia la masa molar un 5 %.
+
+**El área, solo en el intercambiador de dos corrientes**, y solo si se da $U$. Es el único que puede tenerla porque es el único que tiene las dos corrientes: el de una sola recibe un $Q$ de la nada, como si hubiera un servicio infinito, y sin la temperatura de ese servicio no hay diferencia media que calcular. Y **sin $U$ no hay área**: inventarle un valor por omisión sería dar como resultado una suposición.
+
+### ⚠ Una distinción que la interfaz tenía mal planteada
+La LMTD es una **diferencia** de temperatura, y eso **no es la misma magnitud** que una temperatura. Mapearla a `temperatura` habría hecho que al pedirla en Celsius se le restaran 273.15, y los 28.74 K habrían salido como **−244.4 °C**: un número absurdo presentado con toda naturalidad.
+
+Se añadió la magnitud `temperatura_diferencia` con las unidades delta de `pint`, que tienen el factor pero **no el desplazamiento** — y ahí está exactamente la diferencia:
+
+| | factor | desplazamiento |
+|---|---|---|
+| `degC` (temperatura) | 1 | **273.15** |
+| `delta_degC` (diferencia) | 1 | **0** |
+
+### ⚠ Y una inconsistencia anterior que la geometría hizo visible
+La tabla de **corrientes** del informe humanizaba los nombres de variable (`x0` → «x benzene») y la de **equipos** no: mostraba `diametro` y `velocidad_inundacion` en crudo. Llevaba así desde que existe el informe, y solo se notó cuando aparecieron variables cuyo nombre interno es francamente feo. Corregido para las dos.
+
+### Verificación
+`tests/validar_dimensionado.py` sube a 46 comprobaciones (las 32 de las correlaciones más las del diagrama) y `frontend/verificar_dimensionado.mjs` añade 20 en navegador — incluida la que ninguna suite de Python puede hacer: que la LMTD se declare como diferencia y no como temperatura.
+
 ### ⬜ Lo que falta
-- Conectarlo al diagrama y a la interfaz: hoy es Python.
 - **Platos reales** a partir de las teóricas. La eficiencia de Murphree ya existe en McCabe-Thiele, así que falta la correlación que la estime cuando no se da.
 - Columnas de **relleno** (HETP y la correlación de caída de presión de Eckert), que es la otra mitad del mercado.
+- **Área del condensador y del rehervidor**: se conocen $Q_c$, $Q_R$ y las temperaturas de la columna, pero no la del servicio (agua de refrigeración, vapor), y sin ella no hay LMTD. Hace falta modelar los servicios.
 - Sin costes: un diámetro y un área no son un precio.
