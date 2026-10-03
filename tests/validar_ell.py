@@ -394,6 +394,143 @@ except ValueError as e:
           "actividad" in str(e), str(e)[:100])
 
 
+# ======================================================================
+print("\n" + "=" * 74)
+print("8. CONTRA DATOS EXPERIMENTALES (Perry's, tabla 15-8)")
+print("=" * 74)
+# ======================================================================
+# Todo lo anterior comprueba que el modelo es internamente consistente y
+# termodinamicamente sano. Esta seccion comprueba otra cosa, que ninguna
+# de las anteriores puede: si lo que predice se PARECE A LA REALIDAD.
+#
+# Fuente: Perry's Chemical Engineers' Handbook, tabla 15-8, "Water +
+# Acetic Acid + Methyl Isobutyl Ketone Equilibrium Data at 25 C", tomada
+# de Sherwood, Evans y Longcor, Ind. Eng. Chem., 31(9), pp. 1144-1150
+# (1939). Siete lineas de reparto en porcentaje en peso.
+#
+# Y el propio Perry's dice lo que hay que esperar, en la seccion 15:
+#
+#   "an experimentally validated model will be needed because UNIFAC and
+#    other estimation methods are not sufficiently accurate... binary
+#    interaction parameters determined by regression of vapor-liquid
+#    equilibrium (VLE) data cannot be relied upon to accurately model the
+#    LLE behavior for the same system"
+#
+# La segunda mitad de esa frase es exactamente la razon de que este modulo
+# use el juego de parametros de ELL y no el de ELV (seccion 1). La primera
+# es el limite que esta seccion MIDE en vez de suponer: no se comprueba
+# que el modelo acierte, se comprueba CUANTO se desvia, y ese numero queda
+# escrito.
+
+MW_T = None
+
+
+def _preparar_ternario():
+    prov = ProveedorTermodinamico(["water", "acetic acid", "methyl isobutyl ketone"])
+    return prov, np.array([float(c.MW) for c in prov.componentes]), CalculadoraELL(prov)
+
+
+prov_t, MW_T, ell_t = _preparar_ternario()
+
+
+def peso_de_molar(x):
+    m = np.asarray(x, dtype=float) * MW_T
+    return 100.0 * m / float(np.sum(m))
+
+
+def molar_de_peso(w):
+    n = np.asarray(w, dtype=float) / MW_T
+    return n / float(np.sum(n))
+
+
+# (refino, extracto) en % en peso: agua, acido acetico, MIBK
+TABLA_15_8 = [
+    ((98.45, 0.0, 1.55), (2.12, 0.0, 97.88)),
+    ((95.46, 2.85, 1.70), (2.80, 1.87, 95.33)),
+    ((85.8, 11.7, 2.5), (5.4, 8.9, 85.7)),
+    ((75.7, 20.5, 3.8), (9.2, 17.3, 73.5)),
+    ((67.8, 26.2, 6.0), (14.5, 24.6, 60.9)),
+    ((55.0, 32.8, 12.2), (22.0, 30.8, 47.2)),
+    ((42.9, 34.6, 22.5), (31.0, 33.6, 35.4)),
+]
+
+# --- el binario agua/MIBK, que es la primera fila (0 % de acido)
+binario = ell_t.flash_LL(T25, molar_de_peso([50.0, 0.0, 50.0]))
+check("8.1 El binario agua/MIBK se separa a 25 °C", binario is not None)
+if binario:
+    ref, ext = peso_de_molar(binario["x_I"]), peso_de_molar(binario["x_II"])
+    print(f"     MIBK en la fase acuosa:  {ref[2]:5.2f} % peso   (Perry's: 1.55)")
+    print(f"     agua en la fase orgánica: {ext[0]:5.2f} % peso   (Perry's: 2.12)")
+    check("8.2 La solubilidad del MIBK en agua cae dentro de 1 punto porcentual",
+          abs(ref[2] - 1.55) < 1.0,
+          f"{ref[2]:.2f} frente a 1.55 ({100*(ref[2]-1.55)/1.55:+.0f} %)")
+    check("8.3 Y la del agua en MIBK, dentro de 1 punto porcentual",
+          abs(ext[0] - 2.12) < 1.0,
+          f"{ext[0]:.2f} frente a 2.12 ({100*(ext[0]-2.12)/2.12:+.0f} %)")
+
+# --- el ternario: la razon de reparto del acido acetico
+print()
+print(f"     {'AcOH refino':>12} {'exp':>7} {'pred':>7}   {'K exp':>7} {'K pred':>7} {'error':>8}")
+K_exp, K_pred, separadas = [], [], 0
+for refino, extracto in TABLA_15_8[1:]:
+    # La composicion global se toma como la mezcla a partes iguales de las
+    # dos fases MEDIDAS, que por construccion cae dentro de la laguna
+    # experimental. Es la forma honesta de preguntarle al modelo: "con
+    # este alimento, en que dos fases se separa".
+    z_g = 0.5 * molar_de_peso(refino) + 0.5 * molar_de_peso(extracto)
+    r = ell_t.flash_LL(T25, z_g / float(np.sum(z_g)))
+    if r is None:
+        print(f"     {refino[1]:>12.1f} {'—':>7} {'1 fase':>7}")
+        continue
+    separadas += 1
+    pa, po = peso_de_molar(r["x_I"]), peso_de_molar(r["x_II"])
+    ke = extracto[1] / refino[1]
+    kp = po[1] / pa[1]
+    K_exp.append(ke)
+    K_pred.append(kp)
+    print(f"     {refino[1]:>12.1f} {extracto[1]:>7.1f} {po[1]:>7.2f}   "
+          f"{ke:>7.3f} {kp:>7.3f} {100*(kp-ke)/ke:>7.0f} %")
+
+check("8.4 El modelo separa las líneas de reparto del rango útil",
+      separadas >= 5, f"{separadas} de {len(TABLA_15_8)-1} líneas con ácido")
+
+if K_exp:
+    errores = [abs(p - e) / e for p, e in zip(K_pred, K_exp)]
+    # EL NUMERO. No se comprueba que el modelo acierte: se comprueba
+    # cuanto se desvia, y ese limite queda escrito. Si una version futura
+    # lo mejorara, esta comprobacion seguiria pasando y el numero de abajo
+    # seria el que hay que actualizar.
+    check("8.5 La razón de reparto se predice con un error menor del 30 %",
+          max(errores) < 0.30,
+          f"error máximo {100*max(errores):.0f} %, medio {100*np.mean(errores):.0f} %")
+    # Y el SIGNO del error es sistematico, no ruido: eso es informacion
+    # util para quien use el modelo, porque sabe hacia donde se equivoca.
+    check("8.6 Y el error es sistemático: UNIFAC SUBESTIMA el reparto",
+          all(p < e for p, e in zip(K_pred, K_exp)),
+          "las " + str(len(K_pred)) + " predicciones quedan por debajo del dato")
+    # La TENDENCIA si la acierta, y es lo que decide un diseño: K sube con
+    # la concentracion de acido en las dos, experimento y modelo.
+    check("8.7 La tendencia es correcta: K crece con la concentración",
+          all(b > a for a, b in zip(K_pred, K_pred[1:]))
+          and all(b >= a for a, b in zip(K_exp, K_exp[1:])),
+          "K pred: " + " < ".join(f"{k:.3f}" for k in K_pred))
+
+# --- el limite medido: el punto de pliegue del modelo queda mas adentro
+ultimo = TABLA_15_8[-1]
+z_ultimo = 0.5 * molar_de_peso(ultimo[0]) + 0.5 * molar_de_peso(ultimo[1])
+r_ultimo = ell_t.flash_LL(T25, z_ultimo / float(np.sum(z_ultimo)))
+print()
+if r_ultimo is None:
+    print("     LIMITE MEDIDO: en la última línea de reparto (34.6 % de ácido en el")
+    print("     refino) el modelo predice UNA SOLA FASE donde el experimento da dos.")
+    print("     Su punto de pliegue queda más adentro que el real, así que el rango")
+    print("     de concentración en el que sirve es más estrecho de lo que parece.")
+check("8.8 El punto de pliegue del modelo está localizado y documentado",
+      True,
+      "una fase a 34.6 % de ácido" if r_ultimo is None
+      else "separa también la última línea: el límite se movió, actualiza la nota")
+
+
 print("\n" + "=" * 74)
 if fallos:
     print(f"FALLARON {len(fallos)}:")

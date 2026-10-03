@@ -1132,7 +1132,7 @@ Medido: para agua/1-butanol a 25 °C y $x_{agua} = 0.1$, $\gamma_{agua}$ sale **
 
 Cuando no hay separación, toda la alimentación sale por una salida y el equipo declara `separa = 0`, en vez de partirla en dos corrientes idénticas. Sin T de operación, opera a la de la entrada: un sedimentador separa, no calienta.
 
-### Verificación: 32 comprobaciones, **sin literatura externa**
+### Verificación: 40 comprobaciones (32 de ellas **sin literatura externa**)
 Las dos que de verdad valen:
 
 **1. La línea de reparto es invariante dentro de la laguna.** En un binario, todas las composiciones globales dentro de la región de inmiscibilidad se separan en **las mismas dos fases**; lo único que cambia es cuánto hay de cada una. Es la propiedad que *define* una línea de reparto, y un flash que convergiera a soluciones triviales o a mínimos espurios daría una línea distinta para cada alimento.
@@ -1151,10 +1151,46 @@ Siempre negativo, **máximo en el centro de la laguna y tendiendo a cero en los 
 
 Lo demás: benceno/tolueno no se separa a ninguna composición (y la estabilidad lo dice); agua/benceno se separa con fracciones de orden $10^{-4}$ sin perder precisión ($x_{benceno}$ en agua $= 3.93\times10^{-4}$, $x_{agua}$ en benceno $= 3.00\times10^{-3}$); la solubilidad mutua **crece con la temperatura**, que es el camino hacia la temperatura crítica de la laguna; y el balance de materia global cierra a 1.3e-16.
 
-### ⬜ Lo que falta aquí, y necesita una referencia
-Todo lo anterior comprueba que el modelo es **internamente consistente y termodinámicamente sano**. Lo que no comprueba —y no puede, sin datos de fuera— es si la binodal predicha **coincide con la realidad** para un sistema concreto. Eso hace falta porque UNIFAC es predictivo: acierta el comportamiento cualitativo casi siempre y la composición cuantitativa a veces.
+### ✅ Contra datos experimentales (Completado)
+Lo anterior comprueba que el modelo es internamente consistente y termodinámicamente sano. Esta parte comprueba otra cosa, que ninguna de las anteriores puede: **si lo que predice se parece a la realidad.**
 
-Falta también: extracción multietapa (necesita plato a plato) y un diagrama ternario de ELL con sus líneas de reparto en la interfaz.
+Fuente: **Perry's Chemical Engineers' Handbook, tabla 15-8**, «Water + Acetic Acid + Methyl Isobutyl Ketone Equilibrium Data at 25 °C», tomada de Sherwood, Evans y Longcor, *Ind. Eng. Chem.* **31**(9), 1144–1150 (1939). Siete líneas de reparto en porcentaje en peso.
+
+**El binario agua/MIBK a 25 °C** (la primera línea, sin ácido):
+
+| | experimental | predicho | error |
+|---|---|---|---|
+| MIBK en la fase acuosa | 1.55 % peso | **1.41** | −9 % |
+| agua en la fase orgánica | 2.12 % peso | **1.29** | −39 % |
+
+**La razón de reparto del ácido acético** en el ternario:
+
+| AcOH en el refino (% peso) | $K$ experimental | $K$ predicho | error |
+|---|---|---|---|
+| 2.9 | 0.656 | 0.497 | −24 % |
+| 11.7 | 0.761 | 0.565 | −26 % |
+| 20.5 | 0.844 | 0.664 | −21 % |
+| 26.2 | 0.939 | 0.728 | −23 % |
+| 32.8 | 0.939 | 0.778 | −17 % |
+
+### Lo que ese número significa, dicho sin adornos
+**UNIFAC-LLE subestima la razón de reparto entre un 17 % y un 26 %**, y lo hace de forma **sistemática**: las cinco predicciones quedan por debajo del dato. La tendencia sí la acierta —$K$ crece con la concentración de ácido en las dos, experimento y modelo—, y eso es lo que decide si un disolvente sirve; la magnitud no basta para dimensionar un equipo.
+
+Y hay un segundo límite, **medido y localizado**: en la última línea de reparto (34.6 % de ácido en el refino) el modelo predice **una sola fase** donde el experimento da dos. Su punto de pliegue queda más adentro que el real, así que el rango de concentración en el que sirve es más estrecho de lo que parece.
+
+### Perry's dice exactamente esto, y conviene citarlo
+No es una excusa que me invente: es la advertencia del propio manual, en la sección 15.
+
+> *«an experimentally validated model will be needed because **UNIFAC and other estimation methods are not sufficiently accurate**... binary interaction parameters determined by regression of vapor-liquid equilibrium (VLE) data **cannot be relied upon to accurately model the LLE behavior** for the same system»*
+
+La segunda mitad de esa frase es, palabra por palabra, la razón de que este módulo use el juego de parámetros de ELL y no el de ELV. La primera es el límite que la suite **mide** en vez de suponer: no se comprueba que el modelo acierte, se comprueba **cuánto se desvía**, y ese número queda escrito. Si una versión futura lo mejorara, la comprobación seguiría pasando y el número de la tabla sería el que habría que actualizar.
+
+**Conclusión práctica**, y va al README y a los límites: este ELL sirve para **explorar** —decidir si un disolvente separa, ver cómo se mueve la laguna con la temperatura, entender el reparto— y **no** para dimensionar una columna de extracción sin datos del sistema concreto.
+
+### ⬜ Lo que falta aquí
+- **Extracción multietapa**: necesita plato a plato.
+- Un **diagrama ternario** de ELL con sus líneas de reparto en la interfaz, que es como de verdad se lee un sistema de extracción.
+- Poder **ajustar** los parámetros binarios a datos del sistema, que es lo que Perry's dice que hace falta para diseñar. Hoy el modelo es puramente predictivo: no hay dónde meter un dato experimental.
 
 ---
 

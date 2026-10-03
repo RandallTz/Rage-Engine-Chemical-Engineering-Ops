@@ -158,6 +158,10 @@ No cuenta como validación *"devuelve un array de la forma correcta"* ni
 - El balance de energía de una planta con reciclo cierra a
   $4\times10^{-12}$ relativo.
 - El azeótropo etanol/agua aparece en $x = 0.894$ (literatura: 0.894).
+- La solubilidad del MIBK en agua a 25 °C sale 1.41 % en peso contra el
+  1.55 % de Perry's tabla 15-8, y el reparto del ácido acético se queda
+  entre un 17 % y un 26 % corto — **el error está medido y escrito**, no
+  escondido tras una tolerancia holgada.
 - El líquido que sale de un flash está en su punto de burbuja a
   $10^{-9}$ K, comprobado contra una rutina independiente.
 - Un reactor adiabático con volumen grande alcanza el equilibrio químico
@@ -179,10 +183,15 @@ equipo:
 
 - **Sin columna rigurosa MESH todavía** — solo el andamiaje.
 - Sin dinámica: todo es estado estacionario.
-- **Equilibrio líquido-líquido** validado por consistencia interna, no
-  contra datos experimentales: UNIFAC es predictivo y acierta el
-  comportamiento cualitativo casi siempre, la composición cuantitativa a
-  veces. Sin extracción multietapa (necesita plato a plato).
+- **Equilibrio líquido-líquido: sirve para explorar, no para dimensionar.**
+  Medido contra Perry's tabla 15-8 (agua/ácido acético/MIBK a 25 °C),
+  UNIFAC-LLE subestima la razón de reparto entre un 17 % y un 26 %, de
+  forma sistemática, y su punto de pliegue queda más adentro que el real.
+  Acierta la tendencia, que es lo que decide si un disolvente sirve; la
+  magnitud no basta para dimensionar. Perry's lo dice igual: «UNIFAC and
+  other estimation methods are not sufficiently accurate». Sin extracción
+  multietapa (necesita plato a plato) y sin forma de ajustar los
+  parámetros binarios a datos del sistema.
 - Caída de presión **por equipo**, no un perfil interno: una columna de
   atajo no puede llevarlo (su curva de equilibrio está precalculada a una
   sola presión).
