@@ -114,7 +114,7 @@ servidores vivos y un navegador:
 ```bash
 python -m uvicorn backend.main:app --port 8001 --reload   # en una terminal
 cd frontend && npm run dev                                 # en otra
-cd frontend && node verificar_todo.mjs                     # las 14 suites
+cd frontend && node verificar_todo.mjs                     # las 17 suites
 ```
 
 El lanzador mira el **código de salida** de cada suite, no su salida de

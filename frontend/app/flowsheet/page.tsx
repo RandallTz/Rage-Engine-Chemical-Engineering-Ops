@@ -578,7 +578,8 @@ export default function FlowsheetPage() {
         {modo === "reporte" ? (
           <Reporte nodos={nodes} componentes={nombresComponentes} dados={dados} pool={pool}
             inconsistencias={inconsistencias} diagramas={diagramas} unidades={unidades}
-            masasMolares={masasMolares} />
+            masasMolares={masasMolares}
+            nombreSimulacion={simulacion?.nombre ?? "simulacion"} />
         ) : modo === "diseno" ? (
           <Diseno nodos={nodes} componentes={nombresComponentes} dados={dados}
             unidades={unidades} apiUrl={API_URL}

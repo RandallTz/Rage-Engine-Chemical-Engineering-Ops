@@ -1155,3 +1155,50 @@ Lo demás: benceno/tolueno no se separa a ninguna composición (y la estabilidad
 Todo lo anterior comprueba que el modelo es **internamente consistente y termodinámicamente sano**. Lo que no comprueba —y no puede, sin datos de fuera— es si la binodal predicha **coincide con la realidad** para un sistema concreto. Eso hace falta porque UNIFAC es predictivo: acierta el comportamiento cualitativo casi siempre y la composición cuantitativa a veces.
 
 Falta también: extracción multietapa (necesita plato a plato) y un diagrama ternario de ELL con sus líneas de reparto en la interfaz.
+
+---
+
+# Fase 14: Sacar los resultados
+
+La tabla de corrientes se podía **leer** pero no sacar. Una herramienta cuyo resultado no puede salir de ella no se usa en un informe: acaba usándose a mano, copiando números de la pantalla — que es exactamente donde se cometen los errores de transcripción que este proyecto se esfuerza en no cometer por dentro.
+
+### ✅ Tres formas, porque sirven para cosas distintas (Completado)
+`frontend/app/flowsheet/exportar.ts` y los botones en el informe.
+
+- **Ancho**: la tabla que se tiene delante, una columna por corriente. Es la que se pega en un informe.
+- **Largo**: una fila por dato, con su unidad y su estado. Es la que una máquina quiere leer, sin huecos.
+- **Portapapeles**: el camino corto, pegar en una hoja de cálculo sin pasar por un fichero en Descargas.
+
+### Dos decisiones que no son obvias
+**Se exporta lo que se ve, en las unidades que se ven.** El núcleo trabaja en SI, pero quien pide la tabla la quiere como la tiene delante: si eligió kg/h, el CSV dice kg/h. Exportar SI «porque es lo correcto» obligaría a reconvertir a mano, que es volver al problema.
+
+**El estado de cada valor viaja con el valor.** Un número que diste y uno que calculó el simulador se distinguen en la pantalla por el color, y en una hoja de cálculo se volverían indistinguibles. Van en una columna: `dado`, `calculado`, `sin determinar`, `incompatible`.
+
+Y un detalle que importa más de lo que parece: los números van con `toPrecision(12)`, no con el formato de la pantalla. La pantalla redondea a tres decimales para que se pueda leer; un CSV se lee con una máquina, y redondear ahí perdería precisión que el destino puede necesitar. Comprobado: la tabla muestra `365.516` y el CSV dice `365.515693257`.
+
+Las filas se construyen con **la misma conversión de unidades que la tabla**, no con una paralela. Si se duplicara, la tabla y el CSV podrían decir cosas distintas sobre el mismo número — el peor fallo posible en una herramienta cuyo trabajo es no equivocarse al transcribir.
+
+### ⚠ El defecto que encontró la suite
+La primera versión del formato ancho ponía la unidad de la **primera** corriente como etiqueta de toda la fila. Parece razonable hasta que se recuerda que este simulador permite, a propósito, dar `s1.F` en kg/h y `s2.F` en mol/s a la vez.
+
+El resultado era un CSV que decía:
+
+```
+F,kg/h,100.000000000,0.163158504297,0.163158504297
+```
+
+Los tres números son **correctos** —100 kg/h de benceno/tolueno 50/50 son 0.32632 mol/s, así que cada producto se lleva 0.16316— pero dos de ellos están en mol/s bajo una cabecera que dice kg/h. **Números correctos bajo una cabecera falsa, que es peor que un número mal: un número mal se nota.**
+
+Corregido: si la fila mezcla unidades, la columna dice `varias (en cada celda)` y cada celda carga la suya. Una fila homogénea conserva su columna de unidad y sus celdas puramente numéricas, así que la legibilidad del caso común no se sacrifica por el caso raro.
+
+De paso, **mi propia expectativa en la prueba estaba mal**: esperaba 30645 kg/h, que es el número de otra suite donde ese valor se *daba*. Aquí lo que se daba eran 100 kg/h. El fallo que destapó era real; la razón por la que falló, no.
+
+### Detalles pequeños que habrían dolido después
+- `URL.revokeObjectURL` no es opcional: sin él, cada descarga deja el blob entero retenido mientras la pestaña viva.
+- `navigator.clipboard` **no existe** en contexto no seguro (http que no sea localhost), que es justo donde puede acabar este simulador si alguien lo sirve en una red interna. Hay respaldo con `execCommand`, y si tampoco funciona el botón lo dice en vez de no hacer nada.
+- Las etiquetas llevan el nombre del componente: `x benzene`, no `x0`. Fuera de la aplicación, `x0` no significa nada.
+
+### Verificación
+`frontend/verificar_exportar.mjs`, 22 comprobaciones. Las descargas se capturan leyendo el `href` del `<a>` que se crea, en vez de dejar que el navegador escriba un fichero: en headless la carpeta de descargas es un detalle del entorno, y lo que se quiere comprobar es el **contenido**.
+
+17/17 suites de navegador.
