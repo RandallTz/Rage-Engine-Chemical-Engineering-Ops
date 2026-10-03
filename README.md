@@ -35,7 +35,7 @@ frontera, nunca dentro de los bucles numéricos.
 
 **Separación** — columna binaria (McCabe-Thiele / Ponchon-Savarit),
 columna multicomponente (FUG), flash L-V, separador de componentes,
-absorbedor/desorbedor (Kremser).
+absorbedor/desorbedor (Kremser), decantador líquido-líquido.
 
 **Reacción** — CSTR con cinética y balance de energía, reactor de
 equilibrio químico, reactor de flujo pistón (PFR).
@@ -104,7 +104,7 @@ decisiones que no son obvias, en
 
 ```bash
 pip install -r requirements.txt
-python run_tests.py          # las 17 suites del núcleo y la API, ~275 s
+python run_tests.py          # las 18 suites del núcleo y la API, ~300 s
 ```
 
 Y las de la interfaz, que comprueban lo que ninguna suite de Python puede
@@ -179,7 +179,10 @@ equipo:
 
 - **Sin columna rigurosa MESH todavía** — solo el andamiaje.
 - Sin dinámica: todo es estado estacionario.
-- Sin equilibrio líquido-líquido.
+- **Equilibrio líquido-líquido** validado por consistencia interna, no
+  contra datos experimentales: UNIFAC es predictivo y acierta el
+  comportamiento cualitativo casi siempre, la composición cuantitativa a
+  veces. Sin extracción multietapa (necesita plato a plato).
 - Caída de presión **por equipo**, no un perfil interno: una columna de
   atajo no puede llevarlo (su curva de equilibrio está precalculada a una
   sola presión).

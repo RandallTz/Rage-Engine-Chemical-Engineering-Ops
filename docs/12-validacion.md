@@ -194,6 +194,7 @@ la misma definición**. Es la razón de existir de
 | `tests/validar_api_especificaciones.py` | **La frontera HTTP de `/diagrama/*`**: que el endpoint dé el mismo número que el núcleo, los códigos de error, y que la respuesta serialice ([§13.10](13-especificaciones.md)) |
 | `tests/validar_api.py` | **La frontera HTTP del resto**: los presets se reenvían a su propio endpoint, los códigos de error, y que ninguna respuesta lleve `NaN` (que no es JSON válido) |
 | `tests/validar_varias_reacciones.py` | **Varias reacciones**: partir una en dos mitades idénticas da lo mismo que la entera; equilibrio simultáneo; el diagrama completo ([§9.16](09-reactor-cstr.md)) |
+| `tests/validar_ell.py` | **Equilibrio líquido-líquido**: invariancia de la línea de reparto, regla de la palanca, descenso de la energía de Gibbs, y la trampa de los dos juegos de parámetros UNIFAC |
 | `tests/validar_caida_presion.py` | **Caída de presión**: que con 0 nada cambie, que se acumule al encadenar, y su efecto sobre la vaporización |
 | `tests/validar_termodinamica.py` | ELV, topología reactiva, azeótropos |
 | `frontend/verificar_*.mjs` | Interfaz real en navegador (16 suites). Se lanzan todas con `node verificar_todo.mjs`, que mira el **código de salida** y no la salida de texto |

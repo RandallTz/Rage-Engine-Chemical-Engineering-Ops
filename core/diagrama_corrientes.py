@@ -465,6 +465,21 @@ class DiagramaCorrientes:
             n_ecuaciones=1,
         )
 
+    def ell(self):
+        """
+        La calculadora de equilibrio liquido-liquido, cacheada.
+
+        Va aparte de `flash()` porque usa OTRO juego de parametros de
+        UNIFAC -- el ajustado a datos liquido-liquido-- y no es lo mismo
+        que el de ELV. Ver la cabecera de thermodynamics/ell.py.
+        """
+        if self._proveedor is None:
+            return None
+        if getattr(self, "_ell", None) is None:
+            from thermodynamics.ell import CalculadoraELL
+            self._ell = CalculadoraELL(self._proveedor)
+        return self._ell
+
     def _bloque_presion_salida(self, salida, entrada, caida_P, nombre):
         """
         P_salida = P_entrada - caida_P, en las dos direcciones.
@@ -1317,6 +1332,141 @@ class DiagramaCorrientes:
             nombre, "reactor_pfr", entradas=lista_entradas, salidas=[salida], desde=_ini,
             extra={"corrientes": {"entradas": lista_entradas, "entrada": entrada,
                                   "salida": salida}},
+        )
+        return nombre
+
+    def agregar_decantador(self, nombre, entrada, fase_ligera, fase_pesada,
+                           T_operacion=None, caida_P=0.0):
+        """
+        Decantador liquido-liquido de una etapa (mezclador-sedimentador).
+
+        Una corriente entra y se separa en DOS FASES LIQUIDAS en
+        equilibrio, por igualdad de actividades de cada componente:
+
+            x_i^I * gamma_i(T, x^I)  =  x_i^II * gamma_i(T, x^II)
+
+        Ver thermodynamics/ell.py. Es el equipo que abre la familia de la
+        extraccion, y es de UNA etapa a proposito: una columna de
+        extraccion de varias etapas no se resuelve con un metodo de
+        atajo, necesita el sistema plato a plato.
+
+        Por que es distinto de un flash, aunque se parezca. En un flash
+        las dos fases tienen modelos distintos (liquido y vapor), asi que
+        la solucion x = y no cumple las ecuaciones. Aqui las dos fases
+        comparten modelo de actividad y la solucion trivial x^I = x^II
+        **si las cumple**, siempre. Por eso el equipo no se limita a
+        resolver: primero decide si hay dos fases (analisis de
+        estabilidad) y, si no las hay, lo dice en vez de devolver dos
+        fases identicas haciendose pasar por un equilibrio.
+
+        Las dos salidas NO son intercambiables, igual que en el flash el
+        vapor y el liquido: `fase_ligera` recibe la fase mas rica en el
+        ULTIMO componente y `fase_pesada` la mas rica en el primero. Es
+        una convencion de orden, no una densidad calculada -- el modelo
+        no conoce densidades -- y se declara aqui para que dos ejecuciones
+        del mismo diagrama den siempre lo mismo.
+
+        T_operacion -- si no se da, el decantador opera a la temperatura
+                       de la corriente de entrada. Un sedimentador no
+                       calienta ni enfria: separa.
+
+        Variables propias:
+            <nombre>.T            temperatura del recipiente [K]
+            <nombre>.fraccion     fraccion de la alimentacion que sale
+                                  por la fase ligera
+            <nombre>.separa       1.0 si hay dos fases, 0.0 si una sola
+        """
+        _ini = len(self._bloques)
+        for s_ in (entrada, fase_ligera, fase_pesada):
+            self._exigir_corriente(s_)
+        dP = _caida(nombre, caida_P)
+
+        calculadora = self.ell()
+        if calculadora is None:
+            raise ValueError(
+                f"{nombre}: un decantador necesita el ProveedorTermodinamico del diagrama "
+                "(DiagramaCorrientes(..., proveedor=...)). Sin el no hay coeficientes de "
+                "actividad y no hay equilibrio liquido-liquido que resolver."
+            )
+
+        claves_entrada = (f"{entrada}.F", f"{entrada}.T", f"{entrada}.P",
+                          *[f"{entrada}.x{i}" for i in range(self.n)])
+        claves_salida = tuple(
+            clave for s_ in (fase_ligera, fase_pesada)
+            for clave in (f"{s_}.F", f"{s_}.T", f"{s_}.P",
+                          *[f"{s_}.x{i}" for i in range(self.n)])
+        ) + (f"{nombre}.T", f"{nombre}.fraccion", f"{nombre}.separa")
+
+        def resolver_fn(**conocidos):
+            F = conocidos[f"{entrada}.F"]
+            z = np.array([conocidos[f"{entrada}.x{i}"] for i in range(self.n)], dtype=float)
+            suma = float(np.sum(z))
+            if suma <= 0:
+                return {}
+            z = z / suma
+            T = float(T_operacion) if T_operacion is not None else conocidos[f"{entrada}.T"]
+            P_salida = float(conocidos[f"{entrada}.P"]) - dP
+            if P_salida <= 0:
+                raise ValueError(
+                    f"{nombre}: con una caida de {dP:.4g} Pa la presion de salida seria "
+                    f"{P_salida:.4g} Pa, que no es fisica."
+                )
+
+            def repartir(F_ligera, x_ligera, F_pesada, x_pesada, separa, fraccion):
+                valores = {
+                    f"{nombre}.T": float(T), f"{nombre}.separa": float(separa),
+                    f"{nombre}.fraccion": float(fraccion),
+                }
+                for s_, F_s, x_s in ((fase_ligera, F_ligera, x_ligera),
+                                     (fase_pesada, F_pesada, x_pesada)):
+                    valores[f"{s_}.F"] = float(F_s)
+                    valores[f"{s_}.T"] = float(T)
+                    valores[f"{s_}.P"] = float(P_salida)
+                    for i in range(self.n):
+                        valores[f"{s_}.x{i}"] = float(x_s[i])
+                return valores
+
+            # Caudal nulo: se propaga la composicion sin separar nada, por
+            # la misma razon que en los demas equipos -- una rama apagada
+            # no debe paralizar el diagrama.
+            if F <= 0:
+                return repartir(0.0, z, 0.0, z, 0.0, 0.0)
+
+            resultado = calculadora.flash_LL(T, z)
+
+            # UNA SOLA FASE no es un fallo, es una respuesta: toda la
+            # alimentacion sale por la fase pesada y la ligera queda a
+            # cero. Devolver dos fases identicas seria presentar la
+            # solucion trivial como un equilibrio.
+            if resultado is None:
+                return repartir(0.0, z, F, z, 0.0, 0.0)
+
+            # Convencion de salidas: la ligera es la mas rica en el ULTIMO
+            # componente. flash_LL ya ordena sus fases por el componente 0,
+            # asi que aqui basta leerlas en el orden contrario.
+            x_pesada, x_ligera = resultado["x_I"], resultado["x_II"]
+            fraccion_ligera = resultado["fraccion_II"]
+            return repartir(F * fraccion_ligera, x_ligera,
+                            F * (1.0 - fraccion_ligera), x_pesada,
+                            1.0, fraccion_ligera)
+
+        self._bloques.append(
+            BloqueEcuaciones(
+                nombre=f"{nombre}: equilibrio liquido-liquido",
+                variables=claves_entrada + claves_salida,
+                variables_entrada=claves_entrada,
+                puede_resolver=lambda n: n == 0,
+                resolver_fn=resolver_fn,
+            )
+        )
+        for s_ in (fase_ligera, fase_pesada):
+            self._presion_fijada.add(f"{s_}.P")
+            self._temperatura_fijada.add(f"{s_}.T")
+        self._registrar_operacion(
+            nombre, "decantador", entradas=[entrada],
+            salidas=[fase_ligera, fase_pesada], desde=_ini,
+            extra={"corrientes": {"entrada": entrada, "fase_ligera": fase_ligera,
+                                  "fase_pesada": fase_pesada}},
         )
         return nombre
 

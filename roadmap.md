@@ -1076,3 +1076,82 @@ Por eso el campo lleva una **nota al lado** cuando $\Delta P > 0$: sin ella, el 
 ### ⚠ Dos tropiezos del camino
 - La suite de navegador raspaba los números de la pantalla con expresiones regulares y daba `null`: el panel los formatea y los reparte entre dos vistas, así que la primera cifra de seis dígitos que aparece no es necesariamente la que se busca. Reescrita para **leer el pool de la respuesta**, que trae las claves con nombre. Sigue comprobando el camino completo y además dice **qué** variable se mira.
 - Y una pérdida de tiempo que conviene anotar: la suite daba β constante en los tres casos porque **el servidor estaba corriendo código viejo** — se había arrancado sin `--reload` y antes de estos cambios. El síntoma era idéntico a «la caída no se aplica». Es el tercer puerto que este proyecto quema por el ciclo de vida de los servidores de desarrollo; la API va ya por el 8003.
+
+---
+
+# Fase 13: Equilibrio líquido-líquido
+
+Abre la familia que faltaba —extracción, decantadores, sistemas con agua— y es la primera pieza de física del proyecto donde **«las ecuaciones cuadran» no demuestra nada**.
+
+### Por qué este equilibrio es distinto de todos los demás
+Dos fases líquidas en equilibrio cumplen la igualdad de actividades:
+
+$$x_i^{I}\,\gamma_i(T, \mathbf{x}^{I}) = x_i^{II}\,\gamma_i(T, \mathbf{x}^{II})$$
+
+La estructura es la de un flash líquido-vapor. La diferencia que lo cambia todo:
+
+> Las dos fases se describen con **el mismo** modelo de actividad, así que la solución trivial $\mathbf{x}^{I} = \mathbf{x}^{II}$ cumple todas las ecuaciones. **Siempre.** Para cualquier alimento y cualquier temperatura.
+
+Un flash L-V no tiene ese problema porque sus dos fases tienen modelos distintos. Aquí, un arranque cualquiera converge a la solución trivial con toda probabilidad, y devolvería dos fases idénticas presentándolas como un equilibrio. Por eso el módulo no se limita a resolver: primero decide **si** hay dos fases y luego arranca desde donde esa decisión señala.
+
+### ⚠ La trampa de los dos juegos de parámetros
+UNIFAC tiene **dos** juegos de parámetros de interacción, y no son intercambiables:
+
+- `UFIP`, ajustado a datos de equilibrio **líquido-vapor**;
+- `LLEUFIP` (Magnussen y otros), ajustado a datos de equilibrio **líquido-líquido**.
+
+Usar el de ELV para predecir ELL es un error conocido y sistemático: la región de inmiscibilidad sale mal, a veces hasta desaparecer. Este módulo usa el de ELL y el resto del simulador sigue con el de ELV para lo suyo. **Son dos modelos, no uno con dos usos.**
+
+Y aquí está lo que convierte eso en una trampa, porque el fallo habría sido silencioso:
+
+| Id de subgrupo | En el juego de ELV | En el juego de ELL |
+|---|---|---|
+| 16 | **H2O** | P2 |
+| 17 | H2CO | **H2O** |
+| 18 | CH3CO | ACOH |
+| 21 | CH3COO | CHO |
+
+**Los identificadores no coinciden.** `thermo` da la descomposición de cada molécula en los subgrupos del juego de ELV (`Chemical.UNIFAC_groups`), así que pasarla tal cual a las tablas de ELL calcularía las actividades de **moléculas distintas** —el agua tratada como «P2»— y devolvería números plausibles y completamente falsos.
+
+Por eso la traducción va **por nombre de grupo** y no por número, y cuando un grupo no tiene equivalente se dice con nombre y apellido. De los 113 subgrupos del juego de ELV, **49 tienen equivalente**: furfural, por ejemplo, no se puede usar en un cálculo de ELL con UNIFAC, y el error lo dice en vez de calcular con el grupo equivocado.
+
+Medido: para agua/1-butanol a 25 °C y $x_{agua} = 0.1$, $\gamma_{agua}$ sale **3.1289** con los parámetros de ELV y **2.6112** con los de ELL. Un 16.5 % de diferencia sobre el coeficiente que decide si hay separación o no.
+
+### ✅ El módulo (Completado)
+`thermodynamics/ell.py`:
+
+- **Análisis de estabilidad** por la distancia al plano tangente de Michelsen. Si existe alguna composición de prueba con $tpd < 0$, la fase única es inestable. Es el criterio correcto y es **independiente** de la igualdad de actividades que resuelve el flash.
+- Las composiciones de prueba **no son al azar**: las fases casi puras de cada componente —donde están los extremos de una laguna— y una rejilla sobre la recta que une cada par de componentes puros. Un minimizador general encontraría mínimos espurios cerca de los vértices del simplex, donde los logaritmos divergen.
+- **El flash** por sustitución sucesiva sobre $K_i = \gamma_i^{I}/\gamma_i^{II}$ con Rachford-Rice dentro, la misma estructura que `core/flash.py`. Lo que no se parece es el arranque: se parte de la composición que la estabilidad señaló, que es la dirección en la que la mezcla **quiere** separarse.
+- Al terminar se comprueba que las dos fases sigan siendo distintas. Dos fases que difieren menos de 1e-4 son la misma, y el «equilibrio» que las separa no significa nada.
+- **Convención de orden**: la fase I es la más rica en el componente 0. Sin fijarla, el mismo problema devuelve las fases en un orden u otro según el arranque y comparar dos resultados se vuelve imposible.
+- Una sola fase **no es un fallo, es una respuesta**: `flash_LL` devuelve `None`.
+
+### ✅ El decantador (Completado)
+`agregar_decantador`: una entrada, dos fases líquidas en equilibrio. De **una etapa a propósito** — una columna de extracción de varias no se resuelve con un método de atajo, necesita el sistema plato a plato.
+
+Cuando no hay separación, toda la alimentación sale por una salida y el equipo declara `separa = 0`, en vez de partirla en dos corrientes idénticas. Sin T de operación, opera a la de la entrada: un sedimentador separa, no calienta.
+
+### Verificación: 32 comprobaciones, **sin literatura externa**
+Las dos que de verdad valen:
+
+**1. La línea de reparto es invariante dentro de la laguna.** En un binario, todas las composiciones globales dentro de la región de inmiscibilidad se separan en **las mismas dos fases**; lo único que cambia es cuánto hay de cada una. Es la propiedad que *define* una línea de reparto, y un flash que convergiera a soluciones triviales o a mínimos espurios daría una línea distinta para cada alimento.
+
+Agua/1-butanol a 25 °C, nueve composiciones globales de 0.55 a 0.95: **dispersión 2.7e-11**. La laguna va de $x_{agua} = 0.533687$ a $0.981454$. Y la regla de la palanca se cumple a **2.8e-16**, que es una comprobación de otra naturaleza — ata el tamaño de las fases a la geometría de la línea sin pasar por el modelo de actividad.
+
+**2. Separarse baja la energía de Gibbs.** El flash resuelve igualdad de actividades, que es la condición de punto *estacionario*. Que ese punto sea un **mínimo** es otra propiedad, calculada por otro camino:
+
+| $z_{agua}$ | $g(z)/RT$ | $g_{2f}/RT$ | $\Delta g$ |
+|---|---|---|---|
+| 0.55 | −0.258126 | −0.258325 | −2.0e-04 |
+| 0.85 | −0.069969 | −0.095381 | −2.5e-02 |
+| 0.95 | −0.034401 | −0.041067 | −6.7e-03 |
+
+Siempre negativo, **máximo en el centro de la laguna y tendiendo a cero en los bordes**, que es exactamente cómo debe comportarse. Y los dos criterios —plano tangente y flash— coinciden en las 11 composiciones probadas.
+
+Lo demás: benceno/tolueno no se separa a ninguna composición (y la estabilidad lo dice); agua/benceno se separa con fracciones de orden $10^{-4}$ sin perder precisión ($x_{benceno}$ en agua $= 3.93\times10^{-4}$, $x_{agua}$ en benceno $= 3.00\times10^{-3}$); la solubilidad mutua **crece con la temperatura**, que es el camino hacia la temperatura crítica de la laguna; y el balance de materia global cierra a 1.3e-16.
+
+### ⬜ Lo que falta aquí, y necesita una referencia
+Todo lo anterior comprueba que el modelo es **internamente consistente y termodinámicamente sano**. Lo que no comprueba —y no puede, sin datos de fuera— es si la binodal predicha **coincide con la realidad** para un sistema concreto. Eso hace falta porque UNIFAC es predictivo: acierta el comportamiento cualitativo casi siempre y la composición cuantitativa a veces.
+
+Falta también: extracción multietapa (necesita plato a plato) y un diagrama ternario de ELL con sus líneas de reparto en la interfaz.
