@@ -78,6 +78,8 @@ Zona libre de pint: solo floats/np.ndarray en SI.
 
 import numpy as np
 from scipy.optimize import brentq, root
+from core.errores import ErrorFisico, ErrorNumerico
+from core import errores
 
 _TOL_SINGULAR = 1e-12
 
@@ -212,10 +214,11 @@ class EvaluadorCSTR:
         v = self._vector_xi(xi)
         F_out = F_in + float(self.nu_tot_de_cada_una @ v)
         if F_out <= _TOL_SINGULAR:
-            raise ValueError(
+            raise ErrorFisico(
                 f"El avance xi={np.array2string(v, precision=6)} deja un caudal de salida "
                 f"no positivo (F_out={F_out:.6g} mol/s). Ese avance es imposible con este "
-                "alimento."
+                "alimento.",
+                codigo=errores.CAUDAL_NO_FISICO,
             )
         x_out = (F_in * x_in + self.NU.T @ v) / F_out
         self._exigir_simplex(x_out, "de salida", v)
@@ -227,10 +230,11 @@ class EvaluadorCSTR:
         v = self._vector_xi(xi)
         F_in = F_out - float(self.nu_tot_de_cada_una @ v)
         if F_in <= _TOL_SINGULAR:
-            raise ValueError(
+            raise ErrorFisico(
                 f"Con xi={np.array2string(v, precision=6)} el alimento necesario seria "
                 f"F_in={F_in:.6g} mol/s, que no es fisico. Revisa el avance o la corriente "
-                "de salida."
+                "de salida.",
+                codigo=errores.CAUDAL_NO_FISICO,
             )
         x_in = (F_out * x_out - self.NU.T @ v) / F_in
         self._exigir_simplex(x_in, "de alimentacion", v)
@@ -663,7 +667,7 @@ class EvaluadorCSTR:
             "numero sabiendo lo que significa."
         )
         if exigir_liquido:
-            raise ValueError(mensaje)
+            raise ErrorFisico(mensaje, codigo=errores.TANQUE_HIRVIENDO)
         return T_burbuja
 
     def calor_de_reaccion(self, xi):
@@ -877,13 +881,14 @@ class EvaluadorCSTR:
                 soluciones.append((xi_c, T_c, residual_c))
 
         if not soluciones:
-            raise RuntimeError(
+            raise ErrorNumerico(
                 f"El reactor acoplado (cinetica + energia) no convergio desde ninguno de "
                 f"los {len(arranques)} arranques probados (avances entre "
                 f"{arranques[0][0]:.4g} y {arranques[-1][0]:.4g} mol/s). Con una exotermica "
                 "fuerte el lazo T->r->xi->T puede no tener estado estacionario en el rango "
                 "liquido; prueba un volumen menor, retirar calor (Q<0), o forzar un arranque "
-                "concreto con xi_inicial/T_inicial."
+                "concreto con xi_inicial/T_inicial.",
+                codigo=errores.SIN_CONVERGENCIA,
             )
 
         # MULTIPLICIDAD: un CSTR exotermico puede tener mas de un estado
@@ -963,9 +968,10 @@ class EvaluadorCSTR:
             pista = ("" if self.una_sola else
                      " Con varias reacciones puede que ninguna se pase por si sola y que "
                      "el problema sea la suma: comprueba si compiten por ese componente.")
-            raise ValueError(
+            raise ErrorFisico(
                 f"Con un avance xi={avance} la composicion {cual} sale negativa en "
                 f"el componente {negativos[0]} (x={x[negativos[0]]:.4g}). "
                 "Fisicamente no se puede consumir mas de lo que hay: baja el avance."
-                + pista
+                + pista,
+                codigo=errores.FUERA_DEL_SIMPLEX,
             )

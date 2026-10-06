@@ -214,6 +214,47 @@ $$
 con $\varepsilon = 10^{-6}$. Se prefiere olvidar una variable de **salida**,
 para que los bloques no invertibles también se puedan comprobar.
 
+### Un bloque no es una ecuación
+
+Durante un tiempo esta verificación comparaba **solo** la variable
+olvidada y paraba en cuanto una comprobación salía bien, con el
+razonamiento de que *«una comprobación por bloque es suficiente»*. Eso
+vale si cada bloque es una ecuación, y **varios no lo son**:
+
+| Bloque | Ecuaciones que empaqueta |
+|---|---|
+| Bombeo | $n+2$ ($F$, $T$, $P$ y las composiciones) |
+| Mezclador | 5 |
+| Divisor | 10 |
+
+Caso real: una bomba ideal con $P_1 = 101325$, factor $= 3$ **y**
+$P_2 = 100000$ dados a la vez. Tres condiciones sobre dos variables, y
+$3 \times 101325 \neq 100000$. La comprobación recaía sobre la igualdad de
+caudales, salía bien, y **la ecuación de presión no se evaluaba nunca**:
+el servicio respondía «resuelto por completo», sin incidencias,
+conservando la presión de salida dada.
+
+Ahora se compara **todo lo que el bloque devuelve** y se sigue hasta
+haber verificado tantas variables distintas como ecuaciones declara el
+bloque. No cuesta llamadas extra: el solver de la bomba ya escribía
+$P_2 = 303975$ al olvidar otra variable; simplemente nadie miraba ese
+valor.
+
+Esto expuso un segundo error, de signo. La bomba declaraba
+`n_ecuaciones = 1` mientras imponía $n+2$, así que una bomba exactamente
+especificada reportaba $\mathrm{GL} = +3$ y una sobreespecificada
+$\mathrm{GL} = +1$: **decía que faltaban datos cuando sobraban.**
+
+### Una incompatibilidad no hace `completo = false`
+
+La política es explícita: `completo` dice que **todas las variables
+quedaron determinadas**, no que el resultado sea físico. Un diagrama
+puede quedar completo y a la vez tener datos que se contradicen, y en
+ese caso la incompatibilidad viaja en su propio campo
+(`inconsistencias`, y en `diagnosticos` con severidad de error). La
+bandera que separa «se calculó todo» de «el resultado es válido» es
+`resumen_diagnosticos.hay_errores` — ver [§14.3](14-trazabilidad.md).
+
 ---
 
 ## 2.6 Errores rancios

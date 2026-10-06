@@ -33,6 +33,8 @@ caso sintetico de 2 raices antes de confiar en ella (ver roadmap.md).
 
 import numpy as np
 from scipy.optimize import brentq
+from core.errores import ErrorFisico
+from core import errores
 
 
 class AnalizadorFUG:
@@ -267,7 +269,10 @@ class AnalizadorFUG:
                 "recuperaciones o elige un par de claves mas dificil de separar."
             )
         if R <= R_min:
-            raise ValueError(f"R={R} <= R_min={R_min}: requeriria etapas infinitas.")
+            raise ErrorFisico(
+                f"R={R} <= R_min={R_min}: requeriria etapas infinitas.",
+                codigo=errores.REFLUJO_BAJO_MINIMO,
+            )
         X = (R - R_min) / (R + 1.0)
         Y = 0.75 - 0.75 * X ** 0.5668
         return (self.N_min + Y) / (1.0 - Y)

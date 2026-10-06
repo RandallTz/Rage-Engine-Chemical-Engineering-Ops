@@ -32,6 +32,8 @@ from scipy.interpolate import PchipInterpolator
 from scipy.optimize import brentq, root_scalar
 
 from thermodynamics.entalpia import entalpia_de
+from core.errores import ErrorFisico
+from core import errores
 
 _MAX_ETAPAS = 200
 
@@ -209,7 +211,10 @@ class EvaluadorMcCabeThiele:
 
         R_min = self.calcular_R_min(z_F, q, x_D)
         if R <= R_min:
-            raise ValueError(f"R={R:.4f} <= R_min={R_min:.4f}: requeriria etapas infinitas.")
+            raise ErrorFisico(
+                f"R={R:.4f} <= R_min={R_min:.4f}: requeriria etapas infinitas.",
+                codigo=errores.REFLUJO_BAJO_MINIMO,
+            )
 
         x_int, y_int = self._interseccion_rol_q(x_D, R, z_F, q)
         if not (x_B < x_int < x_D):

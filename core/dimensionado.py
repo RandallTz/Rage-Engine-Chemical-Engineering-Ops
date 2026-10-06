@@ -33,6 +33,8 @@ en otras unidades -- y entonces se dice en el nombre del argumento.
 import math
 
 import numpy as np
+from core.errores import ErrorFisico
+from core import errores
 
 _TOL = 1e-12
 
@@ -103,11 +105,12 @@ def capacidad_sin_corregir(parametro_flujo, espaciado_platos_mm):
     if F <= 0:
         raise ValueError(f"El parametro de flujo tiene que ser positivo (se dio {F:.6g}).")
     if not (150.0 <= TS <= 900.0):
-        raise ValueError(
+        raise ErrorFisico(
             f"El espaciado de platos ({TS:.6g} mm) esta fuera del rango en el que la "
             "correlacion de Fair esta ajustada (150 a 900 mm, Perry's Fig. 14-31). "
             "Si de verdad es ese, el numero que saldria no estaria respaldado por los "
-            "datos del ajuste."
+            "datos del ajuste.",
+            codigo=errores.FUERA_DE_RANGO_CORRELACION,
         )
     return 0.0105 + 8.127e-4 * (TS ** 0.755) * math.exp(-1.463 * (F ** 0.842))
 
@@ -271,12 +274,13 @@ def diferencia_media_logaritmica(T_caliente_entrada, T_caliente_salida,
     if dT1 <= 0 or dT2 <= 0:
         extremo = "la entrada del caliente con la salida del frio" if dT1 <= 0 else \
                   "la salida del caliente con la entrada del frio"
-        raise ValueError(
+        raise ErrorFisico(
             f"Las temperaturas se cruzan en {extremo}: dT_1 = {dT1:.4g} K, "
             f"dT_2 = {dT2:.4g} K. El calor no pasa de frio a caliente, asi que no hay "
             "diferencia media que calcular. Revisa si la configuracion es "
             f"{'contracorriente' if contracorriente else 'en paralelo'} o si las "
-            "temperaturas de salida son compatibles con el balance."
+            "temperaturas de salida son compatibles con el balance.",
+            codigo=errores.CRUCE_TEMPERATURAS,
         )
     if abs(dT1 - dT2) < 1e-9 * max(dT1, dT2):
         # El limite de la expresion cuando los dos extremos coinciden. Por

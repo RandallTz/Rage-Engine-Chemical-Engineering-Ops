@@ -17,6 +17,11 @@ from core.especificaciones import (
     Especificacion, grados_de_libertad_con_especificaciones,
 )
 
+from backend.trazabilidad import construir_calculo
+from backend.diagnosticos import (
+    construir as construir_diagnosticos,
+    resumen as resumen_diagnosticos,
+)
 from backend.schemas import (
     ResolverDiagramaRequest, ResolverDiagramaResponse, DiagramaMcCabeThiele,
     DiagramaPonchonSavarit, GradosLibertadRequest, GradosLibertadResponse,
@@ -417,6 +422,13 @@ def _pool_serializable(pool):
 def resolver_diagrama(request: ResolverDiagramaRequest) -> ResolverDiagramaResponse:
     diagrama, columnas = _construir(request)
     specs = _especificaciones_de(request)
+
+    # La trazabilidad se toma ANTES de resolver, a proposito: la fecha es
+    # la del inicio del calculo y la huella queda tomada sobre lo que de
+    # verdad se va a resolver, no sobre nada que el solver haya podido
+    # tocar por el camino.
+    info_calculo = construir_calculo(request)
+
     if specs:
         _comprobar_nombres(diagrama, specs)
         resultado = diagrama.resolver_con_especificaciones(specs, **request.valores)
@@ -431,6 +443,20 @@ def resolver_diagrama(request: ResolverDiagramaRequest) -> ResolverDiagramaRespo
         if grafica is not None:
             diagramas[nombre] = grafica
 
+    # Las redundancias hacen falta para los diagnosticos, y salen del
+    # conteo de grados de libertad. Se calculan sobre el diagrama YA
+    # resuelto para no pagar una resolucion extra -- `redundancias()`
+    # necesita resolver una vez porque sin eso no ve las variables que
+    # quedan determinadas por un camino indirecto.
+    try:
+        conteo = diagrama.grados_de_libertad(request.valores)
+    except Exception:
+        # Un fallo contando no debe tumbar un calculo que si salio: se
+        # pierden las redundancias de los diagnosticos y nada mas.
+        conteo = None
+
+    lista_diagnosticos = construir_diagnosticos(resultado, conteo)
+
     return ResolverDiagramaResponse(
         completo=resultado["completo"],
         pool=pool,
@@ -443,6 +469,10 @@ def resolver_diagrama(request: ResolverDiagramaRequest) -> ResolverDiagramaRespo
         masas_molares_mezcla=diagrama.masas_molares_de_mezcla(resultado["pool"]),
         reciclo=resultado.get("reciclo"),
         especificaciones=_informe_especificaciones(resultado.get("especificaciones")),
+        calculo=info_calculo,
+        diagnosticos=lista_diagnosticos,
+        resumen_diagnosticos=resumen_diagnosticos(lista_diagnosticos),
+        convergencia=resultado.get("convergencia"),
     )
 
 

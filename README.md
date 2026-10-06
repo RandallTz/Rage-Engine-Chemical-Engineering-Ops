@@ -170,9 +170,38 @@ No cuenta como validación *"devuelve un array de la forma correcta"* ni
 - Una especificación de diseño se comprueba **contra el camino directo**:
   pedir $N = 12$ devuelve $R = 2.241647$, y evaluar McCabe-Thiele con ese
   $R$ —sin pasar por el lazo— devuelve $N = 12.00000000$.
+- Una bomba con $P_1 = 101325$, factor $= 3$ y $P_2 = 100000$ dados a la
+  vez **se rechaza**: son tres condiciones sobre dos variables y
+  $3 \times 101325 \neq 100000$. Antes respondía «resuelto por completo».
 
 El detalle completo, y **los límites**, en
 [`docs/12-validacion.md`](docs/12-validacion.md).
+
+---
+
+## De dónde sale cada número
+
+Cada respuesta de `/diagrama/resolver` puede decir con qué se calculó, qué
+le pasa y cuánto se puede fiar uno de ella:
+
+- **`calculo`** — versión del motor y commit de git (con sufijo `-sucio`
+  si el árbol tenía cambios), versiones de `thermo`/`chemicals`/`fluids`
+  —que son la versión *real* del proveedor termodinámico— y una **huella
+  SHA-256 determinista de las entradas físicas**. Dos peticiones con la
+  misma huella deben dar el mismo resultado; si dan otro, el cambio está
+  en el motor o en sus dependencias.
+- **`diagnosticos`** — las incidencias con **código estable**, categoría
+  (datos / física / numérica / modelo) y severidad. La categoría viene de
+  donde se generó el problema, **nunca de buscar palabras en el mensaje**.
+  Y `hay_errores` separa «se calculó todo» de «el resultado es válido»:
+  no son lo mismo.
+- **`convergencia`** — por bloque, el método, la tolerancia y el residuo
+  **cuando el algoritmo de verdad evalúa uno**. Una construcción de
+  McCabe-Thiele no trae residuo y dice por qué; inventarle uno sería una
+  mentira con cara de precisión.
+
+Los tres son opcionales y aditivos. Detalle en
+[`docs/14-trazabilidad.md`](docs/14-trazabilidad.md).
 
 ---
 

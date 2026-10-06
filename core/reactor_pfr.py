@@ -44,6 +44,8 @@ import numpy as np
 from scipy.integrate import solve_ivp
 
 from core.reactor_cstr import EvaluadorCSTR
+from core.errores import ErrorFisico, ErrorNumerico
+from core import errores
 
 _TOL = 1e-12
 
@@ -154,8 +156,9 @@ class EvaluadorPFR(EvaluadorCSTR):
             rtol=1e-9, atol=1e-12,
         )
         if not sol.success and sol.status != 1:
-            raise RuntimeError(
-                f"La integracion del PFR fallo a T={T:.2f} K con V={V:.6g} m3: {sol.message}"
+            raise ErrorNumerico(
+                f"La integracion del PFR fallo a T={T:.2f} K con V={V:.6g} m3: {sol.message}",
+                codigo=errores.INTEGRACION_FALLIDA,
             )
 
         agotado = sol.status == 1
@@ -215,9 +218,10 @@ class EvaluadorPFR(EvaluadorCSTR):
         if self.una_sola:
             xi_max = self._limite_estequiometrico(F_in, x_in)
             if objetivo >= xi_max:
-                raise ValueError(
+                raise ErrorFisico(
                     f"El avance pedido ({objetivo:.6g} mol/s) alcanza o supera el limite "
-                    f"estequiometrico ({xi_max:.6g} mol/s): haria falta un tubo infinito."
+                    f"estequiometrico ({xi_max:.6g} mol/s): haria falta un tubo infinito.",
+                    codigo=errores.LIMITE_ESTEQUIOMETRICO,
                 )
 
         def alcanzado(_V, estado):

@@ -550,6 +550,171 @@ class InfoReciclo(BaseModel):
     tolerancia: float
 
 
+# ---------------------------------------------------------------------
+# Trazabilidad. Los tres bloques son OPCIONALES y se anaden sin tocar
+# ningun campo existente: un cliente que no los conozca sigue
+# funcionando igual, y uno que los conozca puede ocultarlos mientras no
+# esten presentes.
+# ---------------------------------------------------------------------
+
+class VersionMotor(BaseModel):
+    version: str = Field(description="Version del motor de calculo.")
+    commit: Optional[str] = Field(
+        None,
+        description=(
+            "Commit de git del arbol de trabajo, con el sufijo '-sucio' si habia cambios sin "
+            "commitear. Es null cuando no se puede saber (un despliegue sin .git, o sin el "
+            "ejecutable de git): inventarse un identificador seria peor que admitirlo, porque "
+            "un identificador falso se propaga a los informes y nadie lo cuestiona."
+        ),
+    )
+
+
+class ProveedorTermodinamicoInfo(BaseModel):
+    identificador: str = Field(
+        description="Que modelo termodinamico se uso. Hoy solo hay uno: 'unifac_raoult'.")
+    versiones: dict[str, Optional[str]] = Field(
+        description=(
+            "Las versiones de las librerias que DECIDEN los numeros (thermo, chemicals, "
+            "fluids, numpy, scipy). La version del proveedor ES esta: decir 'v1' seria "
+            "inventar un numero que no cambia cuando los resultados si. requirements.txt las "
+            "tiene fijas por este motivo -- una correlacion que cambie rio arriba cambia los "
+            "resultados sin que nadie toque una linea, y ya paso una vez."
+        ),
+    )
+
+
+class CalculoInfo(BaseModel):
+    """Con que se calculo y sobre que entradas. Permite reproducir y auditar."""
+    identificador: str = Field(
+        description="Identificador de ESTA ejecucion. Dos ejecuciones de la misma peticion "
+                    "tienen identificadores distintos y la misma huella_entradas.")
+    instante_utc: str = Field(
+        description="Fecha y hora UTC del SERVIDOR al empezar el calculo, en ISO 8601. Es la "
+                    "del servidor a proposito: la del cliente no certifica nada.")
+    motor: VersionMotor
+    proveedor_termodinamico: ProveedorTermodinamicoInfo
+    huella_entradas: str = Field(
+        description=(
+            "Identificador determinista de las entradas FISICAS normalizadas: componentes en "
+            "orden, modelo, operaciones con sus parametros, valores en SI y especificaciones. "
+            "NO entran las coordenadas de los nodos, las unidades de presentacion ni el nombre "
+            "de la simulacion, porque no cambian el resultado. Dos peticiones con la misma "
+            "huella deben dar el mismo resultado; si dan otro, el cambio esta en el motor o en "
+            "sus dependencias -- y eso es exactamente lo que la huella permite distinguir."
+        ),
+    )
+    algoritmo_huella: str = Field(description="Como se calculo la huella. Hoy: sha256.")
+
+
+class Diagnostico(BaseModel):
+    """
+    Una incidencia del calculo, en forma de datos.
+
+    La CATEGORIA no se deduce del texto del mensaje. Viene de donde se
+    genero el problema: las variables sin determinar son falta de
+    especificacion por construccion, las redundancias son redundancia por
+    construccion, las inconsistencias son datos incompatibles por
+    construccion, y los fallos de bloque traen su categoria desde la
+    excepcion. Lo que nadie clasifico llega como SIN_CLASIFICAR, que es
+    una respuesta honesta: adivinarla buscando palabras en el mensaje
+    acierta hasta que alguien reescribe una frase, y entonces falla en
+    silencio.
+    """
+    codigo: str = Field(
+        description="Identificador ESTABLE para ramificar, en mayusculas y sin acentos. El "
+                    "mensaje es para leer; el codigo es para programar. Si hay que cambiar un "
+                    "mensaje, el codigo no se toca.")
+    categoria: Literal["datos", "fisica", "numerica", "modelo", "informacion", "desconocido"] = Field(
+        description=(
+            "datos: cambia lo que diste (faltan, sobran o se contradicen). "
+            "fisica: el numero existe y la situacion fisica no, o cae fuera del rango del "
+            "modelo; no se arregla iterando mas. "
+            "numerica: el planteamiento es correcto y el algoritmo no llego. "
+            "modelo: lo pedido esta fuera de lo que este simulador implementa; es un limite, "
+            "no un fallo. "
+            "desconocido: no se clasifico, y no se adivina del mensaje."
+        ),
+    )
+    severidad: Literal["error", "advertencia", "informacion"] = Field(
+        description=(
+            "No coincide con la categoria. Una redundancia es ADVERTENCIA -- los datos de mas "
+            "no son necesariamente erroneos, se comprobaran por consistencia. Una "
+            "incompatibilidad es ERROR. Y un bloque que no pudo dispararse se reporta como "
+            "INFORMACION, porque es la CAUSA de las variables sin determinar, no un problema "
+            "aparte."
+        ),
+    )
+    equipo: Optional[str] = Field(None, description="La operacion o corriente implicada.")
+    variables: list[str] = Field(
+        default_factory=list,
+        description="Claves del pool implicadas, para poder senalar el campo concreto en vez "
+                    "de mostrar un mensaje suelto.")
+    bloque: Optional[str] = Field(None, description="La ecuacion concreta, cuando aplica.")
+    mensaje: str
+    dado: Optional[float] = Field(None, description="Solo en incompatibilidades: el valor dado.")
+    implicado: Optional[float] = Field(
+        None, description="Solo en incompatibilidades: el que implica el resto de los datos.")
+    tipo_python: Optional[str] = Field(
+        None,
+        description="Solo cuando la categoria es 'desconocido': el tipo de excepcion. Es el "
+                    "unico dato objetivo que queda sin categoria.")
+
+
+class ResumenDiagnosticos(BaseModel):
+    total: int
+    por_severidad: dict[str, int]
+    por_categoria: dict[str, int]
+    hay_errores: bool = Field(
+        description=(
+            "La bandera que separa 'se calculo todo' de 'el resultado es valido'. `completo` "
+            "dice que todas las variables quedaron determinadas; esto dice si hay algo que lo "
+            "invalide. NO son lo mismo: un diagrama puede quedar completo y a la vez tener "
+            "datos incompatibles, y en ese caso `completo` vale true y `hay_errores` tambien."
+        ),
+    )
+
+
+class MetodoNumericoInfo(BaseModel):
+    """
+    Como resuelve un bloque. Declarado, no adivinado.
+
+    La distincion que importa: "cuanto me puedo fiar de este numero" se
+    contesta distinto segun la familia, y desde fuera no hay forma de
+    saberlo. Un residuo de 1e-11 en un flash dice mucho; la AUSENCIA de
+    residuo en una construccion de McCabe-Thiele no dice nada malo --
+    simplemente ahi no hay residuo que medir, y presentar uno seria
+    inventarlo.
+    """
+    familia: Literal["algebraico", "geometrico", "correlacion", "iterativo",
+                     "integracion", "sin_declarar"]
+    metodo: Optional[str] = Field(None, description="El metodo concreto: brentq, hybr, LSODA...")
+    itera: bool = Field(description="Si hay un lazo con criterio de parada.")
+    tolerancia: Optional[str] = Field(None, description="El criterio de parada, cuando lo hay.")
+    residuo: Optional[str] = Field(
+        None,
+        description="QUE mide el residuo, con sus unidades o su escala. Sin esto, un numero "
+                    "como 2.4e-11 no se puede interpretar.")
+    motivo: Optional[str] = Field(
+        None,
+        description="Por que NO hay residuo, cuando no lo hay. Es la mitad util del "
+                    "descriptor: distingue 'no aplica' de 'no se midio'.")
+
+
+class ConvergenciaBloque(BaseModel):
+    bloque: str
+    n_ecuaciones: int
+    ejecutado: bool = Field(description="Si el bloque llego a correr en esta resolucion.")
+    metodo: MetodoNumericoInfo
+    medido: Optional[dict[str, Any]] = Field(
+        None,
+        description=(
+            "Lo que la ejecucion midio de VERDAD: iteraciones, residuo y su escala. Es null "
+            "cuando el bloque no itera, y eso NO es residuo cero: es que no hay residuo que "
+            "medir. Solo lo rellenan los bloques que de verdad evaluan uno."
+        ),
+    )
+
 class ResolverDiagramaResponse(BaseModel):
     completo: bool
     inconsistencias: list[Inconsistencia] = Field(
@@ -577,6 +742,29 @@ class ResolverDiagramaResponse(BaseModel):
     )
     especificaciones: Optional[InfoEspecificaciones] = Field(
         None, description="Solo si se pidieron: que valor hubo que dar a cada variable manipulada."
+    )
+    # --- trazabilidad. Opcionales: el contrato anterior no cambia.
+    calculo: Optional[CalculoInfo] = Field(
+        None, description="Con que motor y sobre que entradas se calculo. Permite reproducir.")
+    diagnosticos: Optional[list[Diagnostico]] = Field(
+        None,
+        description=(
+            "Las incidencias en forma de datos, con codigo estable y categoria. Unifica lo que "
+            "hoy esta repartido en 'incognitas_restantes', 'diagnostico', 'inconsistencias' y "
+            "'errores_bloque', que se conservan tal cual. Ordenadas por severidad: quien lea "
+            "la primera ya tiene lo mas grave."
+        ),
+    )
+    resumen_diagnosticos: Optional[ResumenDiagnosticos] = Field(
+        None, description="Recuento por severidad y categoria, para decidir que mostrar sin "
+                          "recorrer la lista.")
+    convergencia: Optional[list[ConvergenciaBloque]] = Field(
+        None,
+        description=(
+            "Por bloque: que metodo usa, si itera, con que tolerancia, y lo que la ejecucion "
+            "midio. Se incluyen TODOS los bloques, tambien los que no iteran, porque 'este "
+            "numero sale de una formula cerrada' es informacion y no una ausencia."
+        ),
     )
 
 

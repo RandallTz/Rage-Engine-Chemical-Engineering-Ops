@@ -43,7 +43,13 @@ from core.absorbedor import EvaluadorAbsorbedor
 from core.flash import EvaluadorFlash
 from thermodynamics.elv import CalculadoraELV
 from thermodynamics.entalpia import entalpia_de
+from core.errores import ErrorFisico
+from core import errores
 from core.orquestador import (
+    MetodoNumerico,
+    PROPAGACION,
+    BALANCE,
+    CORRELACION,
     Orquestador,
     BloqueEcuaciones,
     renombrar_bloque,
@@ -55,6 +61,67 @@ from core.orquestador import (
     bloque_cargas_termicas_ps,
 )
 
+
+
+# ---------------------------------------------------------------------
+# Familia numerica de cada bloque de este modulo.
+#
+# El criterio es el mismo en todos: ITERATIVO si por dentro hay un lazo
+# con criterio de parada -- y eso incluye todo lo que llama a burbuja_T,
+# rocio_T, un flash o la inversion h -> T, porque esos usan brentq.
+# GEOMETRICO las construcciones por etapas. CORRELACION los ajustes
+# empiricos. ALGEBRAICO lo que se despeja.
+#
+# Importa separarlos porque la pregunta "cuanto me puedo fiar de este
+# numero" se contesta distinto en cada caso, y desde fuera no hay forma
+# de saberlo: un residuo de 1e-11 en un flash dice mucho, y la ausencia
+# de residuo en una construccion de McCabe-Thiele no dice nada malo.
+# ---------------------------------------------------------------------
+_M_BURBUJA = MetodoNumerico(
+    "iterativo", metodo="brentq sobre T",
+    tolerancia="1e-9 K en la temperatura",
+    residuo="suma de y_i menos 1, adimensional")
+_M_FLASH = MetodoNumerico(
+    "iterativo", metodo="Rachford-Rice + sustitucion sucesiva en K",
+    tolerancia="1e-10 en beta; 1e-8 relativo en K",
+    residuo="f(beta) = sum z_i (K_i - 1)/(1 + beta(K_i - 1)), adimensional")
+_M_ESCALONADO = MetodoNumerico(
+    "geometrico", metodo="escalonado entre la curva de equilibrio y las rectas de operacion",
+    motivo="es una construccion geometrica: se escalona hasta cruzar x_B y se para. "
+           "No hay residuo que medir, y presentar uno seria inventarlo")
+_M_PONCHON = MetodoNumerico(
+    "geometrico", metodo="construccion entalpia-composicion con polos delta",
+    motivo="construccion geometrica sobre el diagrama H-x; no itera")
+_M_FUG = MetodoNumerico(
+    "iterativo", metodo="Fenske-Underwood-Gilliland (brentq sobre theta de Underwood)",
+    tolerancia="1e-10 en theta",
+    residuo="ecuacion de Underwood, adimensional")
+_M_KREMSER = MetodoNumerico(
+    "correlacion", metodo="Kremser",
+    motivo="formula cerrada para la recuperacion; la incertidumbre es la del "
+           "metodo de atajo (sistema diluido, caudales constantes), no de una iteracion")
+_M_FAIR = MetodoNumerico(
+    "correlacion", metodo="correlacion de Fair (Perry's Eq. 14-89 a 14-91)",
+    motivo="ajuste empirico a datos de planta; Perry's le da +-10 % de su propio ajuste")
+_M_CINETICA = MetodoNumerico(
+    "algebraico", metodo="xi = V r(T, x_salida)",
+    motivo="una vez conocida x_salida, el avance se despeja")
+_M_EQUILIBRIO_Q = MetodoNumerico(
+    "iterativo", metodo="brentq en logaritmos sobre el avance (o root con varias reacciones)",
+    tolerancia="1e-12 en el avance",
+    residuo="producto de actividades frente a K_eq, relativo")
+_M_ACOPLADO = MetodoNumerico(
+    "iterativo", metodo="root/hybr sobre (avance, T) con arranques multiples",
+    tolerancia="1e-9 en los residuos adimensionalizados",
+    residuo="materia escalada por F_in y energia por F_in*|dH_rxn|, los dos adimensionales")
+_M_ELL = MetodoNumerico(
+    "iterativo", metodo="plano tangente + sustitucion sucesiva en K con Rachford-Rice",
+    tolerancia="1e-11 en las composiciones",
+    residuo="diferencia relativa de actividades entre las dos fases")
+_M_ENERGIA = MetodoNumerico(
+    "iterativo", metodo="inversion h -> T por brentq",
+    tolerancia="la de la inversion de entalpia",
+    residuo="entalpia, J/mol")
 
 def variables_de_corriente(nombre, n_componentes):
     return (
@@ -82,6 +149,7 @@ def _bloque_cierre_composicion(nombre, n_componentes):
 
     return BloqueEcuaciones(
         nombre=f"Cierre de composicion ({nombre})",
+                metodo_numerico=BALANCE,
         variables=tuple(claves),
         puede_resolver=lambda n: n == 1,
         resolver_fn=resolver_fn,
@@ -116,6 +184,7 @@ def _bloque_caudal_masico(nombre, n_componentes, masas_molares, kg_por_segundo):
 
     return BloqueEcuaciones(
         nombre=f"Caudal masico dado ({nombre})",
+                metodo_numerico=BALANCE,
         variables=tuple([clave_F] + claves_x),
         variables_entrada=tuple(claves_x),
         puede_resolver=lambda n: n == 0,
@@ -280,6 +349,7 @@ class DiagramaCorrientes:
                 bloque_balance_materia(BalanceMateriaGlobal()),
                 mapa_streams,
                 nombre=f"{nombre}: balance de materia",
+                metodo_numerico=BALANCE,
             )
         )
 
@@ -289,6 +359,7 @@ class DiagramaCorrientes:
                     bloque_mccabe_thiele(solucionador),
                     {**mapa_streams, **mapa_op},
                     nombre=f"{nombre}: McCabe-Thiele",
+                metodo_numerico=_M_ESCALONADO,
                 )
             )
             if con_cargas_termicas:
@@ -297,6 +368,7 @@ class DiagramaCorrientes:
                         bloque_cargas_termicas(solucionador.evaluador),
                         {**mapa_streams, **mapa_op},
                         nombre=f"{nombre}: cargas termicas",
+                metodo_numerico=BALANCE,
                     )
                 )
             # q_fijo se IGNORABA en esta rama. Ponchon-Savarit lo publicaba
@@ -326,6 +398,7 @@ class DiagramaCorrientes:
                     bloque_ponchon_savarit(solucionador, q_fijo),
                     {**mapa_streams, **mapa_op},
                     nombre=f"{nombre}: Ponchon-Savarit",
+                metodo_numerico=_M_PONCHON,
                 )
             )
             # Antes el checkbox "incluir balance de energia" se dibujaba
@@ -339,6 +412,7 @@ class DiagramaCorrientes:
                         bloque_cargas_termicas_ps(solucionador.evaluador, q_fijo),
                         {**mapa_streams, **mapa_op},
                         nombre=f"{nombre}: cargas termicas",
+                metodo_numerico=BALANCE,
                     )
                 )
             # q es un DATO en este metodo (se escribe en el panel de la
@@ -456,6 +530,7 @@ class DiagramaCorrientes:
 
         return BloqueEcuaciones(
             nombre=f"Punto de burbuja ({corriente})",
+                metodo_numerico=_M_BURBUJA,
             variables=(clave_x0, clave_P, clave_T),
             variables_entrada=(clave_x0,),
             puede_resolver=lambda n: n == 0,
@@ -484,6 +559,7 @@ class DiagramaCorrientes:
 
         return BloqueEcuaciones(
             nombre=f"Presion de operacion ({corriente})",
+                metodo_numerico=PROPAGACION,
             variables=(clave,),
             variables_entrada=(),
             puede_resolver=lambda n: n == 0,
@@ -564,10 +640,12 @@ class DiagramaCorrientes:
             if c.get(clave) is None and c.get(clave_in) is not None:
                 P_salida = float(c[clave_in]) - dP
                 if P_salida <= 0:
-                    raise ValueError(
+                    raise ErrorFisico(
                         f"{nombre}: con una caida de {dP:.4g} Pa la presion de salida seria "
                         f"{P_salida:.4g} Pa, que no es fisica. La entrada esta a "
-                        f"{float(c[clave_in]):.4g} Pa."
+                        f"{float(c[clave_in]):.4g} Pa.",
+                        codigo=errores.PRESION_NO_FISICA, equipo=nombre,
+                        variables=(clave, clave_in),
                     )
                 return {clave: P_salida}
             if c.get(clave_in) is None and c.get(clave) is not None:
@@ -611,6 +689,7 @@ class DiagramaCorrientes:
 
         return BloqueEcuaciones(
             nombre=f"T de alimentacion ({corriente}, si q=1)",
+                metodo_numerico=_M_BURBUJA,
             variables=(clave_x0, clave_q, clave_P, clave_T),
             variables_entrada=(clave_x0, clave_q),
             puede_resolver=lambda n: n == 0,
@@ -1007,6 +1086,7 @@ class DiagramaCorrientes:
         self._bloques.append(
             BloqueEcuaciones(
                 nombre=f"{nombre}: mezcla",
+                metodo_numerico=_M_ENERGIA,
                 variables=tuple(claves_entrada + claves_salida),
                 variables_entrada=tuple(claves_entrada),
                 puede_resolver=lambda n: n == 0,
@@ -1049,6 +1129,7 @@ class DiagramaCorrientes:
         self._bloques.append(
             BloqueEcuaciones(
                 nombre=f"{nombre}: division",
+                metodo_numerico=PROPAGACION,
                 variables=claves_entrada + claves_salida,
                 variables_entrada=claves_entrada,
                 puede_resolver=lambda n: n == 0,
@@ -1178,6 +1259,7 @@ class DiagramaCorrientes:
         self._bloques.append(
             BloqueEcuaciones(
                 nombre=f"{nombre}: flash ({modo})",
+                metodo_numerico=_M_FLASH,
                 variables=claves_entrada + claves_salida,
                 variables_entrada=claves_entrada,
                 puede_resolver=lambda n: n == 0,
@@ -1256,9 +1338,10 @@ class DiagramaCorrientes:
             # viene detras.
             P_out = P - dP_ic
             if P_out <= 0:
-                raise ValueError(
+                raise ErrorFisico(
                     f"{nombre}: con una caida de {dP_ic:.4g} Pa la presion de salida seria "
-                    f"{P_out:.4g} Pa, que no es fisica. La entrada esta a {P:.4g} Pa."
+                    f"{P_out:.4g} Pa, que no es fisica. La entrada esta a {P:.4g} Pa.",
+                    codigo=errores.PRESION_NO_FISICA, equipo=nombre,
                 )
             if F <= 0:
                 T_vacio = float(T_salida) if T_salida is not None else T_in
@@ -1290,6 +1373,7 @@ class DiagramaCorrientes:
         self._bloques.append(
             BloqueEcuaciones(
                 nombre=f"{nombre}: intercambio de calor",
+                metodo_numerico=_M_FLASH,
                 variables=claves_entrada + claves_salida,
                 variables_entrada=claves_entrada,
                 puede_resolver=lambda n: n == 0,
@@ -1450,9 +1534,10 @@ class DiagramaCorrientes:
             T = float(T_operacion) if T_operacion is not None else conocidos[f"{entrada}.T"]
             P_salida = float(conocidos[f"{entrada}.P"]) - dP
             if P_salida <= 0:
-                raise ValueError(
+                raise ErrorFisico(
                     f"{nombre}: con una caida de {dP:.4g} Pa la presion de salida seria "
-                    f"{P_salida:.4g} Pa, que no es fisica."
+                    f"{P_salida:.4g} Pa, que no es fisica.",
+                    codigo=errores.PRESION_NO_FISICA, equipo=nombre,
                 )
 
             def repartir(F_ligera, x_ligera, F_pesada, x_pesada, separa, fraccion):
@@ -1476,6 +1561,25 @@ class DiagramaCorrientes:
                 return repartir(0.0, z, 0.0, z, 0.0, 0.0)
 
             resultado = calculadora.flash_LL(T, z)
+            if resultado is not None:
+                bloque.registrar_convergencia(
+                    convergio=True,
+                    residuo=resultado.get("residual_actividades"),
+                    escala_residuo=("diferencia relativa de actividades entre "
+                                    "las dos fases liquidas"),
+                    iteraciones=resultado.get("iteraciones"),
+                    # La distancia al plano tangente: negativa significa que
+                    # la fase unica era inestable. Es el criterio que decidio
+                    # que hubiera dos fases, asi que viaja con el residuo.
+                    distancia_plano_tangente=resultado.get("tpd"),
+                )
+            else:
+                # Una sola fase no es un fallo de convergencia: es la
+                # respuesta. Se dice asi, porque dejarlo en None se leeria
+                # como "no se midio".
+                bloque.registrar_convergencia(
+                    convergio=True, residuo=None,
+                    nota="una sola fase liquida: no hubo reparto que converger")
 
             # UNA SOLA FASE no es un fallo, es una respuesta: toda la
             # alimentacion sale por la fase pesada y la ligera queda a
@@ -1493,15 +1597,20 @@ class DiagramaCorrientes:
                             F * (1.0 - fraccion_ligera), x_pesada,
                             1.0, fraccion_ligera)
 
-        self._bloques.append(
-            BloqueEcuaciones(
-                nombre=f"{nombre}: equilibrio liquido-liquido",
-                variables=claves_entrada + claves_salida,
-                variables_entrada=claves_entrada,
-                puede_resolver=lambda n: n == 0,
-                resolver_fn=resolver_fn,
-            )
+        # El bloque se nombra antes de anadirlo porque su propio
+        # `resolver_fn` reporta la convergencia que mide (el residuo de
+        # igualdad de actividades). Python resuelve los nombres libres de
+        # una clausura en tiempo de llamada, asi que para entonces
+        # `bloque` ya existe.
+        bloque = BloqueEcuaciones(
+            nombre=f"{nombre}: equilibrio liquido-liquido",
+            metodo_numerico=_M_ELL,
+            variables=claves_entrada + claves_salida,
+            variables_entrada=claves_entrada,
+            puede_resolver=lambda n: n == 0,
+            resolver_fn=resolver_fn,
         )
+        self._bloques.append(bloque)
         for s_ in (fase_ligera, fase_pesada):
             self._presion_fijada.add(f"{s_}.P")
             self._temperatura_fijada.add(f"{s_}.T")
@@ -1613,6 +1722,7 @@ class DiagramaCorrientes:
         self._bloques.append(
             BloqueEcuaciones(
                 nombre=f"{nombre}: absorcion (Kremser, N={N:g})",
+                metodo_numerico=_M_KREMSER,
                 variables=claves_entrada + claves_salida,
                 variables_entrada=claves_entrada,
                 puede_resolver=lambda n: n == 0,
@@ -1827,6 +1937,7 @@ class DiagramaCorrientes:
         self._bloques.append(
             BloqueEcuaciones(
                 nombre=f"{nombre}: intercambio entre dos corrientes ({modo})",
+                metodo_numerico=_M_ENERGIA,
                 variables=claves_entrada + claves_salida,
                 variables_entrada=claves_entrada,
                 puede_resolver=lambda n: n == 0,
@@ -1915,6 +2026,7 @@ class DiagramaCorrientes:
         self._bloques.append(
             BloqueEcuaciones(
                 nombre=f"{nombre}: expansion isentalpica",
+                metodo_numerico=_M_FLASH,
                 variables=claves_entrada + claves_salida,
                 variables_entrada=claves_entrada,
                 puede_resolver=lambda n: n == 0,
@@ -2029,6 +2141,7 @@ class DiagramaCorrientes:
         self._bloques.append(
             BloqueEcuaciones(
                 nombre=f"{nombre}: separacion por recuperaciones",
+                metodo_numerico=BALANCE,
                 variables=claves_entrada + claves_salida,
                 variables_entrada=claves_entrada,
                 puede_resolver=lambda n: n == 0,
@@ -2149,6 +2262,7 @@ class DiagramaCorrientes:
         self._bloques.append(
             BloqueEcuaciones(
                 nombre=f"{nombre}: compresion isentropica",
+                metodo_numerico=_M_FLASH,
                 variables=claves_entrada + claves_salida,
                 variables_entrada=claves_entrada,
                 puede_resolver=lambda n: n == 0,
@@ -3050,6 +3164,7 @@ def _bloque_balance_cstr(nombre, entrada, salida, n_componentes, evaluador):
 
     return BloqueEcuaciones(
         nombre=f"{nombre}: balance del reactor",
+                metodo_numerico=BALANCE,
         variables=variables,
         puede_resolver=lambda n: n >= 0,  # decide por si mismo que direccion puede
         resolver_fn=resolver_fn,
@@ -3109,6 +3224,7 @@ def _bloque_conversion_cstr(nombre, entrada, n_componentes, evaluador):
 
     return BloqueEcuaciones(
         nombre=f"{nombre}: conversion",
+                metodo_numerico=BALANCE,
         variables=variables,
         puede_resolver=lambda n: n >= 0,
         resolver_fn=resolver_fn,
@@ -3163,6 +3279,7 @@ def _bloque_cinetica_pfr(nombre, entrada, n_componentes, evaluador):
 
     return BloqueEcuaciones(
         nombre=f"{nombre}: cinetica (flujo piston)",
+                metodo_numerico=MetodoNumerico("integracion", metodo="LSODA sobre dxi/dV con eventos terminales", tolerancia="rtol 1e-9, atol 1e-12", residuo="el del integrador; el evento terminal acota el simplex"),
         variables=variables,
         puede_resolver=lambda n: n >= 0,
         resolver_fn=resolver_fn,
@@ -3208,13 +3325,25 @@ def _bloque_equilibrio_cstr(nombre, entrada, n_componentes, evaluador):
         if F_in <= 0 or suma <= 0:
             return {}
         r = evaluador.avance_de_equilibrio(F_in, x_in / suma, c[clave_T])
+        # El residuo que ESTE algoritmo evalua: cuanto se desvia el
+        # producto de actividades de K_eq, en relativo. Se reporta tal
+        # cual, con su escala, en vez de un numero sin unidades.
+        bloque.registrar_convergencia(
+            convergio=True,
+            residuo=r.get("residual"),
+            escala_residuo="relativo frente a K_eq",
+            iteraciones=r.get("iteraciones"),
+            multiplicidad=r.get("multiplicidad"),
+            soluciones=len(r.get("soluciones") or []) or None,
+        )
         salida = _escribir_xi(claves_xi, r["xi"])
         K = np.atleast_1d(np.asarray(r["K_eq"], dtype=float))
         salida.update({k: float(v) for k, v in zip(claves_K, K)})
         return salida
 
-    return BloqueEcuaciones(
+    bloque = BloqueEcuaciones(
         nombre=f"{nombre}: equilibrio quimico",
+                metodo_numerico=_M_EQUILIBRIO_Q,
         variables=variables,
         variables_entrada=entradas,
         puede_resolver=lambda n: n == 0,
@@ -3223,6 +3352,7 @@ def _bloque_equilibrio_cstr(nombre, entrada, n_componentes, evaluador):
         # definicion de su K_eq. Con una reaccion son las dos de siempre.
         n_ecuaciones=2 * len(claves_xi),
     )
+    return bloque
 
 
 def _bloque_energia_cstr(nombre, entrada, salida, n_componentes, evaluador, P_conocida_de):
@@ -3283,6 +3413,7 @@ def _bloque_energia_cstr(nombre, entrada, salida, n_componentes, evaluador, P_co
 
     return BloqueEcuaciones(
         nombre=f"{nombre}: balance de energia",
+                metodo_numerico=_M_ENERGIA,
         variables=variables,
         variables_entrada=entradas,
         puede_resolver=lambda n: n == 0,
@@ -3341,17 +3472,27 @@ def _bloque_reactor_acoplado(nombre, entrada, salida, n_componentes, evaluador, 
             F_in, x_in / suma, c[clave_T_in], c[clave_V],
             Q=c[clave_Q], P=c.get(clave_P),
         )
+        bloque.registrar_convergencia(
+            convergio=True,
+            residuo=r.get("residual"),
+            escala_residuo=("materia escalada por F_in y energia por "
+                            "F_in*|dH_rxn|; los dos adimensionales"),
+            multiplicidad=r.get("multiplicidad"),
+            soluciones=len(r.get("soluciones") or []) or None,
+        )
         return {**_escribir_xi(claves_xi, r["xi"]),
                 clave_T: r["T_salida"], clave_Q_rxn: r["Q_reaccion"]}
 
-    return BloqueEcuaciones(
+    bloque = BloqueEcuaciones(
         nombre=f"{nombre}: cinetica + energia acopladas",
+                metodo_numerico=_M_ACOPLADO,
         variables=variables,
         variables_entrada=entradas,
         puede_resolver=lambda n: n == 0,
         resolver_fn=resolver_fn,
         n_ecuaciones=3,
     )
+    return bloque
 
 
 def _bloque_cinetica_cstr(nombre, salida, n_componentes, evaluador):
@@ -3395,6 +3536,7 @@ def _bloque_cinetica_cstr(nombre, salida, n_componentes, evaluador):
 
     return BloqueEcuaciones(
         nombre=f"{nombre}: cinetica",
+                metodo_numerico=_M_CINETICA,
         variables=variables,
         puede_resolver=lambda n: n >= 0,
         resolver_fn=resolver_fn,
@@ -3504,6 +3646,7 @@ def _bloque_fug_corrientes(nombre, alimentacion, destilado, fondos, n, contexto,
 
     return BloqueEcuaciones(
         nombre=f"{nombre}: FUG",
+                metodo_numerico=_M_FUG,
         variables=variables_entrada + variables_salida,
         variables_entrada=variables_entrada,
         puede_resolver=lambda n_inc: n_inc == 0,
@@ -3547,6 +3690,7 @@ def _bloque_cargas_fug_corrientes(nombre, alimentacion, destilado, fondos, n, co
 
     return BloqueEcuaciones(
         nombre=f"{nombre}: cargas termicas",
+                metodo_numerico=BALANCE,
         variables=variables_entrada + tuple(claves_salida),
         variables_entrada=variables_entrada,
         puede_resolver=lambda n_inc: n_inc == 0,
@@ -3686,6 +3830,7 @@ def _bloque_diametro_columna(nombre, alimentacion, destilado, fondos, n_componen
 
     return BloqueEcuaciones(
         nombre=f"{nombre}: diametro (correlacion de Fair)",
+                metodo_numerico=_M_FAIR,
         variables=entradas + salidas,
         variables_entrada=entradas,
         puede_resolver=lambda n: n == 0,

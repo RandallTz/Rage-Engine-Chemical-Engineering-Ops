@@ -1349,3 +1349,206 @@ La tabla de **corrientes** del informe humanizaba los nombres de variable (`x0` 
 - Columnas de **relleno** (HETP y la correlación de caída de presión de Eckert), que es la otra mitad del mercado.
 - **Área del condensador y del rehervidor**: se conocen $Q_c$, $Q_R$ y las temperaturas de la columna, pero no la del servicio (agua de refrigeración, vapor), y sin ella no hay LMTD. Hace falta modelar los servicios.
 - Sin costes: un diámetro y un área no son un precio.
+
+---
+
+# Fase 16: Trazabilidad — de dónde sale este número
+
+Pedido en `frontend/CONTRATO_BACKEND_TRAZABILIDAD.md`, con una
+observación concreta sobre la bomba y tres bloques nuevos de respuesta.
+Solo backend.
+
+## ✅ La bomba aceptaba presiones incompatibles, y la causa era general
+
+El caso del contrato: bomba ideal con $P_1 = 101325$ Pa, factor $= 3$ **y**
+$P_2 = 100000$ Pa dados a la vez. Tres condiciones sobre dos variables, y
+$3 \times 101325 \neq 100000$. El servicio respondía **«resuelto por
+completo», sin incidencias**, conservando la presión de salida dada.
+
+**La causa no estaba en la bomba.** Estaba en `verificar_consistencia`,
+que comparaba **solo** la variable que había olvidado y hacía `break` en
+cuanto una comprobación salía bien, con el razonamiento de que *«una
+comprobación por bloque es suficiente»*. Eso vale si cada bloque es una
+ecuación, y varios no lo son:
+
+| Bloque | Ecuaciones que empaqueta |
+|---|---|
+| Bombeo | $n+2$ ($F$, $T$, $P$, composiciones) |
+| Mezclador | 5 |
+| Divisor | 10 |
+
+La comprobación recaía sobre la igualdad de caudales, salía bien, y **la
+ecuación de presión no se evaluaba nunca**.
+
+Ahora se compara todo lo que el bloque devuelve, y se sigue hasta haber
+verificado tantas variables distintas como ecuaciones declara. **No cuesta
+llamadas extra**: el solver de la bomba ya escribía $P_2 = 303975$ al
+olvidar otra variable; simplemente nadie miraba ese valor.
+
+### ⚠ Y un error de signo que esto destapó
+
+La bomba declaraba `n_ecuaciones = 1` (el valor por omisión de un bloque
+invertible) mientras imponía $n+2$. Consecuencia: una bomba **exactamente
+especificada** reportaba $\mathrm{GL} = +3$ y una **sobreespecificada**
+$\mathrm{GL} = +1$. Decía que faltaban datos cuando sobraban — el signo
+contrario de la verdad.
+
+El $n+2$ sale de un argumento de rango, no de contar a ojo: hay $2n$
+fracciones entre las dos corrientes, el bloque impone $n$ igualdades más
+los 2 cierres, y el rango de ese sistema es $n+1$, así que a la bomba le
+corresponden $n-1$ composiciones más $F$, $T$ y $P$.
+
+### La política, ahora explícita
+
+El contrato preguntaba si el orquestador debía *omitir* el cierre al estar
+dados ambos extremos o *detectar* la incompatibilidad. Se eligió
+detectar, y se hizo explícito qué significa cada bandera:
+
+- `completo = true` dice que **todas las variables quedaron
+  determinadas**, no que el resultado sea físico.
+- La incompatibilidad viaja en su propio campo.
+- **`hay_errores` es la bandera que separa «se calculó todo» de «el
+  resultado es válido».**
+
+En el caso de la bomba, las dos valen `true` a la vez. Confundirlas era el
+fallo.
+
+## ✅ `calculo`: con qué motor y sobre qué entradas
+
+Versión del motor **y commit de git**, con el sufijo `-sucio` cuando el
+árbol tiene cambios sin commitear: un commit a secas afirmaría que el
+código es exactamente el de ese commit, y con el árbol modificado eso es
+falso. `commit` puede ser `null` — un despliegue sin `.git` no lo sabe, y
+**inventarse un identificador sería peor que admitirlo**, porque un
+identificador falso se propaga a los informes y nadie lo cuestiona.
+
+**La versión del proveedor termodinámico son las versiones de `thermo`,
+`chemicals` y `fluids`.** No es un detalle administrativo: es la razón de
+que `requirements.txt` las tenga fijas, y ya pasó una vez — los atributos
+`Hfl`/`Gfl` de `thermo` cambiaron río arriba y movieron los números sin
+que nadie tocara una línea de este repositorio.
+
+### La huella de las entradas, y qué deja fuera
+
+SHA-256 de las entradas **físicas normalizadas**. El contrato que
+establece: *dos peticiones con la misma huella deben dar el mismo
+resultado; si dan otro, el cambio está en el motor o en sus
+dependencias*. Esa distinción, sin huella, se resuelve discutiendo.
+
+Entra lo que cambia el resultado (componentes **en orden**, modelo,
+operaciones con sus parámetros, valores en SI, especificaciones). No entra
+lo que no (coordenadas de los nodos, unidades de presentación, nombre de
+la simulación).
+
+**Se construye a mano, campo por campo, y no con un volcado automático
+del `request`.** Es más trabajo y es lo correcto: un volcado automático
+metería en la huella cualquier campo nuevo que alguien añada a los
+esquemas, y la huella cambiaría sin que la física cambie — justo lo que
+una huella no debe hacer.
+
+La normalización no es cosmética. `repr(0.1 + 0.2)` y `repr(0.3)`
+difieren, así que sin un formato canónico **dos peticiones idénticas para
+cualquier propósito práctico darían huellas distintas**. Quince cifras
+significativas (lo que un `float64` distingue), los enteros como enteros
+para que `3` y `3.0` no sean dos entradas, diccionarios ordenados, listas
+no — el orden de los componentes define cuál es $x_0$.
+
+Y el digest va **completo**: truncarlo a doce caracteres queda más bonito
+en un informe y multiplica por mucho la probabilidad de colisión.
+
+## ✅ `diagnosticos`: la categoría no se deduce del texto
+
+Lo que pasaba estaba repartido en cuatro campos y tres formas distintas
+(`incognitas_restantes`, `diagnostico`, `inconsistencias`,
+`errores_bloque`). Distinguir «faltan datos» de «esto es físicamente
+imposible» **exigía buscar subcadenas en castellano**, y eso se rompe la
+primera vez que alguien mejora la redacción de un mensaje. Los cuatro
+campos se conservan; `diagnosticos` los unifica con código estable,
+categoría, severidad, equipo y variables implicadas.
+
+La categoría viene de **dónde se generó** el problema. Para los errores de
+bloque, de la propia excepción: `core/errores.py` añade una jerarquía que
+hereda de `ValueError` y `RuntimeError`, y ese detalle es lo que permite
+que todos los `except ValueError` que ya existían **sigan funcionando sin
+tocarlos**.
+
+Lo que nadie clasificó llega como `SIN_CLASIFICAR`, con el tipo de Python
+como único dato objetivo. Es una respuesta honesta: adivinar la categoría
+buscando «hirviendo» o «no convergió» en el mensaje acierta hasta que
+alguien reescribe una frase, **y entonces falla en silencio**.
+
+**La severidad no coincide con la categoría.** Una redundancia es
+*advertencia* — los datos de más no son necesariamente erróneos, se
+comprobarán por consistencia en vez de calcularse. Una incompatibilidad es
+*error*. Y un bloque que no pudo dispararse es *información*: es la
+**causa** de las variables sin determinar, no un problema aparte.
+
+Las variables sin determinar se **agrupan por elemento**: quince
+diagnósticos idénticos no informan más que uno que diga «a `col1` le
+faltan estas quince».
+
+## ✅ `convergencia`: sin residuos fabricados
+
+La parte que el contrato pedía con más insistencia. Cada bloque **declara**
+su familia (`algebraico`, `geometrico`, `correlacion`, `iterativo`,
+`integracion`) y la declaración se separa en dos mitades: lo que el bloque
+*es* (método, tolerancia, **qué mide** el residuo con su escala) y lo que
+esta ejecución *midió*.
+
+| Bloque | Familia | Residuo |
+|---|---|---|
+| `col1: McCabe-Thiele` | geométrico | **ninguno**, con motivo: «se escalona hasta cruzar $x_B$ y se para» |
+| `Punto de burbuja (dest)` | iterativo | $\sum y_i - 1$, tolerancia $10^{-9}$ K, `brentq` sobre $T$ |
+| `col1: balance de materia` | algebraico | **ninguno**: se cumple por construcción |
+| `dec1: equilibrio líquido-líquido` | iterativo | $8.24 \times 10^{-12}$ en 52 iteraciones |
+
+Un residuo de $10^{-11}$ en un flash dice mucho; la *ausencia* de residuo
+en una construcción de McCabe-Thiele no dice nada malo — **ahí no hay
+residuo que medir, y presentar uno sería inventarlo**. El campo `motivo`
+es la mitad útil del descriptor: distingue «no aplica» de «no se midió».
+
+El decantador fuera de la laguna de miscibilidad reporta *«una sola fase
+líquida: no hubo reparto que converger»* en vez de un residuo de cero, que
+sugeriría la convergencia perfecta de algo que nunca se planteó.
+
+Se reportan **todos** los bloques, también los que no iteran: «este número
+sale de una fórmula cerrada» es información, no una ausencia. Y
+`ejecutado` distingue «no corrió» de «no hacía falta»: la presión de
+operación de la alimentación no se dispara cuando `alim.P` viene dada, y
+eso dice que ese número es un **dato** y no un resultado.
+
+## Verificación
+
+`tests/validar_trazabilidad.py`, **49 comprobaciones**, más la sección 5
+de `validar_diagrama_corrientes.py` para la bomba. Las tres cosas que
+estos bloques pueden hacer mal no se ven mirando un resultado concreto:
+
+- **Una huella que cambie cuando no debería** da una falsa sensación de
+  reproducibilidad. Se comprueba contra lo que no cambia la física
+  (reordenar corrientes, `3` frente a `3.0`) y contra lo que sí (el factor
+  de compresión, quitar un dato, invertir los componentes).
+- **Una categoría deducida del texto** funciona hasta que alguien
+  reescribe una frase. Se comprueba que un reflujo bajo el mínimo salga
+  como `fisica` y no como `datos`.
+- **Un residuo fabricado** es una mentira con cara de precisión.
+
+Y una sección que comprueba que **el contrato anterior no se tocó**: los
+nueve campos de siempre siguen presentes, los cuatro nuevos son
+opcionales, y la respuesta completa serializa a JSON estricto — un
+`float32` de NumPy o un `NaN` pasan los tipos de Pydantic y revientan al
+serializar. **20/20 suites en 239 s.**
+
+## ⬜ Lo que falta
+
+- **El catálogo versionado de ecuaciones y suposiciones por operación**,
+  que el contrato marca explícitamente como opcional posterior. Hoy
+  `convergencia` dice *cómo* se resolvió un bloque; no dice *qué ecuación*
+  es ni de qué referencia sale.
+- **`VERSION_MOTOR` se sube a mano.** El commit desambigua, pero la
+  versión semántica depende de que alguien la mueva.
+- **El decantador no está expuesto en la API.** Existe en
+  `core/diagrama_corrientes.py` y no se puede pedir por HTTP, así que su
+  trazabilidad se valida contra el motor. Es una laguna anterior a esta
+  fase, pero esta fase la hizo visible.
+- **Fase vapor no ideal**, que sigue siendo el límite termodinámico de
+  fondo.

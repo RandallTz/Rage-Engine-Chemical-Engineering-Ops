@@ -32,10 +32,84 @@ Ponchon-Savarit) o un numpy.ndarray de n componentes (FUG) sin que
 Orquestador/BloqueEcuaciones necesiten saberlo.
 """
 
+from core.errores import clasificar
+
+
+class MetodoNumerico:
+    """
+    Como resuelve un bloque, declarado y no adivinado.
+
+    Existe porque "cuanto me puedo fiar de este numero" se contesta de
+    forma MUY distinta segun el bloque, y desde fuera no hay manera de
+    saberlo:
+
+      - Una construccion de McCabe-Thiele es geometria: escalona hasta
+        cruzar x_B y para. No hay residuo que mirar, y presentar uno
+        seria inventarselo.
+      - Una correlacion de Fair o un Kremser son formula cerrada. Tampoco
+        hay residuo.
+      - Un punto de burbuja, un flash o un reactor acoplado SI iteran, y
+        el residuo que alcanzan es informacion de primera.
+
+    El contrato de trazabilidad pide exactamente esta distincion: reportar
+    residuos "cuando el algoritmo realmente los evalua" y no fabricarlos
+    para construcciones graficas o correlaciones. Asi que cada bloque
+    declara su naturaleza aqui, y el que no itera lo dice con su motivo en
+    vez de aparecer con los campos vacios -- un hueco se lee como "no me
+    lo han contado" y un motivo se lee como "no aplica".
+
+    familia   : "algebraico"   formula cerrada o propagacion directa
+                "geometrico"   construccion por etapas (McCabe-Thiele...)
+                "correlacion"  ajuste empirico a datos
+                "iterativo"    hay un lazo con criterio de parada
+                "integracion"  se integra una EDO
+    metodo    : nombre concreto ("brentq", "punto fijo", "hybr", "LSODA")
+    tolerancia: criterio de parada, cuando lo hay
+    residuo   : que MIDE el residuo, con sus unidades o su escala. Sin
+                esto, un numero como 2.4e-11 no se puede interpretar.
+    """
+
+    def __init__(self, familia, metodo=None, tolerancia=None, residuo=None, motivo=None):
+        self.familia = familia
+        self.metodo = metodo
+        self.tolerancia = tolerancia
+        self.residuo = residuo
+        # Por que NO hay residuo, cuando no lo hay. Es la mitad util del
+        # descriptor: distingue "no aplica" de "no se midio".
+        self.motivo = motivo
+
+    @property
+    def itera(self):
+        return self.familia in ("iterativo", "integracion")
+
+    def como_diccionario(self):
+        return {
+            "familia": self.familia,
+            "metodo": self.metodo,
+            "itera": self.itera,
+            "tolerancia": self.tolerancia,
+            "residuo": self.residuo,
+            "motivo": self.motivo,
+        }
+
+
+# Descriptores reutilizables, para no repetir la misma declaracion en
+# veinte sitios y para que las familias signifiquen lo mismo en todas.
+PROPAGACION = MetodoNumerico(
+    "algebraico", metodo="sustitucion directa",
+    motivo="propaga valores entre variables; no hay nada que iterar")
+BALANCE = MetodoNumerico(
+    "algebraico", metodo="algebra exacta",
+    motivo="el balance se despeja; no hay residuo porque se cumple por construccion")
+CORRELACION = MetodoNumerico(
+    "correlacion", metodo="ajuste empirico",
+    motivo="formula cerrada ajustada a datos: la incertidumbre es la del "
+           "ajuste, no la de una iteracion")
+
 
 class BloqueEcuaciones:
     def __init__(self, nombre, variables, puede_resolver, resolver_fn, variables_entrada=None,
-                 n_ecuaciones=None):
+                 n_ecuaciones=None, metodo_numerico=None):
         """
         nombre        : para reportes/depuracion.
         variables     : tupla de TODAS las variables de este bloque
@@ -65,6 +139,12 @@ class BloqueEcuaciones:
                         ecuaciones como variables de salida tenga, y uno
                         invertible aporta 1 salvo que se diga otra cosa
                         (el balance de materia, p.ej., aporta 2).
+        metodo_numerico: MetodoNumerico. Como resuelve este bloque, para
+                        poder decir si sus numeros vienen de una
+                        iteracion con residuo o de una formula cerrada.
+                        Por omision, 'sin declarar': se reporta como tal
+                        en vez de suponerle una familia, porque suponerla
+                        seria afirmar algo que nadie ha comprobado.
         """
         self.nombre = nombre
         self.variables = tuple(variables)
@@ -75,6 +155,29 @@ class BloqueEcuaciones:
         self.n_ecuaciones = int(n_ecuaciones)
         self.puede_resolver = puede_resolver
         self.resolver_fn = resolver_fn
+        self.metodo_numerico = metodo_numerico or MetodoNumerico(
+            "sin_declarar",
+            motivo="este bloque no declara su metodo; no se le supone ninguno")
+        # Lo que la ULTIMA ejecucion midio de verdad. Lo rellena el propio
+        # resolver llamando a `registrar_convergencia`, y empieza vacio en
+        # cada resolucion para que nunca se devuelvan numeros de una
+        # ejecucion anterior como si fueran de esta.
+        self.convergencia = None
+
+    def registrar_convergencia(self, **datos):
+        """
+        Lo que la ejecucion en curso midio: iteraciones, residuo, si
+        convergio.
+
+        Lo llama el resolver del bloque cuando de verdad ha iterado. Los
+        bloques algebraicos no lo llaman nunca, y por eso su convergencia
+        queda en None -- que es la respuesta correcta y distinta de
+        "residuo cero".
+        """
+        self.convergencia = {k: v for k, v in datos.items() if v is not None}
+
+    def olvidar_convergencia(self):
+        self.convergencia = None
 
 
 class Orquestador:
@@ -114,6 +217,16 @@ class Orquestador:
         resueltos_por = {}
         resultados_bloques = {}
         errores_bloque = {}
+        # Lo mismo que errores_bloque pero con su categoria y codigo
+        # estable, en un canal APARTE. No se cambia el existente -- hay
+        # codigo y suites que esperan nombre -> texto -- y asi lo nuevo
+        # solo anade.
+        errores_clasificados = {}
+        # Cada resolucion empieza sin convergencia: si no se limpiara, un
+        # bloque podria devolver el residuo de una ejecucion anterior como
+        # si fuera de esta.
+        for bloque in self.bloques:
+            bloque.olvidar_convergencia()
 
         cambio = True
         iteraciones = 0
@@ -137,6 +250,7 @@ class Orquestador:
                     # con los demas. Antes, cualquier excepcion aqui
                     # abortaba la resolucion entera.
                     errores_bloque[bloque.nombre] = str(e)
+                    errores_clasificados[bloque.nombre] = clasificar(e, equipo=bloque.nombre)
                     continue
                 resultados_bloques[bloque.nombre] = resultado
 
@@ -177,6 +291,29 @@ class Orquestador:
             nombre: mensaje for nombre, mensaje in errores_bloque.items()
             if nombre not in bloques_que_resolvieron
         }
+        errores_clasificados = {
+            nombre: datos for nombre, datos in errores_clasificados.items()
+            if nombre not in bloques_que_resolvieron
+        }
+
+        # CONVERGENCIA por bloque: lo que cada uno declara ser, y lo que
+        # su ultima ejecucion midio de verdad. Se incluyen TODOS los
+        # bloques, tambien los que no iteran, porque "este numero sale de
+        # una formula cerrada" es informacion, no una ausencia -- y es
+        # justo lo que distingue un resultado del que fiarse de uno que
+        # solo parece preciso.
+        convergencia = []
+        for bloque in self.bloques:
+            entrada = {
+                "bloque": bloque.nombre,
+                "n_ecuaciones": bloque.n_ecuaciones,
+                "ejecutado": bloque.nombre in resultados_bloques,
+                "metodo": bloque.metodo_numerico.como_diccionario(),
+                # None cuando el bloque no itero. No es cero: es que no hay
+                # residuo que medir.
+                "medido": bloque.convergencia,
+            }
+            convergencia.append(entrada)
 
         return {
             "pool": pool,
@@ -184,6 +321,8 @@ class Orquestador:
             "incognitas_restantes": incognitas_restantes,
             "resultados_bloques": resultados_bloques,
             "errores_bloque": errores_bloque,
+            "errores_clasificados": errores_clasificados,
+            "convergencia": convergencia,
             "completo": len(incognitas_restantes) == 0,
             "iteraciones": iteraciones,
             "agotado_el_tope": agotado_el_tope,
@@ -308,11 +447,16 @@ def verificar_consistencia(bloques, pool, tolerancia=1e-6):
     return inconsistencias
 
 
-def renombrar_bloque(bloque, mapa, nombre=None):
+def renombrar_bloque(bloque, mapa, nombre=None, metodo_numerico=None):
     """
     Devuelve el MISMO bloque con sus variables renombradas segun 'mapa'
     ({nombre_interno: nombre_global}); las que no aparezcan se quedan
     igual.
+
+    `metodo_numerico` permite declarar como resuelve el bloque al
+    envolverlo, que es donde se sabe: una fabrica generica como
+    `bloque_mccabe_thiele` no conoce el contexto, y quien lo conecta al
+    diagrama si.
 
     Para que sirve: permite que las variables internas de una operacion
     (F, z_F, x_D, D...) apunten a las variables de las CORRIENTES a las
@@ -351,6 +495,7 @@ def renombrar_bloque(bloque, mapa, nombre=None):
         puede_resolver=bloque.puede_resolver,
         resolver_fn=resolver_fn,
         n_ecuaciones=bloque.n_ecuaciones,
+        metodo_numerico=metodo_numerico or bloque.metodo_numerico,
     )
 
 
