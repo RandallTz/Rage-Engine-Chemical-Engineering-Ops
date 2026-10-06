@@ -2194,6 +2194,28 @@ class DiagramaCorrientes:
                 variables=variables,
                 puede_resolver=lambda n: n >= 1,
                 resolver_fn=resolver_fn,
+                # n + 2 ecuaciones: F, T, P y n-1 composiciones.
+                #
+                # Este bloque es INVERTIBLE, asi que se quedaba con el valor
+                # por omision de 1 ecuacion -- el que corresponde a un
+                # bloque invertible que impone una sola relacion. Pero la
+                # bomba impone una por campo propagado, y con eso el
+                # contador decia "falta 1 dato" (GL = +1) sobre una bomba
+                # SOBRE-especificada. Medido: una bomba perfectamente
+                # determinada reportaba GL = 3.
+                #
+                # Por que n-1 composiciones y no n. Las 2n fracciones estan
+                # ligadas por: las n igualdades que impone la bomba, mas
+                # los dos cierres (una suma = 1 por corriente) que aportan
+                # los bloques de cierre. Ese conjunto tiene rango n+1, no
+                # n+2: con los vectores ya iguales, los dos cierres son la
+                # MISMA ecuacion. Como los dos cierres se cuentan aparte,
+                # a la bomba le corresponden n-1.
+                #
+                # No lo arregla `_composiciones_dependientes` porque ese
+                # descuento solo mira bloques con salidas fijas, y uno
+                # invertible no las tiene.
+                n_ecuaciones=self.n + 2,
             )
         )
         self._registrar_operacion(

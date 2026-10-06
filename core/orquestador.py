@@ -211,6 +211,41 @@ def verificar_consistencia(bloques, pool, tolerancia=1e-6):
     el propio resolver del bloque. Se prefiere olvidar una variable de
     SALIDA, para que los bloques no invertibles (que exigen todas sus
     entradas) tambien se puedan comprobar.
+
+    UN BLOQUE NO ES UNA ECUACION, y de ahi venia un agujero real
+    ------------------------------------------------------------
+    La primera version comparaba SOLO la variable olvidada y hacia `break`
+    en cuanto una comprobacion salia bien, con el razonamiento de que "una
+    comprobacion por bloque es suficiente". Eso vale si cada bloque es una
+    ecuacion, y varios no lo son: el de la bomba empaqueta n+2 ecuaciones
+    independientes (F, T, P y las composiciones), el mezclador 5, el
+    divisor 10.
+
+    Consecuencia medida: con una bomba a la que se le daban `s1.P`,
+    `factor_P` Y `s2.P` a la vez -- tres condiciones incompatibles, porque
+    3 x 101325 no es 100000 -- la primera comprobacion recaia sobre la
+    igualdad de caudales, salia bien, y el `break` dejaba la ecuacion de
+    presion sin evaluar NUNCA. El simulador respondia "resuelto por
+    completo", sin incidencias, conservando la presion de salida dada.
+
+    Dos cambios, y el primero no cuesta nada:
+
+      1. **Se compara TODO lo que el bloque devuelve**, no solo la
+         variable olvidada. Un `resolver_fn` devuelve un diccionario con
+         las variables que ha podido calcular, y a menudo son varias: al
+         omitir `s1.F` de la bomba, su resolver devuelve `s1.F` *y*
+         `s2.P`, porque la rama de presion dispara con `factor_P` y
+         `s1.P` presentes. Comparar las dos caza la incompatibilidad en
+         la PRIMERA llamada, sin una sola evaluacion extra.
+      2. Se sigue probando variables hasta haber ejercitado tantas
+         ecuaciones como el bloque declara (`n_ecuaciones`), en vez de
+         parar en la primera. El coste esta acotado por ese numero, y en
+         los bloques no invertibles -- que devuelven todas sus salidas de
+         una vez -- se cubre todo en una sola llamada igual que antes.
+
+    Se para en cuanto aparece UNA incompatibilidad: para decirle a quien
+    mira que sus datos no cuadran, la primera ya sirve, y seguir solo
+    produciria mensajes repetidos sobre la misma causa.
     """
     inconsistencias = []
     for bloque in bloques:
@@ -220,7 +255,15 @@ def verificar_consistencia(bloques, pool, tolerancia=1e-6):
         candidatas = [v for v in bloque.variables if v not in bloque.variables_entrada]
         candidatas += [v for v in bloque.variables if v in bloque.variables_entrada]
 
+        # Cuantas ecuaciones distintas se han llegado a evaluar. Se mide
+        # por variables recalculadas y comparadas: cada una ejercita al
+        # menos una ecuacion del bloque.
+        comprobadas = set()
+        incompatible = None
+
         for objetivo in candidatas:
+            if len(comprobadas) >= bloque.n_ecuaciones:
+                break
             incognitas_entrada = 1 if objetivo in bloque.variables_entrada else 0
             if not bloque.puede_resolver(incognitas_entrada):
                 continue
@@ -229,26 +272,39 @@ def verificar_consistencia(bloques, pool, tolerancia=1e-6):
                 resultado = bloque.resolver_fn(**conocidos)
             except Exception:
                 continue  # este bloque no se deja invertir por aqui; se prueba otra variable
-
-            recalculado = resultado.get(objetivo)
-            if not isinstance(recalculado, (int, float, np.floating, np.integer)):
+            if not isinstance(resultado, dict):
                 continue
 
-            dado = float(pool[objetivo])
-            recalculado = float(recalculado)
-            escala = max(abs(dado), abs(recalculado), 1.0)
-            if abs(dado - recalculado) / escala > tolerancia:
-                inconsistencias.append({
-                    "bloque": bloque.nombre,
-                    "variable": objetivo,
-                    "dado": dado,
-                    "implicado": recalculado,
-                    "mensaje": (
-                        f"{bloque.nombre}: diste {objetivo}={dado:.6g}, pero el resto de los datos "
-                        f"implica {objetivo}={recalculado:.6g}. Los datos no son compatibles entre si."
-                    ),
-                })
-            break  # una comprobacion por bloque es suficiente
+            # TODO lo devuelto, no solo `objetivo`. Lo que el bloque
+            # recalcula sobre una variable que ya estaba en el pool es
+            # precisamente una ecuacion que nadie habia evaluado.
+            for variable, recalculado in resultado.items():
+                if not isinstance(recalculado, (int, float, np.floating, np.integer)):
+                    continue
+                if pool.get(variable) is None:
+                    continue
+                dado = float(pool[variable])
+                recalculado = float(recalculado)
+                comprobadas.add(variable)
+                escala = max(abs(dado), abs(recalculado), 1.0)
+                if abs(dado - recalculado) / escala > tolerancia:
+                    incompatible = (variable, dado, recalculado)
+                    break
+            if incompatible is not None:
+                break
+
+        if incompatible is not None:
+            variable, dado, recalculado = incompatible
+            inconsistencias.append({
+                "bloque": bloque.nombre,
+                "variable": variable,
+                "dado": dado,
+                "implicado": recalculado,
+                "mensaje": (
+                    f"{bloque.nombre}: diste {variable}={dado:.6g}, pero el resto de los datos "
+                    f"implica {variable}={recalculado:.6g}. Los datos no son compatibles entre si."
+                ),
+            })
     return inconsistencias
 
 
