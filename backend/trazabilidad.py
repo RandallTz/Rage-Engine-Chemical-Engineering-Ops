@@ -292,3 +292,43 @@ def construir_calculo(request):
         "huella_entradas": huella_entradas,
         "algoritmo_huella": "sha256",
     }
+
+
+def canonico(valor):
+    """
+    El formato canonico, publico para quien tenga que normalizar sus
+    propias entradas antes de pedir una huella.
+
+    Lo usa el laboratorio, cuyas entradas son un grafo de piezas y no una
+    peticion de diagrama: la normalizacion tiene que ser la MISMA en los
+    dos sitios o las huellas no serian comparables entre servicios.
+    """
+    return _canonico(valor)
+
+
+def construir_calculo_desde(entradas, modelo_termodinamico=None):
+    """
+    El bloque `calculo` para un servicio cuyas entradas ya vienen
+    normalizadas por quien las conoce.
+
+    `construir_calculo(request)` sabe normalizar una peticion de diagrama
+    y no tiene por que saber de otras. Esta variante recibe el
+    diccionario ya normalizado y aporta lo que es comun a todo el motor:
+    la version, el commit, las versiones del proveedor y la huella.
+    """
+    huella_entradas = huella(entradas)
+    instante = datetime.now(timezone.utc).isoformat(timespec="milliseconds")
+    return {
+        "identificador": identificador_calculo(huella_entradas, instante),
+        "instante_utc": instante,
+        "motor": {
+            "version": VERSION_MOTOR,
+            "commit": _commit_git(),
+        },
+        "proveedor_termodinamico": {
+            "identificador": modelo_termodinamico or MODELO_TERMODINAMICO,
+            "versiones": _versiones_dependencias(),
+        },
+        "huella_entradas": huella_entradas,
+        "algoritmo_huella": "sha256",
+    }

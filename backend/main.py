@@ -32,6 +32,17 @@ from backend.nucleo import resolver_columna
 from backend.nucleo_flowsheet import resolver_flowsheet
 from backend.nucleo_elv import curva_elv_binaria
 from backend.nucleo_termodinamica import mapa_residual, buscar_azeotropos, propiedades_reaccion
+from backend.schemas_laboratorio import (
+    LaboratorioRequest, LaboratorioResponse, CapacidadesLaboratorioResponse,
+    EjemploLaboratorio,
+)
+from backend.ejemplos_laboratorio import (
+    EJEMPLOS_LABORATORIO, EJEMPLOS_LABORATORIO_POR_ID,
+)
+from backend.nucleo_laboratorio import (
+    validar_laboratorio, resolver_laboratorio, calcular_laboratorio,
+    capacidades_laboratorio,
+)
 
 app = FastAPI(
     title="Simulador de Destilacion -- API",
@@ -219,3 +230,104 @@ def termodinamica_reaccion(request: PropiedadesReaccionRequest):
         return propiedades_reaccion(request)
     except (ValueError, RuntimeError) as e:
         raise HTTPException(status_code=422, detail=str(e))
+
+
+
+# ---------------------------------------------------------------------
+# Laboratorio: el ensamblador de sistemas por bloques.
+#
+# Tres rutas y no una, aunque el contrato permitia una sola con accion
+# explicita: /validar y /resolver dicen en la URL que hacen, y eso evita
+# el fallo tipico del endpoint unico -- mandar la accion equivocada y
+# recibir algo que parece un resultado. /calcular existe igualmente para
+# quien prefiera el camino unico, y ahi la accion SI es explicita.
+#
+# Ninguna de las tres devuelve 4xx por un montaje imposible. Devuelven
+# 200 con `estado` y la lista de diagnosticos, porque es lo util: un 422
+# con el formato de FastAPI no lleva codigo estable ni id de bloque, y la
+# interfaz no puede senalar una pieza con eso. El 4xx se reserva para una
+# peticion que no tiene la FORMA de un montaje, que es lo que Pydantic
+# rechaza antes de llegar aqui.
+# ---------------------------------------------------------------------
+
+@app.post("/laboratorio/validar", response_model=LaboratorioResponse,
+          summary="Valida un montaje SIN resolverlo")
+def laboratorio_validar(request: LaboratorioRequest):
+    """
+    Ensambla el sistema, lo cuenta y lo diagnostica sin ejecutar el solver.
+
+    Devuelve las variables con su rol, las relaciones con `ejecutada =
+    false` -- la verdad: no se ejecuto nada -- y el analisis estructural
+    con los grados de libertad. `convergencia` es null por el mismo
+    motivo: no corrio ningun algoritmo, asi que no hay nada que declarar.
+    """
+    return validar_laboratorio(request)
+
+
+@app.post("/laboratorio/resolver", response_model=LaboratorioResponse,
+          summary="Valida y resuelve un montaje")
+def laboratorio_resolver(request: LaboratorioRequest):
+    """
+    Resuelve el montaje con una marcha aguas abajo.
+
+    `estado` dice que paso: 'resuelto', 'invalido' (el montaje o los datos
+    estan mal), 'no_soportado' (el motor no sabe resolver eso, y lo dice
+    en vez de aproximarlo) o 'no_convergente'. Con cualquier estado que no
+    sea 'resuelto', los valores parciales NO se presentan como resultados.
+    """
+    return resolver_laboratorio(request)
+
+
+@app.post("/laboratorio/calcular", response_model=LaboratorioResponse,
+          summary="Endpoint unico con accion explicita")
+def laboratorio_calcular(request: LaboratorioRequest):
+    """
+    El mismo servicio con la accion en el cuerpo: `accion: "validar"` o
+    `"resolver"`.
+
+    Por omision valida. El lado seguro es el que no gasta tiempo de
+    calculo si el cliente se olvido de decir que queria.
+    """
+    return calcular_laboratorio(request)
+
+
+@app.get("/laboratorio/capacidades", response_model=CapacidadesLaboratorioResponse,
+         summary="Que admite el ensamblador, incluido lo que NO")
+def laboratorio_capacidades():
+    """
+    Lo que el motor sabe hacer, para que la interfaz no ofrezca lo que no hay.
+
+    Incluye la lista de lo NO soportado a proposito: un cliente que solo
+    reciba lo admitido tiene que adivinar el resto, y adivinara que algo
+    funciona.
+    """
+    return capacidades_laboratorio()
+
+
+@app.get("/laboratorio/ejemplos", response_model=list[EjemploLaboratorio],
+         summary="Montajes de ejemplo, listos para reenviar a /resolver")
+def laboratorio_ejemplos():
+    """
+    Montajes que SON peticiones validas de /laboratorio/resolver.
+
+    `modelo` se reenvia tal cual. Esto es lo que permite que la suite
+    compruebe que cada preset de verdad se resuelve: un preset roto es un
+    fallo que el usuario encuentra en el primer clic, y la unica forma de
+    cazarlo antes es ejecutarlo.
+
+    Uno de ellos espera 'invalido' a proposito, para que la interfaz pueda
+    probar su camino de error contra un error de verdad.
+    """
+    return EJEMPLOS_LABORATORIO
+
+
+@app.get("/laboratorio/ejemplos/{ejemplo_id}", response_model=EjemploLaboratorio)
+def laboratorio_ejemplo(ejemplo_id: str):
+    ejemplo = EJEMPLOS_LABORATORIO_POR_ID.get(ejemplo_id)
+    if ejemplo is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No hay ejemplo de laboratorio con id {ejemplo_id!r}. "
+                   f"Disponibles: {', '.join(EJEMPLOS_LABORATORIO_POR_ID)}.",
+        )
+    return ejemplo

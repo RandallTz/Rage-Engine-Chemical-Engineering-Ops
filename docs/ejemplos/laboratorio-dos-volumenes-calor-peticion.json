@@ -1,0 +1,138 @@
+{
+  "version": 1,
+  "componentes": [
+    "benzene",
+    "toluene"
+  ],
+  "modelo_termodinamico": "unifac_raoult",
+  "referencia_entalpia": "sensible_liquido_298.15K",
+  "presion_sistema": {
+    "valor": 101325.0,
+    "unidad": "Pa"
+  },
+  "bloques": [
+    {
+      "id": "in",
+      "tipo": "entrada",
+      "nombre": "Alimentacion",
+      "datos": null
+    },
+    {
+      "id": "cv1",
+      "tipo": "recipiente",
+      "nombre": "Primer volumen",
+      "datos": null
+    },
+    {
+      "id": "heat1",
+      "tipo": "calor",
+      "nombre": "Primer aporte termico",
+      "datos": null
+    },
+    {
+      "id": "medio",
+      "tipo": "corriente",
+      "nombre": "Corriente compartida",
+      "datos": null
+    },
+    {
+      "id": "cv2",
+      "tipo": "recipiente",
+      "nombre": "Segundo volumen",
+      "datos": null
+    },
+    {
+      "id": "heat2",
+      "tipo": "calor",
+      "nombre": "Segundo aporte termico",
+      "datos": null
+    },
+    {
+      "id": "out",
+      "tipo": "salida",
+      "nombre": "Salida final",
+      "datos": null
+    }
+  ],
+  "conexiones": [
+    {
+      "id": "c1",
+      "desde": "in",
+      "hacia": "cv1",
+      "tipo": "materia"
+    },
+    {
+      "id": "c2",
+      "desde": "heat1",
+      "hacia": "cv1",
+      "tipo": "calor"
+    },
+    {
+      "id": "c3",
+      "desde": "cv1",
+      "hacia": "medio",
+      "tipo": "materia"
+    },
+    {
+      "id": "c4",
+      "desde": "medio",
+      "hacia": "cv2",
+      "tipo": "materia"
+    },
+    {
+      "id": "c5",
+      "desde": "heat2",
+      "hacia": "cv2",
+      "tipo": "calor"
+    },
+    {
+      "id": "c6",
+      "desde": "cv2",
+      "hacia": "out",
+      "tipo": "materia"
+    }
+  ],
+  "supuestos": {
+    "estacionario": true,
+    "adiabatico": false,
+    "sinTrabajo": true,
+    "sinReaccion": true,
+    "sinMovimiento": true
+  },
+  "especificaciones": [
+    {
+      "bloque_id": "in",
+      "variable": "F",
+      "valor": 100.0,
+      "unidad": "mol/s"
+    },
+    {
+      "bloque_id": "in",
+      "variable": "T",
+      "valor": 300.0,
+      "unidad": "K"
+    },
+    {
+      "bloque_id": "in",
+      "variable": "x",
+      "valor": 0.5,
+      "unidad": "mol/mol"
+    },
+    {
+      "bloque_id": "cv2",
+      "variable": "T",
+      "valor": 320.0,
+      "unidad": "K"
+    },
+    {
+      "bloque_id": "heat1",
+      "variable": "Q",
+      "valor": 147.8428514739265,
+      "unidad": "kW"
+    }
+  ],
+  "relaciones": null,
+  "estado": null,
+  "solver": null,
+  "accion": null
+}

@@ -1,0 +1,146 @@
+{
+  "schema_version": 1,
+  "motor": {
+    "version": "0.15.0",
+    "commit": "<commit de git, con sufijo -sucio si el arbol tenia cambios>"
+  },
+  "capacidades": {
+    "schema_version": 1,
+    "modelos_termodinamicos": [
+      "unifac_raoult"
+    ],
+    "referencias_entalpia": [
+      "sensible_liquido_298.15K"
+    ],
+    "componentes": "cualquier par admitido por el proveedor UNIFAC (consulta /componentes/buscar)",
+    "numero_de_componentes": 2,
+    "piezas": {
+      "entrada": "Alimentacion: estado impuesto que entra al sistema.",
+      "salida": "Salida: estado que abandona el sistema.",
+      "corriente": "Corriente intermedia: UN estado compartido por dos volumenes.",
+      "recipiente": "Volumen de control: aporta balances, no propiedades.",
+      "reactor": "Reactor mezclado: balances mas estequiometria y cinetica.",
+      "calor": "Fuente de calor: aporta Q al balance del volumen conectado.",
+      "trabajo": "Trabajo de eje: aporta W al balance del volumen conectado."
+    },
+    "variables_por_pieza": {
+      "entrada": [
+        "F",
+        "T",
+        "p",
+        "x"
+      ],
+      "salida": [
+        "p"
+      ],
+      "corriente": [
+        "p"
+      ],
+      "recipiente": [
+        "T"
+      ],
+      "reactor": [
+        "T"
+      ],
+      "calor": [
+        "Q"
+      ],
+      "trabajo": [
+        "W"
+      ]
+    },
+    "unidades": {
+      "F": [
+        "kmol/h",
+        "kmol/s",
+        "mol/h",
+        "mol/s"
+      ],
+      "p": [
+        "MPa",
+        "Pa",
+        "atm",
+        "bar",
+        "kPa"
+      ],
+      "x": [
+        "-",
+        "fraccion",
+        "mol/mol"
+      ],
+      "Q": [
+        "J/s",
+        "MW",
+        "W",
+        "kW"
+      ],
+      "T": [
+        "C",
+        "K",
+        "degC",
+        "°C"
+      ]
+    },
+    "especificaciones": {
+      "preferente": "especificaciones: [{bloque_id, variable, valor, unidad}] -- la unidad es obligatoria",
+      "compatibilidad": "bloques[].datos tambien se admite, con las unidades implicitas que documenta la mesa",
+      "unidades_implicitas_de_datos": {
+        "F": "mol/s",
+        "T": "K",
+        "p": "Pa",
+        "x": "mol/mol",
+        "Q": "kW"
+      },
+      "aviso": "En un dato local, Q se lee en kW; en una especificacion explicita, en la unidad que esta declare. Es la misma letra con dos escalas, y la respuesta dice en 'procedencia' de donde salio cada valor.",
+      "colisiones": "Un dato local y una especificacion explicita sobre la misma variable son un error, tambien si coinciden."
+    },
+    "topologias": [
+      "una alimentacion, uno o dos volumenes de control en serie, una salida",
+      "una corriente intermedia entre dos volumenes, con estado unico compartido",
+      "una fuente de calor por volumen"
+    ],
+    "especificacion_termica": {
+      "modos": [
+        "temperatura de salida impuesta",
+        "calor impuesto"
+      ],
+      "excluyentes": true,
+      "motivo": "El balance de energia del volumen es una ecuacion con esas dos incognitas: fijar una determina la otra."
+    },
+    "supuestos_exigidos": {
+      "estacionario": true,
+      "sinTrabajo": true,
+      "sinReaccion": true,
+      "sinMovimiento": true,
+      "adiabatico": "libre, pero incompatible con una fuente de calor conectada"
+    },
+    "fases": [
+      "liquido",
+      "bifasico",
+      "vapor"
+    ],
+    "nota_fases": "La fase se determina con el punto de burbuja y el de rocio; no se supone liquida.",
+    "no_soportado": [
+      "regimen transitorio (dE/dt, dn_i/dt)",
+      "reaccion quimica en el ensamblador de varios volumenes",
+      "trabajo de eje",
+      "energias cinetica y potencial",
+      "mas de una alimentacion o mas de una salida por volumen",
+      "mas de dos volumenes",
+      "reciclos y ciclos",
+      "caida de presion entre volumenes (la presion es uniforme)",
+      "mezclas de mas de dos componentes",
+      "mallado, CFD y dinamica espacial"
+    ],
+    "tolerancias": {
+      "inversion_h_T": 1e-09,
+      "cierre_global": 1e-08,
+      "nota": "La del cierre global es mas holgada porque es una suma de resultados y acumula el redondeo de los dos balances. Excederla no significa datos malos: significa un fallo del motor, y sale como error con estado 'no_convergente'."
+    },
+    "metodos": {
+      "temperatura impuesta": "evaluacion algebraica directa, sin iteracion",
+      "calor impuesto": "inversion escalar de h(T) con brentq, xtol 1e-10 K",
+      "topologia": "marcha aguas abajo; el sistema es triangular y no se resuelve como sistema acoplado"
+    }
+  }
+}

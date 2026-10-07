@@ -1552,3 +1552,186 @@ serializar. **20/20 suites en 239 s.**
   fase, pero esta fase la hizo visible.
 - **Fase vapor no ideal**, que sigue siendo el límite termodinámico de
   fondo.
+
+---
+
+# Fase 17: El laboratorio deja de reconocer montajes y empieza a resolverlos
+
+Pedido en `frontend/PASAR_A_CLAUDE_LABORATORIO.md`. Solo backend.
+
+## El problema
+
+La mesa del laboratorio dejaba dibujar piezas y **formular** el montaje:
+escribir los balances en LaTeX y marcar qué términos anulaban los
+supuestos. Pero solo había **adaptadores para dos montajes concretos** —un
+calentador y un CSTR isotermo— así que dos volúmenes en serie no se podían
+resolver, y el frontend tenía que mostrar la formulación sin cálculo.
+
+La diferencia no es de tamaño: reconocer un montaje y resolver un sistema
+son dos cosas distintas. Lo segundo exige variables con identidad,
+ecuaciones con origen y un recuento de grados de libertad que no se puede
+sacar contando fichas en el lienzo.
+
+## ✅ Una corriente intermedia es UN estado, no dos
+
+El requisito central, y el que decide la arquitectura. Si el volumen 1
+escribiera su salida en un sitio y el volumen 2 leyera su entrada de otro,
+harían falta cinco ecuaciones de igualdad ($F$, $T$, $p$, $x$, $h$) y
+cinco incógnitas **que no son incógnitas**.
+
+Aquí el estado **pertenece al bloque corriente**: los dos volúmenes
+referencian las mismas variables. En la respuesta salen con
+`rol: "compartida"` y cada una cita los dos volúmenes y las dos
+conexiones.
+
+## ✅ El método se declara, no se adorna
+
+Para esta topología el sistema es **triangular** —cada volumen depende
+solo de lo que tiene aguas arriba— así que se resuelve con una marcha
+aguas abajo:
+
+| Modo | Se impone | Se despeja | Algoritmo real |
+|---|---|---|---|
+| temperatura | $T_{sal}$ | $\dot Q = F(h_{sal}-h_{ent})$ | evaluación directa, sin iteración |
+| calor | $\dot Q$ | $h_{sal}=h_{ent}+\dot Q/F$, y $T$ invirtiendo $h$ | `brentq`, xtol $10^{-10}$ K |
+
+**No hay sistema acoplado, no hay Newton y no se declara ninguno.**
+Declarar «Newton» porque suena a motor sería la misma clase de mentira que
+fabricar un residuo: quien lea «Newton, 1 iteración» concluirá cosas
+falsas sobre el coste y el condicionamiento.
+
+Y los dos modos son excluyentes por aritmética, no por capricho del
+adaptador: el balance de energía del volumen es **una** ecuación con esas
+dos incógnitas.
+
+## ✅ Qué cuenta como ecuación, y qué no
+
+El caso de aceptación produce 18 relaciones y solo **9** cuentan:
+
+| Tipo | Cuenta | Por qué |
+|---|---|---|
+| balance (6) | **sí** | Conservación |
+| constitutiva (3) | **sí** | $h=h(T,p,x)$: donde entra el modelo |
+| condición (3) | no | Es un **dato**: reduce incógnitas, no aumenta ecuaciones |
+| convención (2) | no | El signo de $\dot Q$ no determina nada |
+| cierre (3) | no | $\sum x_i = 1$ se satisface por la parametrización |
+| verificación (1) | no | Combinación lineal de los balances |
+
+$$\mathrm{GL} = 9 - 9 = 0$$
+
+Es la fuente del error más común al mostrar grados de libertad: contar las
+especificaciones y las convenciones infla las ecuaciones y los GL salen
+**negativos en un sistema perfectamente planteado**.
+
+El `rango` que se publica es **estructural**, y `rango_origen` dice de
+dónde sale: el sistema es triangular, así que cada ecuación introduce una
+variable nueva. No se calcula un Jacobiano ni se presenta su rango como
+independencia global — el contrato advertía justo contra eso.
+
+## ✅ Lo que NO se infiere
+
+**La ausencia de una pieza no es un supuesto.** Que no haya fuente de
+calor dibujada no significa $\dot Q=0$: significa que al balance de
+energía le falta un término. Con $\dot Q=0$ supuesto, un volumen al que se
+le pide subir 10 K daría un sistema incompatible sin explicación;
+declarándolo indeterminado, el diagnóstico dice qué falta conectar.
+
+Los dos lados están: una fuente conectada **con** adiabático marcado es
+`LAB_SUPUESTO_INCOHERENTE`; ni fuente **ni** adiabático es
+`LAB_FALTA_ESPECIFICACION`.
+
+## ✅ La fase se determina; Cp no es constante
+
+Cada estado pasa por el flash, que ubica el punto frente al punto de
+burbuja y al de rocío. En el caso de aceptación los tres son líquido
+subenfriado —la burbuja de 50/50 a 300 K está en 8894 Pa— pero **se
+comprueba**, y es barato: el caso líquido se corta en la primera
+comprobación.
+
+| $\dot Q_1$ | $T$ intermedia | fase | $\beta$ |
+|---|---|---|---|
+| 0.148 MW | 310.0 K | líquido | 0 |
+| 2.0 MW | 367.5 K | **bifásico** | 0.302 |
+| 3.0 MW | 369.6 K | **bifásico** | 0.606 |
+| 5.0 MW | 434.4 K | vapor | 1 |
+
+Dentro de la laguna, **1 MW más sube la temperatura 2.1 K** frente a los
+~10 K que costaban 0.15 MW en la zona líquida.
+
+Y $C_p$ no es constante ni siquiera en el líquido: el mismo salto de 10 K
+cuesta **147842.85 W** de 300 a 310 y **150506.36 W** de 310 a 320, un
+1.80 % más.
+
+## ⚠ La trampa de la misma letra
+
+`bloques[].datos` se admite por compatibilidad con lo que la mesa exporta
+hoy, y ahí las unidades son **implícitas**: la mesa documenta $\dot Q$ en
+**kW**. Así que `Q` significa W en una especificación explícita y kW en un
+dato local. Tomar un dato local por watts da un calor mil veces menor, que
+no se parece a un error: **se parece a un resultado**.
+
+Por eso la unidad es obligatoria en las especificaciones explícitas, la
+`procedencia` de cada variable dice si el valor llegó sin unidad escrita,
+y `capacidades` lo avisa.
+
+## ✅ Un montaje imposible devuelve 200
+
+Con `estado` y diagnósticos, no `4xx`. Un 422 de Pydantic no lleva código
+estable, ni id de bloque, ni acción sugerida, y con eso la interfaz no
+puede señalar una ficha. El 4xx queda para lo que no tiene **forma** de
+montaje.
+
+Los diagnósticos llevan prefijo `LAB_` y los **27 códigos declarados se
+emiten**: declarar uno que nunca se emite no es inofensivo, porque quien
+escriba el cliente le hará una rama que no se ejecutará nunca, y nadie se
+enterará de que está mal escrita.
+
+## Verificación
+
+`tests/validar_laboratorio.py`, siete grupos. **Los números no están
+escritos a mano**: se comparan contra llamadas independientes al mismo
+proveedor. Copiar la salida del ensamblador como valor esperado la
+bendeciría para siempre.
+
+Lo único afirmado a priori son las identidades que no dependen de ningún
+dato: que $F$ se conserva, que duplicar $F$ duplica $\dot Q$, que
+$\dot Q_1+\dot Q_2 = F\,\Delta h$ con residuo medido bajo $10^{-12}$, y
+que imponer el $\dot Q$ calculado recupera los 310 K **con error 0.0 K**.
+
+Y una que cruza los dos servicios: el preset de un volumen da el mismo
+$\dot Q$ que `/diagrama/resolver`, **147842.851474 W por los dos caminos**.
+
+Los presets de `/laboratorio/ejemplos` **son** peticiones válidas de
+`/resolver` y la suite los reenvía — la misma idea que en `validar_api.py`:
+un preset roto es un fallo que el usuario encuentra en el primer clic.
+Uno de ellos espera `invalido` a propósito, para que la interfaz pueda
+probar su camino de error contra un error de verdad.
+
+## ⚠ Dos cosas que esta fase hizo visibles
+
+- **`docs/02-solver.md` quedó volteado a CRLF** en el commit de
+  trazabilidad, porque `io.open(p,'w')` traduce los saltos en Windows. El
+  archivo no cambió de contenido, pero ese commit lo registró como una
+  reescritura de 918 líneas. Se deja como está: normalizarlo ahora solo
+  movería el diff fantasma a otro commit.
+- **El decantador sigue sin estar expuesto en ninguna API**, ni aquí ni en
+  el diagrama.
+
+## ⬜ Lo que falta
+
+- **Caída de presión entre volúmenes.** La presión es uniforme; el modelo
+  existe en `/diagrama/resolver` y no está conectado aquí.
+- **Más de dos volúmenes.** El límite es del ensamblador, no del método:
+  la marcha aguas abajo sirve para $N$.
+- **Reactor y reacción** en el ensamblador. El CSTR sigue donde estaba,
+  con su balance de energía desactivado — comprobado que esta entrega no
+  lo activó por el camino.
+- **Trabajo de eje**: la formulación se muestra, el cálculo necesita un
+  modelo de máquina.
+- **Reciclos.** Un lazo se detecta y se nombra —el mensaje dice por dónde
+  pasa— pero no se resuelve.
+- **Las iteraciones reales de `brentq`.** Haría falta exponer el contador
+  desde el flash y la calculadora de entalpía, y eso toca física validada;
+  no se ha hecho por una métrica.
+- **Fase vapor no ideal**, que sigue siendo el límite termodinámico de
+  fondo.

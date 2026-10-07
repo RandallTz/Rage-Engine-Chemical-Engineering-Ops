@@ -173,6 +173,9 @@ No cuenta como validación *"devuelve un array de la forma correcta"* ni
 - Una bomba con $P_1 = 101325$, factor $= 3$ y $P_2 = 100000$ dados a la
   vez **se rechaza**: son tres condiciones sobre dos variables y
   $3 \times 101325 \neq 100000$. Antes respondía «resuelto por completo».
+- Dos volúmenes térmicos en serie dan $\dot Q_1 + \dot Q_2 = F\,\Delta h$ con
+  residuo medido por debajo de $10^{-12}$, y **el calentador del laboratorio
+  da el mismo número por los dos servicios**: 147842.851474 W.
 
 El detalle completo, y **los límites**, en
 [`docs/12-validacion.md`](docs/12-validacion.md).
@@ -202,6 +205,25 @@ le pasa y cuánto se puede fiar uno de ella:
 
 Los tres son opcionales y aditivos. Detalle en
 [`docs/14-trazabilidad.md`](docs/14-trazabilidad.md).
+
+---
+
+## El laboratorio: montar un sistema por piezas
+
+`/laboratorio/*` toma un grafo de piezas físicas —alimentación, volúmenes
+de control, fuentes de calor, corrientes intermedias, salida— y lo
+resuelve como un sistema, en vez de reconocer dos montajes concretos.
+
+Lo que lo distingue de dibujar un diagrama de flujo: **la corriente
+intermedia es un único estado**, compartido por los dos volúmenes, así que
+no hay ecuaciones de continuidad que escribir ni dos copias que igualar. Y
+el motor devuelve el sistema que de verdad ejecutó —qué cuenta como
+ecuación y qué no, qué término cayó por qué supuesto, y con qué algoritmo
+se resolvió— en lugar de un resultado sin procedencia.
+
+Detalle en [`docs/15-laboratorio.md`](docs/15-laboratorio.md); el contrato
+de la API, en
+[`docs/ENTREGA_LABORATORIO_CODEX.md`](docs/ENTREGA_LABORATORIO_CODEX.md).
 
 ---
 

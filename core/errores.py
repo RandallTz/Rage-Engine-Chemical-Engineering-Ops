@@ -151,6 +151,60 @@ SIN_GRUPOS_UNIFAC = "MODELO_SIN_GRUPOS_UNIFAC"
 NO_IMPLEMENTADO = "MODELO_NO_IMPLEMENTADO"
 FUERA_DEL_ALCANCE = "MODELO_FUERA_DEL_ALCANCE"
 
+# ---------------------------------------------------------------------
+# Laboratorio: el ensamblador de sistemas por bloques.
+#
+# Llevan prefijo LAB_ porque identifican fallos del MONTAJE, no de la
+# fisica ni del algoritmo: el cliente dibuja un grafo y hay muchas formas
+# de dibujarlo mal. El codigo tiene que distinguirlas para que la interfaz
+# pueda senalar la pieza o la conexion concreta, que es justo lo que un
+# mensaje suelto no permite hacer.
+#
+# La categoria de cada uno la fija quien lo emite (ver core/laboratorio.py):
+# la mayoria son 'datos', los de topologia imposible son 'modelo'.
+# ---------------------------------------------------------------------
+
+# Estructura del grafo
+LAB_ID_DUPLICADO = "LAB_ID_DUPLICADO"
+LAB_REFERENCIA_INEXISTENTE = "LAB_REFERENCIA_INEXISTENTE"
+LAB_PUERTO_INCOMPATIBLE = "LAB_PUERTO_INCOMPATIBLE"
+LAB_PIEZA_AISLADA = "LAB_PIEZA_AISLADA"
+LAB_CICLO = "LAB_CICLO"
+LAB_TOPOLOGIA_NO_SOPORTADA = "LAB_TOPOLOGIA_NO_SOPORTADA"
+LAB_CORRIENTE_MAL_CONECTADA = "LAB_CORRIENTE_MAL_CONECTADA"
+LAB_VOLUMEN_SIN_SALIDA = "LAB_VOLUMEN_SIN_SALIDA"
+LAB_VOLUMEN_SIN_ENTRADA = "LAB_VOLUMEN_SIN_ENTRADA"
+
+# Especificaciones
+LAB_ESPECIFICACION_DUPLICADA = "LAB_ESPECIFICACION_DUPLICADA"
+LAB_ESPECIFICACION_EXCLUYENTE = "LAB_ESPECIFICACION_EXCLUYENTE"
+LAB_FALTA_ESPECIFICACION = "LAB_FALTA_ESPECIFICACION"
+LAB_VARIABLE_DESCONOCIDA = "LAB_VARIABLE_DESCONOCIDA"
+LAB_UNIDAD_INCOMPATIBLE = "LAB_UNIDAD_INCOMPATIBLE"
+
+# Valores
+LAB_VALOR_NO_FINITO = "LAB_VALOR_NO_FINITO"
+LAB_FRACCION_INVALIDA = "LAB_FRACCION_INVALIDA"
+LAB_VALOR_FUERA_DE_DOMINIO = "LAB_VALOR_FUERA_DE_DOMINIO"
+
+# Supuestos y coherencia del montaje
+LAB_SUPUESTO_INCOHERENTE = "LAB_SUPUESTO_INCOHERENTE"
+LAB_SUPUESTO_NO_SOPORTADO = "LAB_SUPUESTO_NO_SOPORTADO"
+
+# Modelo y componentes
+LAB_MODELO_NO_DISPONIBLE = "LAB_MODELO_NO_DISPONIBLE"
+LAB_COMPONENTE_NO_DISPONIBLE = "LAB_COMPONENTE_NO_DISPONIBLE"
+LAB_NUMERO_DE_COMPONENTES = "LAB_NUMERO_DE_COMPONENTES"
+
+# Resultado
+LAB_FUERA_DE_DOMINIO_TERMODINAMICO = "LAB_FUERA_DE_DOMINIO_TERMODINAMICO"
+LAB_SIN_CONVERGENCIA = "LAB_SIN_CONVERGENCIA"
+LAB_CIERRE_GLOBAL = "LAB_CIERRE_GLOBAL"
+
+# Informativos: no invalidan nada, explican lo que el motor hizo.
+LAB_INFO_FASE = "LAB_INFO_FASE"
+LAB_INFO_CIERRE_GLOBAL = "LAB_INFO_CIERRE_GLOBAL"
+
 # Lo que no se ha clasificado. No se adivina del texto.
 SIN_CLASIFICAR = "SIN_CLASIFICAR"
 

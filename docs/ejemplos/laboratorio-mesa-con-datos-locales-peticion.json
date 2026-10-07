@@ -1,0 +1,116 @@
+{
+  "version": 1,
+  "componentes": [
+    "benzene",
+    "toluene"
+  ],
+  "modelo_termodinamico": "unifac_raoult",
+  "referencia_entalpia": "sensible_liquido_298.15K",
+  "presion_sistema": {
+    "valor": 101325.0,
+    "unidad": "Pa"
+  },
+  "bloques": [
+    {
+      "id": "in",
+      "tipo": "entrada",
+      "nombre": "Alimentacion",
+      "datos": {
+        "F": 100.0,
+        "T": 300.0,
+        "p": 101325.0,
+        "x": 0.5
+      }
+    },
+    {
+      "id": "cv1",
+      "tipo": "recipiente",
+      "nombre": "Primer volumen",
+      "datos": {
+        "T": 310.0
+      }
+    },
+    {
+      "id": "heat1",
+      "tipo": "calor",
+      "nombre": "Primer aporte termico",
+      "datos": null
+    },
+    {
+      "id": "medio",
+      "tipo": "corriente",
+      "nombre": "Corriente compartida",
+      "datos": null
+    },
+    {
+      "id": "cv2",
+      "tipo": "recipiente",
+      "nombre": "Segundo volumen",
+      "datos": {
+        "T": 320.0
+      }
+    },
+    {
+      "id": "heat2",
+      "tipo": "calor",
+      "nombre": "Segundo aporte termico",
+      "datos": null
+    },
+    {
+      "id": "out",
+      "tipo": "salida",
+      "nombre": "Salida final",
+      "datos": null
+    }
+  ],
+  "conexiones": [
+    {
+      "id": "c1",
+      "desde": "in",
+      "hacia": "cv1",
+      "tipo": "materia"
+    },
+    {
+      "id": "c2",
+      "desde": "heat1",
+      "hacia": "cv1",
+      "tipo": "calor"
+    },
+    {
+      "id": "c3",
+      "desde": "cv1",
+      "hacia": "medio",
+      "tipo": "materia"
+    },
+    {
+      "id": "c4",
+      "desde": "medio",
+      "hacia": "cv2",
+      "tipo": "materia"
+    },
+    {
+      "id": "c5",
+      "desde": "heat2",
+      "hacia": "cv2",
+      "tipo": "calor"
+    },
+    {
+      "id": "c6",
+      "desde": "cv2",
+      "hacia": "out",
+      "tipo": "materia"
+    }
+  ],
+  "supuestos": {
+    "estacionario": true,
+    "adiabatico": false,
+    "sinTrabajo": true,
+    "sinReaccion": true,
+    "sinMovimiento": true
+  },
+  "especificaciones": [],
+  "relaciones": null,
+  "estado": null,
+  "solver": null,
+  "accion": null
+}
