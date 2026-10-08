@@ -454,6 +454,200 @@ def estequiometria_invalida():
     return modelo
 
 
+# ---------------------------------------------------------------------
+# Los montajes CINETICOS: la tasa se calcula, no se da.
+#
+# Sistema: isomerizacion n-butano -> isobutano, que es una reaccion real,
+# tiene balance elemental exacto y propiedades completas. A **20 bar**, no
+# a una atmosfera, y eso no es un capricho: a 5 bar la mezcla cruza la
+# frontera de fase al reaccionar --la presion de burbuja pasa de 456 a 545
+# kPa-- y la entalpia da un salto de 18 kJ/mol. El motor lo resuelve
+# igual y lo reporta, pero un ejemplo que se entienda conviene que se
+# quede en liquido. La isomerizacion de butano se opera bajo presion por
+# ese mismo motivo.
+# ---------------------------------------------------------------------
+
+BUTANOS = ["n-butane", "isobutane"]
+P_BUTANOS = 2000000.0
+
+LEY_ISOMERIZACION = {
+    "k_ref": {"valor": 50.0, "unidad": "mol/s"},
+    "T_ref": {"valor": 320.0, "unidad": "K"},
+    "Ea": 50000.0,
+    "base_actividad": "actividad",
+    # Explicitos a proposito. Un orden NO es un coeficiente
+    # estequiometrico, y dejarlo al defecto habria sido elegir un
+    # mecanismo sin decirlo.
+    "ordenes": {"n-butane": 1.0},
+}
+
+
+def _reactor_cinetico(nombre_reactor="Reactor de isomerizacion", con_fuente=True,
+                      adiabatico=False):
+    bloques = [
+        {"id": "in", "tipo": "entrada", "nombre": "Alimentacion de n-butano"},
+        {"id": "rx", "tipo": "reactor", "nombre": nombre_reactor},
+        {"id": "out", "tipo": "salida", "nombre": "Salida"},
+    ]
+    conexiones = [
+        {"id": "c1", "desde": "in", "hacia": "rx", "tipo": "materia"},
+        {"id": "c3", "desde": "rx", "hacia": "out", "tipo": "materia"},
+    ]
+    if con_fuente:
+        bloques.insert(2, {"id": "heat", "tipo": "calor",
+                           "nombre": "Aporte termico"})
+        conexiones.insert(1, {"id": "c2", "desde": "heat", "hacia": "rx",
+                              "tipo": "calor"})
+    return {
+        **_cabecera(),
+        "componentes": list(BUTANOS),
+        "presion_sistema": {"valor": P_BUTANOS, "unidad": "Pa"},
+        "supuestos": {**SUPUESTOS_BASE, "sinReaccion": False,
+                      "adiabatico": adiabatico},
+        "bloques": bloques,
+        "conexiones": conexiones,
+        "especificaciones": [
+            {"bloque_id": "in", "variable": "F", "valor": 100.0, "unidad": "mol/s"},
+            {"bloque_id": "in", "variable": "T", "valor": 320.0, "unidad": "K"},
+            {"bloque_id": "in", "variable": "x0", "valor": 1.0, "unidad": "mol/mol"},
+        ],
+        "reacciones": [],
+    }
+
+
+def cinetica_isoterma():
+    """
+    Una ley de velocidad con la temperatura impuesta.
+
+    Lo que demuestra: que la tasa se CALCULA. El balance del volumen pasa
+    a ser implicito --la tasa depende de la composicion de salida, que es
+    lo que el balance calcula-- y el motor lo resuelve con brentq sobre el
+    avance, ACOTADO por la estequiometria. El cambio de signo esta
+    garantizado: en avance cero el residuo vale -r y en el limite el
+    reactivo se agota, la tasa cae y el residuo vale el avance.
+    """
+    modelo = _reactor_cinetico()
+    modelo["especificaciones"] = modelo["especificaciones"] + [
+        {"bloque_id": "rx", "variable": "T", "valor": 330.0, "unidad": "K"},
+    ]
+    modelo["reacciones"] = [
+        {"id": "iso", "bloque_id": "rx", "nu": [-1.0, 1.0],
+         "ley_directa": dict(LEY_ISOMERIZACION)},
+    ]
+    return modelo
+
+
+def cinetica_adiabatica():
+    """
+    EL CASO DE ENERGIA ACOPLADA: adiabatico, con la temperatura incognita.
+
+    Aqui la temperatura no es un dato: es una consecuencia de la quimica.
+    k(T) decide el avance y el avance decide el calor que decide T, asi
+    que las dos cosas se cierran A LA VEZ. Resolver una y luego la otra
+    daria la respuesta de otro problema.
+
+    El supuesto adiabatico SI es una especificacion termica --dice Q = 0--
+    y por eso este montaje no lleva fuente de calor y aun asi esta
+    completo.
+
+    El resultado se puede comprobar sin el motor: la reaccion libera
+    xi (-dH) = 818 710 W y el calentamiento sensible de 320 a 369.5 K vale
+    lo mismo.
+    """
+    modelo = _reactor_cinetico(nombre_reactor="Reactor adiabatico",
+                               con_fuente=False, adiabatico=True)
+    modelo["reacciones"] = [
+        {"id": "iso", "bloque_id": "rx", "nu": [-1.0, 1.0],
+         "ley_directa": dict(LEY_ISOMERIZACION)},
+    ]
+    return modelo
+
+
+def cinetica_reversible():
+    """
+    Reversible con DOS leyes, una por sentido.
+
+    Asi las tasas brutas se conocen por construccion, que es lo que el
+    contrato exige: cada ley da la velocidad de su sentido por definicion.
+    Lo que no da las brutas es una ley neta escrita como una sola
+    expresion.
+    """
+    modelo = cinetica_isoterma()
+    modelo["reacciones"] = [
+        {"id": "rev", "bloque_id": "rx", "nu": [-1.0, 1.0],
+         "ley_directa": dict(LEY_ISOMERIZACION),
+         "ley_inversa": {
+             "k_ref": {"valor": 12.0, "unidad": "mol/s"},
+             "T_ref": {"valor": 320.0, "unidad": "K"},
+             "Ea": 60000.0,
+             "base_actividad": "actividad",
+             "ordenes": {"isobutane": 1.0},
+         }},
+    ]
+    return modelo
+
+
+def cinetica_desde_equilibrio():
+    """
+    La inversa DERIVADA del equilibrio: k_inv = k_dir / K_eq(T).
+
+    Es la restriccion que impone la termodinamica --en el equilibrio
+    r+ = r- obliga a que la razon de las constantes sea K_eq-- y es el
+    unico modo en que una reversible es consistente sin dos juegos de
+    datos cineticos independientes.
+
+    Dos avisos que la respuesta declara: K_eq sale de van't Hoff, que
+    supone dH_rxn constante con la temperatura; y con este modo la ley
+    directa usa los exponentes de la ESTEQUIOMETRIA, porque mezclar
+    ordenes libres con una inversa derivada del equilibrio romperia esa
+    consistencia.
+    """
+    modelo = cinetica_isoterma()
+    modelo["reacciones"] = [
+        {"id": "rev", "bloque_id": "rx", "nu": [-1.0, 1.0],
+         "ley_directa": dict(LEY_ISOMERIZACION),
+         "ley_inversa": {"desde_equilibrio": True}},
+    ]
+    return modelo
+
+
+def cinetica_volumetrica():
+    """
+    La constante en base VOLUMETRICA, integrada con el volumen del reactor.
+
+    10 mol/(m3 s) en 5 m3 son 50 mol/s, la misma constante que
+    `cinetica_isoterma`, asi que el resultado es identico. La UNIDAD
+    declara la base, igual que con una tasa dada.
+    """
+    modelo = cinetica_isoterma()
+    modelo["reacciones"] = [
+        {"id": "iso", "bloque_id": "rx", "nu": [-1.0, 1.0],
+         "ley_directa": {**LEY_ISOMERIZACION,
+                         "k_ref": {"valor": 10.0, "unidad": "mol/(m3*s)"}}},
+    ]
+    modelo["especificaciones"] = modelo["especificaciones"] + [
+        {"bloque_id": "rx", "variable": "V", "valor": 5.0, "unidad": "m3"},
+    ]
+    return modelo
+
+
+def cinetica_orden_negativo():
+    """
+    Un orden negativo, que se rechaza con el motivo.
+
+    Modela inhibicion y es fisicamente posible, pero hace que la tasa
+    DIVERJA cuando esa especie se agota, y con una alimentacion sin ella
+    la ley no esta definida. Se rechaza en vez de devolver un infinito.
+    """
+    modelo = cinetica_isoterma()
+    modelo["reacciones"] = [
+        {"id": "iso", "bloque_id": "rx", "nu": [-1.0, 1.0],
+         "ley_directa": {**LEY_ISOMERIZACION,
+                         "ordenes": {"n-butane": 1.0, "isobutane": -1.0}}},
+    ]
+    return modelo
+
+
 EJEMPLOS_LABORATORIO = [
     {
         "id": "un-volumen-temperatura",
@@ -578,6 +772,60 @@ EJEMPLOS_LABORATORIO = [
                        "descuadra y en cuanto.",
         "estado_esperado": "invalido",
         "modelo": estequiometria_invalida(),
+    },
+    # --- los cineticos
+    {
+        "id": "cinetica-isoterma",
+        "nombre": "Ley de velocidad con temperatura impuesta",
+        "descripcion": "La tasa se CALCULA, asi que el balance es implicito. Se "
+                       "resuelve con brentq sobre el avance, acotado por la "
+                       "estequiometria.",
+        "estado_esperado": "resuelto",
+        "modelo": cinetica_isoterma(),
+    },
+    {
+        "id": "cinetica-adiabatica",
+        "nombre": "Reactor adiabatico: la temperatura es una consecuencia",
+        "descripcion": "Energia acoplada. k(T) decide el avance y el avance decide "
+                       "el calor que decide T: se cierran a la vez. El supuesto "
+                       "adiabatico ES la especificacion termica (Q = 0).",
+        "estado_esperado": "resuelto",
+        "modelo": cinetica_adiabatica(),
+    },
+    {
+        "id": "cinetica-reversible",
+        "nombre": "Reversible con dos leyes, una por sentido",
+        "descripcion": "Las tasas brutas se conocen por construccion: cada ley da "
+                       "la velocidad de su sentido por definicion.",
+        "estado_esperado": "resuelto",
+        "modelo": cinetica_reversible(),
+    },
+    {
+        "id": "cinetica-desde-equilibrio",
+        "nombre": "Inversa derivada de K_eq(T)",
+        "descripcion": "k_inv = k_dir / K_eq(T), la restriccion que impone la "
+                       "termodinamica. La respuesta declara la aproximacion de "
+                       "van't Hoff y que la directa pasa a usar los exponentes de "
+                       "la estequiometria.",
+        "estado_esperado": "resuelto",
+        "modelo": cinetica_desde_equilibrio(),
+    },
+    {
+        "id": "cinetica-volumetrica",
+        "nombre": "Constante en base volumetrica",
+        "descripcion": "10 mol/(m3 s) en 5 m3 son 50 mol/s: identico al isotermo. "
+                       "La unidad declara la base.",
+        "estado_esperado": "resuelto",
+        "modelo": cinetica_volumetrica(),
+    },
+    {
+        "id": "cinetica-orden-negativo",
+        "nombre": "Orden negativo (se rechaza)",
+        "descripcion": "Modela inhibicion y hace que la tasa diverja cuando la "
+                       "especie se agota. Devuelve 200 con estado 'invalido' y "
+                       "LAB_ORDEN_INVALIDO.",
+        "estado_esperado": "invalido",
+        "modelo": cinetica_orden_negativo(),
     },
 ]
 

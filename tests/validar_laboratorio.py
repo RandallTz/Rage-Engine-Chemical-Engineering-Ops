@@ -52,6 +52,7 @@ except Exception:
 import asyncio
 import copy
 import json
+import math
 
 import httpx
 import numpy as np
@@ -1585,10 +1586,14 @@ check("8.49 Y es FÍSICA: el avance no cabe en la alimentación",
       and r["estados_por_bloque"]["out"]["F"] is None,
       "no se presentan composiciones negativas como resultado")
 
-caso_rxn("8.50 Cinética: se rechaza con nombre en vez de ignorarse", montaje_reactor(
-    ISO, [{"id": "r", "bloque_id": "rx", "nu": [-1, 1], "A": 1e4, "Ea": 45000.0}],
-    [1.0, 0.0]),
-    codigos.LAB_CINETICA_NO_SOPORTADA)
+# La cinética YA se resuelve (grupo 9). Lo que se rechaza es dar sus
+# parámetros SUELTOS: 'A' y 'Ea' sin una ley no dicen de qué ley son
+# parámetros, y aceptarlos obligaría a inventar los órdenes y la base.
+caso_rxn("8.50 Parámetros cinéticos sueltos, sin una ley, se rechazan",
+         montaje_reactor(
+             ISO, [{"id": "r", "bloque_id": "rx", "nu": [-1, 1],
+                    "A": 1e4, "Ea": 45000.0}], [1.0, 0.0]),
+         codigos.LAB_LEY_INVALIDA)
 
 caso_rxn("8.51 Una ν sin reactivos y productos a la vez", montaje_reactor(
     ISO, [{"id": "r", "bloque_id": "rx", "nu": [1, 1],
@@ -1685,6 +1690,524 @@ reordenadas["reacciones"].reverse()
 check("8.67 Pero reordenar las reacciones NO lo cambia",
       validar(reordenadas)["modelo_id"] == r_dos["modelo_id"],
       "el orden en que lleguen no cambia la química")
+
+
+# =====================================================================
+print("\n" + "=" * 76)
+print("9. CINETICA: la tasa se calcula, y el balance se vuelve implicito")
+print("=" * 76)
+# =====================================================================
+# Con la tasa dada el sistema es triangular. Con una ley de velocidad deja
+# de serlo DENTRO de cada volumen, porque la tasa depende de la
+# composición de salida, que es lo que el balance calcula. Lo que se
+# comprueba aquí es que eso se resuelve de verdad y que el algoritmo que
+# se declara es el que corre.
+#
+# Los casos de primer y segundo orden en base de fracción molar tienen
+# SOLUCIÓN ANALÍTICA, así que no hay nada escrito a mano: se comparan
+# contra el álgebra.
+
+BUT = ["n-butane", "isobutane"]
+P_BUT = 2.0e6
+LEY_BASE = {
+    "k_ref": {"valor": 50.0, "unidad": "mol/s"},
+    "T_ref": {"valor": 320.0, "unidad": "K"},
+    "Ea": 50000.0, "base_actividad": "actividad",
+    "ordenes": {"n-butane": 1.0},
+}
+
+
+def montaje_cinetico(reacciones, T_salida=330.0, adiabatico=False,
+                     con_fuente=True, extra=(), componentes=BUT,
+                     presion=P_BUT, T_entrada=320.0):
+    bloques = [
+        {"id": "in", "tipo": "entrada", "nombre": "Alimentacion"},
+        {"id": "rx", "tipo": "reactor", "nombre": "Reactor"},
+        {"id": "out", "tipo": "salida", "nombre": "Salida"},
+    ]
+    conexiones = [
+        {"id": "c1", "desde": "in", "hacia": "rx", "tipo": "materia"},
+        {"id": "c3", "desde": "rx", "hacia": "out", "tipo": "materia"},
+    ]
+    if con_fuente:
+        bloques.insert(2, {"id": "heat", "tipo": "calor", "nombre": "Aporte"})
+        conexiones.insert(1, {"id": "c2", "desde": "heat", "hacia": "rx",
+                              "tipo": "calor"})
+    especificaciones = [
+        {"bloque_id": "in", "variable": "F", "valor": 100.0, "unidad": "mol/s"},
+        {"bloque_id": "in", "variable": "T", "valor": T_entrada, "unidad": "K"},
+        {"bloque_id": "in", "variable": "x0", "valor": 1.0, "unidad": "mol/mol"},
+    ]
+    if T_salida is not None:
+        especificaciones.append({"bloque_id": "rx", "variable": "T",
+                                 "valor": T_salida, "unidad": "K"})
+    return {
+        "version": 1, "componentes": list(componentes),
+        "presion_sistema": {"valor": presion, "unidad": "Pa"},
+        "bloques": bloques, "conexiones": conexiones,
+        "supuestos": {"estacionario": True, "adiabatico": adiabatico,
+                      "sinTrabajo": True, "sinReaccion": False,
+                      "sinMovimiento": True},
+        "especificaciones": especificaciones + list(extra),
+        "reacciones": reacciones,
+    }
+
+
+# --- 9.1 primer orden ideal: hay solución analítica
+#
+#   r = k x_A ;  xi = r ;  x_A = (F_A0 - xi)/F0   (sum(nu)=0)
+#   =>  xi = k F_A0 / (F0 + k)
+LEY_IDEAL = {"k_ref": {"valor": 50.0, "unidad": "mol/s"},
+             "T_ref": {"valor": 330.0, "unidad": "K"},
+             "Ea": 0.0, "base_actividad": "fraccion_molar",
+             "ordenes": {"n-butane": 1.0}}
+r_ideal = resolver(montaje_cinetico(
+    [{"id": "iso", "bloque_id": "rx", "nu": [-1, 1],
+      "ley_directa": LEY_IDEAL}]))
+xi_analitico = 50.0 * 100.0 / (100.0 + 50.0)
+check("9.1 Primer orden ideal: coincide con la solución analítica",
+      r_ideal["estado"] == "resuelto"
+      and abs(r_ideal["reacciones"][0]["avance_neto"] - xi_analitico) < 1e-12,
+      f"{r_ideal['reacciones'][0]['avance_neto']!r} frente a {xi_analitico!r}")
+
+LEY_2 = {**LEY_IDEAL, "ordenes": {"n-butane": 2.0}}
+r_2 = resolver(montaje_cinetico(
+    [{"id": "iso", "bloque_id": "rx", "nu": [-1, 1], "ley_directa": LEY_2}]))
+# 100^2 xi = 50 (100 - xi)^2
+_b = -(2 * 100.0 + 100.0 ** 2 / 50.0)
+_raices = [(-_b + sg * math.sqrt(_b * _b - 4 * 100.0 ** 2)) / 2.0
+           for sg in (1, -1)]
+xi_2 = min(x for x in _raices if 0 <= x <= 100)
+check("9.2 Segundo orden ideal: también",
+      abs(r_2["reacciones"][0]["avance_neto"] - xi_2) < 1e-9,
+      f"{r_2['reacciones'][0]['avance_neto']!r} frente a {xi_2!r}")
+
+# --- 9.3 el algoritmo que se declara es el que corre
+si = r_ideal["convergencia"]["sistemas_implicitos"][0]
+check("9.3 Una reacción isoterma se resuelve con brentq ACOTADO",
+      "brentq" in si["metodo"] and "acotado" in si["metodo"]
+      and si["bloque_id"] == "rx",
+      si["metodo"])
+check("9.4 Con el intervalo estequiométrico declarado como restricción",
+      any("estequiometria" in r for r in si["restricciones"]),
+      si["restricciones"][0][:90])
+check("9.5 Y con su residuo medido y su tolerancia",
+      si["residuo_escalado"] < si["tolerancia"] and si["convergio"] is True,
+      f"residuo {si['residuo_escalado']:.2e} < {si['tolerancia']:.0e} "
+      f"en {si['evaluaciones_de_funcion']} evaluaciones")
+check("9.6 El alcance global dice que la marcha sigue siendo aguas abajo",
+      "marcha aguas abajo" in r_ideal["convergencia"]["metodo"]
+      and "DENTRO" in r_ideal["convergencia"]["metodo"],
+      r_ideal["convergencia"]["metodo"][:110])
+
+# --- 9.7 varias reacciones: serie A -> B -> C
+TRES = ["n-butane", "isobutane", "isopentane"]
+l1 = {**LEY_IDEAL, "ordenes": {"n-butane": 1.0}}
+l2 = {"k_ref": {"valor": 30.0, "unidad": "mol/s"},
+      "T_ref": {"valor": 330.0, "unidad": "K"}, "Ea": 0.0,
+      "base_actividad": "fraccion_molar", "ordenes": {"isobutane": 1.0}}
+# Con especies de distinta fórmula el balance elemental no cuadraría, así
+# que la serie se hace con dos isomerizaciones ficticias del MISMO
+# esqueleto: n-butano -> isobutano -> n-butano no sirve. Se usa en su
+# lugar un sistema de dos reacciones sobre dos especies, con la segunda
+# volviendo: A -> B y B -> A, que sí conserva los elementos.
+r_serie = resolver(montaje_cinetico([
+    {"id": "ida", "bloque_id": "rx", "nu": [-1, 1], "ley_directa": l1},
+    {"id": "vuelta", "bloque_id": "rx", "nu": [1, -1], "ley_directa": l2},
+]))
+# xi1 = 50 x_A, xi2 = 30 x_B, x_A = (100 - xi1 + xi2)/100, x_B = (xi1 - xi2)/100
+# => xi1 = 50(100 - xi1 + xi2)/100 ; xi2 = 30(xi1 - xi2)/100
+# De la segunda: 100 xi2 = 30 xi1 - 30 xi2 -> xi2 = 30 xi1/130
+# En la primera: 100 xi1 = 5000 - 50 xi1 + 50 xi2 = 5000 - 50 xi1 + 1500 xi1/130
+_xi1 = 5000.0 / (100.0 + 50.0 - 1500.0 / 130.0)
+_xi2 = 30.0 * _xi1 / 130.0
+check("9.7 Dos reacciones acopladas: coinciden con el álgebra",
+      r_serie["estado"] == "resuelto"
+      and abs(r_serie["reacciones"][0]["avance_neto"] - _xi1) < 1e-9
+      and abs(r_serie["reacciones"][1]["avance_neto"] - _xi2) < 1e-9,
+      f"ξ = {[r['avance_neto'] for r in r_serie['reacciones']]} frente a "
+      f"{[_xi1, _xi2]}")
+si_serie = r_serie["convergencia"]["sistemas_implicitos"][0]
+check("9.8 Con varias reacciones el método es OTRO, y se declara",
+      "hybr" in si_serie["metodo"] and "brentq" not in si_serie["metodo"],
+      si_serie["metodo"][:88])
+check("9.9 Y dice que la factibilidad se COMPRUEBA, no se impone",
+      any("no se impone" in r or "comprueba" in r
+          for r in si_serie["restricciones"]),
+      "con varias reacciones los límites de cada una no son conservadores")
+
+# --- 9.10 reversible con dos leyes: las brutas se conocen
+r_rev = resolver(montaje_cinetico([
+    {"id": "rev", "bloque_id": "rx", "nu": [-1, 1], "ley_directa": LEY_BASE,
+     "ley_inversa": {"k_ref": {"valor": 12.0, "unidad": "mol/s"},
+                     "T_ref": {"valor": 320.0, "unidad": "K"}, "Ea": 60000.0,
+                     "ordenes": {"isobutane": 1.0}}}]))
+rx_rev = r_rev["reacciones"][0]
+check("9.10 Reversible con dos leyes: las brutas se conocen",
+      r_rev["estado"] == "resuelto"
+      and rx_rev["brutas_disponibles"] is True
+      and rx_rev["tasa_directa"] > 0 and rx_rev["tasa_inversa"] > 0,
+      f"r⁺ = {rx_rev['tasa_directa']:.4f}, r⁻ = {rx_rev['tasa_inversa']:.4f}")
+check("9.11 Y el avance neto es su diferencia",
+      abs(rx_rev["avance_neto"]
+          - (rx_rev["tasa_directa"] - rx_rev["tasa_inversa"])) < 1e-12)
+fr = {e["componente"]: e for e in r_rev["fuentes_por_volumen"]["rx"]["por_especie"]}
+check("9.12 Las fuentes brutas salen de las dos leyes, no del neto",
+      fr["n-butane"]["generacion_bruta"] == rx_rev["tasa_inversa"]
+      and fr["n-butane"]["consumo_bruto"] == rx_rev["tasa_directa"],
+      "el evento inverso produce lo que el directo consume")
+
+# --- 9.13 la inversa derivada del equilibrio
+r_eqk = resolver(montaje_cinetico([
+    {"id": "rev", "bloque_id": "rx", "nu": [-1, 1], "ley_directa": LEY_BASE,
+     "ley_inversa": {"desde_equilibrio": True}}]))
+rx_eqk = r_eqk["reacciones"][0]
+check("9.13 La inversa se puede DERIVAR del equilibrio",
+      r_eqk["estado"] == "resuelto"
+      and rx_eqk["ley_inversa"]["origen"] == "derivada del equilibrio"
+      and rx_eqk["tasa_inversa"] > 0,
+      f"k_inv = k_dir / K_eq, con K_eq = {rx_eqk['ley_inversa']['K_eq_usada']:.4f}")
+check("9.14 Y la respuesta declara por qué eso es lo consistente",
+      "r+ = r-" in rx_eqk["ley_inversa"]["nota"],
+      rx_eqk["ley_inversa"]["nota"][:95])
+check("9.15 Y avisa de que la directa pasa a usar la estequiometría",
+      "estequiometria" in rx_eqk["ley_inversa"]["nota"],
+      "mezclar órdenes libres con una inversa del equilibrio rompería la razón K_eq")
+
+# --- 9.16 ENERGIA ACOPLADA: el adiabático
+r_adia = resolver(montaje_cinetico(
+    [{"id": "iso", "bloque_id": "rx", "nu": [-1, 1], "ley_directa": LEY_BASE}],
+    T_salida=None, adiabatico=True, con_fuente=False))
+check("9.16 Un reactor adiabático se resuelve: el supuesto ES la especificación",
+      r_adia["estado"] == "resuelto",
+      f"estado={r_adia['estado']}")
+T_adia = r_adia["estados_por_bloque"]["out"]["T"]
+xi_adia = r_adia["reacciones"][0]["avance_neto"]
+check("9.17 Y la temperatura SUBE: la isomerización es exotérmica",
+      T_adia > 320.0, f"320 → {T_adia:.4f} K con ξ = {xi_adia:.4f} mol/s")
+
+# La comprobación independiente: imponer esa T en modo isotermo tiene que
+# dar el MISMO avance. Si el acoplamiento se resolvió bien, los dos
+# caminos coinciden.
+r_comprobacion = resolver(montaje_cinetico(
+    [{"id": "iso", "bloque_id": "rx", "nu": [-1, 1], "ley_directa": LEY_BASE}],
+    T_salida=T_adia))
+check("9.18 Imponiendo esa T en modo isotermo sale el MISMO avance",
+      abs(r_comprobacion["reacciones"][0]["avance_neto"] - xi_adia) < 1e-9,
+      f"{r_comprobacion['reacciones'][0]['avance_neto']!r} frente a {xi_adia!r}")
+
+# Y el balance de energía, contra el proveedor por el camino corto.
+_prov_but = ProveedorTermodinamico(BUT)
+dH_but = float(np.array([-1.0, 1.0])
+               @ np.asarray(_prov_but.entalpias_formacion_liquido(), dtype=float))
+e_in_a = r_adia["estados_por_bloque"]["in"]
+e_out_a = r_adia["estados_por_bloque"]["out"]
+liberado = -xi_adia * dH_but
+sensible = e_out_a["F"] * e_out_a["h"] - e_in_a["F"] * e_in_a["h"]
+check("9.19 El calor liberado iguala al calentamiento sensible",
+      abs(liberado - sensible) < 1e-6 * abs(liberado),
+      f"{liberado:.1f} W liberados, {sensible:.1f} W de calentamiento")
+check("9.20 ΔH es negativa: por eso la temperatura sube sola",
+      dH_but < 0, f"ΔH = {dH_but:.0f} J/mol")
+
+si_adia = r_adia["convergencia"]["sistemas_implicitos"][0]
+check("9.21 El método declara el ARRANQUE y el solver, no solo el solver",
+      "sustituciones sucesivas" in si_adia["metodo"]
+      and "least_squares" in si_adia["metodo"],
+      si_adia["metodo"][:125])
+check("9.22 Y dice por qué hace falta el arranque",
+      any("minimo local" in r for r in si_adia["restricciones"]),
+      "least_squares minimiza el cuadrado y puede pararse donde no hay raíz")
+check("9.23 Los límites de T salen de la tabla de entalpía, no de un número",
+      any("tabla" in r and "entalpia" in r for r in si_adia["restricciones"]),
+      [r for r in si_adia["restricciones"] if "tabla" in r][0][:95])
+check("9.24 Con residuo medido por debajo de la tolerancia",
+      si_adia["residuo_escalado"] < si_adia["tolerancia"],
+      f"{si_adia['residuo_escalado']:.2e} < {si_adia['tolerancia']:.0e}")
+check("9.25 Y el balance de energía se marca resuelto DENTRO del sistema",
+      "sistema cinetico acoplado"
+      in next(e for e in r_adia["ecuaciones"]
+              if e["id"] == "rx:energia")["metodo"],
+      next(e for e in r_adia["ecuaciones"]
+           if e["id"] == "rx:energia")["metodo"][:85])
+
+# --- 9.26 Q impuesto con cinética
+r_q = resolver(montaje_cinetico(
+    [{"id": "iso", "bloque_id": "rx", "nu": [-1, 1], "ley_directa": LEY_BASE}],
+    T_salida=None,
+    extra=[{"bloque_id": "heat", "variable": "Q", "valor": 100.0,
+            "unidad": "kW"}]))
+check("9.26 Con Q impuesto y cinética, T y avance también se cierran juntos",
+      r_q["estado"] == "resuelto"
+      and r_q["estados_por_bloque"]["out"]["T"] > T_adia,
+      f"T = {r_q['estados_por_bloque']['out']['T']:.4f} K, más que los "
+      f"{T_adia:.4f} del adiabático porque se añade calor")
+
+# --- 9.27 la base volumétrica
+r_vol = resolver(montaje_cinetico(
+    [{"id": "iso", "bloque_id": "rx", "nu": [-1, 1],
+      "ley_directa": {**LEY_BASE,
+                      "k_ref": {"valor": 10.0, "unidad": "mol/(m3*s)"}}}],
+    extra=[{"bloque_id": "rx", "variable": "V", "valor": 5.0, "unidad": "m3"}]))
+r_int = resolver(montaje_cinetico(
+    [{"id": "iso", "bloque_id": "rx", "nu": [-1, 1], "ley_directa": LEY_BASE}]))
+check("9.27 Una constante volumétrica se integra con V y da lo mismo",
+      r_vol["estado"] == "resuelto"
+      and abs(r_vol["reacciones"][0]["avance_neto"]
+              - r_int["reacciones"][0]["avance_neto"]) < 1e-9,
+      "10 mol/(m³·s) × 5 m³ = 50 mol/s")
+
+# --- 9.28 los órdenes
+ley_sin_ordenes = {k: v for k, v in LEY_BASE.items() if k != "ordenes"}
+r_def = resolver(montaje_cinetico(
+    [{"id": "iso", "bloque_id": "rx", "nu": [-1, 1],
+      "ley_directa": ley_sin_ordenes}]))
+check("9.28 Sin órdenes declarados se usa |ν| de los reactivos",
+      r_def["estado"] == "resuelto"
+      and r_def["reacciones"][0]["ley_directa"]["ordenes"]
+      == {"n-butane": 1.0, "isobutane": 0.0},
+      "y la respuesta lo dice, para que nadie crea que lo eligió")
+check("9.29 Un orden NO es un coeficiente estequiométrico, y se puede fijar aparte",
+      resolver(montaje_cinetico(
+          [{"id": "iso", "bloque_id": "rx", "nu": [-1, 1],
+            "ley_directa": {**LEY_BASE,
+                            "ordenes": {"n-butane": 1.5}}}]
+      ))["reacciones"][0]["ley_directa"]["ordenes"]["n-butane"] == 1.5,
+      "orden 1.5 con ν = −1: la ley sale de un mecanismo, no del balance")
+
+# --- 9.30 Arrhenius: las dos formas
+r_clasico = resolver(montaje_cinetico(
+    [{"id": "iso", "bloque_id": "rx", "nu": [-1, 1],
+      "ley_directa": {"A": {"valor": 1.0e8, "unidad": "mol/s"},
+                      "Ea": 50000.0, "ordenes": {"n-butane": 1.0}}}]))
+check("9.30 Arrhenius clásico (A, Ea) también se admite, y se declara",
+      r_clasico["estado"] == "resuelto"
+      and r_clasico["reacciones"][0]["ley_directa"]["forma"]
+      == "arrhenius_clasico",
+      "los datos de la literatura vienen así")
+check("9.31 Y la forma referenciada se declara como tal, con su T_ref",
+      r_ideal["reacciones"][0]["ley_directa"]["forma"] == "referenciada"
+      and r_ideal["reacciones"][0]["ley_directa"]["T_ref"] == 330.0)
+
+# --- 9.32 los rechazos de la cinética
+def caso_cin(nombre, montaje, codigo_esperado):
+    r = resolver(montaje)
+    vistos = [d["codigo"] for d in errores_de(r)]
+    check(nombre, codigo_esperado in vistos,
+          f"estado={r['estado']}, códigos={', '.join(vistos[:2]) or 'ninguno'}")
+    return r
+
+
+caso_cin("9.32 Una ley y una tasa dada a la vez", montaje_cinetico(
+    [{"id": "r", "bloque_id": "rx", "nu": [-1, 1], "ley_directa": LEY_BASE,
+      "tasa": {"valor": 5.0, "unidad": "mol/s"}}]),
+    codigos.LAB_TASA_AMBIGUA)
+
+caso_cin("9.33 Solo ley_inversa, sin la directa", montaje_cinetico(
+    [{"id": "r", "bloque_id": "rx", "nu": [-1, 1], "ley_inversa": LEY_BASE}]),
+    codigos.LAB_LEY_INVALIDA)
+
+caso_cin("9.34 k_ref sin T_ref", montaje_cinetico(
+    [{"id": "r", "bloque_id": "rx", "nu": [-1, 1],
+      "ley_directa": {"k_ref": {"valor": 1.0, "unidad": "mol/s"},
+                      "Ea": 1000.0}}]),
+    codigos.LAB_LEY_INVALIDA)
+
+r = caso_cin("9.35 Un orden negativo", montaje_cinetico(
+    [{"id": "r", "bloque_id": "rx", "nu": [-1, 1],
+      "ley_directa": {**LEY_BASE, "ordenes": {"n-butane": -1.0}}}]),
+    codigos.LAB_ORDEN_INVALIDO)
+check("9.36 Y el motivo es que la tasa divergiría al agotarse la especie",
+      "diverja" in errores_de(r)[0]["mensaje"],
+      errores_de(r)[0]["mensaje"][:105])
+
+r = caso_cin("9.37 La base en concentración no está", montaje_cinetico(
+    [{"id": "r", "bloque_id": "rx", "nu": [-1, 1],
+      "ley_directa": {**LEY_BASE, "base_actividad": "concentracion"}}]),
+    codigos.LAB_BASE_ACTIVIDAD_NO_SOPORTADA)
+check("9.38 Y dice por qué: necesitaría el volumen molar de la mezcla",
+      "volumen molar" in errores_de(r)[0]["mensaje"],
+      "es otra decisión de modelo y no se toma por tu cuenta")
+
+caso_cin("9.39 Órdenes de una especie que no está en la mezcla", montaje_cinetico(
+    [{"id": "r", "bloque_id": "rx", "nu": [-1, 1],
+      "ley_directa": {**LEY_BASE, "ordenes": {"benzene": 1.0}}}]),
+    codigos.LAB_ORDEN_INVALIDO)
+
+caso_cin("9.40 Una constante cinética negativa", montaje_cinetico(
+    [{"id": "r", "bloque_id": "rx", "nu": [-1, 1],
+      "ley_directa": {**LEY_BASE,
+                      "k_ref": {"valor": -5.0, "unidad": "mol/s"}}}]),
+    codigos.LAB_TASA_NEGATIVA)
+
+caso_cin("9.41 Base volumétrica sin V", montaje_cinetico(
+    [{"id": "r", "bloque_id": "rx", "nu": [-1, 1],
+      "ley_directa": {**LEY_BASE,
+                      "k_ref": {"valor": 10.0, "unidad": "mol/(m3*s)"}}}]),
+    codigos.LAB_FALTA_VOLUMEN_REACTOR)
+
+caso_cin("9.42 Leyes directa e inversa en bases distintas", montaje_cinetico(
+    [{"id": "r", "bloque_id": "rx", "nu": [-1, 1], "ley_directa": LEY_BASE,
+      "ley_inversa": {"k_ref": {"valor": 1.0, "unidad": "mol/(m3*s)"},
+                      "T_ref": {"valor": 320.0, "unidad": "K"}, "Ea": 0.0,
+                      "ordenes": {"isobutane": 1.0}}}],
+    extra=[{"bloque_id": "rx", "variable": "V", "valor": 2.0, "unidad": "m3"}]),
+    codigos.LAB_UNIDAD_INCOMPATIBLE)
+
+caso_cin("9.43 Adiabático y temperatura impuesta a la vez", montaje_cinetico(
+    [{"id": "r", "bloque_id": "rx", "nu": [-1, 1], "ley_directa": LEY_BASE}],
+    adiabatico=True, con_fuente=False),
+    codigos.LAB_ESPECIFICACION_EXCLUYENTE)
+
+caso_cin("9.44 Mezclar tasa dada y cinética en el mismo volumen", montaje_cinetico(
+    [{"id": "a", "bloque_id": "rx", "nu": [-1, 1], "ley_directa": LEY_BASE},
+     {"id": "b", "bloque_id": "rx", "nu": [1, -1],
+      "tasa": {"valor": 1.0, "unidad": "mol/s"}}]),
+    codigos.LAB_TOPOLOGIA_NO_SOPORTADA)
+
+# --- 9.45 un adiabático sin cinética también funciona ahora
+r_adia_simple = resolver(montaje_cinetico(
+    [{"id": "iso", "bloque_id": "rx", "nu": [-1, 1],
+      "tasa": {"valor": 20.0, "unidad": "mol/s"}}],
+    T_salida=None, adiabatico=True, con_fuente=False))
+check("9.45 Un adiabático con tasa DADA también se resuelve",
+      r_adia_simple["estado"] == "resuelto"
+      and r_adia_simple["estados_por_bloque"]["out"]["T"] > 320.0,
+      f"T = {r_adia_simple['estados_por_bloque']['out']['T']:.4f} K; "
+      "con tasa dada basta una inversión escalar, y se declara así")
+check("9.46 Y ahí el método es la inversión escalar, no un sistema",
+      "inversion_escalar" in r_adia_simple["convergencia"]["alcance"]
+      and not r_adia_simple["convergencia"].get("sistemas_implicitos"),
+      r_adia_simple["convergencia"]["alcance"])
+
+# --- 9.47 serialización
+for nombre, rr in (("isoterma", r_ideal), ("adiabática", r_adia),
+                   ("reversible", r_rev), ("dos reacciones", r_serie)):
+    try:
+        json.dumps(rr, allow_nan=False)
+        ok, detalle = True, ""
+    except (TypeError, ValueError) as e:
+        ok, detalle = False, str(e)[:70]
+    check(f"9.47 La respuesta «{nombre}» serializa a JSON estricto", ok, detalle)
+
+check("9.48 Y una ley cambia el modelo_id",
+      validar(montaje_cinetico(
+          [{"id": "iso", "bloque_id": "rx", "nu": [-1, 1],
+            "ley_directa": {**LEY_BASE, "Ea": 51000.0}}]))["modelo_id"]
+      != r_int["modelo_id"],
+      "la cinética es física: entra en la huella")
+
+
+# =====================================================================
+print("\n" + "=" * 76)
+print("10. CATALOGO DE SUSTANCIAS: una formula no identifica nada")
+print("=" * 76)
+# =====================================================================
+
+def sustancia(q):
+    r = cliente.get("/laboratorio/sustancias/buscar", params={"q": q})
+    assert r.status_code == 200, (r.status_code, r.text[:200])
+    return r.json()
+
+
+# EL caso: 'C2H6O' resuelve a dimetil éter y el etanol tiene esa fórmula.
+# Hierven a 248 K y a 352 K: 103 K de diferencia por escribir la fórmula.
+d_formula = sustancia("C2H6O")
+check("10.1 Una FÓRMULA se marca como identificación NO fiable",
+      d_formula["identificacion"] == "formula"
+      and d_formula["identificacion_fiable"] is False,
+      f"resolvió a {d_formula['sustancia']['nombre']!r}")
+check("10.2 Y lista los OTROS candidatos con esa fórmula",
+      any(c["nombre"] == "ethanol" for c in d_formula["candidatos"]),
+      ", ".join(c["nombre"] for c in d_formula["candidatos"]))
+check("10.3 Con un aviso que explica el riesgo",
+      "no identifica una sustancia" in (d_formula["aviso"] or ""),
+      (d_formula["aviso"] or "")[:100])
+
+# Los tres identificadores que SÍ identifican dan lo mismo.
+por_nombre, por_cas, por_smiles = (sustancia("ethanol"), sustancia("64-17-5"),
+                                   sustancia("CCO"))
+check("10.4 Nombre, CAS y SMILES identifican la misma sustancia",
+      {d["sustancia"]["cas"] for d in (por_nombre, por_cas, por_smiles)}
+      == {"64-17-5"}
+      and all(d["identificacion_fiable"] for d in
+              (por_nombre, por_cas, por_smiles)),
+      ", ".join(d["identificacion"] for d in
+                (por_nombre, por_cas, por_smiles)))
+check("10.5 El id estable es el CAS",
+      por_nombre["sustancia"]["id"] == por_nombre["sustancia"]["cas"],
+      "no el nombre, que tiene sinónimos, ni la fórmula, que es ambigua")
+check("10.6 Y trae masa molar CON unidad, carga, fórmula e InChIKey",
+      por_nombre["sustancia"]["unidad_masa_molar"] == "g/mol"
+      and por_nombre["sustancia"]["carga"] == 0
+      and por_nombre["sustancia"]["formula"] == "C2H6O"
+      and por_nombre["sustancia"]["inchi_key"],
+      f"MW = {por_nombre['sustancia']['masa_molar']} g/mol")
+
+# La distinción que de verdad importa para montar una reacción.
+d_dicpd = sustancia("dicyclopentadiene")
+check("10.7 Una sustancia puede servir para ELV y NO para reacción",
+      d_dicpd["capacidades"]["elv"]["disponible"] is True
+      and d_dicpd["capacidades"]["reaccion"]["disponible"] is False,
+      "el diciclopentadieno tiene grupos UNIFAC y no tiene Hf")
+check("10.8 Y se dice QUÉ propiedad falta",
+      any("formacion" in f
+          for f in d_dicpd["capacidades"]["reaccion"]["falta"]),
+      ", ".join(d_dicpd["capacidades"]["reaccion"]["falta"]))
+check("10.9 Enterarse al resolver, con el calor de reacción en NaN, es tarde",
+      "tarde" in (d_dicpd["mensaje"] or ""),
+      (d_dicpd["mensaje"] or "")[:95])
+
+d_amoniaco = sustancia("ammonia")
+check("10.10 Sin grupos UNIFAC no sirve para nada, y lo dice",
+      all(not c["disponible"] for c in d_amoniaco["capacidades"].values()),
+      (d_amoniaco["mensaje"] or "")[:90])
+
+check("10.11 Lo que no existe se dice que no existe",
+      sustancia("sustancia_inventada_xyz")["encontrada"] is False)
+
+check("10.12 Trae la composición elemental, que es lo que valida una ν",
+      por_nombre["composicion_elemental"]["atomos"] == {"C": 2, "H": 6, "O": 1},
+      "A @ ν tiene que ser cero")
+check("10.13 Y las referencias con las que el motor trabaja",
+      "sensible" in por_nombre["referencias"]["entalpia"],
+      por_nombre["referencias"]["nota"][:88])
+
+cat = cliente.get("/laboratorio/sustancias/catalogo").json()
+check("10.14 El catálogo declara qué identificadores identifican y cuáles no",
+      [i["identifica"] for i in cat["identificadores_admitidos"]
+       if i["tipo"] == "formula"] == [False]
+      and all(i["identifica"] for i in cat["identificadores_admitidos"]
+              if i["tipo"] != "formula"),
+      "la fórmula es la única que no")
+check("10.15 Y de qué propiedad depende cada capacidad",
+      set(cat["capacidades"]) == {"elv", "entalpia", "reaccion", "equilibrio"}
+      and all("necesita" in v for v in cat["capacidades"].values()),
+      "para que el editor explique por qué una sustancia no sirve")
+check("10.16 Las dos respuestas serializan a JSON estricto",
+      bool(json.dumps(d_formula, allow_nan=False))
+      and bool(json.dumps(cat, allow_nan=False)))
+
+# Y la consecuencia práctica: el montaje con una especie sin Hf se rechaza
+# al resolver, con el código que el catálogo anticipó.
+# La estequiometría SÍ cuadra --2 C5H6 -> C10H12-- para que lo que falle
+# sea exactamente lo que el catálogo anticipó: la entalpía de formación.
+# Con una ν mal puesta el rechazo vendría por los elementos y la prueba no
+# demostraría nada sobre Hf.
+sin_hf = montaje_cinetico(
+    [{"id": "r", "bloque_id": "rx", "nu": [-2, 1],
+      "tasa": {"valor": 1.0, "unidad": "mol/s"}}],
+    componentes=["cyclopentadiene", "dicyclopentadiene"], presion=1.0e5,
+    T_entrada=320.0, T_salida=330.0)
+r_sin_hf = resolver(sin_hf)
+codigos_sin_hf = [d["codigo"] for d in errores_de(r_sin_hf)]
+check("10.17 Y un montaje con esa especie se rechaza por la Hf que falta",
+      r_sin_hf["estado"] != "resuelto"
+      and codigos.LAB_ENTALPIA_FORMACION_NO_DISPONIBLE in codigos_sin_hf,
+      f"estado={r_sin_hf['estado']}, {', '.join(codigos_sin_hf)[:70]}")
+check("10.18 Es el mismo fallo que el catálogo avisaba ANTES de calcular",
+      d_dicpd["capacidades"]["reaccion"]["disponible"] is False,
+      "por eso el editor de especies puede impedirlo en vez de dejarlo llegar aquí")
 
 
 print("\n" + "=" * 76)

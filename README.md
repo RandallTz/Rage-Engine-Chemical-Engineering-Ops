@@ -180,6 +180,10 @@ No cuenta como validación *"devuelve un array de la forma correcta"* ni
   neta cero con generación y consumo brutos positivos**, y una
   estequiometría que no conserva los elementos se rechaza diciendo qué
   elemento descuadra y en cuánto.
+- Una cinética de primer orden reproduce su **solución analítica**
+  $\xi = kF_{A0}/(F_0+k)$ a $10^{-12}$, y un reactor adiabático se verifica
+  por dos caminos: imponer la temperatura que salió da el mismo avance, y
+  el calor liberado iguala al calentamiento sensible.
 
 El detalle completo, y **los límites**, en
 [`docs/12-validacion.md`](docs/12-validacion.md).

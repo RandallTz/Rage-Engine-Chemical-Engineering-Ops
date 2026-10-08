@@ -104,6 +104,74 @@ class EspecificacionLaboratorio(BaseModel):
     unidad: Optional[str] = Field(None, max_length=24)
 
 
+class LeyDeVelocidadEntrada(BaseModel):
+    """
+    Una ley de accion de masas: r = k(T) * prod_i a_i^(orden_i).
+
+    DOS FORMAS DE DAR LA CONSTANTE, y la referenciada es mejor:
+
+        k_ref + T_ref    k = k_ref exp(-Ea/R (1/T - 1/T_ref))
+        A                k = A exp(-Ea/(R T))
+
+    No es estetica. En la forma clasica A tiene magnitudes absurdas (1e13
+    y mas) y el exponente vale -20 o -40, asi que la expresion resta
+    numeros enormes para dar uno pequeno. En la referenciada k_ref esta a
+    escala humana y el exponente ronda cero cerca de T_ref. Se admiten las
+    dos --los datos de la literatura vienen en la clasica-- y la respuesta
+    declara cual se uso.
+
+    La UNIDAD de la constante declara la base de la tasa, igual que en una
+    tasa dada: 'mol/s' se usa tal cual y 'mol/(m3*s)' se integra con el
+    volumen del reactor.
+    """
+    k_ref: Optional[ValorConUnidad] = Field(
+        None,
+        description="La constante a T_ref (forma referenciada). Su unidad declara "
+                    "la base de la tasa.")
+    T_ref: Optional[ValorConUnidad] = Field(
+        None, description="Obligatoria con k_ref: una constante referenciada sin "
+                          "su temperatura no dice a que temperatura vale.")
+    A: Optional[ValorConUnidad] = Field(
+        None, description="Factor preexponencial (Arrhenius clasico). Alternativa "
+                          "a k_ref; no se dan los dos.")
+    Ea: Optional[float] = Field(
+        None, description="Energia de activacion en J/mol. Si falta, se toma 0 y "
+                          "la constante no depende de la temperatura.")
+    ordenes: Optional[Any] = Field(
+        None,
+        description=(
+            "Los ordenes de reaccion, como {componente: orden} o como lista en el "
+            "orden de 'componentes'. **Un orden NO es un coeficiente "
+            "estequiometrico**: la ley sale de un mecanismo y la estequiometria de "
+            "un balance, y coinciden solo en una reaccion elemental. Si no se "
+            "declaran se usa |nu| de los reactivos y la respuesta dice que ese fue "
+            "el defecto, para que nadie crea que lo eligio. Los ordenes negativos "
+            "se rechazan: modelan inhibicion y hacen que la tasa diverja cuando "
+            "esa especie se agota."
+        ),
+    )
+    # Deliberadamente `str` y no `Literal`: una base desconocida tiene que
+    # salir como DIAGNOSTICO del nucleo --con su codigo, su id de bloque y
+    # la explicacion de por que la concentracion no esta-- y no como un
+    # 422 de Pydantic, que no lleva nada de eso. Es el mismo criterio que
+    # con el resto de lo semantico.
+    base_actividad: Optional[str] = Field(
+        None, max_length=40,
+        description="'actividad' (a = x gamma, con UNIFAC; la correcta en liquido "
+                    "no ideal) o 'fraccion_molar' (a = x, ideal y mas barata). Por "
+                    "omision 'actividad'. La base en concentracion NO esta: "
+                    "necesitaria el volumen molar de la mezcla, que es otra "
+                    "decision de modelo.")
+    desde_equilibrio: Optional[bool] = Field(
+        None,
+        description="Solo en 'ley_inversa'. Con true, la inversa se DERIVA del "
+                    "equilibrio: k_inv = k_dir / K_eq(T). Es la restriccion que "
+                    "impone la termodinamica, y el unico modo en que una "
+                    "reversible es consistente sin dos juegos de datos cineticos. "
+                    "Necesita la energia de Gibbs de formacion de todas las "
+                    "especies; consultala en /laboratorio/sustancias/buscar.")
+
+
 class ReaccionLaboratorio(BaseModel):
     """
     Una reaccion de tasa especificada en un volumen.
@@ -154,17 +222,27 @@ class ReaccionLaboratorio(BaseModel):
         None,
         description="Solo el neto, de cualquier signo. Con esta forma las brutas NO "
                     "estan disponibles y se devuelven como null.")
-    # Campos que el motor rechaza explicitamente, declarados para poder
-    # dar un diagnostico con nombre en vez de ignorarlos en silencio.
+    # --- la tasa CALCULADA: leyes de velocidad.
+    ley_directa: Optional[LeyDeVelocidadEntrada] = Field(
+        None,
+        description="La ley del sentido directo. Con ella la tasa se CALCULA, y el "
+                    "balance del volumen pasa a ser implicito: el motor lo resuelve "
+                    "como sistema y declara el algoritmo real.")
+    ley_inversa: Optional[LeyDeVelocidadEntrada] = Field(
+        None,
+        description="La ley del sentido inverso, o {'desde_equilibrio': true} para "
+                    "derivarla de K_eq(T). Con cualquiera de las dos, las tasas "
+                    "brutas se conocen por construccion.")
+    # Campos que el motor rechaza con nombre en vez de ignorarlos.
     cinetica: Optional[Any] = Field(
         None,
-        description="NO SOPORTADO en esta entrega. Se rechaza con "
-                    "LAB_CINETICA_NO_SOPORTADA en vez de ignorarse: una tasa que "
-                    "dependa de la composicion de salida hace el balance implicito "
-                    "y exige un solver acoplado. El CSTR con cinetica sigue en "
-                    "/diagrama/resolver.")
-    A: Optional[float] = Field(None, description="NO SOPORTADO; ver 'cinetica'.")
-    Ea: Optional[float] = Field(None, description="NO SOPORTADO; ver 'cinetica'.")
+        description="No se usa. Los parametros cineticos van dentro de "
+                    "'ley_directa' / 'ley_inversa'; sueltos no dicen de que ley "
+                    "son parametros y se rechazan con LAB_LEY_INVALIDA.")
+    A: Optional[float] = Field(
+        None, description="No aqui: va dentro de la ley, con su unidad.")
+    Ea: Optional[float] = Field(
+        None, description="No aqui: va dentro de la ley.")
 
 
 class LaboratorioRequest(BaseModel):
@@ -359,6 +437,18 @@ class ConvergenciaLaboratorio(BaseModel):
     convergio: Optional[bool] = Field(
         None, description="null cuando no hubo nada que converger. No es false.")
     motivo_sin_convergencia: Optional[str] = None
+    sistemas_implicitos: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description=(
+            "Un sistema implicito POR VOLUMEN cinetico, con el algoritmo que de "
+            "verdad corrio, su residuo escalado, la tolerancia, las evaluaciones y "
+            "las restricciones. No se agregan en un solo numero: dos volumenes "
+            "pueden resolverse con algoritmos distintos y promediar sus residuos "
+            "no significaria nada. "
+            "Con la tasa DADA esta lista esta vacia, porque no hay nada implicito "
+            "que resolver."
+        ),
+    )
     cierre_global: CierreGlobal
 
 
@@ -476,6 +566,86 @@ class EjemploLaboratorio(BaseModel):
     descripcion: str
     estado_esperado: str
     modelo: LaboratorioRequest
+
+
+# =====================================================================
+# Catalogo de sustancias
+# =====================================================================
+
+class CapacidadSustancia(BaseModel):
+    disponible: bool
+    falta: list[str] = Field(
+        default_factory=list,
+        description="Que propiedad falta cuando no esta disponible.")
+
+
+class SustanciaResumen(BaseModel):
+    id: Optional[str] = Field(
+        None, description="El id ESTABLE: el CAS. Es lo que conviene guardar, no "
+                          "el nombre (que tiene sinonimos) ni la formula (que es "
+                          "ambigua).")
+    cas: Optional[str] = None
+    nombre: Optional[str] = None
+    nombre_iupac: Optional[str] = None
+    formula: Optional[str] = None
+    masa_molar: Optional[float] = None
+    unidad_masa_molar: str = "g/mol"
+    carga: Optional[int] = Field(
+        None, description="Carga de la especie. Cero para una molecula neutra.")
+    smiles: Optional[str] = None
+    inchi_key: Optional[str] = None
+
+
+class BusquedaSustanciaResponse(BaseModel):
+    """
+    El resultado de identificar una sustancia, con COMO se identifico.
+
+    `identificacion_fiable` es el campo que hay que mirar: un CAS, un
+    nombre, un SMILES o un InChIKey identifican una sustancia; una FORMULA
+    no. 'C2H6O' resuelve a dimetil eter y el etanol tiene la misma
+    formula, y hierven a 248 K y a 352 K. Cuando la identificacion no es
+    fiable, `candidatos` trae las otras sustancias con esa formula para
+    que el cliente pregunte en vez de que el motor adivine.
+    """
+    consulta: str
+    encontrada: bool
+    identificacion: Literal["cas", "nombre", "smiles", "inchi_key", "formula",
+                            "otro", "no_encontrada"]
+    identificacion_fiable: bool = Field(
+        description="False cuando se resolvio por FORMULA, que no identifica una "
+                    "sustancia.")
+    sustancia: Optional[SustanciaResumen] = None
+    candidatos: list[SustanciaResumen] = Field(
+        default_factory=list,
+        description="Las OTRAS sustancias con la misma formula, cuando la "
+                    "identificacion no es fiable.")
+    candidatos_totales: int = 0
+    capacidades: Optional[dict[str, CapacidadSustancia]] = Field(
+        None,
+        description="Que se puede hacer con ella: elv, entalpia, reaccion, "
+                    "equilibrio. Una sustancia puede tener grupos UNIFAC y no "
+                    "tener entalpia de formacion -- sirve para un ELV y no para un "
+                    "balance reactivo -- y por eso son cuatro capacidades y no un "
+                    "unico 'apto'.")
+    propiedades: Optional[dict[str, Any]] = None
+    composicion_elemental: Optional[dict[str, Any]] = Field(
+        None, description="Los atomos, que es lo que valida una estequiometria.")
+    modelos_soportados: list[str] = Field(default_factory=list)
+    fases: list[str] = Field(default_factory=list)
+    referencias: Optional[dict[str, Any]] = None
+    mensaje: Optional[str] = None
+    aviso: Optional[str] = Field(
+        None, description="Presente cuando la identificacion no es fiable.")
+
+
+class CatalogoSustanciasResponse(BaseModel):
+    identificadores_admitidos: list[dict[str, Any]]
+    capacidades: dict[str, Any]
+    id_estable: str
+    max_candidatos: int
+    modelos: list[str]
+    referencias: dict[str, Any]
+    nota: str
 
 
 class CapacidadesLaboratorioResponse(BaseModel):

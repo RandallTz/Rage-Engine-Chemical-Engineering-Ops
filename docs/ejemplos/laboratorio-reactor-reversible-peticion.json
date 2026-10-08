@@ -107,6 +107,8 @@
         "unidad": "mol/s"
       },
       "tasa_neta": null,
+      "ley_directa": null,
+      "ley_inversa": null,
       "cinetica": null,
       "A": null,
       "Ea": null

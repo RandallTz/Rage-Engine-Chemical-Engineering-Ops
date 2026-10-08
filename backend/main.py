@@ -34,8 +34,9 @@ from backend.nucleo_elv import curva_elv_binaria
 from backend.nucleo_termodinamica import mapa_residual, buscar_azeotropos, propiedades_reaccion
 from backend.schemas_laboratorio import (
     LaboratorioRequest, LaboratorioResponse, CapacidadesLaboratorioResponse,
-    EjemploLaboratorio,
+    EjemploLaboratorio, BusquedaSustanciaResponse, CatalogoSustanciasResponse,
 )
+from backend.nucleo_sustancias import buscar_sustancia, catalogo_sustancias
 from backend.ejemplos_laboratorio import (
     EJEMPLOS_LABORATORIO, EJEMPLOS_LABORATORIO_POR_ID,
 )
@@ -331,3 +332,49 @@ def laboratorio_ejemplo(ejemplo_id: str):
                    f"Disponibles: {', '.join(EJEMPLOS_LABORATORIO_POR_ID)}.",
         )
     return ejemplo
+
+
+# ---------------------------------------------------------------------
+# Catalogo de sustancias del proveedor.
+#
+# Separado de /componentes/buscar, que contesta "existe y tiene grupos
+# UNIFAC". Eso basta para un ELV y no para una reaccion, por dos motivos:
+# una formula NO identifica una sustancia, y tener grupos UNIFAC no basta
+# para reaccionar -- hace falta la entalpia de formacion, y hay sustancias
+# que tienen lo primero y no lo segundo.
+# ---------------------------------------------------------------------
+
+@app.get("/laboratorio/sustancias/buscar", response_model=BusquedaSustanciaResponse,
+         summary="Identifica una sustancia y dice COMO la identifico")
+def laboratorio_sustancias_buscar(q: str):
+    """
+    Resuelve un nombre, CAS, SMILES, InChIKey o formula.
+
+    `identificacion_fiable` es el campo que hay que mirar. Un CAS, un
+    nombre, un SMILES o un InChIKey identifican una sustancia; una FORMULA
+    no: 'C2H6O' resuelve a dimetil eter y el etanol tiene la misma
+    formula, y hierven a 248 K y a 352 K. Cuando no es fiable, la
+    respuesta trae los `candidatos` para que preguntes en vez de que el
+    motor adivine.
+
+    Y `capacidades` dice para QUE sirve, una por una: el diciclopentadieno
+    tiene grupos UNIFAC pero no entalpia de formacion, asi que vale para
+    un ELV y no para un balance reactivo. Enterarse de eso al resolver,
+    cuando el calor de reaccion sale NaN, es tarde.
+    """
+    return buscar_sustancia(q)
+
+
+@app.get("/laboratorio/sustancias/catalogo",
+         response_model=CatalogoSustanciasResponse,
+         summary="Que identificadores y capacidades admite el catalogo")
+def laboratorio_sustancias_catalogo():
+    """
+    Como se pregunta y que se puede saber, sin preguntar nada.
+
+    Declara los identificadores admitidos --con cuales identifican y
+    cuales no-- y de que propiedad depende cada capacidad, para que el
+    editor de especies pueda explicar por que una sustancia no sirve en
+    vez de limitarse a no ofrecerla.
+    """
+    return catalogo_sustancias()

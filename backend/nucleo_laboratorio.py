@@ -84,9 +84,14 @@ def _a_diccionario(request):
                         ("tasa_inversa", r.tasa_inversa), ("tasa_neta", r.tasa_neta),
                     )
                 },
+                # Las leyes de velocidad, cuando la tasa se calcula.
+                **{campo: (ley.model_dump(exclude_none=True)
+                           if ley is not None else None)
+                   for campo, ley in (("ley_directa", r.ley_directa),
+                                      ("ley_inversa", r.ley_inversa))},
                 # Se pasan a proposito, para que el nucleo los RECHACE con
                 # un diagnostico con nombre. Filtrarlos aqui los ignoraria
-                # en silencio, y el cliente creeria que su cinetica se usa.
+                # en silencio, y el cliente creeria que se usan.
                 "cinetica": r.cinetica,
                 "A": r.A,
                 "Ea": r.Ea,
@@ -140,7 +145,7 @@ def entradas_normalizadas(peticion):
                 "nu": canonico(list(r["nu"])),
                 **{campo: canonico(r.get(campo))
                    for campo in ("tasa", "tasa_directa", "tasa_inversa",
-                                 "tasa_neta")},
+                                 "tasa_neta", "ley_directa", "ley_inversa")},
             }
             for r in peticion.get("reacciones") or []
         ),

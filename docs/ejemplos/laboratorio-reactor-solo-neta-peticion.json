@@ -104,6 +104,8 @@
         "valor": 0.0,
         "unidad": "mol/s"
       },
+      "ley_directa": null,
+      "ley_inversa": null,
       "cinetica": null,
       "A": null,
       "Ea": null

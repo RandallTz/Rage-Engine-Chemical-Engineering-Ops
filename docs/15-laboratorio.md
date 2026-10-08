@@ -8,8 +8,9 @@ había adaptadores para dos montajes concretos, un calentador y un CSTR
 isotermo, así que **dos volúmenes en serie no se podían resolver**.
 
 Este capítulo documenta el ensamblador que sí los resuelve
-(`core/laboratorio.py`), las tres decisiones que le dan forma, y la
-estequiometría que se le añadió después (`core/estequiometria.py`).
+(`core/laboratorio.py`), las tres decisiones que le dan forma, la
+estequiometría que se le añadió después (`core/estequiometria.py`) y la
+cinética que rompió su estructura triangular (`core/cinetica.py`).
 
 El contrato de la API, los códigos de diagnóstico y los ejemplos exactos
 están en [`ENTREGA_LABORATORIO_CODEX.md`](ENTREGA_LABORATORIO_CODEX.md).
@@ -502,13 +503,287 @@ volumétrica sin $V$ no se integra con 1 m³: se diagnostica.
 
 ---
 
+## 15.9ter Cinética: cuando la tasa deja de ser un dato
+
+### Lo que se rompe
+
+Con la tasa dada, el avance es un **dato**: el balance por especie se
+resuelve hacia delante y el sistema es triangular (§15.3). Con una ley de
+velocidad:
+
+$$ \xi_r = r_r(T, \mathbf{x}_{salida}) \qquad \mathbf{x}_{salida} = \mathbf{x}_{salida}(\xi) $$
+
+la tasa depende de la composición de **salida**, que es lo que el balance
+calcula. Eso es un sistema implícito.
+
+**La triangularidad se rompe DENTRO de cada volumen, no entre volúmenes.**
+La marcha aguas abajo sigue valiendo: la entrada de cada volumen es la
+salida del anterior, ya determinada. Es una distinción que la respuesta
+declara, porque decir «sistema acoplado» a secas sugeriría que todo el
+montaje se resuelve a la vez, y no es así.
+
+Y es el motivo de que la entrega anterior **rechazara** la cinética con un
+diagnóstico en vez de aproximarla: resolver un sistema implícito con una
+marcha habría dado números, y números de otro problema.
+
+### La ley, con órdenes explícitos
+
+$$ r = k(T)\prod_i a_i^{n_i} $$
+
+**Un orden no es un coeficiente estequiométrico.** La ley sale de un
+mecanismo y la estequiometría de un balance, y coinciden solo en una
+reacción elemental. Si no se declaran se usa $|\nu|$ de los reactivos
+—acción de masas consistente con la estequiometría— y la respuesta **dice
+que ese fue el defecto**, para que nadie crea que lo eligió.
+
+Los órdenes **negativos se rechazan**: modelan inhibición y hacen que la
+tasa diverja cuando esa especie se agota, así que el motor no puede
+garantizar un resultado acotado. Rechazarlo es mejor que devolver un
+infinito.
+
+### Arrhenius referenciado, y por qué no es estético
+
+$$ k(T) = k_{ref}\,\exp\!\left[-\frac{E_a}{R}\left(\frac{1}{T}-\frac{1}{T_{ref}}\right)\right] $$
+
+frente a $A\,e^{-E_a/RT}$. En la forma clásica $A$ tiene magnitudes
+absurdas ($10^{13}$ y más) y el exponente vale −20 o −40, así que la
+expresión **resta números enormes para dar uno pequeño**. En la
+referenciada $k_{ref}$ está a escala humana y el exponente ronda cero
+cerca de $T_{ref}$. Se admiten las dos —los datos de la literatura vienen
+en la clásica— y se declara cuál se usó.
+
+### La base de la actividad, y las unidades de $k$
+
+| Base | $a_i$ |
+|---|---|
+| `actividad` | $x_i\gamma_i(T,\mathbf{x})$, con UNIFAC |
+| `fraccion_molar` | $x_i$ |
+
+Las dos son **adimensionales**, y eso resuelve de un golpe el problema de
+que las unidades de $k$ dependan del orden global: **$k$ lleva las
+unidades de la tasa y punto**. Su unidad declara además la base
+(integrada o volumétrica), igual que en una tasa dada.
+
+La base en concentración **no está**: necesitaría el volumen molar de la
+mezcla, que es otra decisión de modelo, y tomarla por cuenta propia sería
+elegir un modelo por el usuario.
+
+### La inversa, y la consistencia termodinámica
+
+Con dos leyes, las brutas se conocen por construcción. Y hay un tercer
+camino:
+
+$$ k_{inv} = \frac{k_{dir}}{K_{eq}(T)} $$
+
+Eso **sí** es termodinámicamente consistente: en el equilibrio $r^+ = r^-$
+obliga a que la razón de las constantes sea $K_{eq}$, y ésa es la
+restricción que impone la termodinámica. Es el único modo en que una
+reversible lo es sin dos juegos de datos cinéticos independientes.
+
+Con dos avisos que la respuesta declara:
+
+- $K_{eq}$ sale de **van't Hoff**, que supone $\Delta H_{rxn}$ constante
+  con la temperatura. Reutiliza
+  [`thermodynamics/reaccion.py`](09-reactor-cstr.md) en vez de reescribirlo.
+- La ley directa pasa a usar los **exponentes de la estequiometría**,
+  porque mezclar órdenes libres con una inversa derivada del equilibrio
+  rompería la consistencia: la razón $r^+/r^-$ dejaría de ser $K_{eq}$.
+
+### Y la corrección que el contrato pedía
+
+**Imponer $r^+ = r^-$ no demuestra equilibrio termodinámico.** Describe un
+estado estacionario con esas dos tasas, nada más. El equilibrio se calcula
+de $\Delta G$ y $K$, y eso no está implementado. El preset
+`reactor-en-equilibrio` se llama así porque sus tasas son iguales, no
+porque el motor haya comprobado un equilibrio.
+
+---
+
+## 15.9quater Energía acoplada, y un hueco que tenía
+
+### El modo adiabático no existía
+
+`_comprobar_modos` exigía temperatura impuesta **o** calor impuesto, y con
+el supuesto adiabático no hay fuente que imponer: la especificación **es**
+$\dot Q = 0$, y la temperatura es la incógnita. Un volumen adiabático no
+se podía resolver, y el diagnóstico decía «no se impuso ni la temperatura
+ni el calor» — que era falso.
+
+Es el mismo error que §15.6 corrige en el otro sentido —la **ausencia** de
+una fuente no es $\dot Q = 0$— cometido al revés: **la presencia del
+supuesto sí es una especificación**, y no se estaba leyendo como tal.
+
+Ahora hay tres modos, y siguen siendo excluyentes por la misma razón
+estructural de §15.3:
+
+| Modo | Se impone | Se calcula |
+|---|---|---|
+| temperatura | $T_{sal}$ | $\dot Q$ |
+| calor | $\dot Q$ | $T$ |
+| **adiabático** | $\dot Q = 0$, por el supuesto | $T$ |
+
+### Con cinética, T y avance se cierran juntos
+
+$k(T)$ decide el avance y el avance decide el calor que decide $T$.
+Resolver uno y luego el otro daría la respuesta de otro problema.
+
+Verificado por dos caminos independientes en la isomerización de butano
+adiabática (320 K de entrada, 20 bar):
+
+- imponer la $T$ resultante en modo isotermo da el **mismo** avance:
+  86.0894127745747 frente a 86.08941277457478;
+- el calor liberado iguala al calentamiento sensible: **818 710.3 W** por
+  los dos lados.
+
+---
+
+## 15.9quinquies Los tres algoritmos, y por qué son tres
+
+| Situación | Algoritmo | Por qué ése |
+|---|---|---|
+| una reacción, $T$ impuesta | `brentq` **acotado** | el intervalo estequiométrico garantiza el cambio de signo |
+| varias reacciones, $T$ impuesta | `root`/`hybr` | no hay intervalo que acote un sistema |
+| $T$ incógnita | sustituciones sucesivas **y** `least_squares`/`trf` con límites | `least_squares` solo se para donde el cuadrado tiene un mínimo, y ése puede no ser raíz |
+
+### El cambio de signo, con una reacción
+
+En $\xi = 0$ el residuo vale $-r$ (negativo si la reacción avanza) y en el
+límite estequiométrico el reactivo se agota, la tasa cae a cero y el
+residuo vale $\xi > 0$. Así que hay raíz en el intervalo **físico**, y
+`brentq` la encuentra sin ambigüedad. Si no hay cambio de signo, no es un
+fallo del solver: es que la ley y la alimentación no se encuentran, y el
+diagnóstico lo dice con los dos extremos.
+
+### Por qué con varias no se imponen límites
+
+Los límites de cada reacción suponiendo las otras a cero **no son
+conservadores**: dos reacciones pueden consumir el mismo reactivo. Así que
+la factibilidad se **comprueba** después en vez de imponerse, y la
+respuesta lo declara como restricción. Un límite que no limita es peor que
+no tenerlo, porque invita a confiar en él.
+
+### El mínimo local que no era raíz
+
+Esta es la parte que conviene leer despacio, porque el síntoma no apuntaba
+al diagnóstico.
+
+`least_squares` minimiza $\lVert F\rVert^2$. En un sistema cuadrado eso
+**no** es lo mismo que resolver $F = 0$: puede pararse en un mínimo local
+del cuadrado. Y pasaba. Para una reacción exotérmica con sólo ley directa
+el resultado era:
+
+$$ \xi = -13.3\ \text{mol/s} \qquad T = 307.8\ \text{K} $$
+
+Avance **negativo** y temperatura **por debajo** de la entrada. Físicamente
+imposible, y el solver no estaba roto: estaba haciendo su trabajo sobre una
+función cuyo mínimo local pilló primero.
+
+El motivo está en la dirección de descenso desde $(\xi = 0, T = T_{ent})$.
+Ahí el residuo de materia vale $-r/F$ y el de energía vale cero, así que
+**bajar** la temperatura reduce la tasa y con ella el residuo de materia:
+
+$$ \frac{\partial}{\partial T}\tfrac12\lVert F\rVert^2 \;=\; \underbrace{F_{mat}}_{<0}\cdot\underbrace{\frac{\partial F_{mat}}{\partial T}}_{<0} \;>\; 0 $$
+
+El gradiente apunta a $T$ **menor**, que es exactamente al lado contrario
+de donde está la solución de una exotérmica.
+
+Antes de eso, con `root`/`hybr` —que no acepta límites— el fallo era otro:
+con la tasa creciendo como $e^{-E_a/RT}$, el primer paso se iba a
+temperaturas sin sentido y desde allí no volvía. El residuo no tenía nada
+de malo; medido en una rejilla es suave, monótono y tiene solución. Lo que
+faltaba era **impedir que el solver mirara donde el modelo no existe**.
+
+### La solución: arrancar donde arrancaría un ingeniero
+
+Sustituciones sucesivas, alternando los dos problemas que **sí** se
+resuelven de forma robusta porque cada uno es escalar y acotado:
+
+1. con $T$ fija, el avance (`brentq`, con cambio de signo garantizado);
+2. con el avance fijo, la $T$ (`brentq` sobre el dominio de la tabla de
+   entalpía, invirtiendo el balance de energía).
+
+Eso converge en pocas vueltas y deja el punto cerca. Después
+`least_squares` **acotado** lo pule y **mide** el residuo final.
+
+**Las dos cosas se declaran.** Decir solo «least_squares» ocultaría de
+dónde salió el punto de partida, y el punto de partida es la mitad del
+problema cuando hay mínimos locales.
+
+### Los límites, y de dónde salen
+
+La temperatura se acota al **dominio de la tabla de entalpía** —para
+butano, 200–399.7 K— que es donde el modelo existe. No es un número
+elegido: es `CalculadoraEntalpia.T_min/T_max`.
+
+Y si la solución se queda **en** un límite, `convergio` es `false`: una
+solución en la pared no es un estado estacionario, significa que el
+sistema pide salirse del dominio del modelo. Detectarlo y decirlo es la
+diferencia entre un resultado y un número.
+
+---
+
+## 15.9sexies El catálogo de sustancias
+
+Dos preguntas que `/componentes/buscar` no contestaba.
+
+### Una fórmula no identifica una sustancia
+
+| Consulta | Resuelve a | $T_b$ |
+|---|---|---|
+| `C2H6O` | **dimethyl ether** | 248.4 K |
+| `ethanol` | ethanol | 351.6 K |
+
+Las dos tienen fórmula C2H6O: **103 K de diferencia** por escribir la
+fórmula. Y el cálculo sale perfectamente bien para la sustancia
+equivocada, que es lo peor que puede pasar.
+
+El índice de fórmulas de `chemicals` asocia cada fórmula a **una** sola
+sustancia, así que ya eligió por su cuenta y no sirve para avisar. Se
+barre la base entera —76 522 entradas, 8 ms— y se devuelven los
+candidatos. Ocho milisegundos es baratísimo al lado de no poder avisar.
+
+El **id estable es el CAS**: el nombre tiene sinónimos y la fórmula es
+ambigua.
+
+### Tener grupos UNIFAC no basta para reaccionar
+
+Hace falta además la entalpía de formación, y hay sustancias que tienen lo
+primero y no lo segundo. El **diciclopentadieno** es el caso que lo
+destapó: UNIFAC sí, `Hfm` no. Sirve para un ELV y no para un balance
+reactivo, y enterarse al resolver —cuando el calor de reacción sale NaN—
+es tarde.
+
+Así que las capacidades se declaran una por una, con lo que falta en cada
+caso:
+
+| Capacidad | Necesita |
+|---|---|
+| `elv` | grupos UNIFAC |
+| `entalpia` | + $C_p$ del líquido |
+| `reaccion` | + entalpía de formación |
+| `equilibrio` | + energía de Gibbs de formación |
+
+Y se comprueba **la misma propiedad que el motor usa luego**, no una
+parecida: `entalpias_formacion_liquido()` lee `Hfm`, así que el catálogo
+mira `Hfm`. Comprobar otra daría un apto que luego falla.
+
+---
+
 ## 15.10 Límites
 
 - **Trabajo de eje y régimen transitorio se rechazan** con diagnóstico.
   Un montaje que el motor no sabe resolver tiene que decirlo en vez de
   devolver números de otro problema.
-- **La cinética y el equilibrio químico, también.** La tasa tiene que
-  estar especificada; ver §15.9bis.
+- **El equilibrio químico calculado.** El motor no obtiene la composición
+  de equilibrio a partir de $\Delta G$ y $K$; lo único de ese territorio es
+  `desde_equilibrio`, que usa $K_{eq}$ para hacer consistente una inversa
+  **cinética**, que es otra cosa.
+- **El régimen de lote (transitorio).** Es otro régimen: estado inicial,
+  integración en el tiempo, muestreo y tolerancias del integrador.
+  `estacionario` sigue siendo obligatorio.
+- **Mezclar en un mismo volumen reacciones de tasa dada con reacciones
+  cinéticas.** Las primeras se propagan y las segundas exigen resolver un
+  sistema; combinarlas necesita un solver que incluya las dos.
 - **Dos volúmenes como máximo**, una alimentación, una salida por volumen.
   El límite es del ensamblador, no del método: la marcha aguas abajo sirve
   para $N$.
@@ -526,7 +801,7 @@ volumétrica sin $V$ no se integra con 1 m³: se diagnostica.
 
 ## 15.11 Qué comprueba la validación
 
-`tests/validar_laboratorio.py`, ocho grupos y **230 comprobaciones**. **Los números no están
+`tests/validar_laboratorio.py`, diez grupos y **312 comprobaciones**. **Los números no están
 escritos a mano**: se comparan contra llamadas independientes al mismo
 proveedor. Si copiara la salida del ensamblador como valor esperado, la
 prueba bendeciría cualquier error que tuviera, y para siempre.
@@ -555,6 +830,22 @@ Los residuos de elementos y masa quedan por debajo de $10^{-12}$ en todos
 los casos, y el cierre global del montaje de dos reactores da **0.0**:
 $\Sigma \dot Q = -2\,517\,877.48$ W $=$ transporte $249\,622.52$ $+$
 reacción $-2\,767\,500.00$.
+
+### Y de la cinética
+
+Los casos de primer y segundo orden en base de fracción molar tienen
+**solución analítica**, así que tampoco hay números escritos a mano:
+
+| Caso | Analítico |
+|---|---|
+| 1.º orden | $\xi = \dfrac{k F_{A0}}{F_0 + k} = 33.3\overline{3}$ |
+| 2.º orden | raíz de $F_0^2\xi = k(F_{A0}-\xi)^2$ |
+| dos reacciones acopladas | sistema lineal resuelto a mano |
+
+Los tres coinciden a $10^{-9}$ o mejor. Y se comprueba que **lo declarado
+es lo que corre**: que una reacción isoterma use `brentq` acotado, que
+varias usen `hybr`, que el acoplado declare el arranque **y** el solver, y
+que los límites de temperatura vengan de la tabla de entalpía.
 
 ### Dos defectos que la reacción destapó
 

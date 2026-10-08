@@ -199,7 +199,7 @@ la misma definición**. Es la razón de existir de
 | `tests/validar_caida_presion.py` | **Caída de presión**: que con 0 nada cambie, que se acumule al encadenar, y su efecto sobre la vaporización |
 | `tests/validar_termodinamica.py` | ELV, topología reactiva, azeótropos |
 | `tests/validar_trazabilidad.py` | **Trazabilidad**: que la huella cambie cuando cambia la física y **no** cuando no, que la categoría de un diagnóstico no salga del texto del mensaje, y que ningún bloque no iterativo presente un residuo ([§14](14-trazabilidad.md)) |
-| `tests/validar_laboratorio.py` | **El laboratorio**: dos volúmenes con la corriente intermedia como un solo estado, los modos T y Q excluyentes, balances por especie con reacción, el equilibrio con **fuente neta cero y brutas positivas**, conservación de elementos y masa medida, y las muchas formas de montar mal el grafo ([§15](15-laboratorio.md)) |
+| `tests/validar_laboratorio.py` | **El laboratorio**: la corriente intermedia como un solo estado, balances por especie con reacción, el equilibrio con **fuente neta cero y brutas positivas**, cinética de acción de masas contra **soluciones analíticas**, energía acoplada verificada por dos caminos, y el catálogo que avisa de que `C2H6O` no identifica una sustancia ([§15](15-laboratorio.md)) |
 | `frontend/verificar_*.mjs` | Interfaz real en navegador (18 suites). Se lanzan todas con `node verificar_todo.mjs`, que mira el **código de salida** y no la salida de texto |
 
 Las suites de navegador usan `puppeteer-core`: **no comprueban que el

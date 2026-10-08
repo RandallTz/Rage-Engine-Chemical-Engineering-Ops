@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "estado": "resuelto",
-  "modelo_id": "11255cc3715f468a630c4b7e09a4abead973c1e6dbd1f9ac9cee240247c76507",
+  "modelo_id": "cd2a050c6d49c774e2ba5a2b4a786869af9857aabd02d7624e55f95f3a5fb32e",
   "calculo": {
     "identificador": "<identificador de esta ejecucion>",
     "instante_utc": "<instante UTC de la ejecucion>",
@@ -19,7 +19,7 @@
         "scipy": "<version instalada de scipy>"
       }
     },
-    "huella_entradas": "11255cc3715f468a630c4b7e09a4abead973c1e6dbd1f9ac9cee240247c76507",
+    "huella_entradas": "cd2a050c6d49c774e2ba5a2b4a786869af9857aabd02d7624e55f95f3a5fb32e",
     "algoritmo_huella": "sha256"
   },
   "componentes": [
@@ -743,6 +743,7 @@
     "escala_residuo": null,
     "convergio": null,
     "motivo_sin_convergencia": "No hubo iteracion: con la temperatura impuesta en cada volumen, el calor se despeja del balance en una sola evaluacion. No hay convergencia que declarar ni residuo que medir.",
+    "sistemas_implicitos": [],
     "cierre_global": {
       "residuo_relativo": null,
       "escala": "relativo al mayor de |suma de Q| y |F dh|",
@@ -943,7 +944,7 @@
       }
     },
     "aviso_referencia": "`incluye_formacion` decide si el balance de energia lleva el termino de calor de reaccion. Con una referencia SENSIBLE las entalpias de formacion no estan en h, asi que el termino va explicito; con una que las incluyera, ya estaria dentro y sumarlo lo contaria dos veces. La respuesta dice en `terminos_descartados` cual de los dos casos aplico.",
-    "componentes": "los que el proveedor UNIFAC admita (consulta /componentes/buscar)",
+    "componentes": "los que el proveedor UNIFAC admita. Consultalos en /laboratorio/sustancias/buscar, que ademas dice si la sustancia sirve para REACCION (hace falta entalpia de formacion, y hay especies que tienen grupos UNIFAC y no la tienen) y avisa cuando la consulta era una FORMULA, que no identifica una sustancia",
     "numero_de_componentes": {
       "minimo": 2,
       "maximo": 8,
@@ -1091,9 +1092,32 @@
       "donde": "En un bloque de tipo 'reactor'. La produccion y la desaparicion quimica pertenecen al volumen donde ocurren: no son alimentaciones ficticias.",
       "convencion_nu": "positivo producto, negativo reactivo. Un mismo evento produce unos componentes y consume otros, y por eso el signo va en el coeficiente y no en la tasa.",
       "formas_de_declarar_la_tasa": {
-        "tasa": "irreversible, una sola direccion. Las brutas se conocen.",
-        "tasa_directa + tasa_inversa": "reversible. Las brutas se conocen. Las dos son >= 0.",
-        "tasa_neta": "solo el neto. Las brutas NO se conocen y se devuelven como null."
+        "tasa": "DADA, irreversible. Las brutas se conocen.",
+        "tasa_directa + tasa_inversa": "DADA, reversible. Las brutas se conocen. Las dos son >= 0.",
+        "tasa_neta": "DADA, solo el neto. Las brutas NO se conocen y se devuelven como null.",
+        "ley_directa (+ ley_inversa)": "CALCULADA por una ley de accion de masas. Las brutas se conocen: cada ley da la velocidad de su sentido por definicion."
+      },
+      "cinetica": {
+        "ley": "r = k(T) prod_i a_i^(orden_i)",
+        "ordenes": "EXPLICITOS. Un orden no es un coeficiente estequiometrico: la ley sale de un mecanismo y la estequiometria de un balance, y coinciden solo en una reaccion elemental. Sin declararlos se usa |nu| de los reactivos y la respuesta lo dice. Los negativos se rechazan: modelan inhibicion y hacen que la tasa diverja cuando la especie se agota.",
+        "arrhenius": {
+          "referenciada": "k = k_ref exp(-Ea/R (1/T - 1/T_ref)). Preferible: k_ref esta a escala humana y el exponente ronda cero cerca de T_ref.",
+          "clasica": "k = A exp(-Ea/(R T)). Se admite porque los datos de la literatura vienen asi, pero A tiene magnitudes absurdas y la expresion resta numeros enormes."
+        },
+        "bases_de_actividad": {
+          "actividad": "a_i = x_i gamma_i(T, x), con UNIFAC. Es la base correcta en fase liquida no ideal.",
+          "fraccion_molar": "a_i = x_i. Ignora la no idealidad; mas barata y menos correcta."
+        },
+        "base_concentracion": "NO admitida: necesitaria el volumen molar de la mezcla, que es otra decision de modelo.",
+        "unidades_de_k": "Las actividades son adimensionales en las dos bases, asi que k lleva las unidades de la tasa y no dependen del orden global. Su unidad declara la base (integrada o volumetrica), igual que en una tasa dada.",
+        "inversa_desde_equilibrio": "k_inv = k_dir / K_eq(T). Es la restriccion que impone la termodinamica, y el unico modo en que una reversible es consistente sin dos juegos de datos cineticos. Usa van't Hoff, que supone dH_rxn constante con T: es una aproximacion y se declara.",
+        "lo_que_cambia": "Con una ley, la tasa depende de la composicion de SALIDA, que es lo que el balance calcula: el sistema del volumen se vuelve IMPLICITO. La marcha aguas abajo entre volumenes sigue valiendo; lo implicito esta dentro de cada volumen.",
+        "no_soportado": [
+          "mezclar en un mismo volumen reacciones de tasa dada con reacciones cineticas",
+          "ordenes negativos (inhibicion)",
+          "equilibrio quimico calculado: el motor no obtiene el avance a partir de K",
+          "regimen transitorio o lote"
+        ]
       },
       "bases": {
         "integrada": [
@@ -1119,11 +1143,13 @@
     },
     "especificacion_termica": {
       "modos": [
-        "temperatura de salida impuesta",
-        "calor impuesto"
+        "temperatura de salida impuesta (Q incognita)",
+        "calor impuesto (T incognita)",
+        "adiabatico: el supuesto ES la especificacion, dice Q = 0, y la temperatura es la incognita"
       ],
       "excluyentes": true,
-      "motivo": "El balance de energia del volumen es una ecuacion con esas dos incognitas: fijar una determina la otra."
+      "motivo": "El balance de energia del volumen es una ecuacion con esas dos incognitas: fijar una determina la otra. El supuesto adiabatico cuenta como fijar Q, asi que marcarlo Y ademas imponer la temperatura sobra.",
+      "con_cinetica": "Cuando la temperatura es incognita Y hay cinetica, las dos cosas se cierran A LA VEZ: k(T) decide el avance y el avance decide el calor que decide T. Resolver una y luego la otra daria la respuesta de otro problema."
     },
     "supuestos_exigidos": {
       "estacionario": true,
@@ -1139,9 +1165,8 @@
     ],
     "nota_fases": "La fase se determina con el punto de burbuja y el de rocio; no se supone liquida.",
     "no_soportado": [
-      "regimen transitorio (dE/dt, dn_i/dt)",
-      "cinetica: la tasa tiene que estar especificada. Una tasa que dependa de la composicion de salida hace el balance implicito y exige un solver acoplado; el CSTR con cinetica sigue en /diagrama/resolver",
-      "equilibrio quimico: el motor no calcula el avance a partir de K",
+      "regimen transitorio y lote (dE/dt, dn_i/dt, integracion en el tiempo)",
+      "equilibrio quimico calculado: el motor no obtiene el avance a partir de K. OJO: imponer r+ = r- NO demuestra equilibrio termodinamico, solo describe un estado estacionario con esas dos tasas",
       "trabajo de eje",
       "energias cinetica y potencial",
       "mas de una alimentacion o mas de una salida por volumen",
@@ -1156,11 +1181,15 @@
       "inversion_h_T": 1e-09,
       "cierre_global": 1e-08,
       "conservacion_elementos_y_masa": 1e-10,
+      "sistema_cinetico_implicito": 1e-10,
       "nota": "La del cierre global es mas holgada porque es una suma de resultados y acumula el redondeo de los dos balances. Excederla no significa datos malos: significa un fallo del motor, y sale como error con estado 'no_convergente'."
     },
     "metodos": {
       "temperatura impuesta": "evaluacion algebraica directa, sin iteracion",
-      "calor impuesto": "inversion escalar de h(T) con brentq, xtol 1e-10 K",
+      "calor impuesto o adiabatico": "inversion escalar de h(T) con brentq, xtol 1e-10 K",
+      "cinetica isoterma, una reaccion": "brentq sobre el avance, ACOTADO por el intervalo estequiometrico. El cambio de signo esta garantizado",
+      "cinetica isoterma, varias reacciones": "scipy.optimize.root con hybr sobre el vector de avances. Sin intervalo que acote un sistema, la factibilidad se comprueba despues",
+      "cinetica con T incognita": "arranque por sustituciones sucesivas (dos problemas escalares acotados, alternados) y despues scipy.optimize.least_squares con trf y limites. El arranque hace falta porque least_squares minimiza el cuadrado del residuo y puede pararse en un minimo local que no es raiz",
       "materia": "propagacion algebraica de los caudales por especie; con reaccion se suma nu_i xi, que es un dato y no una incognita",
       "topologia": "marcha aguas abajo; el sistema es triangular -- tambien con reaccion, porque la tasa esta especificada y no depende de la salida -- y no se resuelve como sistema acoplado"
     }

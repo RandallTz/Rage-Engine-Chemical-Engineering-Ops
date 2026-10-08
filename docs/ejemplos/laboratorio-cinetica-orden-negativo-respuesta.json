@@ -1,0 +1,641 @@
+{
+  "schema_version": 1,
+  "estado": "invalido",
+  "modelo_id": "0b239418b81e381c32674dc6e481552126547acae8aa6ca00592e2228ebc40b0",
+  "calculo": {
+    "identificador": "<identificador de esta ejecucion>",
+    "instante_utc": "<instante UTC de la ejecucion>",
+    "motor": {
+      "version": "0.15.0",
+      "commit": "<commit de git, con sufijo -sucio si el arbol tenia cambios>"
+    },
+    "proveedor_termodinamico": {
+      "identificador": "<identificador de esta ejecucion>",
+      "versiones": {
+        "thermo": "<version instalada de thermo>",
+        "chemicals": "<version instalada de chemicals>",
+        "fluids": "<version instalada de fluids>",
+        "numpy": "<version instalada de numpy>",
+        "scipy": "<version instalada de scipy>"
+      }
+    },
+    "huella_entradas": "0b239418b81e381c32674dc6e481552126547acae8aa6ca00592e2228ebc40b0",
+    "algoritmo_huella": "sha256"
+  },
+  "componentes": [
+    "n-butane",
+    "isobutane"
+  ],
+  "modelo_termodinamico": "unifac_raoult",
+  "referencia_entalpia": "sensible_liquido_298.15K",
+  "presion_sistema": 2000000.0,
+  "variables": [
+    {
+      "id": "in.F",
+      "bloque_ids": [
+        "in",
+        "rx"
+      ],
+      "conexion_ids": [
+        "c1"
+      ],
+      "simbolo": "F_{1}",
+      "magnitud": "F",
+      "unidad": "mol/s",
+      "rol": "impuesta",
+      "compartida": false,
+      "impuesta": true,
+      "valor": 100.0,
+      "procedencia": "especificacion explicita en 'in' (mol/s)"
+    },
+    {
+      "id": "in.T",
+      "bloque_ids": [
+        "in",
+        "rx"
+      ],
+      "conexion_ids": [
+        "c1"
+      ],
+      "simbolo": "T_{1}",
+      "magnitud": "T",
+      "unidad": "K",
+      "rol": "impuesta",
+      "compartida": false,
+      "impuesta": true,
+      "valor": 320.0,
+      "procedencia": "especificacion explicita en 'in' (K)"
+    },
+    {
+      "id": "in.p",
+      "bloque_ids": [
+        "in",
+        "rx"
+      ],
+      "conexion_ids": [
+        "c1"
+      ],
+      "simbolo": "p_{1}",
+      "magnitud": "p",
+      "unidad": "Pa",
+      "rol": "impuesta",
+      "compartida": false,
+      "impuesta": true,
+      "valor": 2000000.0,
+      "procedencia": "presion uniforme del sistema"
+    },
+    {
+      "id": "in.h",
+      "bloque_ids": [
+        "in",
+        "rx"
+      ],
+      "conexion_ids": [
+        "c1"
+      ],
+      "simbolo": "h_{1}",
+      "magnitud": "h",
+      "unidad": "J/mol",
+      "rol": "calculada",
+      "compartida": false,
+      "impuesta": false,
+      "valor": null,
+      "procedencia": null
+    },
+    {
+      "id": "in.x0",
+      "bloque_ids": [
+        "in",
+        "rx"
+      ],
+      "conexion_ids": [
+        "c1"
+      ],
+      "simbolo": "x_{1,1}",
+      "magnitud": "x0",
+      "unidad": "mol/mol",
+      "rol": "impuesta",
+      "compartida": false,
+      "impuesta": true,
+      "valor": 1.0,
+      "procedencia": "especificacion explicita en 'in' (mol/mol)"
+    },
+    {
+      "id": "in.x1",
+      "bloque_ids": [
+        "in",
+        "rx"
+      ],
+      "conexion_ids": [
+        "c1"
+      ],
+      "simbolo": "x_{2,1}",
+      "magnitud": "x1",
+      "unidad": "mol/mol",
+      "rol": "calculada",
+      "compartida": false,
+      "impuesta": false,
+      "valor": null,
+      "procedencia": null
+    },
+    {
+      "id": "out.F",
+      "bloque_ids": [
+        "out",
+        "rx"
+      ],
+      "conexion_ids": [
+        "c3"
+      ],
+      "simbolo": "F_{4}",
+      "magnitud": "F",
+      "unidad": "mol/s",
+      "rol": "calculada",
+      "compartida": false,
+      "impuesta": false,
+      "valor": null,
+      "procedencia": null
+    },
+    {
+      "id": "out.T",
+      "bloque_ids": [
+        "out",
+        "rx"
+      ],
+      "conexion_ids": [
+        "c3"
+      ],
+      "simbolo": "T_{4}",
+      "magnitud": "T",
+      "unidad": "K",
+      "rol": "impuesta",
+      "compartida": false,
+      "impuesta": true,
+      "valor": 330.0,
+      "procedencia": "especificacion explicita en 'rx' (K): temperatura de su corriente de salida ('out'). No es la temperatura de la alimentacion."
+    },
+    {
+      "id": "out.p",
+      "bloque_ids": [
+        "out",
+        "rx"
+      ],
+      "conexion_ids": [
+        "c3"
+      ],
+      "simbolo": "p_{4}",
+      "magnitud": "p",
+      "unidad": "Pa",
+      "rol": "impuesta",
+      "compartida": false,
+      "impuesta": true,
+      "valor": 2000000.0,
+      "procedencia": "presion uniforme del sistema"
+    },
+    {
+      "id": "out.h",
+      "bloque_ids": [
+        "out",
+        "rx"
+      ],
+      "conexion_ids": [
+        "c3"
+      ],
+      "simbolo": "h_{4}",
+      "magnitud": "h",
+      "unidad": "J/mol",
+      "rol": "calculada",
+      "compartida": false,
+      "impuesta": false,
+      "valor": null,
+      "procedencia": null
+    },
+    {
+      "id": "out.x0",
+      "bloque_ids": [
+        "out",
+        "rx"
+      ],
+      "conexion_ids": [
+        "c3"
+      ],
+      "simbolo": "x_{1,4}",
+      "magnitud": "x0",
+      "unidad": "mol/mol",
+      "rol": "calculada",
+      "compartida": false,
+      "impuesta": false,
+      "valor": null,
+      "procedencia": null
+    },
+    {
+      "id": "out.x1",
+      "bloque_ids": [
+        "out",
+        "rx"
+      ],
+      "conexion_ids": [
+        "c3"
+      ],
+      "simbolo": "x_{2,4}",
+      "magnitud": "x1",
+      "unidad": "mol/mol",
+      "rol": "calculada",
+      "compartida": false,
+      "impuesta": false,
+      "valor": null,
+      "procedencia": null
+    },
+    {
+      "id": "heat.Q",
+      "bloque_ids": [
+        "heat",
+        "rx"
+      ],
+      "conexion_ids": [
+        "c2"
+      ],
+      "simbolo": "Q_{3}",
+      "magnitud": "Q",
+      "unidad": "W",
+      "rol": "calculada",
+      "compartida": false,
+      "impuesta": false,
+      "valor": null,
+      "procedencia": null
+    }
+  ],
+  "ecuaciones": [],
+  "diagnosticos": [
+    {
+      "codigo": "LAB_ORDEN_INVALIDO",
+      "severidad": "error",
+      "categoria": "datos",
+      "mensaje": "reacciones[0] (iso).ley_directa: hay ordenes negativos ([1.0, -1.0]). Un orden negativo modela inhibicion y hace que la tasa diverja cuando esa especie se agota; este motor no lo admite porque no puede garantizar un resultado acotado.",
+      "accion_sugerida": "Revisa la ley de velocidad.",
+      "bloque_ids": [
+        "rx"
+      ],
+      "conexion_ids": [],
+      "variable_ids": []
+    }
+  ],
+  "resumen_diagnosticos": {
+    "total": 1,
+    "por_severidad": {
+      "error": 1
+    },
+    "por_categoria": {
+      "datos": 1
+    },
+    "hay_errores": true
+  },
+  "analisis": {
+    "variables_totales": 13,
+    "impuestas": 6,
+    "incognitas": 7,
+    "ecuaciones_independientes": 0,
+    "grados_libertad": 7,
+    "rango": null,
+    "rango_origen": "no se determina: el montaje no llego a ensamblarse.",
+    "metodo": null,
+    "alcance": null,
+    "nota_metodo": null,
+    "orden_resolucion": [
+      "rx"
+    ],
+    "no_contadas": {
+      "condicion": 0,
+      "convencion": 0,
+      "cierre": 0,
+      "verificacion": 0
+    },
+    "nota_no_contadas": "Las especificaciones reducen las incognitas; no aumentan las ecuaciones. Las convenciones de signo no son ecuaciones. El cierre de composicion se satisface por la parametrizacion. La verificacion global es combinacion lineal de los balances."
+  },
+  "convergencia": null,
+  "estados_por_bloque": {
+    "in": {
+      "F": 100.0,
+      "T": 320.0,
+      "p": 2000000.0,
+      "x": 1.0,
+      "composicion": [
+        1.0,
+        null
+      ],
+      "por_especie": [
+        {
+          "componente": "n-butane",
+          "x": 1.0,
+          "F_i": 100.0,
+          "unidad_F_i": "mol/s"
+        },
+        {
+          "componente": "isobutane",
+          "x": null,
+          "F_i": null,
+          "unidad_F_i": "mol/s"
+        }
+      ],
+      "h": null,
+      "fase": null,
+      "beta": null,
+      "nota_F_i": "F_i = F x_i, derivado. No es una variable del sistema: declararlo como tal anadiria n incognitas y n ecuaciones que se cancelan."
+    },
+    "out": {
+      "F": null,
+      "T": 330.0,
+      "p": 2000000.0,
+      "x": null,
+      "composicion": [
+        null,
+        null
+      ],
+      "por_especie": [
+        {
+          "componente": "n-butane",
+          "x": null,
+          "F_i": null,
+          "unidad_F_i": "mol/s"
+        },
+        {
+          "componente": "isobutane",
+          "x": null,
+          "F_i": null,
+          "unidad_F_i": "mol/s"
+        }
+      ],
+      "h": null,
+      "fase": null,
+      "beta": null,
+      "nota_F_i": "F_i = F x_i, derivado. No es una variable del sistema: declararlo como tal anadiria n incognitas y n ecuaciones que se cancelan."
+    }
+  },
+  "reacciones": [],
+  "fuentes_por_volumen": {},
+  "conservacion": {},
+  "capacidades": {
+    "schema_version": 1,
+    "modelos_termodinamicos": [
+      "unifac_raoult"
+    ],
+    "referencias_entalpia": {
+      "sensible_liquido_298.15K": {
+        "incluye_formacion": false,
+        "T_ref": 298.15,
+        "fase_ref": "liquido",
+        "descripcion": "Entalpia sensible de cada especie referida a su liquido puro a 298.15 K. No incluye entalpias de formacion, asi que un balance con reaccion necesita el termino de calor de reaccion explicito."
+      }
+    },
+    "aviso_referencia": "`incluye_formacion` decide si el balance de energia lleva el termino de calor de reaccion. Con una referencia SENSIBLE las entalpias de formacion no estan en h, asi que el termino va explicito; con una que las incluyera, ya estaria dentro y sumarlo lo contaria dos veces. La respuesta dice en `terminos_descartados` cual de los dos casos aplico.",
+    "componentes": "los que el proveedor UNIFAC admita. Consultalos en /laboratorio/sustancias/buscar, que ademas dice si la sustancia sirve para REACCION (hace falta entalpia de formacion, y hay especies que tienen grupos UNIFAC y no la tienen) y avisa cuando la consulta era una FORMULA, que no identifica una sustancia",
+    "numero_de_componentes": {
+      "minimo": 2,
+      "maximo": 8,
+      "nota": "El orden importa: 'x0' es la fraccion del primero. 'x' a secas se admite como alias de 'x0' SOLO en binarios, porque con tres especies no identifica ninguna."
+    },
+    "piezas": {
+      "entrada": "Alimentacion: estado impuesto que entra al sistema.",
+      "salida": "Salida: estado que abandona el sistema.",
+      "corriente": "Corriente intermedia: UN estado compartido por dos volumenes.",
+      "recipiente": "Volumen de control: aporta balances, no propiedades.",
+      "reactor": "Reactor mezclado: balances mas estequiometria y cinetica.",
+      "calor": "Fuente de calor: aporta Q al balance del volumen conectado.",
+      "trabajo": "Trabajo de eje: aporta W al balance del volumen conectado."
+    },
+    "variables_por_pieza": {
+      "entrada": {
+        "binario": [
+          "F",
+          "T",
+          "p",
+          "x0",
+          "x1",
+          "x"
+        ],
+        "n_componentes": [
+          "F",
+          "T",
+          "p",
+          "x0",
+          "x1",
+          "x2",
+          "... x{n-1}"
+        ]
+      },
+      "salida": {
+        "binario": [
+          "p"
+        ],
+        "n_componentes": [
+          "p"
+        ]
+      },
+      "corriente": {
+        "binario": [
+          "p"
+        ],
+        "n_componentes": [
+          "p"
+        ]
+      },
+      "recipiente": {
+        "binario": [
+          "T"
+        ],
+        "n_componentes": [
+          "T"
+        ]
+      },
+      "reactor": {
+        "binario": [
+          "T",
+          "V"
+        ],
+        "n_componentes": [
+          "T",
+          "V"
+        ]
+      },
+      "calor": {
+        "binario": [
+          "Q"
+        ],
+        "n_componentes": [
+          "Q"
+        ]
+      },
+      "trabajo": {
+        "binario": [
+          "W"
+        ],
+        "n_componentes": [
+          "W"
+        ]
+      }
+    },
+    "unidades": {
+      "F": [
+        "kmol/h",
+        "kmol/s",
+        "mol/h",
+        "mol/s"
+      ],
+      "p": [
+        "MPa",
+        "Pa",
+        "atm",
+        "bar",
+        "kPa"
+      ],
+      "x": [
+        "-",
+        "fraccion",
+        "mol/mol"
+      ],
+      "Q": [
+        "J/s",
+        "MW",
+        "W",
+        "kW"
+      ],
+      "V": [
+        "L",
+        "cm3",
+        "dm3",
+        "m3",
+        "mL"
+      ],
+      "T": [
+        "C",
+        "K",
+        "degC",
+        "°C"
+      ]
+    },
+    "especificaciones": {
+      "preferente": "especificaciones: [{bloque_id, variable, valor, unidad}] -- la unidad es obligatoria",
+      "compatibilidad": "bloques[].datos tambien se admite, con las unidades implicitas que documenta la mesa",
+      "unidades_implicitas_de_datos": {
+        "F": "mol/s",
+        "T": "K",
+        "p": "Pa",
+        "x": "mol/mol",
+        "Q": "kW"
+      },
+      "aviso": "En un dato local, Q se lee en kW; en una especificacion explicita, en la unidad que esta declare. Es la misma letra con dos escalas, y la respuesta dice en 'procedencia' de donde salio cada valor.",
+      "colisiones": "Un dato local y una especificacion explicita sobre la misma variable son un error, tambien si coinciden."
+    },
+    "topologias": [
+      "una alimentacion, uno o dos volumenes en serie, una salida",
+      "una corriente intermedia entre dos volumenes, con estado unico compartido",
+      "una fuente de calor por volumen",
+      "volumenes de tipo 'recipiente' (sin reaccion) o 'reactor' (con una o varias reacciones de tasa especificada)"
+    ],
+    "reaccion": {
+      "donde": "En un bloque de tipo 'reactor'. La produccion y la desaparicion quimica pertenecen al volumen donde ocurren: no son alimentaciones ficticias.",
+      "convencion_nu": "positivo producto, negativo reactivo. Un mismo evento produce unos componentes y consume otros, y por eso el signo va en el coeficiente y no en la tasa.",
+      "formas_de_declarar_la_tasa": {
+        "tasa": "DADA, irreversible. Las brutas se conocen.",
+        "tasa_directa + tasa_inversa": "DADA, reversible. Las brutas se conocen. Las dos son >= 0.",
+        "tasa_neta": "DADA, solo el neto. Las brutas NO se conocen y se devuelven como null.",
+        "ley_directa (+ ley_inversa)": "CALCULADA por una ley de accion de masas. Las brutas se conocen: cada ley da la velocidad de su sentido por definicion."
+      },
+      "cinetica": {
+        "ley": "r = k(T) prod_i a_i^(orden_i)",
+        "ordenes": "EXPLICITOS. Un orden no es un coeficiente estequiometrico: la ley sale de un mecanismo y la estequiometria de un balance, y coinciden solo en una reaccion elemental. Sin declararlos se usa |nu| de los reactivos y la respuesta lo dice. Los negativos se rechazan: modelan inhibicion y hacen que la tasa diverja cuando la especie se agota.",
+        "arrhenius": {
+          "referenciada": "k = k_ref exp(-Ea/R (1/T - 1/T_ref)). Preferible: k_ref esta a escala humana y el exponente ronda cero cerca de T_ref.",
+          "clasica": "k = A exp(-Ea/(R T)). Se admite porque los datos de la literatura vienen asi, pero A tiene magnitudes absurdas y la expresion resta numeros enormes."
+        },
+        "bases_de_actividad": {
+          "actividad": "a_i = x_i gamma_i(T, x), con UNIFAC. Es la base correcta en fase liquida no ideal.",
+          "fraccion_molar": "a_i = x_i. Ignora la no idealidad; mas barata y menos correcta."
+        },
+        "base_concentracion": "NO admitida: necesitaria el volumen molar de la mezcla, que es otra decision de modelo.",
+        "unidades_de_k": "Las actividades son adimensionales en las dos bases, asi que k lleva las unidades de la tasa y no dependen del orden global. Su unidad declara la base (integrada o volumetrica), igual que en una tasa dada.",
+        "inversa_desde_equilibrio": "k_inv = k_dir / K_eq(T). Es la restriccion que impone la termodinamica, y el unico modo en que una reversible es consistente sin dos juegos de datos cineticos. Usa van't Hoff, que supone dH_rxn constante con T: es una aproximacion y se declara.",
+        "lo_que_cambia": "Con una ley, la tasa depende de la composicion de SALIDA, que es lo que el balance calcula: el sistema del volumen se vuelve IMPLICITO. La marcha aguas abajo entre volumenes sigue valiendo; lo implicito esta dentro de cada volumen.",
+        "no_soportado": [
+          "mezclar en un mismo volumen reacciones de tasa dada con reacciones cineticas",
+          "ordenes negativos (inhibicion)",
+          "equilibrio quimico calculado: el motor no obtiene el avance a partir de K",
+          "regimen transitorio o lote"
+        ]
+      },
+      "bases": {
+        "integrada": [
+          "kmol/h",
+          "kmol/s",
+          "mol/h",
+          "mol/s"
+        ],
+        "volumetrica": [
+          "kmol/(m3*h)",
+          "kmol/(m3*s)",
+          "mol/(L*s)",
+          "mol/(cm3*s)",
+          "mol/(dm3*s)",
+          "mol/(m3*h)",
+          "mol/(m3*s)"
+        ],
+        "nota": "La UNIDAD declara la base, que es lo menos ambiguo posible. Una tasa volumetrica necesita el volumen del reactor ('V' como especificacion); si no se da, no se supone 1 m3: se diagnostica."
+      },
+      "brutas_frente_a_neto": "La fuente neta NO determina la generacion y el consumo brutos. En el equilibrio de una reaccion reversible r+ = r- > 0: el neto es cero y las brutas son POSITIVAS. Si solo se da la tasa neta, `generacion_bruta` y `consumo_bruto` salen null con su motivo, y nunca se rellenan con max(neto, 0) -- eso daria cero generacion en una reaccion que esta funcionando a toda velocidad. La `descomposicion_neta` SI se ofrece, en un campo aparte y etiquetada como lo que es: la descomposicion del neto, no el intercambio bruto.",
+      "derivadas_no_libres": "G_i y C_i se DERIVAN de la estequiometria y de las tasas. No son dos incognitas mas por especie: con n especies serian 2n variables nuevas y el problema quedaria indeterminado.",
+      "conservacion": "La estequiometria se valida contra la matriz elemental de 'thermo' (A @ nu = 0) y contra la masa (MW @ nu = 0) ANTES de resolver, y elementos y masa se MIDEN sobre los caudales resueltos despues. El caudal molar total SI puede cambiar: sum(nu) no tiene por que ser cero. La masa no cambia nunca."
+    },
+    "especificacion_termica": {
+      "modos": [
+        "temperatura de salida impuesta (Q incognita)",
+        "calor impuesto (T incognita)",
+        "adiabatico: el supuesto ES la especificacion, dice Q = 0, y la temperatura es la incognita"
+      ],
+      "excluyentes": true,
+      "motivo": "El balance de energia del volumen es una ecuacion con esas dos incognitas: fijar una determina la otra. El supuesto adiabatico cuenta como fijar Q, asi que marcarlo Y ademas imponer la temperatura sobra.",
+      "con_cinetica": "Cuando la temperatura es incognita Y hay cinetica, las dos cosas se cierran A LA VEZ: k(T) decide el avance y el avance decide el calor que decide T. Resolver una y luego la otra daria la respuesta de otro problema."
+    },
+    "supuestos_exigidos": {
+      "estacionario": true,
+      "sinTrabajo": true,
+      "sinMovimiento": true,
+      "adiabatico": "libre, pero incompatible con una fuente de calor conectada",
+      "sinReaccion": "libre. En true anula a la vez la produccion, el consumo y los cierres cineticos, y es incompatible con una reaccion declarada. En false exige que cada reactor declare su reaccion: la ausencia de una reaccion declarada no significa que no haya reaccion, significa que al balance por especie le falta un termino."
+    },
+    "fases": [
+      "liquido",
+      "bifasico",
+      "vapor"
+    ],
+    "nota_fases": "La fase se determina con el punto de burbuja y el de rocio; no se supone liquida.",
+    "no_soportado": [
+      "regimen transitorio y lote (dE/dt, dn_i/dt, integracion en el tiempo)",
+      "equilibrio quimico calculado: el motor no obtiene el avance a partir de K. OJO: imponer r+ = r- NO demuestra equilibrio termodinamico, solo describe un estado estacionario con esas dos tasas",
+      "trabajo de eje",
+      "energias cinetica y potencial",
+      "mas de una alimentacion o mas de una salida por volumen",
+      "mas de dos volumenes, o mas de 8 componentes",
+      "reciclos y ciclos",
+      "caida de presion entre volumenes (la presion es uniforme)",
+      "entropia, exergia y potenciales quimicos",
+      "conduccion en solidos, difusion y balances de momento",
+      "mallado, CFD y dinamica espacial"
+    ],
+    "tolerancias": {
+      "inversion_h_T": 1e-09,
+      "cierre_global": 1e-08,
+      "conservacion_elementos_y_masa": 1e-10,
+      "sistema_cinetico_implicito": 1e-10,
+      "nota": "La del cierre global es mas holgada porque es una suma de resultados y acumula el redondeo de los dos balances. Excederla no significa datos malos: significa un fallo del motor, y sale como error con estado 'no_convergente'."
+    },
+    "metodos": {
+      "temperatura impuesta": "evaluacion algebraica directa, sin iteracion",
+      "calor impuesto o adiabatico": "inversion escalar de h(T) con brentq, xtol 1e-10 K",
+      "cinetica isoterma, una reaccion": "brentq sobre el avance, ACOTADO por el intervalo estequiometrico. El cambio de signo esta garantizado",
+      "cinetica isoterma, varias reacciones": "scipy.optimize.root con hybr sobre el vector de avances. Sin intervalo que acote un sistema, la factibilidad se comprueba despues",
+      "cinetica con T incognita": "arranque por sustituciones sucesivas (dos problemas escalares acotados, alternados) y despues scipy.optimize.least_squares con trf y limites. El arranque hace falta porque least_squares minimiza el cuadrado del residuo y puede pararse en un minimo local que no es raiz",
+      "materia": "propagacion algebraica de los caudales por especie; con reaccion se suma nu_i xi, que es un dato y no una incognita",
+      "topologia": "marcha aguas abajo; el sistema es triangular -- tambien con reaccion, porque la tasa esta especificada y no depende de la salida -- y no se resuelve como sistema acoplado"
+    }
+  }
+}

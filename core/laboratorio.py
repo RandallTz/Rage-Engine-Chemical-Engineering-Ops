@@ -74,10 +74,13 @@ import re
 import numpy as np
 
 from core import errores as codigos
+from core import cinetica as cin
 from core import estequiometria as est
 from core.errores import ErrorDeDatos, ErrorFisico, ErrorNumerico
 from core.flash import EvaluadorFlash
 from thermodynamics.elv import CalculadoraELV
+from thermodynamics.entalpia import entalpia_de
+from thermodynamics.reaccion import GestorReaccion
 from thermodynamics.proveedor import ProveedorTermodinamico
 
 # ---------------------------------------------------------------------
@@ -1275,6 +1278,132 @@ def _convertir_tasa(etiqueta, campo, dato):
     )
 
 
+def _leer_ley(m, etiqueta, dato, nu, n, componentes, base_tasa_esperada=None):
+    """
+    Una LeyDeVelocidad a partir de su declaracion, o un ErrorDeDatos.
+
+    Los ORDENES son explicitos. Si no se declaran se usa |nu| de los
+    reactivos --accion de masas consistente con la estequiometria-- y la
+    respuesta dice que ese fue el defecto. Un orden NO es un coeficiente
+    estequiometrico: la ley sale de un mecanismo y la estequiometria de un
+    balance, y coinciden solo en una reaccion elemental. Ponerlos iguales
+    en silencio seria elegir un mecanismo por el usuario.
+    """
+    if not isinstance(dato, dict):
+        raise ErrorDeDatos(
+            f"{etiqueta}: la ley tiene que ser un objeto.",
+            codigo=codigos.LAB_LEY_INVALIDA,
+        )
+
+    base = dato.get("base_actividad") or "actividad"
+    if base not in cin.BASES_ACTIVIDAD:
+        raise ErrorDeDatos(
+            f"{etiqueta}: base de actividad no admitida: {base!r}. Admitidas: "
+            f"{', '.join(sorted(cin.BASES_ACTIVIDAD))}. La base en concentracion "
+            "no esta: necesitaria el volumen molar de la mezcla, que es otra "
+            "decision de modelo y no se toma por tu cuenta.",
+            codigo=codigos.LAB_BASE_ACTIVIDAD_NO_SOPORTADA,
+        )
+
+    # La constante, con su unidad, que es la que declara la base de la tasa.
+    k_dato = dato.get("k_ref") if dato.get("k_ref") is not None else dato.get("A")
+    forma = "referenciada" if dato.get("k_ref") is not None else "arrhenius_clasico"
+    if k_dato is None:
+        raise ErrorDeDatos(
+            f"{etiqueta}: falta la constante. Da 'k_ref' con su 'T_ref' (forma "
+            "referenciada, mejor condicionada) o 'A' (Arrhenius clasico).",
+            codigo=codigos.LAB_LEY_INVALIDA,
+        )
+    k_valor, base_tasa, unidad_k = _convertir_tasa(etiqueta, "la constante", k_dato)
+    if k_valor < 0:
+        raise ErrorDeDatos(
+            f"{etiqueta}: la constante cinetica sale {k_valor:g} y no puede ser "
+            "negativa: es una velocidad. El signo lo lleva el coeficiente "
+            "estequiometrico.",
+            codigo=codigos.LAB_TASA_NEGATIVA,
+        )
+    if base_tasa_esperada is not None and base_tasa != base_tasa_esperada:
+        raise ErrorDeDatos(
+            f"{etiqueta}: la constante esta en base {base_tasa} y la otra ley de "
+            f"la misma reaccion en base {base_tasa_esperada}. Las dos tienen que "
+            "estar en la misma base para poder restarse.",
+            codigo=codigos.LAB_UNIDAD_INCOMPATIBLE,
+        )
+
+    Ea = dato.get("Ea")
+    if Ea is None:
+        Ea = 0.0
+    Ea = float(Ea)
+    if not math.isfinite(Ea):
+        raise ErrorDeDatos(f"{etiqueta}: Ea no es un numero finito.",
+                           codigo=codigos.LAB_VALOR_NO_FINITO)
+
+    T_ref = dato.get("T_ref")
+    if forma == "referenciada":
+        if T_ref is None:
+            raise ErrorDeDatos(
+                f"{etiqueta}: 'k_ref' necesita 'T_ref'. Una constante referenciada "
+                "sin su temperatura de referencia no dice a que temperatura vale.",
+                codigo=codigos.LAB_LEY_INVALIDA,
+            )
+        T_ref = convertir("T", T_ref.get("valor") if isinstance(T_ref, dict)
+                          else T_ref,
+                          T_ref.get("unidad") if isinstance(T_ref, dict) else "K")
+        if T_ref <= 0:
+            raise ErrorDeDatos(f"{etiqueta}: T_ref = {T_ref:g} K no es fisica.",
+                               codigo=codigos.LAB_VALOR_FUERA_DE_DOMINIO)
+    else:
+        T_ref = cin.T_REFERENCIA_POR_OMISION
+
+    # Los ordenes.
+    declarados = dato.get("ordenes")
+    orden_por_omision = False
+    if declarados is None:
+        ordenes = np.where(nu < 0, -nu, 0.0)
+        orden_por_omision = True
+    elif isinstance(declarados, dict):
+        desconocidos = [c for c in declarados if c not in componentes]
+        if desconocidos:
+            raise ErrorDeDatos(
+                f"{etiqueta}: los ordenes mencionan componentes que no estan en la "
+                f"mezcla: {', '.join(desconocidos)}.",
+                codigo=codigos.LAB_ORDEN_INVALIDO,
+            )
+        ordenes = np.array([float(declarados.get(c, 0.0)) for c in componentes])
+    else:
+        ordenes = np.asarray(declarados, dtype=float)
+        if ordenes.shape != (n,):
+            raise ErrorDeDatos(
+                f"{etiqueta}: hay {ordenes.size} ordenes y {n} componentes. Da uno "
+                "por componente en el mismo orden, o un objeto "
+                "{componente: orden}.",
+                codigo=codigos.LAB_ORDEN_INVALIDO,
+            )
+    if not np.all(np.isfinite(ordenes)):
+        raise ErrorDeDatos(f"{etiqueta}: hay ordenes no finitos.",
+                           codigo=codigos.LAB_VALOR_NO_FINITO)
+    if np.any(ordenes < 0):
+        # Un orden negativo es fisicamente posible (inhibicion) pero hace
+        # que la tasa explote cuando la especie se agota, y con una
+        # alimentacion sin esa especie la ley no esta definida. Se
+        # rechaza con el motivo en vez de dar un infinito.
+        raise ErrorDeDatos(
+            f"{etiqueta}: hay ordenes negativos "
+            f"({[float(v) for v in ordenes]}). Un orden negativo modela "
+            "inhibicion y hace que la tasa diverja cuando esa especie se agota; "
+            "este motor no lo admite porque no puede garantizar un resultado "
+            "acotado.",
+            codigo=codigos.LAB_ORDEN_INVALIDO,
+        )
+
+    ley = cin.LeyDeVelocidad(
+        k_ref=k_valor, Ea=Ea, ordenes=ordenes, T_ref=T_ref, base=base,
+        forma=forma, unidad_k=unidad_k, base_tasa=base_tasa,
+    )
+    ley.orden_por_omision = orden_por_omision
+    return ley, base_tasa
+
+
 def _leer_reacciones(m, peticion, bloques):
     """
     Pasa `reacciones` de la peticion a objetos Reaccion validados.
@@ -1352,21 +1481,92 @@ def _leer_reacciones(m, peticion, bloques):
             )
             continue
 
+        # --- el camino CINETICO: la tasa se calcula, no se da.
+        if d.get("ley_directa") is not None or d.get("ley_inversa") is not None:
+            tiene_tasas = [k for k in ("tasa", "tasa_directa", "tasa_inversa",
+                                       "tasa_neta") if d.get(k) is not None]
+            try:
+                if tiene_tasas:
+                    raise ErrorDeDatos(
+                        f"{etiqueta}: se declaro una ley de velocidad y ademas "
+                        f"{', '.join(tiene_tasas)}. Una reaccion tiene la tasa "
+                        "DADA o CALCULADA, no las dos: con las dos habria que "
+                        "elegir cual manda y la eleccion no es del motor.",
+                        codigo=codigos.LAB_TASA_AMBIGUA,
+                    )
+                if d.get("ley_inversa") is not None and d.get("ley_directa") is None:
+                    raise ErrorDeDatos(
+                        f"{etiqueta}: hay 'ley_inversa' y no 'ley_directa'. Una "
+                        "reaccion que solo va hacia atras se escribe invirtiendo "
+                        "los signos de nu.",
+                        codigo=codigos.LAB_LEY_INVALIDA,
+                    )
+
+                nu = np.asarray(d.get("nu"), dtype=float) if d.get("nu") is not None \
+                    else np.zeros(m.n)
+                directa, base_tasa = _leer_ley(
+                    m, f"{etiqueta}.ley_directa", d["ley_directa"], nu, m.n,
+                    m.componentes)
+
+                inversa, desde_equilibrio = None, False
+                declarada = d.get("ley_inversa")
+                if isinstance(declarada, dict) and declarada.get(
+                        "desde_equilibrio"):
+                    # La inversa derivada de K_eq(T). Es la restriccion que
+                    # impone la termodinamica, y por eso es el unico modo
+                    # en que una reversible es consistente sin dos juegos
+                    # de datos cineticos independientes.
+                    desde_equilibrio = True
+                elif declarada is not None:
+                    inversa, _ = _leer_ley(
+                        m, f"{etiqueta}.ley_inversa", declarada, nu, m.n,
+                        m.componentes, base_tasa_esperada=base_tasa)
+
+                # La base volumetrica necesita el volumen, igual que con
+                # una tasa dada.
+                volumen = None
+                if base_tasa == "volumetrica":
+                    v_V = m.variable(f"{bid}.V")
+                    if v_V is None or v_V.valor is None:
+                        raise ErrorDeDatos(
+                            f"{etiqueta}: la constante esta en base volumetrica "
+                            f"y {bid!r} no declara su volumen.",
+                            codigo=codigos.LAB_FALTA_VOLUMEN_REACTOR,
+                        )
+                    volumen = v_V.valor
+                    directa.k_ref *= volumen
+                    if inversa is not None:
+                        inversa.k_ref *= volumen
+
+                reaccion = cin.ReaccionCinetica(
+                    rid, bid, nu, directa, ley_inversa=inversa,
+                    inversa_desde_equilibrio=desde_equilibrio, volumen=volumen,
+                )
+                est.validar_estequiometria(reaccion, elementos, A, mw,
+                                           m.componentes)
+                reacciones.append(reaccion)
+            except ErrorDeDatos as e:
+                datos = e.como_diccionario()
+                m.avisar(
+                    datos.get("codigo") or codigos.LAB_LEY_INVALIDA, "error",
+                    str(e), "Revisa la ley de velocidad.", bloques=[bid],
+                )
+            continue
+
         if d.get("cinetica") is not None or d.get("A") is not None \
                 or d.get("Ea") is not None:
             m.avisar(
-                codigos.LAB_CINETICA_NO_SOPORTADA, "error",
-                f"{etiqueta}: esta entrega resuelve reacciones de TASA "
-                "ESPECIFICADA, no cinetica.",
-                "Da la tasa directamente. Una tasa que dependa de la composicion "
-                "de salida hace el balance implicito y exige un solver acoplado, "
-                "que este ensamblador no tiene; el CSTR con cinetica sigue en "
-                "/diagrama/resolver.",
-                categoria="modelo", bloques=[bid],
+                codigos.LAB_LEY_INVALIDA, "error",
+                f"{etiqueta}: se dieron parametros cineticos sueltos "
+                "('cinetica', 'A' o 'Ea') sin una ley.",
+                "Una ley de velocidad se declara en 'ley_directa' (y opcionalmente "
+                "'ley_inversa'), con su constante, su Ea, su T_ref y sus ordenes. "
+                "Sueltos no dicen de que ley son parametros.",
+                bloques=[bid],
             )
             continue
 
-        # --- las tasas, sin ambiguedad
+        # --- las tasas DADAS, sin ambiguedad
         tiene = {k: d.get(k) for k in
                  ("tasa", "tasa_directa", "tasa_inversa", "tasa_neta")}
         try:
@@ -2122,6 +2322,32 @@ def _comprobar_modos(m, bloques):
         T_impuesta = v_T.impuesta
         q_impuestas = [q for q in qs if q.impuesta]
 
+        # El supuesto adiabatico SI es una especificacion termica: dice
+        # Q = 0, y entonces la temperatura es la incognita. Que no haya
+        # fuente de calor no significa que falte el dato -- significa que
+        # el dato lo puso el supuesto.
+        #
+        # Es el mismo razonamiento de la entrega anterior en el otro
+        # sentido: la AUSENCIA de una fuente no es Q = 0, pero la
+        # PRESENCIA del supuesto si lo es.
+        adiabatico = m._supuestos.get("adiabatico") and not calores
+        if adiabatico:
+            if T_impuesta:
+                m.avisar(
+                    codigos.LAB_ESPECIFICACION_EXCLUYENTE, "error",
+                    f"{nombre!r}: el supuesto adiabatico ya impone Q = 0, y "
+                    f"ademas se impuso la temperatura de salida "
+                    f"({v_T.valor:g} K).",
+                    "Con Q = 0 el balance de energia determina la temperatura. "
+                    "Impuestas las dos, la ecuacion sobra y en general no se "
+                    "cumple: quita una.",
+                    bloques=[bid, salida], variables=[v_T.id],
+                )
+            else:
+                m._modo = getattr(m, "_modo", {})
+                m._modo[bid] = "adiabatico"
+            continue
+
         if T_impuesta and q_impuestas:
             m.avisar(
                 codigos.LAB_ESPECIFICACION_EXCLUYENTE, "error",
@@ -2137,8 +2363,9 @@ def _comprobar_modos(m, bloques):
             m.avisar(
                 codigos.LAB_FALTA_ESPECIFICACION, "error",
                 f"{nombre!r}: no se impuso ni la temperatura de salida ni el calor.",
-                "Fija una de las dos. Sin ninguna, el balance de energia tiene dos "
-                "incognitas y una sola ecuacion.",
+                "Fija una de las dos, o marca el supuesto adiabatico y retira la "
+                "fuente, que equivale a imponer Q = 0. Sin ninguna, el balance de "
+                "energia tiene dos incognitas y una sola ecuacion.",
                 bloques=[bid, salida],
                 variables=[v_T.id] + [q.id for q in qs],
             )
@@ -2227,6 +2454,155 @@ def _estado_completo(m, bloque_id, T, x):
     return m.flash.isotermico(float(T), m.presion, z)
 
 
+def _dH_de(m):
+    """Las entalpias de reaccion, calculadas una vez y cacheadas."""
+    if not hasattr(m, "_dH_rxn"):
+        m._dH_rxn = est.entalpias_de_reaccion(m.proveedor, m.reacciones)
+    return m._dH_rxn
+
+
+def _K_eq_de(m):
+    """
+    K_eq(T) de cada reaccion, para las inversas derivadas del equilibrio.
+
+    Se construye un GestorReaccion con la estequiometria del montaje y se
+    le piden sus K: reutiliza la maquinaria de van't Hoff ya validada en
+    thermodynamics/reaccion.py en vez de reescribirla.
+
+    OJO con lo que esto significa y lo que no: van't Hoff supone dH_rxn
+    CONSTANTE con la temperatura. Es una aproximacion, se declara como tal
+    en la respuesta, y lejos de T_std se nota.
+    """
+    if hasattr(m, "_gestor_K"):
+        return m._gestor_K
+
+    necesitan = [r for r in m.reacciones
+                 if getattr(r, "inversa_desde_equilibrio", False)]
+    if not necesitan:
+        m._gestor_K = None
+        return None
+
+    NU = np.array([r.nu for r in necesitan], dtype=float)
+    try:
+        gestor = GestorReaccion(m.proveedor, NU, A=1.0, Ea=0.0)
+    except Exception as e:
+        raise ErrorDeDatos(
+            f"No se puede calcular K_eq para las reacciones que la piden: {e}. "
+            "Hace falta la energia de Gibbs de formacion de todas las especies; "
+            "consultala en /laboratorio/sustancias/buscar antes de usar "
+            "'desde_equilibrio'.",
+            codigo=codigos.LAB_EQUILIBRIO_NO_UTILIZABLE,
+        ) from e
+
+    indices = {r.id: j for j, r in enumerate(necesitan)}
+
+    def K_de(reaccion_id, T):
+        return float(gestor.K_eq_de_cada_una(float(T))[indices[reaccion_id]])
+
+    m._gestor_K = K_de
+    return K_de
+
+
+def _resolver_volumen_cinetico(m, bid, nombre, cineticas, F_i_in, F_in, h_in,
+                               e_in, e_out, modo, bloques_calor):
+    """
+    Resuelve los avances de un volumen con leyes de velocidad.
+
+    AQUI SE ROMPE LA TRIANGULARIDAD, Y SOLO AQUI. La marcha aguas abajo
+    entre volumenes sigue valiendo --la entrada de cada uno es la salida
+    del anterior, ya determinada-- pero DENTRO del volumen la tasa depende
+    de la composicion de salida, que es lo que el balance calcula. Eso es
+    un sistema implicito y se resuelve como tal.
+
+    Dos caminos, segun si la temperatura esta impuesta:
+
+      isotermo      T dada: se resuelven solo los avances. Con una
+                    reaccion es una raiz escalar ACOTADA por la
+                    estequiometria; con varias, un sistema.
+      acoplado      T incognita (adiabatico o Q impuesto): los avances y
+                    la temperatura se cierran A LA VEZ, porque k(T) decide
+                    el avance y el avance decide el calor que decide T.
+                    Resolver uno y luego el otro daria la respuesta de
+                    otro problema.
+    """
+    calculadora = entalpia_de(m.proveedor)
+    K_de = _K_eq_de(m)
+
+    def entalpia(T, x):
+        return m.flash.isotermico(float(T), m.presion,
+                                  np.asarray(x, dtype=float))["h"]
+
+    try:
+        if modo == "temperatura":
+            T_out = e_out["T"].valor
+            resultado = cin.resolver_cinetica_isoterma(
+                m.proveedor, cineticas, F_i_in, T_out, m.n, K_eq_de=K_de)
+        else:
+            # Adiabatico (Q = 0) o Q impuesto: la temperatura entra en el
+            # sistema.
+            Q = 0.0
+            if modo == "calor":
+                v_Q = m.variable(f"{bloques_calor[0]['desde']}.Q")
+                Q = v_Q.valor
+            dH = _dH_de(m)
+            # Los limites de temperatura salen de la TABLA de entalpia,
+            # no de un numero elegido: es el dominio donde el modelo
+            # existe, y es lo que impide que el solver busque donde no hay
+            # nada.
+            resultado = cin.resolver_cinetica_con_energia(
+                m.proveedor, cineticas, F_i_in, e_in["T"].valor, h_in, m.n,
+                entalpia_de=entalpia, dH_de=lambda rid: dH[rid], Q=Q,
+                K_eq_de=K_de, T_inicial=e_in["T"].valor,
+                T_limites=(calculadora.T_min, calculadora.T_max),
+            )
+            e_out["T"].valor = float(resultado.T)
+            e_out["T"].procedencia = (
+                f"sistema acoplado de {nombre!r}: los avances y la temperatura "
+                "se cierran a la vez"
+                + (" con Q = 0 (adiabatico)" if modo == "adiabatico"
+                   else f" con Q = {Q:g} W impuesto")
+            )
+    except (ValueError, ArithmeticError) as e:
+        raise ErrorNumerico(
+            f"{nombre!r}: el sistema cinetico no se pudo resolver: {e}",
+            codigo=codigos.LAB_IMPLICITO_SIN_CONVERGENCIA, equipo=bid,
+        ) from e
+
+    if not resultado.convergio:
+        raise ErrorNumerico(
+            f"{nombre!r}: el sistema cinetico no convergio. Residuo escalado "
+            f"{resultado.residuo:.3e} frente a una tolerancia de "
+            f"{cin.TOLERANCIA_IMPLICITA:.0e}. {resultado.motivo or ''}",
+            codigo=codigos.LAB_IMPLICITO_SIN_CONVERGENCIA, equipo=bid,
+        )
+
+    # La factibilidad, COMPROBADA. Con una reaccion el intervalo ya la
+    # garantiza; con varias no se puede imponer y por eso se mira aqui.
+    NU = np.array([r.nu for r in cineticas], dtype=float)
+    F_i_out = np.asarray(F_i_in, dtype=float) + NU.T @ resultado.xi
+    escala = max(float(np.sum(F_i_in)), 1.0)
+    negativas = [i for i in range(m.n) if F_i_out[i] < -1e-9 * escala]
+    if negativas:
+        detalle = ", ".join(
+            f"{m.componentes[i]}: {F_i_out[i]:.6g} mol/s" for i in negativas)
+        raise ErrorFisico(
+            f"{nombre!r}: la solucion del sistema cinetico deja caudales "
+            f"negativos ({detalle}). Las leyes y la alimentacion no son "
+            "compatibles: revisa constantes, ordenes y composicion de entrada.",
+            codigo=codigos.LAB_CAUDAL_ESPECIE_NEGATIVO, equipo=bid,
+        )
+
+    m.avisar(
+        codigos.LAB_INFO_CINETICA, "informacion",
+        f"{nombre!r}: sistema cinetico resuelto con {resultado.metodo}; residuo "
+        f"escalado {resultado.residuo:.3e} en {resultado.evaluaciones} "
+        "evaluaciones de la ley.",
+        None, categoria="informacion",
+        bloques=[bid], variables=[e_out["T"].id],
+    )
+    return resultado
+
+
 def resolver(peticion):
     """
     Ensambla y resuelve. Devuelve el diccionario completo de la respuesta.
@@ -2252,6 +2628,7 @@ def resolver(peticion):
     alcances = set()
     iteraciones_totales = 0
     residuos = []
+    implicitos = []
 
     try:
         for bid in m.volumenes:
@@ -2298,6 +2675,30 @@ def resolver(peticion):
             # el caudal total cambia, y una ecuacion escrita en fracciones
             # arrastraria ese cambio a todos los terminos.
             reacciones_aqui = [r for r in m.reacciones if r.bloque_id == bid]
+            cineticas = [r for r in reacciones_aqui
+                         if isinstance(r, cin.ReaccionCinetica)]
+            if cineticas and len(cineticas) != len(reacciones_aqui):
+                raise ErrorDeDatos(
+                    f"{nombre!r}: mezcla reacciones de tasa dada con reacciones "
+                    "cineticas. Las primeras se propagan y las segundas exigen "
+                    "resolver un sistema implicito; combinarlas en un mismo "
+                    "volumen necesita un solver que incluya las dos, y este "
+                    "ensamblador aun no lo hace.",
+                    codigo=codigos.LAB_TOPOLOGIA_NO_SOPORTADA,
+                    equipo=bid,
+                )
+
+            modo = modos.get(bid)
+            if cineticas:
+                implicito = _resolver_volumen_cinetico(
+                    m, bid, nombre, cineticas, F_i_in, F_in, h_in, e_in, e_out,
+                    modo, bloques_calor=[
+                        c for c in m._fuentes
+                        if c["hacia"] == bid
+                        and m._bloques[c["desde"]]["tipo"] == "calor"])
+                implicitos.append((bid, implicito))
+                alcances.add(implicito.alcance)
+
             avance = np.zeros(m.n, dtype=float)
             for r in reacciones_aqui:
                 avance = avance + r.fuente_neta()
@@ -2367,7 +2768,6 @@ def resolver(peticion):
             )
             F = F_in
 
-            modo = modos.get(bid)
             calores = [c for c in m._fuentes
                        if c["hacia"] == bid and m._bloques[c["desde"]]["tipo"] == "calor"]
             v_Q = m.variable(f"{calores[0]['desde']}.Q") if calores else None
@@ -2427,9 +2827,54 @@ def resolver(peticion):
                 )
                 alcances.add("algebraico_directo")
 
-            elif modo == "calor":
+            elif cineticas and modo in ("calor", "adiabatico"):
+                # La temperatura ya salio del sistema acoplado, junto con
+                # los avances. Volver a invertir h(T) aqui resolveria dos
+                # veces la misma ecuacion, y la segunda sin la cinetica,
+                # que es justo lo que la acopla.
+                Q = 0.0 if modo == "adiabatico" else v_Q.valor
+                T_out = e_out["T"].valor
+                r_out = _estado_completo(m, salida, T_out, x_out)
+                e_out["h"].valor = r_out["h"]
+                e_out["h"].procedencia = (
+                    f"h({T_out:.6g} K, {m.presion:.6g} Pa, x={_fmt_x(x_out)}) "
+                    f"con {m.modelo}; fase {r_out['fase']}"
+                )
+                _marcar_entalpia(m, salida, r_out)
+                if v_Q is not None:
+                    v_Q.valor = Q
+                    v_Q.procedencia = (
+                        f"impuesto en {nombre!r}" if modo == "calor" else
+                        f"cero: {nombre!r} es adiabatico"
+                    )
+                rel_energia.metodo = (
+                    "resuelto dentro del sistema cinetico acoplado: los avances y "
+                    "la temperatura se cierran a la vez")
+                rel_energia.alcance = "sistema_acoplado"
+                rel_energia.escala = (
+                    "residuo de energia relativo a F h de entrada")
+                implicito_aqui = next(
+                    (res for b, res in implicitos if b == bid), None)
+                rel_energia.ejecutar(
+                    residuo=(implicito_aqui.residuo if implicito_aqui else None),
+                    nota=(
+                        "Con cinetica, k(T) decide el avance y el avance decide el "
+                        "calor que decide T: las dos cosas se cierran juntas. El "
+                        "residuo es el maximo del sistema, que incluye esta "
+                        "ecuacion."
+                        + (f" El calor de reaccion aporta {calor_rxn:+.6g} W."
+                           if calor_rxn else "")
+                    ),
+                )
+                alcances.add("sistema_acoplado")
+
+            elif modo in ("calor", "adiabatico"):
                 # Inversion escalar: h objetivo conocido, se busca T.
-                Q = v_Q.valor
+                # El adiabatico es este mismo caso con Q = 0, asi que se
+                # resuelve por el mismo camino en vez de duplicarlo.
+                Q = 0.0 if modo == "adiabatico" else v_Q.valor
+                if modo == "adiabatico" and v_Q is not None:
+                    v_Q.valor = 0.0
                 # Con reaccion, F de salida NO es F de entrada, asi que la
                 # entalpia objetivo se divide por el caudal que de verdad
                 # sale. Usar el de entrada daria una temperatura
@@ -2439,16 +2884,21 @@ def resolver(peticion):
                     r_out = m.flash.a_entalpia(m.presion, x_out, h_objetivo)
                 except ValueError as e:
                     raise ErrorFisico(
-                        f"{nombre!r}: con Q = {Q:g} W y F = {F_out:g} mol/s la "
-                        f"entalpia de salida ({h_objetivo:.6g} J/mol) cae fuera del "
-                        f"dominio del modelo. {e}",
+                        f"{nombre!r}: con Q = {Q:g} W"
+                        + (" (adiabatico)" if modo == "adiabatico" else "")
+                        + f" y F = {F_out:g} mol/s la entalpia de salida "
+                        f"({h_objetivo:.6g} J/mol) cae fuera del dominio del "
+                        f"modelo. {e}",
                         codigo=codigos.LAB_FUERA_DE_DOMINIO_TERMODINAMICO,
                         equipo=bid,
                     ) from e
                 T_out = r_out["T"]
                 e_out["T"].valor = T_out
                 e_out["T"].procedencia = (
-                    f"inversion de h(T) en {nombre!r}: h_salida = h_entrada + Q/F"
+                    f"inversion de h(T) en {nombre!r}: la entalpia de salida sale "
+                    "del balance de energia"
+                    + (" con Q = 0 (adiabatico)" if modo == "adiabatico"
+                       else " con el Q impuesto")
                 )
                 e_out["h"].valor = r_out["h"]
                 e_out["h"].procedencia = (
@@ -2576,7 +3026,8 @@ def resolver(peticion):
         return _respuesta(m, analisis, estado, convergencia=None)
 
     # --- la comprobacion global, con su residuo medido -------------
-    convergencia = _cerrar(m, analisis, alcances, iteraciones_totales, residuos)
+    convergencia = _cerrar(m, analisis, alcances, iteraciones_totales, residuos,
+                           implicitos)
     # El cierre global puede haber anadido un error DESPUES de calcular. Si
     # lo hizo, el estado no es 'resuelto': los numeros estan ahi pero no se
     # sostienen, y presentarlos como resueltos seria el fallo que todo este
@@ -2699,7 +3150,7 @@ def _fase_legible(m, bloque_id):
     return m.estados[bloque_id].get("fase", "sin determinar")
 
 
-def _cerrar(m, analisis, alcances, iteraciones, residuos):
+def _cerrar(m, analisis, alcances, iteraciones, residuos, implicitos=()):
     """
     El cierre global de energia y la declaracion del metodo.
 
@@ -2776,10 +3227,32 @@ def _cerrar(m, analisis, alcances, iteraciones, residuos):
         alcance = "inversion_escalar"
         metodo = ("marcha aguas abajo con una inversion escalar h(T) por volumen "
                   "(brentq)")
+    elif alcances & {"sistema_acoplado", "raiz_escalar_acotada"}:
+        # Con cinetica la topologia SIGUE siendo una marcha aguas abajo
+        # --la entrada de cada volumen es la salida del anterior, ya
+        # determinada-- y lo implicito esta DENTRO de cada volumen. Son
+        # dos cosas distintas y la declaracion las separa: decir "sistema
+        # acoplado" a secas sugeriria que todo el montaje se resuelve a la
+        # vez, y no es asi.
+        alcance = ("sistema_acoplado" if "sistema_acoplado" in alcances
+                   else "raiz_escalar_acotada")
+        metodo = (
+            "marcha aguas abajo entre volumenes, y DENTRO de cada volumen "
+            "cinetico un sistema implicito: "
+            + " y ".join(sorted(
+                {"raiz_escalar_acotada": "brentq sobre el avance, acotado por la "
+                                         "estequiometria",
+                 "sistema_acoplado": "root/hybr sobre los avances (y la temperatura "
+                                     "cuando no esta impuesta)",
+                 "algebraico_directo": "evaluacion directa donde no hay cinetica",
+                 "inversion_escalar": "inversion escalar h(T) con brentq",
+                 }[a] for a in alcances))
+        )
     else:
         alcance = "mixto"
         metodo = ("marcha aguas abajo: evaluacion directa donde la temperatura esta "
-                  "impuesta, e inversion escalar h(T) con brentq donde lo esta el calor")
+                  "impuesta, e inversion escalar h(T) con brentq donde lo esta el "
+                  "calor")
 
     analisis["metodo"] = metodo
     analisis["alcance"] = alcance
@@ -2823,6 +3296,14 @@ def _cerrar(m, analisis, alcances, iteraciones, residuos):
             "se despeja del balance en una sola evaluacion. No hay convergencia que "
             "declarar ni residuo que medir."
         ),
+        # Lo que cada sistema implicito hizo de verdad, por volumen. No
+        # se agrega en un solo numero: dos volumenes pueden resolverse con
+        # algoritmos distintos, y promediar sus residuos no significaria
+        # nada.
+        "sistemas_implicitos": [
+            {"bloque_id": bid, **res.como_diccionario()}
+            for bid, res in implicitos
+        ],
         "cierre_global": {
             "residuo_relativo": residuo_global,
             "escala": "relativo al mayor de |suma de Q| y |F dh|",
@@ -2935,8 +3416,12 @@ def capacidades():
             "las incluyera, ya estaria dentro y sumarlo lo contaria dos veces. La "
             "respuesta dice en `terminos_descartados` cual de los dos casos aplico."
         ),
-        "componentes": "los que el proveedor UNIFAC admita "
-                       "(consulta /componentes/buscar)",
+        "componentes": "los que el proveedor UNIFAC admita. Consultalos en "
+                       "/laboratorio/sustancias/buscar, que ademas dice si la "
+                       "sustancia sirve para REACCION (hace falta entalpia de "
+                       "formacion, y hay especies que tienen grupos UNIFAC y no la "
+                       "tienen) y avisa cuando la consulta era una FORMULA, que no "
+                       "identifica una sustancia",
         "numero_de_componentes": {
             "minimo": 2, "maximo": MAX_COMPONENTES,
             "nota": "El orden importa: 'x0' es la fraccion del primero. 'x' a secas "
@@ -2984,11 +3469,61 @@ def capacidades():
                              "produce unos componentes y consume otros, y por eso el "
                              "signo va en el coeficiente y no en la tasa.",
             "formas_de_declarar_la_tasa": {
-                "tasa": "irreversible, una sola direccion. Las brutas se conocen.",
-                "tasa_directa + tasa_inversa": "reversible. Las brutas se conocen. "
-                                               "Las dos son >= 0.",
-                "tasa_neta": "solo el neto. Las brutas NO se conocen y se devuelven "
-                             "como null.",
+                "tasa": "DADA, irreversible. Las brutas se conocen.",
+                "tasa_directa + tasa_inversa": "DADA, reversible. Las brutas se "
+                                               "conocen. Las dos son >= 0.",
+                "tasa_neta": "DADA, solo el neto. Las brutas NO se conocen y se "
+                             "devuelven como null.",
+                "ley_directa (+ ley_inversa)": "CALCULADA por una ley de accion de "
+                                               "masas. Las brutas se conocen: cada "
+                                               "ley da la velocidad de su sentido "
+                                               "por definicion.",
+            },
+            "cinetica": {
+                "ley": "r = k(T) prod_i a_i^(orden_i)",
+                "ordenes": "EXPLICITOS. Un orden no es un coeficiente "
+                           "estequiometrico: la ley sale de un mecanismo y la "
+                           "estequiometria de un balance, y coinciden solo en una "
+                           "reaccion elemental. Sin declararlos se usa |nu| de los "
+                           "reactivos y la respuesta lo dice. Los negativos se "
+                           "rechazan: modelan inhibicion y hacen que la tasa "
+                           "diverja cuando la especie se agota.",
+                "arrhenius": {
+                    "referenciada": "k = k_ref exp(-Ea/R (1/T - 1/T_ref)). "
+                                    "Preferible: k_ref esta a escala humana y el "
+                                    "exponente ronda cero cerca de T_ref.",
+                    "clasica": "k = A exp(-Ea/(R T)). Se admite porque los datos de "
+                               "la literatura vienen asi, pero A tiene magnitudes "
+                               "absurdas y la expresion resta numeros enormes.",
+                },
+                "bases_de_actividad": dict(cin.BASES_ACTIVIDAD),
+                "base_concentracion": "NO admitida: necesitaria el volumen molar de "
+                                      "la mezcla, que es otra decision de modelo.",
+                "unidades_de_k": "Las actividades son adimensionales en las dos "
+                                 "bases, asi que k lleva las unidades de la tasa y "
+                                 "no dependen del orden global. Su unidad declara "
+                                 "la base (integrada o volumetrica), igual que en "
+                                 "una tasa dada.",
+                "inversa_desde_equilibrio": "k_inv = k_dir / K_eq(T). Es la "
+                                            "restriccion que impone la "
+                                            "termodinamica, y el unico modo en que "
+                                            "una reversible es consistente sin dos "
+                                            "juegos de datos cineticos. Usa van't "
+                                            "Hoff, que supone dH_rxn constante con "
+                                            "T: es una aproximacion y se declara.",
+                "lo_que_cambia": "Con una ley, la tasa depende de la composicion de "
+                                 "SALIDA, que es lo que el balance calcula: el "
+                                 "sistema del volumen se vuelve IMPLICITO. La "
+                                 "marcha aguas abajo entre volumenes sigue valiendo; "
+                                 "lo implicito esta dentro de cada volumen.",
+                "no_soportado": [
+                    "mezclar en un mismo volumen reacciones de tasa dada con "
+                    "reacciones cineticas",
+                    "ordenes negativos (inhibicion)",
+                    "equilibrio quimico calculado: el motor no obtiene el avance a "
+                    "partir de K",
+                    "regimen transitorio o lote",
+                ],
             },
             "bases": {
                 "integrada": sorted(UNIDADES_TASA_INTEGRADA),
@@ -3022,10 +3557,21 @@ def capacidades():
             ),
         },
         "especificacion_termica": {
-            "modos": ["temperatura de salida impuesta", "calor impuesto"],
+            "modos": [
+                "temperatura de salida impuesta (Q incognita)",
+                "calor impuesto (T incognita)",
+                "adiabatico: el supuesto ES la especificacion, dice Q = 0, y la "
+                "temperatura es la incognita",
+            ],
             "excluyentes": True,
             "motivo": "El balance de energia del volumen es una ecuacion con esas dos "
-                      "incognitas: fijar una determina la otra.",
+                      "incognitas: fijar una determina la otra. El supuesto "
+                      "adiabatico cuenta como fijar Q, asi que marcarlo Y ademas "
+                      "imponer la temperatura sobra.",
+            "con_cinetica": "Cuando la temperatura es incognita Y hay cinetica, las "
+                            "dos cosas se cierran A LA VEZ: k(T) decide el avance y "
+                            "el avance decide el calor que decide T. Resolver una y "
+                            "luego la otra daria la respuesta de otro problema.",
         },
         "supuestos_exigidos": {
             "estacionario": True, "sinTrabajo": True, "sinMovimiento": True,
@@ -3041,11 +3587,10 @@ def capacidades():
         "nota_fases": "La fase se determina con el punto de burbuja y el de rocio; no "
                       "se supone liquida.",
         "no_soportado": [
-            "regimen transitorio (dE/dt, dn_i/dt)",
-            "cinetica: la tasa tiene que estar especificada. Una tasa que dependa "
-            "de la composicion de salida hace el balance implicito y exige un "
-            "solver acoplado; el CSTR con cinetica sigue en /diagrama/resolver",
-            "equilibrio quimico: el motor no calcula el avance a partir de K",
+            "regimen transitorio y lote (dE/dt, dn_i/dt, integracion en el tiempo)",
+            "equilibrio quimico calculado: el motor no obtiene el avance a partir "
+            "de K. OJO: imponer r+ = r- NO demuestra equilibrio termodinamico, solo "
+            "describe un estado estacionario con esas dos tasas",
             "trabajo de eje",
             "energias cinetica y potencial",
             "mas de una alimentacion o mas de una salida por volumen",
@@ -3060,6 +3605,7 @@ def capacidades():
             "inversion_h_T": TOLERANCIA_INVERSION,
             "cierre_global": TOLERANCIA_CIERRE,
             "conservacion_elementos_y_masa": TOLERANCIA_CONSERVACION,
+            "sistema_cinetico_implicito": cin.TOLERANCIA_IMPLICITA,
             "nota": "La del cierre global es mas holgada porque es una suma de "
                     "resultados y acumula el redondeo de los dos balances. "
                     "Excederla no significa datos malos: significa un fallo del "
@@ -3067,7 +3613,23 @@ def capacidades():
         },
         "metodos": {
             "temperatura impuesta": "evaluacion algebraica directa, sin iteracion",
-            "calor impuesto": "inversion escalar de h(T) con brentq, xtol 1e-10 K",
+            "calor impuesto o adiabatico": "inversion escalar de h(T) con brentq, "
+                                           "xtol 1e-10 K",
+            "cinetica isoterma, una reaccion": "brentq sobre el avance, ACOTADO por "
+                                               "el intervalo estequiometrico. El "
+                                               "cambio de signo esta garantizado",
+            "cinetica isoterma, varias reacciones": "scipy.optimize.root con hybr "
+                                                    "sobre el vector de avances. Sin "
+                                                    "intervalo que acote un sistema, "
+                                                    "la factibilidad se comprueba "
+                                                    "despues",
+            "cinetica con T incognita": "arranque por sustituciones sucesivas (dos "
+                                        "problemas escalares acotados, alternados) y "
+                                        "despues scipy.optimize.least_squares con "
+                                        "trf y limites. El arranque hace falta "
+                                        "porque least_squares minimiza el cuadrado "
+                                        "del residuo y puede pararse en un minimo "
+                                        "local que no es raiz",
             "materia": "propagacion algebraica de los caudales por especie; con "
                        "reaccion se suma nu_i xi, que es un dato y no una incognita",
             "topologia": "marcha aguas abajo; el sistema es triangular -- tambien "

@@ -10,10 +10,15 @@ especie y transformación estequiométrica**. Reutiliza el proveedor de
 propiedades, el flash y la calculadora de entalpía existentes. Sin CFD,
 sin mallado, sin columna completa y sin interpretar LaTeX.
 
-> **Segunda entrega** (reacción), respondiendo a
-> `frontend/ENTREGA_FUNDAMENTOS_CLAUDE.md`. Lo térmico de la primera sigue
-> funcionando y está comprobado; lo que cambió de forma visible está en
-> [§11](#11-qué-cambió-respecto-a-la-primera-entrega).
+> **Tercera entrega** (catálogo de sustancias, cinética y energía
+> acoplada), respondiendo a `frontend/PENDIENTES_BACKEND_CLAUDE.md`
+> puntos 1, 2 y 5. Lo anterior sigue funcionando y está comprobado; lo que
+> cambió de forma visible está en
+> [§11](#11-qué-cambió-respecto-a-las-entregas-anteriores).
+>
+> **Lo que NO está en esta entrega**, de ese mismo documento: el punto 3
+> (lote transitorio con integración ODE) y el punto 4 (equilibrio químico
+> calculado a partir de ΔG). Ver [§12](#12-lo-que-queda-de-la-lista).
 
 ---
 
@@ -27,6 +32,8 @@ sin mallado, sin columna completa y sin interpretar LaTeX.
 | `GET` | `/laboratorio/capacidades` | Qué admite el motor, **incluido lo que no** |
 | `GET` | `/laboratorio/ejemplos` | Montajes que **son** peticiones válidas de `/resolver` |
 | `GET` | `/laboratorio/ejemplos/{id}` | Uno concreto |
+| `GET` | `/laboratorio/sustancias/buscar?q=` | Identifica una sustancia **y dice cómo la identificó** |
+| `GET` | `/laboratorio/sustancias/catalogo` | Qué identificadores y capacidades admite |
 
 Hay tres rutas de cálculo y no una, aunque el contrato permitía una sola.
 `/validar` y `/resolver` dicen en la URL lo que hacen, y eso evita el
@@ -77,6 +84,20 @@ Y los reactivos:
 | `laboratorio-reactor-solo-neta-*` | Misma salida, **brutas en `null`** con su motivo |
 | `laboratorio-dos-reactores-en-serie-*` | Dos reactores compartiendo la corriente, con el cierre global |
 | `laboratorio-estequiometria-invalida-*` | Un rechazo: `ν = [−1, +2]` no conserva los elementos |
+
+Y los cinéticos (isomerización de butano a **20 bar**, para que se quede en
+líquido: a 5 bar la mezcla cruza la frontera de fase al reaccionar y la
+entalpía da un salto de 18 kJ/mol — el motor lo resuelve igual y lo
+reporta, pero un ejemplo que se entienda conviene que no lo haga):
+
+| Archivo (`-peticion` / `-respuesta`) | Qué muestra |
+|---|---|
+| `laboratorio-cinetica-isoterma-*` | La tasa se calcula; `brentq` acotado por la estequiometría |
+| `laboratorio-cinetica-adiabatica-*` | **T y avance cerrados a la vez**; 320 → 369.46 K |
+| `laboratorio-cinetica-reversible-*` | Dos leyes, una por sentido: las brutas se conocen |
+| `laboratorio-cinetica-desde-equilibrio-*` | `k_inv = k_dir / K_eq(T)`, con sus dos avisos |
+| `laboratorio-cinetica-volumetrica-*` | `10 mol/(m³·s) × 5 m³ = 50 mol/s`: idéntico al isotermo |
+| `laboratorio-cinetica-orden-negativo-*` | Un rechazo: la tasa divergiría al agotarse la especie |
 
 ### Lo mínimo
 
@@ -539,6 +560,20 @@ de unidades, es un dato que no describe ninguna reacción química.
 | `LAB_CONSERVACION_NO_MEDIDA` | **numérica** | Elementos o masa no cuadran sobre los caudales resueltos. Es un fallo del motor, no de los datos |
 | `LAB_DATOS_COMPOSICION_INCOMPATIBLE` | datos | Se dieron las n fracciones y no suman 1 |
 
+### Cinética
+
+| Código | Categoría | Cuándo |
+|---|---|---|
+| `LAB_LEY_INVALIDA` | datos | La ley no es un objeto, falta la constante, `k_ref` sin `T_ref`, `ley_inversa` sin `ley_directa`, o parámetros cinéticos sueltos (`A`/`Ea`/`cinetica`) sin una ley |
+| `LAB_ORDEN_INVALIDO` | datos | Órdenes negativos, de longitud equivocada, no finitos, o de una especie que no está en la mezcla |
+| `LAB_BASE_ACTIVIDAD_NO_SOPORTADA` | datos | Una base que no es `actividad` ni `fraccion_molar`. La concentración necesitaría el volumen molar de la mezcla |
+| `LAB_EQUILIBRIO_NO_UTILIZABLE` | física | `desde_equilibrio` sin las energías de Gibbs de formación, o con un `K_eq` no utilizable |
+| `LAB_SIN_CAMBIO_DE_SIGNO` | **numérica** | El residuo no cambia de signo en el intervalo estequiométrico: no hay avance físico que satisfaga la ley |
+| `LAB_IMPLICITO_SIN_CONVERGENCIA` | **numérica** | El sistema no convergió, o se quedó en un límite. El mensaje trae el residuo y la tolerancia |
+
+Y `LAB_TASA_AMBIGUA` cubre también dar una ley **y** una tasa a la vez:
+una reacción tiene la tasa dada **o** calculada, no las dos.
+
 ### Modelo y resultado
 
 | Código | Categoría | Cuándo |
@@ -609,6 +644,78 @@ El CSTR sigue en `/diagrama/resolver` **con su balance de energía
 desactivado**, como estaba. Acoplarlo aquí exige resolver ese balance, no
 solo escribirlo, y está comprobado en la suite que esta entrega no lo
 activó por el camino.
+
+---
+
+## 7ter. El catálogo de sustancias
+
+`GET /laboratorio/sustancias/buscar?q=...`
+
+Es lo que necesitas para el editor de especies. No sustituye a
+`/componentes/buscar` —que contesta «existe y tiene grupos UNIFAC»— sino
+que contesta las dos preguntas que esa no cubre.
+
+### Una fórmula NO identifica una sustancia
+
+Y no es una precaución teórica:
+
+| Consulta | Resuelve a | CAS | T de ebullición |
+|---|---|---|---|
+| `C2H6O` | **dimethyl ether** | 115-10-6 | 248.4 K |
+| `ethanol` | ethanol | 64-17-5 | 351.6 K |
+
+Las dos tienen fórmula C2H6O. **103 K de diferencia** por escribir la
+fórmula en vez del nombre, y el cálculo sale perfectamente bien para la
+sustancia equivocada.
+
+Así que la respuesta trae:
+
+```jsonc
+{
+  "identificacion": "formula",
+  "identificacion_fiable": false,          // ← el campo que hay que mirar
+  "sustancia": {"id": "115-10-6", "nombre": "dimethyl ether", …},
+  "candidatos": [{"id": "64-17-5", "nombre": "ethanol", …}],
+  "candidatos_totales": 1,
+  "aviso": "'C2H6O' es una FORMULA, y una formula no identifica una sustancia…"
+}
+```
+
+| `identificacion` | ¿Identifica? |
+|---|---|
+| `cas`, `nombre`, `smiles`, `inchi_key` | **sí** |
+| `formula` | **no** — mira `candidatos` y pregunta |
+| `no_encontrada` | — |
+
+**El id estable es el CAS.** Es lo que conviene guardar: el nombre tiene
+sinónimos y cambia de idioma, la fórmula es ambigua.
+
+### Tener grupos UNIFAC no basta para reaccionar
+
+La segunda pregunta. `capacidades` responde una por una, y dice qué falta:
+
+```jsonc
+"capacidades": {
+  "elv":        {"disponible": true,  "falta": []},
+  "entalpia":   {"disponible": true,  "falta": []},
+  "reaccion":   {"disponible": false, "falta": ["entalpia de formacion (Hfm)"]},
+  "equilibrio": {"disponible": false, "falta": ["entalpia de formacion (Hfm)",
+                                                "energia de Gibbs de formacion (Gfm)"]}
+}
+```
+
+Ese es el **diciclopentadieno** de verdad: tiene grupos UNIFAC, así que
+sirve para un ELV, y **no tiene entalpía de formación**, así que no sirve
+para un balance reactivo. Si el editor lo ofrece para una reacción, el
+error aparece al resolver, con el calor de reacción en NaN. Eso es tarde.
+
+Está comprobado en la suite que el montaje con esa especie se rechaza con
+`LAB_ENTALPIA_FORMACION_NO_DISPONIBLE` — el mismo fallo que el catálogo
+avisaba antes de calcular.
+
+La respuesta trae además `propiedades` (Tb, Tm, Tc, pc, Hfm, Gfm, cada una
+con su unidad y su referencia), `composicion_elemental` (los átomos, que
+es lo que valida una ν), `modelos_soportados`, `fases` y `referencias`.
 
 ---
 
@@ -779,6 +886,224 @@ reacción −2 767 500.00, con residuo medido **0.0**.
 
 ---
 
+## 7quater. Cinética: la tasa se calcula
+
+Hasta ahora la tasa era un dato. Ahora puede ser una **ley de acción de
+masas**, y eso cambia la naturaleza del problema.
+
+### Lo que cambia
+
+$$ \xi_r = r_r(T, \mathbf{x}_{salida}) \qquad \mathbf{x}_{salida} = \mathbf{x}_{salida}(\xi) $$
+
+La tasa depende de la composición de **salida**, que es lo que el balance
+calcula. El sistema del volumen se vuelve **implícito**. Es el motivo de
+que la entrega anterior rechazara la cinética con un diagnóstico: resolver
+un sistema implícito con una marcha aguas abajo habría dado números, y
+números de otro problema.
+
+**La marcha aguas abajo entre volúmenes sigue valiendo** —la entrada de
+cada uno es la salida del anterior, ya determinada— y lo implícito está
+**dentro** de cada volumen. `convergencia.metodo` lo dice con esas
+palabras.
+
+### La declaración
+
+```json
+"reacciones": [
+  {"id": "iso", "bloque_id": "rx", "nu": [-1.0, 1.0],
+   "ley_directa": {
+     "k_ref": {"valor": 50.0, "unidad": "mol/s"},
+     "T_ref": {"valor": 320.0, "unidad": "K"},
+     "Ea": 50000.0,
+     "base_actividad": "actividad",
+     "ordenes": {"n-butane": 1.0}
+   }}
+]
+```
+
+$$ r = k(T)\prod_i a_i^{n_i} $$
+
+**Los órdenes son explícitos, y eso importa.** Un orden **no** es un
+coeficiente estequiométrico: la ley sale de un mecanismo y la
+estequiometría de un balance, y coinciden solo en una reacción elemental.
+Si no los declaras se usa |ν| de los reactivos y la respuesta **dice que
+ese fue el defecto**, para que nadie crea que lo eligió.
+
+Los órdenes **negativos se rechazan**: modelan inhibición y hacen que la
+tasa diverja cuando esa especie se agota, así que el motor no puede
+garantizar un resultado acotado.
+
+### Arrhenius: dos formas, y una es mejor
+
+| Forma | Expresión |
+|---|---|
+| referenciada | $k = k_{ref}\,e^{-\frac{E_a}{R}\left(\frac{1}{T}-\frac{1}{T_{ref}}\right)}$ |
+| clásica | $k = A\,e^{-E_a/RT}$ |
+
+La referenciada está mejor condicionada: $A$ tiene magnitudes absurdas
+($10^{13}$ y más) y el exponente vale −20 o −40, así que la expresión
+resta números enormes para dar uno pequeño. Con `k_ref` el valor está a
+escala humana y el exponente ronda cero cerca de `T_ref`. Se admiten las
+dos —los datos de la literatura vienen en la clásica— y
+`ley_directa.forma` declara cuál se usó. `k_ref` **exige** `T_ref`: una
+constante referenciada sin su temperatura no dice a qué temperatura vale.
+
+### La base de la actividad
+
+| Base | $a_i$ |
+|---|---|
+| `actividad` (por omisión) | $x_i\,\gamma_i(T,\mathbf{x})$, con UNIFAC |
+| `fraccion_molar` | $x_i$ |
+
+Las dos son **adimensionales**, y eso quita de encima el problema de que
+las unidades de $k$ dependan del orden global: **$k$ lleva las unidades de
+la tasa y punto**. Y su unidad declara la base (integrada o volumétrica),
+igual que en una tasa dada.
+
+La base en **concentración no está**: necesitaría el volumen molar de la
+mezcla, que es otra decisión de modelo. Se rechaza con
+`LAB_BASE_ACTIVIDAD_NO_SOPORTADA` y el motivo.
+
+### Reversible: dos leyes, o la del equilibrio
+
+Con `ley_directa` y `ley_inversa`, **las brutas se conocen por
+construcción**: cada ley da la velocidad de su sentido por definición.
+
+Y hay un tercer camino, `"ley_inversa": {"desde_equilibrio": true}`:
+
+$$ k_{inv} = \frac{k_{dir}}{K_{eq}(T)} $$
+
+Eso **sí** es termodinámicamente consistente — en el equilibrio $r^+ =
+r^-$ obliga a que la razón de las constantes sea $K_{eq}$ — y es el único
+modo en que una reversible lo es sin dos juegos de datos cinéticos
+independientes. Dos avisos que la respuesta declara:
+
+- $K_{eq}$ sale de **van't Hoff**, que supone $\Delta H_{rxn}$ constante
+  con la temperatura. Es una aproximación y lejos de $T_{std}$ se nota.
+- Con este modo la ley directa pasa a usar los **exponentes de la
+  estequiometría**, porque mezclar órdenes libres con una inversa derivada
+  del equilibrio rompería esa consistencia: la razón $r^+/r^-$ dejaría de
+  ser $K_{eq}$.
+
+### Y una corrección que el contrato pedía
+
+**Imponer $r^+ = r^-$ no demuestra equilibrio termodinámico.** Describe un
+estado estacionario con esas dos tasas, nada más. El equilibrio
+termodinámico se calcula de $\Delta G$ y $K$, y eso **no** está en esta
+entrega (ver [§12](#12-lo-que-queda-de-la-lista)). El preset
+`reactor-en-equilibrio` se llama así porque sus tasas son iguales, no
+porque el motor haya comprobado un equilibrio.
+
+---
+
+## 7quinquies. Energía acoplada
+
+### El modo adiabático era un hueco
+
+`/laboratorio/*` exigía temperatura impuesta **o** calor impuesto, y con
+el supuesto adiabático no hay fuente de calor que imponer: la
+especificación **es** Q = 0, y la temperatura es la incógnita. Un volumen
+adiabático no se podía resolver, y el diagnóstico decía «no se impuso ni
+la temperatura ni el calor» — que era falso.
+
+Es el mismo error que la entrega anterior corrigió en el otro sentido (la
+**ausencia** de una fuente no es Q = 0), cometido al revés: la
+**presencia** del supuesto sí es una especificación.
+
+Ahora hay tres modos térmicos, y siguen siendo excluyentes:
+
+| Modo | Se impone | Se calcula |
+|---|---|---|
+| temperatura | T de salida | Q |
+| calor | Q | T |
+| **adiabático** | Q = 0, por el supuesto | T |
+
+Marcar `adiabatico` **y** además imponer la temperatura es
+`LAB_ESPECIFICACION_EXCLUYENTE`.
+
+### Con cinética, T y avance se cierran a la vez
+
+$k(T)$ decide el avance y el avance decide el calor que decide $T$.
+Resolver uno y luego el otro daría la respuesta de otro problema, así que
+se resuelven juntos: los avances **más** la temperatura, en un sistema.
+
+El resultado del preset `cinetica-adiabatica` se puede comprobar sin el
+motor: la reacción libera $\xi(-\Delta H) = 818\,710$ W y el calentamiento
+sensible de 320 a 369.46 K vale lo mismo.
+
+### `convergencia.sistemas_implicitos`
+
+Un sistema **por volumen cinético**, con el algoritmo que de verdad
+corrió:
+
+```jsonc
+"sistemas_implicitos": [{
+  "bloque_id": "rx",
+  "metodo": "arranque por sustituciones sucesivas (…12 vuelta(s), convergido), y
+             despues scipy.optimize.least_squares con trf …, con limites",
+  "alcance": "sistema_acoplado",
+  "residuo_escalado": 1.097e-15,
+  "tolerancia": 1e-10,
+  "evaluaciones_de_funcion": 4,
+  "convergio": true,
+  "restricciones": ["temperatura en [200.0, 399.7] K, el dominio de la tabla…", …]
+}]
+```
+
+No se agregan en un solo número: dos volúmenes pueden resolverse con
+algoritmos distintos y promediar sus residuos no significaría nada. **Con
+la tasa dada la lista está vacía**, porque no hay nada implícito que
+resolver.
+
+### Los tres algoritmos, y por qué son tres
+
+| Situación | Algoritmo |
+|---|---|
+| una reacción, T impuesta | `brentq` sobre el avance, **acotado** por el intervalo estequiométrico |
+| varias reacciones, T impuesta | `scipy.optimize.root` con `hybr` sobre el vector de avances |
+| T incógnita (adiabático o Q impuesto) | arranque por sustituciones sucesivas, y después `least_squares` con `trf` **y límites** |
+
+**Con una reacción el intervalo garantiza el cambio de signo**: en ξ = 0 el
+residuo vale −r (negativo si la reacción avanza) y en el límite el
+reactivo se agota, la tasa cae a cero y el residuo vale ξ > 0.
+
+**Con varias no hay intervalo que acote un sistema**, así que la
+factibilidad (caudales no negativos) se **comprueba** después en vez de
+imponerse. Los límites de cada reacción suponiendo las otras a cero no son
+conservadores: dos reacciones pueden consumir el mismo reactivo.
+
+**Con T incógnita hacen falta las dos cosas, y esto conviene entenderlo.**
+`least_squares` minimiza $\lVert F\rVert^2$, y en un sistema cuadrado eso
+**no** es lo mismo que resolver $F = 0$: puede pararse en un mínimo local
+del cuadrado que no es raíz. Pasaba, y se veía en el resultado — para una
+reacción exotérmica con sólo ley directa daba avance **negativo** y
+temperatura **por debajo** de la entrada. El solver no estaba roto:
+
+> Desde (ξ = 0, T = T_ent) el residuo de materia vale −r/F y el de energía
+> vale cero, así que **bajar** la temperatura reduce la tasa y con ella el
+> residuo de materia. El gradiente apunta a T menor, que es exactamente al
+> lado contrario de donde está la solución de una exotérmica.
+
+Así que se arranca donde arrancaría un ingeniero: alternando los dos
+problemas que **sí** se resuelven de forma robusta porque cada uno es
+escalar y acotado — el avance con T fija, y la T con el avance fijo — y
+después el solver acotado lo pule y **mide** el residuo final. Las dos
+cosas se declaran: decir sólo «least_squares» ocultaría de dónde salió el
+punto de partida, y el punto de partida es la mitad del problema cuando
+hay mínimos locales.
+
+**Y los límites de la temperatura salen de la tabla de entalpía**, no de un
+número elegido: es el dominio donde el modelo existe. Dejar que el solver
+mirara fuera era lo que hacía que no convergiera — con la tasa creciendo
+como $e^{-E_a/RT}$, el primer paso se iba a temperaturas sin sentido y no
+volvía.
+
+Si la solución se queda **en** un límite, `convergio` es `false` y el
+motivo lo dice: una solución en la pared no es un estado estacionario,
+significa que el sistema pide salirse del dominio del modelo.
+
+---
+
 ## 8. Lo que está verificado
 
 `tests/validar_laboratorio.py`. **Los números no están escritos a
@@ -811,7 +1136,7 @@ con 2 MW la corriente intermedia sale a 367.5 K con `beta = 0.3018`, y 1
 MW más sube la temperatura solo **2.1 K** porque casi todo va a calor
 latente — frente a los ~10 K que costaban 0.15 MW en la zona líquida.
 
-Los ocho grupos de la suite (**230 comprobaciones**) cubren: uno y dos
+Los diez grupos de la suite (**312 comprobaciones**) cubren: uno y dos
 volúmenes con continuidad y conservación; los modos excluyentes; los
 montajes mal formados (ids, referencias, puertos, aislados, ciclos,
 null/NaN, fracciones, unidades, modelo y componentes); el dominio
@@ -845,9 +1170,38 @@ escritos a mano:
 - **Catorce rechazos** con su código: elementos que no cuadran, tasa
   negativa, reversible a medias, dos formas de tasa a la vez, base
   volumétrica sin volumen, un avance que no cabe en la alimentación,
-  cinética, ν sin reactivo y producto, ν de longitud equivocada, reacción
-  en un no-reactor, reacción con `sinReaccion`, reactor sin reacción
-  declarada, unidad de tasa no admitida y bases mezcladas.
+  parámetros cinéticos sueltos, ν sin reactivo y producto, ν de longitud
+  equivocada, reacción en un no-reactor, reacción con `sinReaccion`,
+  reactor sin reacción declarada, unidad de tasa no admitida y bases
+  mezcladas.
+
+### Y lo que se comprueba de la cinética
+
+Los casos de **primer y segundo orden en base de fracción molar tienen
+solución analítica**, así que tampoco hay números escritos a mano — se
+comparan contra el álgebra:
+
+| Caso | Analítico | Numérico |
+|---|---|---|
+| 1.º orden, $r = kx_A$ | $\xi = \dfrac{kF_{A0}}{F_0+k} = 33.3\overline{3}$ | coincide a $10^{-12}$ |
+| 2.º orden, $r = kx_A^2$ | raíz de $F_0^2\xi = k(F_{A0}-\xi)^2$ | coincide a $10^{-9}$ |
+| dos reacciones acopladas | sistema lineal resuelto a mano | coincide a $10^{-9}$ |
+
+**El adiabático se verifica por dos caminos independientes**: imponer la
+temperatura resultante en modo isotermo da el **mismo** avance
+(86.0894127745747 frente a 86.08941277457478), y el calor liberado por la
+reacción iguala al calentamiento sensible (818 710.3 W por los dos lados).
+
+Y se comprueba que lo declarado es lo que corre: que una reacción isoterma
+use `brentq` **acotado**, que varias usen `hybr`, que el acoplado declare
+**el arranque y el solver** y no sólo el solver, y que los límites de
+temperatura vengan de la tabla de entalpía.
+
+**Once rechazos más** de la cinética. Y del catálogo: que `C2H6O` salga
+marcado como no fiable con el etanol entre los candidatos, que nombre, CAS
+y SMILES den la misma sustancia, y que el diciclopentadieno salga apto
+para ELV y **no** para reacción — el mismo fallo que el motor da luego con
+`LAB_ENTALPIA_FORMACION_NO_DISPONIBLE`.
 
 ---
 
@@ -873,7 +1227,40 @@ escritos a mano:
 
 ---
 
-## 11. Qué cambió respecto a la primera entrega
+## 12. Lo que queda de la lista
+
+De `PENDIENTES_BACKEND_CLAUDE.md`, esta entrega cubre los puntos **1**
+(catálogo de sustancias), **2** (cinética general y redes, con el solver
+implícito declarado) y **5** (reactores con energía acoplada: isotérmico,
+adiabático y con Q impuesto).
+
+**No están, y lo digo para que no se dé por hecho:**
+
+- **Punto 3, lote transitorio.** Es otro régimen: estado inicial,
+  integración ODE en el tiempo, muestreo, tolerancias del integrador,
+  agotamiento y no negatividad a lo largo de la trayectoria. Nada de eso
+  se resuelve con lo que hay; `estacionario` sigue siendo obligatorio y
+  quitarlo da `LAB_SUPUESTO_NO_SOPORTADO`.
+- **Punto 4, equilibrio químico calculado.** El motor **no** obtiene la
+  composición de equilibrio a partir de $\Delta G$ y $K$. Lo único que hay
+  de ese territorio es `desde_equilibrio`, que usa $K_{eq}$ para hacer
+  consistente una **inversa cinética** — que es otra cosa. Y la
+  advertencia que el contrato pedía está puesta donde corresponde:
+  **imponer $r^+ = r^-$ no demuestra equilibrio termodinámico.**
+- **Puntos 6 a 10** (entropía y exergía, conducción, difusión, momento,
+  más de dos volúmenes y el decantador expuesto) siguen igual.
+- **Los transversales** (expresiones tipadas con comprobación dimensional
+  automática, sensibilidad e incertidumbre) tampoco están empezados.
+
+Lo que sí cumple esta entrega del requisito transversal es la parte de
+«todas las capacidades nuevas deben anunciar límites y ejemplos
+reproducibles»: `capacidades` declara lo no soportado una por una, y los
+veinte presets de `/laboratorio/ejemplos` son peticiones que se reenvían
+al endpoint y la suite comprueba que dan el estado que prometen.
+
+---
+
+## 11. Qué cambió respecto a las entregas anteriores
 
 Nada del contrato térmico dejó de funcionar, y está comprobado. Pero hay
 cuatro cambios **visibles** que conviene mirar antes de conectar:
@@ -904,6 +1291,19 @@ determinaba nada.
 **4. `estados_por_bloque` tiene campos nuevos** (`composicion`,
 `por_especie`, `nota_F_i`) y `x` es `null` con tres o más componentes.
 Los campos viejos siguen donde estaban.
+
+**5. `base_actividad` es `str` y no un `Literal` en el esquema.** A
+propósito: una base desconocida tiene que salir como **diagnóstico** del
+núcleo —con su código, su id de bloque y la explicación de por qué la
+concentración no está— y no como un 422 de Pydantic, que no lleva nada de
+eso. Es el mismo criterio que con el resto de lo semántico.
+
+**6. `convergencia.sistemas_implicitos` es nuevo**, y está vacío cuando no
+hay cinética.
+
+**7. El modo adiabático existe.** Antes un volumen adiabático no se podía
+resolver; ahora es el tercer modo térmico, y marcarlo **más** imponer la
+temperatura es un error.
 
 Y dos defectos que la reacción destapó y que estaban desde la primera
 entrega:
