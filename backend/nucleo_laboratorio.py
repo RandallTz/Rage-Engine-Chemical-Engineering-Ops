@@ -69,6 +69,30 @@ def _a_diccionario(request):
              "valor": e.valor, "unidad": e.unidad}
             for e in request.especificaciones
         ],
+        "reacciones": [
+            {
+                "id": r.id,
+                "bloque_id": r.bloque_id,
+                "nu": list(r.nu),
+                # Las tasas llegan como objetos; el nucleo las convierte y
+                # decide la base a partir de la unidad.
+                **{
+                    campo: ({"valor": dato.valor, "unidad": dato.unidad}
+                            if dato is not None else None)
+                    for campo, dato in (
+                        ("tasa", r.tasa), ("tasa_directa", r.tasa_directa),
+                        ("tasa_inversa", r.tasa_inversa), ("tasa_neta", r.tasa_neta),
+                    )
+                },
+                # Se pasan a proposito, para que el nucleo los RECHACE con
+                # un diagnostico con nombre. Filtrarlos aqui los ignoraria
+                # en silencio, y el cliente creeria que su cinetica se usa.
+                "cinetica": r.cinetica,
+                "A": r.A,
+                "Ea": r.Ea,
+            }
+            for r in request.reacciones
+        ],
     }
 
 
@@ -104,6 +128,24 @@ def entradas_normalizadas(peticion):
          for e in peticion["especificaciones"]),
         key=lambda e: (e["bloque_id"], e["variable"]),
     )
+    # Las reacciones SI entran en la huella: cambiar un coeficiente
+    # estequiometrico o una tasa cambia el sistema. Se ordenan por id por
+    # el mismo motivo que los bloques -- el orden en que el cliente las
+    # mande no cambia la quimica -- pero `nu` conserva el suyo, que es el
+    # de los componentes.
+    reacciones = sorted(
+        (
+            {
+                "id": r["id"], "bloque_id": r["bloque_id"],
+                "nu": canonico(list(r["nu"])),
+                **{campo: canonico(r.get(campo))
+                   for campo in ("tasa", "tasa_directa", "tasa_inversa",
+                                 "tasa_neta")},
+            }
+            for r in peticion.get("reacciones") or []
+        ),
+        key=lambda r: r["id"],
+    )
     return {
         # El orden de los componentes SI importa: define cual es x.
         "componentes": list(peticion["componentes"]),
@@ -114,6 +156,7 @@ def entradas_normalizadas(peticion):
         "conexiones": conexiones,
         "supuestos": canonico(peticion.get("supuestos")),
         "especificaciones": especificaciones,
+        "reacciones": reacciones,
         # El nombre del bloque NO entra: cambiar la etiqueta de una pieza
         # no cambia el sistema. Tampoco entran las relaciones en LaTeX.
     }
@@ -205,6 +248,9 @@ def _ejecutar(request, accion):
             },
             "convergencia": None,
             "estados_por_bloque": {},
+            "reacciones": [],
+            "fuentes_por_volumen": {},
+            "conservacion": {},
         }
 
     return _envolver(resultado, calculo, modelo_id)

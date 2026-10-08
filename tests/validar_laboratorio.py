@@ -267,9 +267,10 @@ check("1.11 Y su h es la del proveedor en ese estado",
       f"{estados['medio']['h']:.9f} J/mol")
 
 compartidas = [v for v in r2["variables"] if v["compartida"]]
-check("1.12 Las cinco variables de la corriente intermedia son compartidas",
-      len(compartidas) == 5
-      and {v["id"] for v in compartidas} == {f"medio.{k}" for k in "FTpxh"},
+check("1.12 Las seis variables de la corriente intermedia son compartidas",
+      len(compartidas) == 6
+      and {v["id"] for v in compartidas}
+      == {"medio.F", "medio.T", "medio.p", "medio.h", "medio.x0", "medio.x1"},
       ", ".join(sorted(v["id"] for v in compartidas)))
 check("1.13 Y cada una referencia LOS DOS volúmenes y LAS DOS conexiones",
       all(set(v["bloque_ids"]) == {"medio", "cv1", "cv2"}
@@ -285,10 +286,10 @@ check("1.15 Un solo volumen también se resuelve", r1["estado"] == "resuelto")
 check("1.16 Con su Q igual al del primer tramo del caso de dos",
       abs(valor(r1, "heat1.Q") - Q1_esperado) < 1e-9 * abs(Q1_esperado),
       f"{valor(r1, 'heat1.Q'):.6f} W")
-check("1.17 Y con GL = 0: 5 incógnitas y 5 ecuaciones",
+check("1.17 Y con GL = 0: 7 incógnitas y 7 ecuaciones",
       r1["analisis"]["grados_libertad"] == 0
-      and r1["analisis"]["incognitas"] == 5
-      and r1["analisis"]["ecuaciones_independientes"] == 5,
+      and r1["analisis"]["incognitas"] == 7
+      and r1["analisis"]["ecuaciones_independientes"] == 7,
       f"{r1['analisis']['incognitas']} incógnitas / "
       f"{r1['analisis']['ecuaciones_independientes']} ecuaciones")
 
@@ -301,10 +302,10 @@ check("1.18 Con un volumen el cierre global NO se mide: sería una tautología",
       and "tautologia" in global1["nota"],
       global1["nota"][:92])
 
-check("1.19 Dos volúmenes: GL = 0 con 9 incógnitas y 9 ecuaciones",
+check("1.19 Dos volúmenes: GL = 0 con 12 incógnitas y 12 ecuaciones",
       r2["analisis"]["grados_libertad"] == 0
-      and r2["analisis"]["incognitas"] == 9
-      and r2["analisis"]["ecuaciones_independientes"] == 9,
+      and r2["analisis"]["incognitas"] == 12
+      and r2["analisis"]["ecuaciones_independientes"] == 12,
       f"{r2['analisis']['incognitas']} / "
       f"{r2['analisis']['ecuaciones_independientes']}")
 
@@ -608,7 +609,20 @@ caso_malo("3.24 Componente que el proveedor no conoce", m,
 
 m = copy.deepcopy(montaje_dos_volumenes())
 m["componentes"] = ["benzene", "toluene", "water"]
-caso_malo("3.25 Tres componentes: fuera del alcance de esta entrega", m,
+r = caso_malo("3.25 Con tres componentes, 'x' a secas ya no identifica ninguna", m,
+              codigos.LAB_VARIABLE_DESCONOCIDA)
+check("3.25b Y el mensaje dice cómo nombrarlas",
+      "x0, x1, x2" in (errores_de(r)[0]["accion_sugerida"] or ""),
+      (errores_de(r)[0]["accion_sugerida"] or "")[:95])
+
+m = copy.deepcopy(montaje_dos_volumenes())
+m["componentes"] = ["benzene"]
+caso_malo("3.25c Un solo componente no es una mezcla", m,
+          codigos.LAB_NUMERO_DE_COMPONENTES, "no_soportado")
+
+m = copy.deepcopy(montaje_dos_volumenes())
+m["componentes"] = ["benzene", "benzene"]
+caso_malo("3.25d Un componente repetido", m,
           codigos.LAB_NUMERO_DE_COMPONENTES, "no_soportado")
 
 m = copy.deepcopy(montaje_dos_volumenes())
@@ -630,11 +644,26 @@ check("3.29 No se infiere Q = 0 por la ausencia de la pieza",
       "no significa Q = 0" in (errores_de(r)[0]["accion_sugerida"] or ""),
       (errores_de(r)[0]["accion_sugerida"] or "")[:100])
 
-for supuesto in ("estacionario", "sinTrabajo", "sinReaccion", "sinMovimiento"):
+for supuesto in ("estacionario", "sinTrabajo", "sinMovimiento"):
     m = copy.deepcopy(montaje_dos_volumenes())
     m["supuestos"][supuesto] = not m["supuestos"][supuesto]
     caso_malo(f"3.30 Supuesto no soportado: {supuesto} invertido", m,
               codigos.LAB_SUPUESTO_NO_SOPORTADO, "no_soportado")
+
+# 'sinReaccion' ya NO es uno de ellos: ahora hay reacción. Quitarlo sin
+# declarar ninguna reacción no invalida el cálculo --un recipiente no
+# lleva término de transformación-- pero el montaje declara una intención
+# que su topología no recoge, y callarlo dejaría al usuario creyendo que
+# algo reacciona.
+m = copy.deepcopy(montaje_dos_volumenes())
+m["supuestos"]["sinReaccion"] = False
+rsr = validar(m)
+avisos = [d for d in rsr["diagnosticos"] if d["severidad"] == "advertencia"]
+check("3.30b Quitar 'sinReaccion' sin ningún reactor avisa, pero no invalida",
+      rsr["estado"] == "valido"
+      and any(d["codigo"] == codigos.LAB_SIN_REACCION_DECLARADA for d in avisos),
+      f"estado={rsr['estado']}, "
+      + (avisos[0]["mensaje"][:80] if avisos else "sin aviso (!)"))
 
 m = copy.deepcopy(montaje_dos_volumenes())
 del m["supuestos"]["sinMovimiento"]
@@ -645,8 +674,13 @@ m = copy.deepcopy(montaje_dos_volumenes())
 for b in m["bloques"]:
     if b["id"] == "cv1":
         b["tipo"] = "reactor"
-caso_malo("3.32 El reactor no lo resuelve este ensamblador, y lo dice", m,
-          codigos.LAB_TOPOLOGIA_NO_SOPORTADA, "no_soportado")
+m["supuestos"]["sinReaccion"] = False
+r = caso_malo("3.32 Un reactor que no declara su reacción se rechaza", m,
+              codigos.LAB_SIN_REACCION_DECLARADA)
+check("3.32b Y el motivo es el mismo que con el calor: la ausencia no es un supuesto",
+      "no significa que no haya reaccion"
+      in (errores_de(r)[0]["accion_sugerida"] or ""),
+      (errores_de(r)[0]["accion_sugerida"] or "")[-95:])
 
 m = copy.deepcopy(montaje_dos_volumenes())
 m["bloques"].append({"id": "in2", "tipo": "entrada", "nombre": "Segunda"})
@@ -796,10 +830,10 @@ check("5.5 Y los valores calculados siguen en null",
 # En /resolver, ejecutadas son las que de verdad corrieron.
 ejecutadas = {e["id"] for e in r2["ecuaciones"] if e["ejecutada"]}
 cuentan = {e["id"] for e in r2["ecuaciones"] if e["cuenta_como_ecuacion"]}
-check("5.6 En /resolver se ejecutan las 9 ecuaciones del sistema",
-      cuentan <= ejecutadas and len(cuentan) == 9,
+check("5.6 En /resolver se ejecutan las 12 ecuaciones del sistema",
+      cuentan <= ejecutadas and len(cuentan) == 12,
       f"{len(cuentan)} cuentan, {len(ejecutadas)} ejecutadas "
-      "(la verificación global ejecuta además)")
+      "(las verificaciones ejecutan además)")
 
 no_ecuaciones = [e for e in r2["ecuaciones"] if not e["cuenta_como_ecuacion"]]
 check("5.7 Las convenciones de signo NO cuentan como ecuación",
@@ -809,20 +843,56 @@ check("5.7 Las convenciones de signo NO cuentan como ecuación",
 check("5.8 Ni las especificaciones: son datos, no leyes",
       all(not e["cuenta_como_ecuacion"]
           for e in r2["ecuaciones"] if e["tipo"] == "condicion"))
-check("5.9 Ni el cierre de composición, que se satisface por parametrización",
-      all(not e["cuenta_como_ecuacion"] and e["residuo"] is None
-          for e in r2["ecuaciones"] if e["tipo"] == "cierre"))
+# El cierre SÍ cuenta cuando determina la fracción que falta, y NO cuando
+# se dieron todas: ahí comprueba en vez de calcular. El criterio no ha
+# cambiado -- una relación cuenta si y solo si determina algo -- lo que
+# cambió es que ahora las n fracciones son variables explícitas.
+cierres = [e for e in r2["ecuaciones"] if e["tipo"] == "cierre"]
+check("5.9 El cierre cuenta cuando determina la fracción que falta",
+      len(cierres) == 3 and all(e["cuenta_como_ecuacion"] for e in cierres),
+      f"{len(cierres)} cierres, todos determinan una fracción")
+
+# Y con las n fracciones dadas, deja de contar.
+m_todas = con_spec(montaje_dos_volumenes(), bloque_id="in", variable="x1",
+                   valor=0.5, unidad="mol/mol")
+r_todas = resolver(m_todas)
+cierre_in = next(e for e in r_todas["ecuaciones"] if e["id"] == "in:cierre")
+check("5.9b Y deja de contar si se dan todas: entonces comprueba, no calcula",
+      r_todas["estado"] == "resuelto"
+      and cierre_in["cuenta_como_ecuacion"] is False
+      and cierre_in["residuo"] is not None
+      and r_todas["analisis"]["grados_libertad"] == 0,
+      f"residuo medido {cierre_in['residuo']:.1e}, GL = "
+      f"{r_todas['analisis']['grados_libertad']}")
+
+# Y una suma que no da 1 es un dato contradictorio.
+m_mal = con_spec(montaje_dos_volumenes(), bloque_id="in", variable="x1",
+                 valor=0.4, unidad="mol/mol")
+e_mal = errores_de(resolver(m_mal))
+check("5.9c Unas fracciones que no suman 1 se rechazan",
+      e_mal and e_mal[0]["codigo"] == codigos.LAB_DATOS_COMPOSICION_INCOMPATIBLE,
+      e_mal[0]["mensaje"][:95] if e_mal else "se aceptó (!)")
 check("5.10 Ni la verificación global, que es suma de los otros balances",
       all(not e["cuenta_como_ecuacion"]
           for e in r2["ecuaciones"] if e["tipo"] == "verificacion"),
       "contarla regalaría una ecuación y los GL saldrían mal")
 
 # Residuos: solo donde se midieron.
-directas = [e for e in r2["ecuaciones"]
-            if e["alcance"] in ("algebraico_directo", "evaluacion_directa")]
-check("5.11 Ninguna relación de evaluación directa trae residuo",
-      directas and all(e["residuo"] is None for e in directas),
-      f"{len(directas)} relaciones directas, 0 residuos fabricados")
+# Lo que el solver RESUELVE no trae residuo: se satisface por
+# construcción. Lo que COMPRUEBA sí lo trae, y eso es una medida y no una
+# fabricación -- la diferencia está en si la relación determinó algo o se
+# limitó a verificarlo.
+resueltas = [e for e in r2["ecuaciones"]
+             if e["cuenta_como_ecuacion"]
+             and e["alcance"] in ("algebraico_directo", "evaluacion_directa")]
+check("5.11 Ninguna relación RESUELTA de evaluación directa trae residuo",
+      resueltas and all(e["residuo"] is None for e in resueltas),
+      f"{len(resueltas)} relaciones resueltas directamente, 0 residuos fabricados")
+
+verificaciones = [e for e in r2["ecuaciones"] if e["tipo"] == "verificacion"]
+check("5.11b Y las verificaciones SÍ lo traen: ahí el residuo se mide",
+      verificaciones and all(e["residuo"] is not None for e in verificaciones),
+      ", ".join(f"{e['id']}={e['residuo']:.1e}" for e in verificaciones))
 check("5.12 Y el balance de energía explica por qué no lo tiene",
       "no hay residuo que medir"
       in next(e for e in r2["ecuaciones"] if e["id"] == "cv1:energia")["nota"],
@@ -1078,6 +1148,543 @@ check("7.6 El preset bifásico llega a la laguna, y el flash lo confirma",
       med_p["fase"] == "bifasico" and fase_ref(med_p["T"]) == "bifasico"
       and 0.0 < med_p["beta"] < 1.0,
       f"T = {med_p['T']:.3f} K, beta = {med_p['beta']:.4f}")
+
+
+# =====================================================================
+print("\n" + "=" * 76)
+print("8. REACCION: estequiometria, fuentes brutas y conservacion")
+print("=" * 76)
+# =====================================================================
+# Los numeros tampoco están escritos a mano aquí: la estequiometría y las
+# tasas son datos, así que los avances y las fuentes se comparan contra lo
+# que la estequiometría OBLIGA -- nu_i por el avance -- y la conservación
+# de elementos y masa contra la matriz atómica que da 'thermo'.
+
+# Dos sistemas reales, los dos con propiedades completas y balance
+# elemental exacto:
+#   n-butano  -> isobutano        isomerización, sum(nu) = 0
+#   2 isobuteno <-> diisobutileno dimerización,  sum(nu) = -1
+ISO = ["n-butane", "isobutane"]
+DIM = ["isobutene", "diisobutylene"]
+_prov_iso = ProveedorTermodinamico(ISO)
+_prov_dim = ProveedorTermodinamico(DIM)
+
+
+def montaje_reactor(componentes, reacciones, x_entrada, T_entrada=300.0,
+                    T_salida=310.0, presion=5e5, F=100.0, extra=()):
+    especificaciones = [
+        {"bloque_id": "in", "variable": "F", "valor": F, "unidad": "mol/s"},
+        {"bloque_id": "in", "variable": "T", "valor": T_entrada, "unidad": "K"},
+        {"bloque_id": "rx", "variable": "T", "valor": T_salida, "unidad": "K"},
+    ] + [
+        {"bloque_id": "in", "variable": f"x{i}", "valor": v, "unidad": "mol/mol"}
+        for i, v in enumerate(x_entrada[:-1])
+    ] + list(extra)
+    return {
+        "version": 1,
+        "componentes": list(componentes),
+        "presion_sistema": {"valor": presion, "unidad": "Pa"},
+        "bloques": [
+            {"id": "in", "tipo": "entrada", "nombre": "Alimentacion"},
+            {"id": "rx", "tipo": "reactor", "nombre": "Reactor"},
+            {"id": "heat", "tipo": "calor", "nombre": "Aporte termico"},
+            {"id": "out", "tipo": "salida", "nombre": "Salida"},
+        ],
+        "conexiones": [
+            {"id": "c1", "desde": "in", "hacia": "rx", "tipo": "materia"},
+            {"id": "c2", "desde": "heat", "hacia": "rx", "tipo": "calor"},
+            {"id": "c3", "desde": "rx", "hacia": "out", "tipo": "materia"},
+        ],
+        "supuestos": {"estacionario": True, "adiabatico": False,
+                      "sinTrabajo": True, "sinReaccion": False,
+                      "sinMovimiento": True},
+        "especificaciones": especificaciones,
+        "reacciones": reacciones,
+    }
+
+
+def flujos(resultado, bloque):
+    """{componente: F_i} de una corriente."""
+    return {e["componente"]: e["F_i"]
+            for e in resultado["estados_por_bloque"][bloque]["por_especie"]}
+
+
+def masa_de(proveedor, flujos_por_componente):
+    """Caudal masico [g/s] a partir de los caudales molares."""
+    return sum(float(c.MW) * flujos_por_componente[c.name if hasattr(c, "name") else n]
+               for c, n in zip(proveedor.componentes, flujos_por_componente))
+
+
+# --- 8.1 A -> B: la isomerizacion
+r_iso = resolver(montaje_reactor(
+    ISO, [{"id": "iso", "bloque_id": "rx", "nu": [-1, 1],
+           "tasa": {"valor": 20.0, "unidad": "mol/s"}}],
+    [1.0, 0.0]))
+check("8.1 A → B se resuelve con GL = 0",
+      r_iso["estado"] == "resuelto" and r_iso["analisis"]["grados_libertad"] == 0,
+      f"estado={r_iso['estado']}, GL={r_iso['analisis']['grados_libertad']}")
+
+f_in, f_out = flujos(r_iso, "in"), flujos(r_iso, "out")
+check("8.2 Consume de A exactamente el avance, y genera lo mismo de B",
+      abs(f_in["n-butane"] - f_out["n-butane"] - 20.0) < 1e-12
+      and abs(f_out["isobutane"] - f_in["isobutane"] - 20.0) < 1e-12,
+      f"A: {f_in['n-butane']:.4f} → {f_out['n-butane']:.4f}; "
+      f"B: {f_in['isobutane']:.4f} → {f_out['isobutane']:.4f}")
+
+fuentes = r_iso["fuentes_por_volumen"]["rx"]["por_especie"]
+por_comp = {e["componente"]: e for e in fuentes}
+check("8.3 Y las fuentes lo dicen: G de B = C de A = el avance",
+      por_comp["isobutane"]["generacion_bruta"] == 20.0
+      and por_comp["n-butane"]["consumo_bruto"] == 20.0
+      and por_comp["isobutane"]["consumo_bruto"] == 0.0
+      and por_comp["n-butane"]["generacion_bruta"] == 0.0,
+      "una reacción irreversible solo va en un sentido")
+check("8.4 Con sum(nu) = 0, el caudal molar NO cambia",
+      r_iso["estados_por_bloque"]["out"]["F"]
+      == r_iso["estados_por_bloque"]["in"]["F"] == 100.0)
+
+cons = r_iso["conservacion"]["rx"]
+check("8.5 Elementos conservados, medidos sobre los caudales resueltos",
+      cons["residuo_elemental_maximo"] < 1e-12,
+      ", ".join(f"{e}: {d['entra']:.4f} → {d['sale']:.4f}"
+                for e, d in cons["elementos"].items()))
+check("8.6 Y la masa también",
+      cons["masa"]["residuo_relativo"] < 1e-12,
+      f"{cons['masa']['entra_g_s']:.6f} → {cons['masa']['sale_g_s']:.6f} g/s")
+
+# El calor de reacción, contra el proveedor por el camino corto.
+Hf_iso = np.asarray(_prov_iso.entalpias_formacion_liquido(), dtype=float)
+dH_iso = float(np.array([-1.0, 1.0]) @ Hf_iso)
+rxn_iso = r_iso["reacciones"][0]
+check("8.7 El avance que reporta es el que se pidió",
+      rxn_iso["avance_neto"] == 20.0 and rxn_iso["modo_tasa"] == "irreversible")
+check("8.8 Y el calor de reacción sale de ν·Hf del proveedor",
+      abs(dH_iso - (-9510.0)) < 1.0,
+      f"ΔH = {dH_iso:.1f} J/mol (exotérmica: la isomerización libera calor)")
+
+# --- 8.9 A -> 2B: el caudal molar cambia y la masa no
+r_crack = resolver(montaje_reactor(
+    DIM, [{"id": "crack", "bloque_id": "rx", "nu": [2, -1],
+           "tasa": {"valor": 10.0, "unidad": "mol/s"}}],
+    [0.0, 1.0], T_entrada=320.0, T_salida=330.0, presion=1e6))
+check("8.9 A → 2B se resuelve",
+      r_crack["estado"] == "resuelto"
+      and r_crack["analisis"]["grados_libertad"] == 0, r_crack["estado"])
+check("8.10 El caudal molar SÍ cambia: +10 mol/s por un avance de 10 con sum(ν)=+1",
+      r_crack["estados_por_bloque"]["out"]["F"] == 110.0,
+      f"100 → {r_crack['estados_por_bloque']['out']['F']} mol/s")
+cc = r_crack["conservacion"]["rx"]
+check("8.11 Y la masa NO cambia, aunque el caudal molar sí",
+      cc["masa"]["residuo_relativo"] < 1e-12 and cc["caudal_molar"]["cambia"] is True,
+      f"masa {cc['masa']['entra_g_s']:.4f} g/s constante; "
+      f"molar {cc['caudal_molar']['entra_mol_s']:.0f} → "
+      f"{cc['caudal_molar']['sale_mol_s']:.0f} mol/s")
+fc = {e["componente"]: e for e in r_crack["fuentes_por_volumen"]["rx"]["por_especie"]}
+check("8.12 Se generan 2 de B por cada A consumido",
+      fc["isobutene"]["generacion_bruta"] == 20.0
+      and fc["diisobutylene"]["consumo_bruto"] == 10.0,
+      "ν = [+2, −1] con avance 10")
+
+# --- 8.13 reversible: la dirección inversa intercambia producción y consumo
+r_rev = resolver(montaje_reactor(
+    DIM, [{"id": "dim", "bloque_id": "rx", "nu": [-2, 1],
+           "tasa_directa": {"valor": 2.0, "unidad": "mol/s"},
+           "tasa_inversa": {"valor": 8.0, "unidad": "mol/s"}}],
+    [0.5, 0.5], T_entrada=320.0, T_salida=330.0, presion=1e6))
+fr = {e["componente"]: e for e in r_rev["fuentes_por_volumen"]["rx"]["por_especie"]}
+check("8.13 Reversible con la inversa dominante: el avance neto es negativo",
+      r_rev["estado"] == "resuelto"
+      and r_rev["reacciones"][0]["avance_neto"] == -6.0,
+      f"ξ = r⁺ − r⁻ = 2 − 8 = {r_rev['reacciones'][0]['avance_neto']}")
+check("8.14 Y la inversa intercambia producción y consumo correctamente",
+      fr["isobutene"]["generacion_bruta"] == 16.0      # 2 × r⁻ = 2 × 8
+      and fr["isobutene"]["consumo_bruto"] == 4.0      # 2 × r⁺ = 2 × 2
+      and fr["diisobutylene"]["generacion_bruta"] == 2.0   # 1 × r⁺
+      and fr["diisobutylene"]["consumo_bruto"] == 8.0,     # 1 × r⁻
+      "el evento directo produce lo que tiene ν>0; el inverso, lo que tiene ν<0")
+check("8.15 El neto es la diferencia de las brutas, especie por especie",
+      all(abs(e["fuente_neta"]
+              - (e["generacion_bruta"] - e["consumo_bruto"])) < 1e-12
+          for e in fr.values()),
+      "+12 y −6, que es ν·ξ")
+
+# --- 8.16 EL CASO QUE EL CONTRATO EXIGE: equilibrio dinámico
+#
+# r⁺ = r⁻ > 0. La fuente neta es CERO y las brutas son POSITIVAS. Es el
+# caso que desmonta la tentación de derivar las brutas del neto: un neto
+# de cero es compatible con una reacción parada y con una funcionando a
+# toda velocidad, y hay que distinguirlas.
+r_eq = resolver(montaje_reactor(
+    DIM, [{"id": "dim", "bloque_id": "rx", "nu": [-2, 1],
+           "tasa_directa": {"valor": 5.0, "unidad": "mol/s"},
+           "tasa_inversa": {"valor": 5.0, "unidad": "mol/s"}}],
+    [0.5, 0.5], T_entrada=320.0, T_salida=330.0, presion=1e6))
+fe = {e["componente"]: e for e in r_eq["fuentes_por_volumen"]["rx"]["por_especie"]}
+check("8.16 Equilibrio r⁺ = r⁻ = 5: la fuente neta es CERO",
+      r_eq["estado"] == "resuelto"
+      and all(e["fuente_neta"] == 0.0 for e in fe.values())
+      and r_eq["reacciones"][0]["avance_neto"] == 0.0)
+check("8.17 Y las brutas son POSITIVAS: las moléculas no están quietas",
+      fe["isobutene"]["generacion_bruta"] == 10.0
+      and fe["isobutene"]["consumo_bruto"] == 10.0
+      and fe["diisobutylene"]["generacion_bruta"] == 5.0
+      and fe["diisobutylene"]["consumo_bruto"] == 5.0,
+      "G = C = |ν|·r > 0 con neto cero")
+check("8.18 La composición no cambia, pero la reacción está funcionando",
+      flujos(r_eq, "in") == flujos(r_eq, "out")
+      and r_eq["reacciones"][0]["brutas_disponibles"] is True,
+      "misma salida que entrada, y 5 mol/s en cada dirección")
+check("8.19 Y la descomposición del neto da cero en las dos casillas",
+      all(e["descomposicion_neta"]["aparente_generacion"] == 0.0
+          and e["descomposicion_neta"]["aparente_consumo"] == 0.0
+          for e in fe.values()),
+      "por eso NO es el intercambio bruto, y va en un campo aparte")
+check("8.20 Con ξ = 0 el calor de reacción es cero, aunque haya 5 mol/s en cada sentido",
+      abs(valor(r_eq, "heat.Q")
+          - (r_eq["estados_por_bloque"]["out"]["F"]
+             * r_eq["estados_por_bloque"]["out"]["h"]
+             - r_eq["estados_por_bloque"]["in"]["F"]
+             * r_eq["estados_por_bloque"]["in"]["h"])) < 1e-6,
+      "el calor lo mueve el avance NETO, no las brutas")
+
+# --- 8.21 solo el neto: las brutas NO están disponibles
+r_net = resolver(montaje_reactor(
+    DIM, [{"id": "dim", "bloque_id": "rx", "nu": [-2, 1],
+           "tasa_neta": {"valor": 0.0, "unidad": "mol/s"}}],
+    [0.5, 0.5], T_entrada=320.0, T_salida=330.0, presion=1e6))
+fn = r_net["fuentes_por_volumen"]["rx"]
+check("8.21 Con solo la tasa neta, las brutas salen NULL",
+      r_net["estado"] == "resuelto"
+      and fn["brutas_disponibles"] is False
+      and all(e["generacion_bruta"] is None and e["consumo_bruto"] is None
+              for e in fn["por_especie"]),
+      "null, no cero: el dato no está")
+# Dos motivos distintos y los dos necesarios: el del VOLUMEN explica que
+# G_i es una suma con un término desconocido y nombra la reacción
+# culpable; el de la REACCIÓN explica por qué la tasa neta no determina
+# las brutas.
+check("8.22 El motivo del volumen nombra la reacción y explica la suma",
+      "SUMA" in (fn["motivo_brutas_no_disponibles"] or "")
+      and "dim" in (fn["motivo_brutas_no_disponibles"] or ""),
+      (fn["motivo_brutas_no_disponibles"] or "")[:100])
+motivo_rxn = r_net["reacciones"][0]["motivo_brutas_no_disponibles"] or ""
+check("8.22b Y el de la reacción explica que un neto de cero es ambiguo",
+      "equilibrio dinamico" in motivo_rxn and "parada" in motivo_rxn,
+      motivo_rxn[:110])
+check("8.23 Nunca se rellenan con max(neto, 0)",
+      r_net["reacciones"][0]["generacion_bruta"] is None
+      if "generacion_bruta" in r_net["reacciones"][0] else True,
+      "daría cero generación en una reacción que puede ir a toda velocidad")
+check("8.24 Pero la fuente neta sí, y la descomposición del neto también",
+      all(e["fuente_neta"] == 0.0
+          and e["descomposicion_neta"]["aparente_generacion"] == 0.0
+          for e in fn["por_especie"]),
+      "lo que se sabe se da; lo que no, se dice que no")
+
+# Y mezclar una reacción con brutas y otra sin ellas deja el volumen sin
+# brutas: G_i es una suma y un término desconocido la hace desconocida.
+r_mix = resolver(montaje_reactor(
+    DIM, [{"id": "a", "bloque_id": "rx", "nu": [-2, 1],
+           "tasa": {"valor": 3.0, "unidad": "mol/s"}},
+          {"id": "b", "bloque_id": "rx", "nu": [2, -1],
+           "tasa_neta": {"valor": 1.0, "unidad": "mol/s"}}],
+    [0.5, 0.5], T_entrada=320.0, T_salida=330.0, presion=1e6))
+check("8.25 Una reacción sin brutas deja al VOLUMEN sin brutas",
+      r_mix["estado"] == "resuelto"
+      and r_mix["fuentes_por_volumen"]["rx"]["brutas_disponibles"] is False
+      and r_mix["reacciones"][0]["brutas_disponibles"] is True,
+      "la reacción 'a' sí las tiene; la suma del volumen, no")
+check("8.26 Y el motivo nombra la reacción culpable",
+      "b" in (r_mix["fuentes_por_volumen"]["rx"]["motivo_brutas_no_disponibles"]
+              or ""),
+      "para saber qué declarar mejor")
+
+# --- 8.27 la base: integrada frente a volumétrica
+r_vol = resolver(montaje_reactor(
+    ISO, [{"id": "iso", "bloque_id": "rx", "nu": [-1, 1],
+           "tasa": {"valor": 4.0, "unidad": "mol/(m3*s)"}}],
+    [1.0, 0.0],
+    extra=[{"bloque_id": "rx", "variable": "V", "valor": 5.0, "unidad": "m3"}]))
+check("8.27 Una tasa volumétrica se integra con el volumen del reactor",
+      r_vol["estado"] == "resuelto"
+      and r_vol["reacciones"][0]["avance_neto"] == 20.0
+      and r_vol["reacciones"][0]["base_tasa"] == "volumetrica",
+      "4 mol/(m³·s) × 5 m³ = 20 mol/s")
+check("8.28 Y da el MISMO resultado que la integrada equivalente",
+      flujos(r_vol, "out") == flujos(r_iso, "out"),
+      "dos formas de declarar el mismo dato")
+check("8.29 La respuesta declara la base y el volumen usado",
+      r_vol["reacciones"][0]["volumen_m3"] == 5.0
+      and r_vol["reacciones"][0]["unidad_declarada"] == "mol/(m3*s)",
+      "la unidad es la que decide la base, y queda escrita")
+
+# --- 8.30 dos volúmenes con reacción, compartiendo la corriente
+def montaje_dos_reactores():
+    return {
+        "version": 1,
+        "componentes": list(DIM),
+        "presion_sistema": {"valor": 1e6, "unidad": "Pa"},
+        "bloques": [
+            {"id": "in", "tipo": "entrada", "nombre": "Alimentacion"},
+            {"id": "rx1", "tipo": "reactor", "nombre": "Primer reactor"},
+            {"id": "h1", "tipo": "calor", "nombre": "Aporte 1"},
+            {"id": "medio", "tipo": "corriente", "nombre": "Corriente compartida"},
+            {"id": "rx2", "tipo": "reactor", "nombre": "Segundo reactor"},
+            {"id": "h2", "tipo": "calor", "nombre": "Aporte 2"},
+            {"id": "out", "tipo": "salida", "nombre": "Salida"},
+        ],
+        "conexiones": [
+            {"id": "c1", "desde": "in", "hacia": "rx1", "tipo": "materia"},
+            {"id": "c2", "desde": "h1", "hacia": "rx1", "tipo": "calor"},
+            {"id": "c3", "desde": "rx1", "hacia": "medio", "tipo": "materia"},
+            {"id": "c4", "desde": "medio", "hacia": "rx2", "tipo": "materia"},
+            {"id": "c5", "desde": "h2", "hacia": "rx2", "tipo": "calor"},
+            {"id": "c6", "desde": "rx2", "hacia": "out", "tipo": "materia"},
+        ],
+        "supuestos": {"estacionario": True, "adiabatico": False,
+                      "sinTrabajo": True, "sinReaccion": False,
+                      "sinMovimiento": True},
+        "especificaciones": [
+            {"bloque_id": "in", "variable": "F", "valor": 100.0, "unidad": "mol/s"},
+            {"bloque_id": "in", "variable": "T", "valor": 320.0, "unidad": "K"},
+            {"bloque_id": "in", "variable": "x0", "valor": 1.0, "unidad": "mol/mol"},
+            {"bloque_id": "rx1", "variable": "T", "valor": 330.0, "unidad": "K"},
+            {"bloque_id": "rx2", "variable": "T", "valor": 340.0, "unidad": "K"},
+        ],
+        "reacciones": [
+            {"id": "dim1", "bloque_id": "rx1", "nu": [-2, 1],
+             "tasa": {"valor": 10.0, "unidad": "mol/s"}},
+            {"id": "dim2", "bloque_id": "rx2", "nu": [-2, 1],
+             "tasa": {"valor": 15.0, "unidad": "mol/s"}},
+        ],
+    }
+
+
+r_dos = resolver(montaje_dos_reactores())
+check("8.30 Dos reactores en serie se resuelven",
+      r_dos["estado"] == "resuelto"
+      and r_dos["analisis"]["grados_libertad"] == 0, r_dos["estado"])
+check("8.31 El caudal baja en los dos: 100 → 90 → 75",
+      r_dos["estados_por_bloque"]["in"]["F"] == 100.0
+      and r_dos["estados_por_bloque"]["medio"]["F"] == 90.0
+      and r_dos["estados_por_bloque"]["out"]["F"] == 75.0,
+      "un avance de 10 y otro de 15, con sum(ν) = −1")
+
+compartidas_rxn = [v for v in r_dos["variables"] if v["compartida"]]
+check("8.32 Y el estado intermedio NO se duplica: sigue siendo uno",
+      len(compartidas_rxn) == 6
+      and {v["id"] for v in compartidas_rxn}
+      == {"medio.F", "medio.T", "medio.p", "medio.h", "medio.x0", "medio.x1"}
+      and all(set(v["bloque_ids"]) == {"medio", "rx1", "rx2"}
+              for v in compartidas_rxn),
+      "seis variables compartidas por los dos reactores")
+check("8.33 Sin variables repetidas para el mismo estado",
+      len({v["id"] for v in r_dos["variables"]}) == len(r_dos["variables"]))
+
+for bid in ("rx1", "rx2"):
+    c = r_dos["conservacion"][bid]
+    check(f"8.34 Elementos y masa conservados en {bid}",
+          c["residuo_elemental_maximo"] < 1e-12
+          and c["masa"]["residuo_relativo"] < 1e-12,
+          f"masa {c['masa']['entra_g_s']:.6f} g/s constante")
+
+# El cierre global CON reacción: la suma de los calores tiene que dar el
+# transporte MÁS el calor de reacción de todo el montaje.
+Hf_dim = np.asarray(_prov_dim.entalpias_formacion_liquido(), dtype=float)
+dH_dim = float(np.array([-2.0, 1.0]) @ Hf_dim)
+calor_rxn_total = 25.0 * dH_dim
+suma_Q = sum(v["valor"] for v in r_dos["variables"] if v["magnitud"] == "Q")
+e_in_dos = r_dos["estados_por_bloque"]["in"]
+e_out_dos = r_dos["estados_por_bloque"]["out"]
+transporte = (e_out_dos["F"] * e_out_dos["h"] - e_in_dos["F"] * e_in_dos["h"])
+check("8.35 El cierre global incluye el calor de reacción de TODO el montaje",
+      abs(suma_Q - (transporte + calor_rxn_total)) < 1e-6 * abs(suma_Q),
+      f"ΣQ = {suma_Q:.3f} W = transporte {transporte:.3f} + reacción "
+      f"{calor_rxn_total:.3f}")
+check("8.36 Y el motor lo mide, con residuo por debajo de la tolerancia",
+      r_dos["convergencia"]["cierre_global"]["residuo_relativo"] < 1e-12,
+      f"residuo {r_dos['convergencia']['cierre_global']['residuo_relativo']:.2e}")
+check("8.37 La dimerización es exotérmica, así que hay que RETIRAR calor",
+      suma_Q < 0 and dH_dim < 0,
+      f"ΔH = {dH_dim:.0f} J/mol, ΣQ = {suma_Q:.0f} W")
+
+# --- 8.38 sin reacción recupera el balance no reactivo
+sin_rxn = montaje_dos_reactores()
+sin_rxn["reacciones"] = []
+sin_rxn["supuestos"]["sinReaccion"] = True
+for b in sin_rxn["bloques"]:
+    if b["tipo"] == "reactor":
+        b["tipo"] = "recipiente"
+r_sin = resolver(sin_rxn)
+check("8.38 Sin reacción se recupera el balance no reactivo",
+      r_sin["estado"] == "resuelto"
+      and r_sin["estados_por_bloque"]["out"]["F"] == 100.0
+      and flujos(r_sin, "in") == flujos(r_sin, "out"),
+      "F y composición se propagan sin cambio")
+check("8.39 Y el término de reacción figura como DESCARTADO por el supuesto",
+      any(t["supuesto"] == "sinReaccion"
+          for e in r_sin["ecuaciones"] if e["id"] == "rx1:materia_especie_0"
+          for t in e["terminos_descartados"])
+      or any(t["supuesto"] == "sinReaccion"
+             for e in r_sin["ecuaciones"]
+             if e["id"].endswith(":materia_especie_0")
+             for t in e["terminos_descartados"]),
+      "elimina a la vez producción, consumo y cierres cinéticos")
+check("8.40 Sin reacción no hay bloque de reacciones ni de fuentes",
+      r_sin["reacciones"] == [] and r_sin["fuentes_por_volumen"] == {},
+      "no se inventan ceros donde no hay química")
+
+# --- 8.41 los rechazos
+def caso_rxn(nombre, montaje, codigo_esperado):
+    r = resolver(montaje)
+    errs = errores_de(r)
+    vistos = [d["codigo"] for d in errs]
+    check(nombre, codigo_esperado in vistos,
+          f"estado={r['estado']}, códigos={', '.join(vistos[:2]) or 'ninguno'}")
+    return r
+
+
+r = caso_rxn("8.41 Estequiometría que no conserva los elementos", montaje_reactor(
+    ISO, [{"id": "mala", "bloque_id": "rx", "nu": [-1, 2],
+           "tasa": {"valor": 1.0, "unidad": "mol/s"}}], [1.0, 0.0]),
+    codigos.LAB_ELEMENTOS_NO_CONSERVADOS)
+check("8.42 Y el mensaje dice QUÉ elemento descuadra y en cuánto",
+      "C:" in errores_de(r)[0]["mensaje"] and "H:" in errores_de(r)[0]["mensaje"],
+      errores_de(r)[0]["mensaje"][:100])
+
+caso_rxn("8.43 Una tasa bruta negativa", montaje_reactor(
+    ISO, [{"id": "r", "bloque_id": "rx", "nu": [-1, 1],
+           "tasa": {"valor": -5.0, "unidad": "mol/s"}}], [1.0, 0.0]),
+    codigos.LAB_TASA_NEGATIVA)
+
+caso_rxn("8.44 Una reversible con una sola de las dos tasas", montaje_reactor(
+    ISO, [{"id": "r", "bloque_id": "rx", "nu": [-1, 1],
+           "tasa_directa": {"valor": 5.0, "unidad": "mol/s"}}], [1.0, 0.0]),
+    codigos.LAB_TASA_AMBIGUA)
+
+caso_rxn("8.45 Dos formas de declarar la tasa a la vez", montaje_reactor(
+    ISO, [{"id": "r", "bloque_id": "rx", "nu": [-1, 1],
+           "tasa": {"valor": 5.0, "unidad": "mol/s"},
+           "tasa_neta": {"valor": 1.0, "unidad": "mol/s"}}], [1.0, 0.0]),
+    codigos.LAB_TASA_AMBIGUA)
+
+r = caso_rxn("8.46 Base volumétrica sin declarar el volumen", montaje_reactor(
+    ISO, [{"id": "r", "bloque_id": "rx", "nu": [-1, 1],
+           "tasa": {"valor": 5.0, "unidad": "mol/(m3*s)"}}], [1.0, 0.0]),
+    codigos.LAB_FALTA_VOLUMEN_REACTOR)
+check("8.47 No se supone 1 m³: se diagnostica",
+      "no declara su volumen" in errores_de(r)[0]["mensaje"],
+      errores_de(r)[0]["mensaje"][:95])
+
+r = caso_rxn("8.48 Una tasa que consume más de lo que entra", montaje_reactor(
+    ISO, [{"id": "r", "bloque_id": "rx", "nu": [-1, 1],
+           "tasa": {"valor": 500.0, "unidad": "mol/s"}}], [1.0, 0.0]),
+    codigos.LAB_CAUDAL_ESPECIE_NEGATIVO)
+check("8.49 Y es FÍSICA: el avance no cabe en la alimentación",
+      errores_de(r)[0]["categoria"] == "fisica"
+      and r["estados_por_bloque"]["out"]["F"] is None,
+      "no se presentan composiciones negativas como resultado")
+
+caso_rxn("8.50 Cinética: se rechaza con nombre en vez de ignorarse", montaje_reactor(
+    ISO, [{"id": "r", "bloque_id": "rx", "nu": [-1, 1], "A": 1e4, "Ea": 45000.0}],
+    [1.0, 0.0]),
+    codigos.LAB_CINETICA_NO_SOPORTADA)
+
+caso_rxn("8.51 Una ν sin reactivos y productos a la vez", montaje_reactor(
+    ISO, [{"id": "r", "bloque_id": "rx", "nu": [1, 1],
+           "tasa": {"valor": 5.0, "unidad": "mol/s"}}], [1.0, 0.0]),
+    codigos.LAB_ESTEQUIOMETRIA_INVALIDA)
+
+caso_rxn("8.52 Una ν con el número de coeficientes equivocado", montaje_reactor(
+    ISO, [{"id": "r", "bloque_id": "rx", "nu": [-1, 1, 1],
+           "tasa": {"valor": 5.0, "unidad": "mol/s"}}], [1.0, 0.0]),
+    codigos.LAB_ESTEQUIOMETRIA_INVALIDA)
+
+mal_bloque = montaje_reactor(
+    ISO, [{"id": "r", "bloque_id": "rx", "nu": [-1, 1],
+           "tasa": {"valor": 5.0, "unidad": "mol/s"}}], [1.0, 0.0])
+for b in mal_bloque["bloques"]:
+    if b["id"] == "rx":
+        b["tipo"] = "recipiente"
+caso_rxn("8.53 Una reacción en una pieza que no es un reactor", mal_bloque,
+         codigos.LAB_REACCION_EN_NO_REACTOR)
+
+con_supuesto = montaje_reactor(
+    ISO, [{"id": "r", "bloque_id": "rx", "nu": [-1, 1],
+           "tasa": {"valor": 5.0, "unidad": "mol/s"}}], [1.0, 0.0])
+con_supuesto["supuestos"]["sinReaccion"] = True
+caso_rxn("8.54 Una reacción declarada con el supuesto que la anula", con_supuesto,
+         codigos.LAB_SUPUESTO_INCOHERENTE)
+
+sin_declarar = montaje_reactor(ISO, [], [1.0, 0.0])
+caso_rxn("8.55 Un reactor que no declara su reacción", sin_declarar,
+         codigos.LAB_SIN_REACCION_DECLARADA)
+
+unidad_mala = montaje_reactor(
+    ISO, [{"id": "r", "bloque_id": "rx", "nu": [-1, 1],
+           "tasa": {"valor": 5.0, "unidad": "mol/min"}}], [1.0, 0.0])
+r = caso_rxn("8.56 Una unidad de tasa no admitida", unidad_mala,
+             codigos.LAB_UNIDAD_INCOMPATIBLE)
+check("8.57 Y el mensaje separa las integradas de las volumétricas",
+      "Integradas" in errores_de(r)[0]["mensaje"]
+      and "Volumetricas" in errores_de(r)[0]["mensaje"],
+      "la unidad es la que declara la base")
+
+bases_mezcladas = montaje_reactor(
+    ISO, [{"id": "r", "bloque_id": "rx", "nu": [-1, 1],
+           "tasa_directa": {"valor": 5.0, "unidad": "mol/s"},
+           "tasa_inversa": {"valor": 1.0, "unidad": "mol/(m3*s)"}}], [1.0, 0.0],
+    extra=[{"bloque_id": "rx", "variable": "V", "valor": 2.0, "unidad": "m3"}])
+caso_rxn("8.58 Tasas directa e inversa en bases distintas", bases_mezcladas,
+         codigos.LAB_UNIDAD_INCOMPATIBLE)
+
+# --- 8.59 la referencia química y el calor de reacción
+energia_rx = next(e for e in r_iso["ecuaciones"] if e["id"] == "rx:energia")
+check("8.59 El balance reactivo lleva el calor de reacción EXPLÍCITO",
+      "Delta H_{rxn" in energia_rx["latex_activo"],
+      energia_rx["latex_activo"])
+check("8.60 Y NO figura como descartado: la referencia es sensible",
+      not any("formacion" in (t["termino"] or "")
+              for t in energia_rx["terminos_descartados"]),
+      "la referencia no incluye las entalpías de formación, así que el término va")
+info_rxn = [d for d in r_iso["diagnosticos"]
+            if d["codigo"] == codigos.LAB_INFO_CALOR_REACCION]
+check("8.61 Se informa de cuánto aporta y de que no está duplicado",
+      info_rxn and "no esta duplicado" in info_rxn[0]["mensaje"],
+      info_rxn[0]["mensaje"][:110] if info_rxn else "no se informó")
+cap_rxn = cliente.get("/laboratorio/capacidades").json()["capacidades"]
+check("8.62 Las capacidades declaran si la referencia incluye formación",
+      cap_rxn["referencias_entalpia"]["sensible_liquido_298.15K"]["incluye_formacion"]
+      is False,
+      "y de ahí cuelga la decisión de sumar el término, no de un comentario")
+check("8.63 Y declaran la distinción bruto/neto",
+      "equilibrio" in cap_rxn["reaccion"]["brutas_frente_a_neto"],
+      "para que el cliente no derive las brutas del neto por su cuenta")
+
+# --- 8.64 serialización y trazabilidad
+for nombre, rr in (("isomerización", r_iso), ("equilibrio", r_eq),
+                   ("dos reactores", r_dos), ("solo neta", r_net)):
+    try:
+        json.dumps(rr, allow_nan=False)
+        ok, detalle = True, ""
+    except (TypeError, ValueError) as e:
+        ok, detalle = False, str(e)[:70]
+    check(f"8.64 La respuesta «{nombre}» serializa a JSON estricto", ok, detalle)
+
+otra_tasa = montaje_dos_reactores()
+otra_tasa["reacciones"][0]["tasa"]["valor"] = 11.0
+check("8.65 Cambiar una tasa cambia el modelo_id",
+      validar(otra_tasa)["modelo_id"] != r_dos["modelo_id"],
+      "la tasa es física: entra en la huella")
+otro_nu = montaje_dos_reactores()
+otro_nu["reacciones"][0]["nu"] = [-3.0, 1.5]
+check("8.66 Y cambiar un coeficiente estequiométrico, también",
+      validar(otro_nu)["modelo_id"] != r_dos["modelo_id"])
+reordenadas = montaje_dos_reactores()
+reordenadas["reacciones"].reverse()
+check("8.67 Pero reordenar las reacciones NO lo cambia",
+      validar(reordenadas)["modelo_id"] == r_dos["modelo_id"],
+      "el orden en que lleguen no cambia la química")
 
 
 print("\n" + "=" * 76)

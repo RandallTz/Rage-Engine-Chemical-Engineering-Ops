@@ -4,10 +4,16 @@ Respuesta a `frontend/PASAR_A_CLAUDE_LABORATORIO.md`. Solo backend; ningún
 archivo de `frontend/` se ha tocado.
 
 **Lo que hay:** un ensamblador que toma el grafo de piezas de la mesa y
-resuelve un sistema estacionario de **dos volúmenes térmicos** unidos por
-una corriente intermedia con **identidad única**. Reutiliza el proveedor
-de propiedades, el flash y la calculadora de entalpía existentes. Sin
-CFD, sin mallado, sin columna completa y sin interpretar LaTeX.
+resuelve un sistema estacionario de hasta **dos volúmenes** unidos por una
+corriente intermedia con **identidad única**, con **balances molares por
+especie y transformación estequiométrica**. Reutiliza el proveedor de
+propiedades, el flash y la calculadora de entalpía existentes. Sin CFD,
+sin mallado, sin columna completa y sin interpretar LaTeX.
+
+> **Segunda entrega** (reacción), respondiendo a
+> `frontend/ENTREGA_FUNDAMENTOS_CLAUDE.md`. Lo térmico de la primera sigue
+> funcionando y está comprobado; lo que cambió de forma visible está en
+> [§11](#11-qué-cambió-respecto-a-la-primera-entrega).
 
 ---
 
@@ -59,6 +65,19 @@ ejecutando el endpoint y no escritos a mano:
 | `laboratorio-incompatible-t-y-q-respuesta.json` | Un rechazo, para probar tu camino de error |
 | `laboratorio-capacidades.json` | La respuesta de `/capacidades` |
 
+Y los reactivos:
+
+| Archivo (`-peticion` / `-respuesta`) | Qué muestra |
+|---|---|
+| `laboratorio-reactor-isomerizacion-*` | A → B. Consumo y generación iguales al avance; `Σν = 0`, el caudal no cambia |
+| `laboratorio-reactor-volumetrico-*` | La misma, con la tasa en `mol/(m3*s)` y `V = 5 m³`. Mismo resultado |
+| `laboratorio-reactor-a-dos-b-*` | A → 2B. El caudal molar pasa de 100 a 110 y la masa no se mueve |
+| `laboratorio-reactor-reversible-*` | `r⁺ = 2`, `r⁻ = 8`. La inversa intercambia producción y consumo |
+| `laboratorio-reactor-en-equilibrio-*` | `r⁺ = r⁻ = 5`: **neto cero y brutas positivas** |
+| `laboratorio-reactor-solo-neta-*` | Misma salida, **brutas en `null`** con su motivo |
+| `laboratorio-dos-reactores-en-serie-*` | Dos reactores compartiendo la corriente, con el cierre global |
+| `laboratorio-estequiometria-invalida-*` | Un rechazo: `ν = [−1, +2]` no conserva los elementos |
+
 ### Lo mínimo
 
 ```json
@@ -101,8 +120,20 @@ ejecutando el endpoint y no escritos a mano:
 
 ### Lo que hay que saber de la petición
 
-**`componentes` exige dos, y el orden importa.** `x` es la fracción del
-primero. Tres componentes se rechazan con `LAB_NUMERO_DE_COMPONENTES`.
+**`componentes` admite de 2 a 8, y el orden importa.** Las fracciones se
+llaman `x0`, `x1`, … `x{n-1}`, en ese orden. **`x` a secas vale como alias
+de `x0` solo en binarios**: con tres especies no identifica ninguna, y
+aceptarlo obligaría a adivinar.
+
+**Una fracción de cero es válida** y significa que esa especie no está. Lo
+digo porque hasta esta entrega se rechazaba: el dominio trataba todas las
+magnitudes igual, y para un caudal cero no es un caudal pequeño sino la
+ausencia de corriente. Para una fracción molar sí es físico, y con tres
+especies y una alimentación pura es lo normal.
+
+**No hace falta dar las n fracciones.** Dando n−1, el cierre determina la
+que falta. Dándolas todas, el cierre deja de calcular y **comprueba**: si
+no suman 1, es `LAB_DATOS_COMPOSICION_INCOMPATIBLE`.
 
 **`componentes` y `modelo_termodinamico` son obligatorios en la práctica.**
 Si omites el modelo se usa `unifac_raoult`, que es el único, y la
@@ -143,7 +174,12 @@ menor que parece perfectamente razonable.
 | `p` | `Pa`, `kPa`, `bar`, `MPa`, `atm` | `Pa` |
 | `x` | `mol/mol`, `-`, `fraccion` | `mol/mol` |
 | `Q`, `W` | `W`, `J/s`, `kW`, `MW` | `W` |
+| `V` | `m3`, `L`, `dm3`, `cm3`, `mL` | `m3` |
 | `h` | — (siempre resultado) | `J/mol` |
+| `F_i` | — (siempre resultado) | `mol/s` |
+
+Y las tasas de reacción, cuya unidad además **declara la base** (ver
+[§7bis](#7bis-reacción)).
 
 La temperatura es **afín**, no un factor: `degC` lleva desplazamiento y
 las demás no. Es el mismo problema que la LMTD destapó en el informe (ver
@@ -385,9 +421,25 @@ medirla daría el redondeo de la ecuación de la que se despejó Q.
 ### `estados_por_bloque`
 
 ```json
-"medio": {"F": 100.0, "T": 310.0, "p": 101325.0, "x": 0.5,
-          "h": 1749.1074602946055, "fase": "liquido", "beta": 0.0}
+"medio": {
+  "F": 100.0, "T": 310.0, "p": 101325.0, "h": 1749.1074602946055,
+  "x": 0.5,
+  "composicion": [0.5, 0.5],
+  "por_especie": [
+    {"componente": "benzene", "x": 0.5, "F_i": 50.0, "unidad_F_i": "mol/s"},
+    {"componente": "toluene", "x": 0.5, "F_i": 50.0, "unidad_F_i": "mol/s"}
+  ],
+  "fase": "liquido", "beta": 0.0
+}
 ```
+
+**`x` se conserva por compatibilidad** y es la fracción del primer
+componente, igual que antes. Es `null` con tres o más especies: usa
+`composicion` o `por_especie`.
+
+**`F_i` es derivado**, `F·x_i`. No es una variable del sistema —declararlo
+como tal añadiría n incógnitas y n ecuaciones que se cancelan— pero es lo
+que hace falta para comprobar la conservación de elementos y masa.
 
 **`fase` se DETERMINA, no se supone.** El flash ubica el punto frente al
 punto de burbuja y al de rocío a (T, p, x), así que la fase sale como
@@ -465,6 +517,28 @@ marca el supuesto adiabático». Son cosas distintas y la diferencia
 importa: con Q = 0 supuesto, un volumen al que se le pide subir 10 K
 daría un sistema incompatible sin explicación.
 
+### Reacción y estequiometría
+
+Llevan prefijo `LAB_` como los demás, pero fallan por otro motivo: una
+estequiometría que no conserva los elementos no es un error de montaje ni
+de unidades, es un dato que no describe ninguna reacción química.
+
+| Código | Categoría | Cuándo |
+|---|---|---|
+| `LAB_REACCION_EN_NO_REACTOR` | datos | La reacción cuelga de un `recipiente` o de una pieza que no es un volumen |
+| `LAB_ESTEQUIOMETRIA_INVALIDA` | datos | `ν` de longitud equivocada, no finita, toda a cero, o sin reactivo y producto a la vez |
+| `LAB_ELEMENTOS_NO_CONSERVADOS` | datos | `A·ν ≠ 0`. El mensaje dice **qué elemento descuadra y en cuánto** |
+| `LAB_MASA_NO_CONSERVADA` | datos | `MW·ν ≠ 0` |
+| `LAB_TASA_AMBIGUA` | datos | Ninguna tasa, varias formas a la vez, o una reversible con solo una de las dos |
+| `LAB_TASA_NEGATIVA` | datos | Una tasa **bruta** negativa. Son velocidades; el signo lo lleva `ν` |
+| `LAB_FALTA_VOLUMEN_REACTOR` | datos | Base volumétrica sin `V`. **No se supone 1 m³** |
+| `LAB_CAUDAL_ESPECIE_NEGATIVO` | **física** | El avance consume más de lo que entra |
+| `LAB_CINETICA_NO_SOPORTADA` | modelo | Se pasó `cinetica`, `A` o `Ea` |
+| `LAB_SIN_REACCION_DECLARADA` | datos (error) / advertencia | Un reactor sin reacción y sin `sinReaccion` es error; `sinReaccion: false` sin ningún reactor es advertencia |
+| `LAB_ENTALPIA_FORMACION_NO_DISPONIBLE` | datos | Falta `Hf` líquida de alguna especie. Suponerla cero convertiría una exotérmica en un calentador neutro |
+| `LAB_CONSERVACION_NO_MEDIDA` | **numérica** | Elementos o masa no cuadran sobre los caudales resueltos. Es un fallo del motor, no de los datos |
+| `LAB_DATOS_COMPOSICION_INCOMPATIBLE` | datos | Se dieron las n fracciones y no suman 1 |
+
 ### Modelo y resultado
 
 | Código | Categoría | Cuándo |
@@ -538,6 +612,173 @@ activó por el camino.
 
 ---
 
+## 7bis. Reacción
+
+### Dónde va y qué forma tiene
+
+Una reacción pertenece a un bloque de tipo **`reactor`**. La producción y
+la desaparición química pertenecen al volumen donde ocurren: no son
+alimentaciones ficticias. Una reacción colgada de un `recipiente` se
+rechaza con `LAB_REACCION_EN_NO_REACTOR`.
+
+```json
+"reacciones": [
+  {"id": "dim", "bloque_id": "rx", "nu": [-2.0, 1.0],
+   "tasa_directa": {"valor": 5.0, "unidad": "mol/s"},
+   "tasa_inversa": {"valor": 5.0, "unidad": "mol/s"}}
+]
+```
+
+**`nu` lleva un coeficiente por componente, en el mismo orden, positivo
+producto y negativo reactivo.** El signo va en el coeficiente y no en la
+tasa, porque un mismo evento produce unos componentes y consume otros.
+Las tasas brutas son velocidades: siempre ≥ 0.
+
+### Las tres formas de declarar la tasa, y por qué son tres
+
+| Forma | Reacción | ¿Brutas disponibles? |
+|---|---|---|
+| `tasa` | irreversible, una dirección | **sí** |
+| `tasa_directa` + `tasa_inversa` | reversible | **sí** |
+| `tasa_neta` | solo el neto | **no** |
+
+No son tres maneras de escribir lo mismo: la tercera **sabe menos**. Dar
+más de una es un error, no una preferencia.
+
+### La precisión que el contrato exige: bruto no es neto
+
+Una reacción reversible en equilibrio tiene `r⁺ = r⁻ > 0`. La fuente neta
+de cada especie es **cero** y, aun así, cada especie se está produciendo y
+consumiendo a un ritmo **positivo**. Las moléculas no están quietas: están
+yendo y viniendo a la misma velocidad.
+
+El preset `reactor-en-equilibrio` lo muestra con `r⁺ = r⁻ = 5 mol/s`:
+
+```json
+"por_especie": [
+  {"componente": "isobutene",     "nu": -2.0,
+   "generacion_bruta": 10.0, "consumo_bruto": 10.0, "fuente_neta": 0.0},
+  {"componente": "diisobutylene", "nu":  1.0,
+   "generacion_bruta":  5.0, "consumo_bruto":  5.0, "fuente_neta": 0.0}
+]
+```
+
+De ahí se siguen tres reglas, y las tres están implementadas:
+
+1. **Con `r⁺` y `r⁻` por separado**, las brutas se calculan:
+   `G_i = max(ν_i,0)·r⁺ + max(−ν_i,0)·r⁻` y simétrico para `C_i`. El
+   evento directo produce lo que tiene ν > 0; el inverso, lo que tiene
+   ν < 0. Las dos cosas generan.
+2. **Con solo la tasa neta**, `generacion_bruta` y `consumo_bruto` salen
+   **`null`** con su motivo. **Nunca se rellenan con `max(neto, 0)`**: eso
+   daría cero generación en una reacción que está funcionando a toda
+   velocidad. Compara `reactor-en-equilibrio` con `reactor-solo-neta`:
+   misma composición de salida, y uno sabe las brutas y el otro no.
+3. **La descomposición del neto sí se ofrece**, en
+   `descomposicion_neta.aparente_generacion` / `aparente_consumo`, y
+   etiquetada como lo que es. Es el signo del neto repartido en dos
+   casillas no negativas, **no** el intercambio bruto. En el equilibrio da
+   cero en las dos mientras las brutas valen 10 y 5.
+
+**Para la interfaz:** mira `brutas_disponibles` antes que nada. Si es
+`false`, muestra «no disponible» y el motivo, no un cero. Un cero ahí
+afirma que la reacción está parada cuando puede estar a toda velocidad.
+
+Y en `fuentes_por_volumen`, si **alguna** reacción del volumen solo trae su
+tasa neta, las brutas del volumen entero no están disponibles: `G_i` es una
+suma y un término desconocido hace desconocida la suma. El motivo nombra la
+reacción culpable.
+
+### Las bases: integrada frente a volumétrica
+
+La **unidad** declara la base, que es lo menos ambiguo posible:
+
+| Base | Unidades | Necesita |
+|---|---|---|
+| integrada | `mol/s`, `mol/h`, `kmol/s`, `kmol/h` | nada |
+| volumétrica | `mol/(m3*s)`, `mol/(m3*h)`, `kmol/(m3*s)`, `kmol/(m3*h)`, `mol/(L*s)`, `mol/(dm3*s)`, `mol/(cm3*s)` | `V` del reactor |
+
+Una tasa volumétrica sin `V` **no se supone 1 m³**: se diagnostica con
+`LAB_FALTA_VOLUMEN_REACTOR`. `V` se da como especificación sobre el
+reactor (`{"bloque_id": "rx", "variable": "V", "valor": 5.0, "unidad":
+"m3"}`), y la respuesta dice en `base_tasa`, `unidad_declarada` y
+`volumen_m3` qué se usó. El preset `reactor-volumetrico` da exactamente el
+mismo resultado que `reactor-isomerizacion`: 4 mol/(m³·s) × 5 m³ = 20
+mol/s.
+
+### Conservación
+
+**Antes de resolver**, la estequiometría se valida contra la matriz
+elemental que da `thermo`:
+
+$$ A \cdot \nu = 0 \quad\text{y}\quad MW \cdot \nu = 0 $$
+
+Una ν que no la cumpla no es una reacción: es un dato mal puesto, y se
+rechaza con `LAB_ELEMENTOS_NO_CONSERVADOS` diciendo **qué elemento
+descuadra y en cuánto**.
+
+**Después de resolver**, elementos y masa se **miden** sobre los caudales
+resueltos, en `conservacion[bloque_id]`. No es la misma comprobación:
+aquello verifica que la reacción tenga sentido, esto que el balance se
+haya aplicado bien. Una reacción bien balanceada con un balance mal
+aplicado pasa la primera y falla la segunda.
+
+**El caudal molar total PUEDE cambiar.** `Σν` no tiene por qué ser cero, y
+`conservacion[...].caudal_molar.cambia` lo dice. El preset
+`reactor-a-dos-b` pasa de 100 a 110 mol/s sin mover un gramo de masa. Un
+caudal molar que cambia parece un balance roto y no lo es; si la interfaz
+avisa de eso, avisará en falso.
+
+### La energía reactiva, y el doble conteo que hay que evitar
+
+La referencia de entalpía de este motor es **sensible**: `h` no incluye
+las entalpías de formación. Así que el balance de un volumen reactivo
+lleva el calor de reacción **explícito**:
+
+$$ \dot Q + F_{ent} h_{ent} - F_{sal} h_{sal} - \sum_r \dot\xi_r \Delta H_{rxn,r} = 0 $$
+
+Dos cosas que conviene tener claras:
+
+- **`ΔH_rxn` se evalúa a la temperatura de REFERENCIA, no a la del
+  volumen.** No es una aproximación: las entalpías sensibles ya se
+  encargan de toda la dependencia con T. Corregir `ΔH_rxn` con Kirchhoff
+  aquí **sería contarlo dos veces**.
+- **La decisión de sumar el término cuelga de la referencia, no de que
+  haya reacción.** `capacidades.referencias_entalpia[...].incluye_formacion`
+  dice en qué lado está cada una. Si algún día hay una referencia que
+  incluya formación, el término **no** aparecerá —ya estaría dentro de
+  `h`— y figurará en `terminos_descartados` con ese motivo. Es el error
+  que el contrato pide evitar, visto desde los dos lados.
+
+Con `ξ = 0` el calor de reacción es cero **aunque las brutas sean
+positivas**: el calor lo mueve el avance neto. El preset
+`reactor-en-equilibrio` lo comprueba.
+
+### El cierre global con reacción
+
+$$ \sum_j \dot Q_j = F_{sal} h_{sal} - F_{ent} h_{ent} + \sum_r \dot\xi_r \Delta H_{rxn,r} $$
+
+Al sumar los balances por volumen, los estados intermedios se cancelan
+—son la **misma** variable— pero los términos de reacción se acumulan. En
+`dos-reactores-en-serie`: ΣQ = −2 517 877.48 W = transporte 249 622.52 +
+reacción −2 767 500.00, con residuo medido **0.0**.
+
+### Lo que NO hay
+
+- **Cinética.** La tasa tiene que estar especificada. Una tasa que
+  dependa de la composición de salida hace el balance implícito y exige un
+  solver acoplado; se rechaza con `LAB_CINETICA_NO_SOPORTADA` en vez de
+  ignorarse, y el CSTR con cinética sigue en `/diagrama/resolver`.
+- **Equilibrio químico.** El motor no calcula el avance a partir de `K`.
+- **`sinReaccion` es ahora un supuesto libre.** En `true` anula a la vez
+  producción, consumo y cierres cinéticos, y es incompatible con una
+  reacción declarada. En `false` exige que cada reactor declare la suya:
+  la ausencia de una reacción declarada no significa que no haya reacción,
+  significa que al balance por especie le falta un término. Con `false` y
+  ningún reactor, sale una **advertencia** (no un error).
+
+---
+
 ## 8. Lo que está verificado
 
 `tests/validar_laboratorio.py`. **Los números no están escritos a
@@ -570,13 +811,43 @@ con 2 MW la corriente intermedia sale a 367.5 K con `beta = 0.3018`, y 1
 MW más sube la temperatura solo **2.1 K** porque casi todo va a calor
 latente — frente a los ~10 K que costaban 0.15 MW en la zona líquida.
 
-Los siete grupos de la suite cubren: uno y dos volúmenes con continuidad
-y conservación; los modos excluyentes; los montajes mal formados (ids,
-referencias, puertos, aislados, ciclos, null/NaN, fracciones, unidades,
-modelo y componentes); el dominio termodinámico sin presentar resultados
-a medias; que los ids de los diagnósticos existan y que las ecuaciones
-marcadas como ejecutadas correspondan al cálculo real; la no regresión de
-`/diagrama/resolver` y del CSTR; y el reenvío de los presets al endpoint.
+Los ocho grupos de la suite (**230 comprobaciones**) cubren: uno y dos
+volúmenes con continuidad y conservación; los modos excluyentes; los
+montajes mal formados (ids, referencias, puertos, aislados, ciclos,
+null/NaN, fracciones, unidades, modelo y componentes); el dominio
+termodinámico sin presentar resultados a medias; que los ids de los
+diagnósticos existan y que las ecuaciones marcadas como ejecutadas
+correspondan al cálculo real; la no regresión de `/diagrama/resolver` y
+del CSTR; el reenvío de los presets al endpoint; y **la reacción**.
+
+### Y lo que se comprueba de la reacción
+
+También contra lo que la estequiometría **obliga**, no contra números
+escritos a mano:
+
+- **A → B** (`n-butano → isobutano`, ν = [−1, +1]): el consumo de A y la
+  generación de B son exactamente el avance, 20 mol/s; con `Σν = 0` el
+  caudal molar **no** cambia; elementos y masa con residuo `< 1e-12`.
+- **A → 2B** (`diisobutileno → 2 isobuteno`, ν = [+2, −1]): el caudal pasa
+  de 100 a **110** mol/s con un avance de 10, y la masa no se mueve.
+- **Reversible con la inversa dominante** (`r⁺ = 2`, `r⁻ = 8`): avance
+  neto −6, y las brutas salen 16/4 para el isobuteno y 2/8 para el dímero
+  — la dirección inversa intercambia producción y consumo.
+- **Equilibrio** (`r⁺ = r⁻ = 5`): fuente neta **cero** con brutas 10 y 5,
+  **positivas**; la composición de salida igual a la de entrada; y el
+  calor de reacción cero, porque lo mueve el avance neto.
+- **Solo la tasa neta**: brutas en `null` con su motivo, y una reacción
+  sin brutas deja al **volumen** sin brutas, nombrando la culpable.
+- **Dos reactores compartiendo la corriente**: 100 → 90 → 75 mol/s, seis
+  variables compartidas, ningún estado duplicado, y el cierre global con
+  el calor de reacción de todo el montaje con residuo **0.0**.
+- **Las bases**: 4 mol/(m³·s) × 5 m³ da el mismo resultado que 20 mol/s.
+- **Catorce rechazos** con su código: elementos que no cuadran, tasa
+  negativa, reversible a medias, dos formas de tasa a la vez, base
+  volumétrica sin volumen, un avance que no cabe en la alimentación,
+  cinética, ν sin reactivo y producto, ν de longitud equivocada, reacción
+  en un no-reactor, reacción con `sinReaccion`, reactor sin reacción
+  declarada, unidad de tasa no admitida y bases mezcladas.
 
 ---
 
@@ -594,5 +865,54 @@ marcadas como ejecutadas correspondan al cálculo real; la no regresión de
 - **`iteraciones` reales de `brentq`.** Haría falta exponer el contador
   desde el flash y la calculadora de entalpía, y eso toca física
   validada; no lo he hecho por una métrica.
+- **Cinética y equilibrio químico**, por lo dicho en
+  [§7bis](#7bis-reacción).
+- **Entropía, exergía, conducción, difusión y momento**: las entregas
+  posteriores que el contrato enumera. Ninguna está empezada, y
+  `capacidades.no_soportado` las lista para que la interfaz no las ofrezca.
+
+---
+
+## 11. Qué cambió respecto a la primera entrega
+
+Nada del contrato térmico dejó de funcionar, y está comprobado. Pero hay
+cuatro cambios **visibles** que conviene mirar antes de conectar:
+
+**1. Los ids de las ecuaciones de materia.** Donde antes había
+`{vol}:materia_total` (tipo `balance`) y `{vol}:materia_especie`, ahora hay
+**n** relaciones `{vol}:materia_especie_{i}`, una por especie, y
+`{vol}:materia_total` pasa a tipo **`verificacion`**.
+
+El motivo: el balance total es la **suma** de los n por especie, así que
+contarlo como ecuación independiente regalaría una ecuación — el mismo
+error que contar la verificación global de energía. Como suma, sigue
+sirviendo de comprobación, y su residuo se mide.
+
+**2. Los recuentos de `analisis`.** Las n fracciones son ahora variables
+explícitas (`x0`, `x1`, …) y el cierre es la ecuación que determina la que
+falta. El caso de aceptación térmico pasa de «17 variables, 9 incógnitas,
+9 ecuaciones» a «20, 12, 12». **`grados_libertad` sigue dando 0**, porque
+han subido a la vez una variable y una ecuación por corriente.
+
+**3. El cierre de composición ahora cuenta como ecuación… cuando
+determina algo.** Si se dan las n fracciones, no cuenta: comprueba, y su
+residuo se mide. El criterio no ha cambiado —**una relación cuenta si y
+solo si determina algo**— lo que cambió es que antes la segunda fracción
+de un binario no era una variable sino una expresión, así que el cierre no
+determinaba nada.
+
+**4. `estados_por_bloque` tiene campos nuevos** (`composicion`,
+`por_especie`, `nota_F_i`) y `x` es `null` con tres o más componentes.
+Los campos viejos siguen donde estaban.
+
+Y dos defectos que la reacción destapó y que estaban desde la primera
+entrega:
+
+- **Una fracción molar de cero se rechazaba** como no física. Invisible
+  mientras todo fuera binario.
+- **El cierre de composición se evaluaba dos veces** en la corriente de
+  entrada, y la segunda vez trataba un valor *calculado* como si fuera
+  *dado*, midiendo el residuo de una tautología. La bandera `impuesta`
+  existe justo para distinguirlos y ahí no se estaba usando.
 
 Detalle técnico completo en [`docs/15-laboratorio.md`](15-laboratorio.md).

@@ -131,6 +131,7 @@
       "unidad": "MW"
     }
   ],
+  "reacciones": [],
   "relaciones": null,
   "estado": null,
   "solver": null,

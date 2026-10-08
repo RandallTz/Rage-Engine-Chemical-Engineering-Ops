@@ -42,6 +42,7 @@ MAX_BLOQUES = 16
 MAX_CONEXIONES = 32
 MAX_ESPECIFICACIONES = 64
 MAX_COMPONENTES = 8
+MAX_REACCIONES = 16
 
 
 class ValorConUnidad(BaseModel):
@@ -103,13 +104,77 @@ class EspecificacionLaboratorio(BaseModel):
     unidad: Optional[str] = Field(None, max_length=24)
 
 
+class ReaccionLaboratorio(BaseModel):
+    """
+    Una reaccion de tasa especificada en un volumen.
+
+    LAS TRES FORMAS DE DECLARAR LA TASA, Y POR QUE SON TRES
+    -------------------------------------------------------
+    `tasa`                              irreversible, una direccion
+    `tasa_directa` + `tasa_inversa`     reversible, con las brutas
+    `tasa_neta`                         solo el neto
+
+    No son tres formas de escribir lo mismo: la tercera sabe MENOS que las
+    otras dos. Con `tasa_neta` el motor no puede decir cuanto se produce y
+    cuanto se consume, y lo dice -- devuelve `generacion_bruta` y
+    `consumo_bruto` en null con su motivo -- en vez de rellenarlos con
+    max(neto, 0).
+
+    La razon es que un neto de cero es compatible con dos situaciones
+    fisicas distintas: una reaccion PARADA (r+ = r- = 0) y un equilibrio
+    DINAMICO (r+ = r- > 0), donde cada especie se esta produciendo y
+    consumiendo a toda velocidad. La tasa neta no las distingue, asi que
+    el motor tampoco puede.
+
+    Dar mas de una forma es un error, no una preferencia: habria que
+    elegir una y la eleccion no es del motor.
+    """
+    id: str = Field(min_length=1, max_length=120)
+    bloque_id: str = Field(
+        min_length=1, max_length=120,
+        description="El volumen donde ocurre, que tiene que ser de tipo 'reactor'. "
+                    "La produccion y la desaparicion quimica pertenecen al volumen "
+                    "donde ocurren: no son alimentaciones ficticias.")
+    nu: list[float] = Field(
+        max_length=MAX_COMPONENTES,
+        description="Un coeficiente por componente, EN EL MISMO ORDEN. "
+                    "**Positivo producto, negativo reactivo.** Un mismo evento "
+                    "produce unos componentes y consume otros, y por eso el signo va "
+                    "en el coeficiente y no en la tasa. Se valida contra la matriz "
+                    "elemental de 'thermo': A @ nu tiene que ser cero.")
+    tasa: Optional[ValorConUnidad] = Field(
+        None, description="Tasa de una reaccion irreversible, >= 0.")
+    tasa_directa: Optional[ValorConUnidad] = Field(
+        None, description="r+ de una reversible, >= 0. Exige tasa_inversa.")
+    tasa_inversa: Optional[ValorConUnidad] = Field(
+        None, description="r- de una reversible, >= 0. Exige tasa_directa. Con una "
+                          "sola no se sabe si la otra es cero o si no se dio, y son "
+                          "dos situaciones fisicas distintas.")
+    tasa_neta: Optional[ValorConUnidad] = Field(
+        None,
+        description="Solo el neto, de cualquier signo. Con esta forma las brutas NO "
+                    "estan disponibles y se devuelven como null.")
+    # Campos que el motor rechaza explicitamente, declarados para poder
+    # dar un diagnostico con nombre en vez de ignorarlos en silencio.
+    cinetica: Optional[Any] = Field(
+        None,
+        description="NO SOPORTADO en esta entrega. Se rechaza con "
+                    "LAB_CINETICA_NO_SOPORTADA en vez de ignorarse: una tasa que "
+                    "dependa de la composicion de salida hace el balance implicito "
+                    "y exige un solver acoplado. El CSTR con cinetica sigue en "
+                    "/diagrama/resolver.")
+    A: Optional[float] = Field(None, description="NO SOPORTADO; ver 'cinetica'.")
+    Ea: Optional[float] = Field(None, description="NO SOPORTADO; ver 'cinetica'.")
+
+
 class LaboratorioRequest(BaseModel):
     version: int = Field(
         1, description="Version del contrato que el cliente habla. Hoy: 1.")
     componentes: list[str] = Field(
         max_length=MAX_COMPONENTES,
-        description="Identificadores del proveedor, EN ORDEN: 'x' es la fraccion del "
-                    "primero. Esta entrega resuelve binarios.",
+        description="Identificadores del proveedor, EN ORDEN: 'x0' es la fraccion "
+                    "del primero. 'x' a secas vale como alias de 'x0' SOLO en "
+                    "binarios, porque con tres especies no identifica ninguna.",
     )
     modelo_termodinamico: Optional[str] = Field(
         None, max_length=60,
@@ -134,6 +199,10 @@ class LaboratorioRequest(BaseModel):
     )
     especificaciones: list[EspecificacionLaboratorio] = Field(
         default_factory=list, max_length=MAX_ESPECIFICACIONES)
+    reacciones: list[ReaccionLaboratorio] = Field(
+        default_factory=list, max_length=MAX_REACCIONES,
+        description="Las reacciones de los reactores del montaje. Vacia si no hay, "
+                    "y entonces conviene marcar 'sinReaccion' para dejarlo dicho.")
     # Lo que el JSON de la mesa trae y aqui se ignora a proposito.
     relaciones: Optional[Any] = Field(
         None,
@@ -293,16 +362,37 @@ class ConvergenciaLaboratorio(BaseModel):
     cierre_global: CierreGlobal
 
 
+class EspecieEnCorriente(BaseModel):
+    componente: str
+    x: Optional[float] = None
+    F_i: Optional[float] = Field(
+        None,
+        description="Caudal molar de la especie [mol/s]. DERIVADO: F_i = F x_i. No "
+                    "es una variable del sistema -- declararlo como tal anadiria n "
+                    "incognitas y n ecuaciones que se cancelan -- pero es lo que "
+                    "hace falta para comprobar la conservacion de elementos y masa.")
+    unidad_F_i: str = "mol/s"
+
+
 class EstadoBloque(BaseModel):
     F: Optional[float] = None
     T: Optional[float] = None
     p: Optional[float] = None
-    x: Optional[float] = None
+    x: Optional[float] = Field(
+        None,
+        description="La fraccion del PRIMER componente, y solo en binarios. Se "
+                    "conserva por compatibilidad; en general usa 'composicion' o "
+                    "'por_especie'. Es null con tres o mas componentes.")
+    composicion: list[Optional[float]] = Field(
+        default_factory=list,
+        description="Las n fracciones en el orden de 'componentes'.")
+    por_especie: list[EspecieEnCorriente] = Field(default_factory=list)
     h: Optional[float] = None
     fase: Optional[str] = Field(
         None, description="DETERMINADA con el punto de burbuja y el de rocio, no "
                           "supuesta.")
     beta: Optional[float] = Field(None, description="Fraccion molar vaporizada.")
+    nota_F_i: Optional[str] = None
 
 
 class LaboratorioResponse(BaseModel):
@@ -331,6 +421,37 @@ class LaboratorioResponse(BaseModel):
         description="null cuando no se resolvio. En /validar siempre es null: no se "
                     "ejecuto ningun algoritmo, asi que no hay nada que declarar.")
     estados_por_bloque: dict[str, EstadoBloque]
+    reacciones: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description=(
+            "Por reaccion: nu, la convencion de signo, el modo y la base de la "
+            "tasa, el avance neto, los balances elemental y de masa, y la "
+            "generacion y el consumo brutos POR ESPECIE. "
+            "**`brutas_disponibles` es el campo que hay que mirar antes que "
+            "ninguno**: si es false, `generacion_bruta` y `consumo_bruto` valen "
+            "null con su motivo, y eso no es cero -- es que el dato no esta."
+        ),
+    )
+    fuentes_por_volumen: dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "G_i, C_i y la fuente neta de cada volumen reactivo, agregando sus "
+            "reacciones. Si ALGUNA reaccion del volumen solo trae su tasa neta, las "
+            "brutas del volumen no estan disponibles: G_i es una suma y un termino "
+            "desconocido hace desconocida la suma. "
+            "`descomposicion_neta` se ofrece aparte y NO es el intercambio bruto: "
+            "es el signo del neto repartido en dos casillas."
+        ),
+    )
+    conservacion: dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "Elementos y masa MEDIDOS sobre los caudales resueltos, por volumen. Es "
+            "independiente de haber validado la estequiometria: aquello comprueba "
+            "que la reaccion tenga sentido, esto que el balance se haya aplicado "
+            "bien. El caudal molar total PUEDE cambiar; la masa no cambia nunca."
+        ),
+    )
     capacidades: dict[str, Any] = Field(
         description="Lo que el ensamblador admite, incluido lo que NO. Un cliente "
                     "que solo reciba la lista de lo admitido adivinara el resto.")

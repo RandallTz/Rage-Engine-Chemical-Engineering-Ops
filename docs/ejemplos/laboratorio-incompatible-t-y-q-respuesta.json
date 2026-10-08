@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "estado": "invalido",
-  "modelo_id": "de303df259799e07fd097dadaa09bd12698e03432edb7611635dae996b8660a4",
+  "modelo_id": "d1f08e2127916520e52be8aee8be32bb8ca03cf50c6eecdf7fb9f9ba6054f720",
   "calculo": {
     "identificador": "<identificador de esta ejecucion>",
     "instante_utc": "<instante UTC de la ejecucion>",
@@ -19,7 +19,7 @@
         "scipy": "<version instalada de scipy>"
       }
     },
-    "huella_entradas": "de303df259799e07fd097dadaa09bd12698e03432edb7611635dae996b8660a4",
+    "huella_entradas": "d1f08e2127916520e52be8aee8be32bb8ca03cf50c6eecdf7fb9f9ba6054f720",
     "algoritmo_huella": "sha256"
   },
   "componentes": [
@@ -85,24 +85,6 @@
       "procedencia": "presion uniforme del sistema"
     },
     {
-      "id": "in.x",
-      "bloque_ids": [
-        "in",
-        "cv1"
-      ],
-      "conexion_ids": [
-        "c1"
-      ],
-      "simbolo": "x_{1}",
-      "magnitud": "x",
-      "unidad": "mol/mol",
-      "rol": "impuesta",
-      "compartida": false,
-      "impuesta": true,
-      "valor": 0.5,
-      "procedencia": "especificacion explicita en 'in' (mol/mol)"
-    },
-    {
       "id": "in.h",
       "bloque_ids": [
         "in",
@@ -114,6 +96,42 @@
       "simbolo": "h_{1}",
       "magnitud": "h",
       "unidad": "J/mol",
+      "rol": "calculada",
+      "compartida": false,
+      "impuesta": false,
+      "valor": null,
+      "procedencia": null
+    },
+    {
+      "id": "in.x0",
+      "bloque_ids": [
+        "in",
+        "cv1"
+      ],
+      "conexion_ids": [
+        "c1"
+      ],
+      "simbolo": "x_{1,1}",
+      "magnitud": "x0",
+      "unidad": "mol/mol",
+      "rol": "impuesta",
+      "compartida": false,
+      "impuesta": true,
+      "valor": 0.5,
+      "procedencia": "especificacion explicita en 'in' (mol/mol)"
+    },
+    {
+      "id": "in.x1",
+      "bloque_ids": [
+        "in",
+        "cv1"
+      ],
+      "conexion_ids": [
+        "c1"
+      ],
+      "simbolo": "x_{2,1}",
+      "magnitud": "x1",
+      "unidad": "mol/mol",
       "rol": "calculada",
       "compartida": false,
       "impuesta": false,
@@ -181,26 +199,6 @@
       "procedencia": "presion uniforme del sistema"
     },
     {
-      "id": "medio.x",
-      "bloque_ids": [
-        "medio",
-        "cv1",
-        "cv2"
-      ],
-      "conexion_ids": [
-        "c3",
-        "c4"
-      ],
-      "simbolo": "x_{4}",
-      "magnitud": "x",
-      "unidad": "mol/mol",
-      "rol": "compartida",
-      "compartida": true,
-      "impuesta": false,
-      "valor": null,
-      "procedencia": null
-    },
-    {
       "id": "medio.h",
       "bloque_ids": [
         "medio",
@@ -214,6 +212,46 @@
       "simbolo": "h_{4}",
       "magnitud": "h",
       "unidad": "J/mol",
+      "rol": "compartida",
+      "compartida": true,
+      "impuesta": false,
+      "valor": null,
+      "procedencia": null
+    },
+    {
+      "id": "medio.x0",
+      "bloque_ids": [
+        "medio",
+        "cv1",
+        "cv2"
+      ],
+      "conexion_ids": [
+        "c3",
+        "c4"
+      ],
+      "simbolo": "x_{1,4}",
+      "magnitud": "x0",
+      "unidad": "mol/mol",
+      "rol": "compartida",
+      "compartida": true,
+      "impuesta": false,
+      "valor": null,
+      "procedencia": null
+    },
+    {
+      "id": "medio.x1",
+      "bloque_ids": [
+        "medio",
+        "cv1",
+        "cv2"
+      ],
+      "conexion_ids": [
+        "c3",
+        "c4"
+      ],
+      "simbolo": "x_{2,4}",
+      "magnitud": "x1",
+      "unidad": "mol/mol",
       "rol": "compartida",
       "compartida": true,
       "impuesta": false,
@@ -275,24 +313,6 @@
       "procedencia": "presion uniforme del sistema"
     },
     {
-      "id": "out.x",
-      "bloque_ids": [
-        "out",
-        "cv2"
-      ],
-      "conexion_ids": [
-        "c6"
-      ],
-      "simbolo": "x_{7}",
-      "magnitud": "x",
-      "unidad": "mol/mol",
-      "rol": "calculada",
-      "compartida": false,
-      "impuesta": false,
-      "valor": null,
-      "procedencia": null
-    },
-    {
       "id": "out.h",
       "bloque_ids": [
         "out",
@@ -304,6 +324,42 @@
       "simbolo": "h_{7}",
       "magnitud": "h",
       "unidad": "J/mol",
+      "rol": "calculada",
+      "compartida": false,
+      "impuesta": false,
+      "valor": null,
+      "procedencia": null
+    },
+    {
+      "id": "out.x0",
+      "bloque_ids": [
+        "out",
+        "cv2"
+      ],
+      "conexion_ids": [
+        "c6"
+      ],
+      "simbolo": "x_{1,7}",
+      "magnitud": "x0",
+      "unidad": "mol/mol",
+      "rol": "calculada",
+      "compartida": false,
+      "impuesta": false,
+      "valor": null,
+      "procedencia": null
+    },
+    {
+      "id": "out.x1",
+      "bloque_ids": [
+        "out",
+        "cv2"
+      ],
+      "conexion_ids": [
+        "c6"
+      ],
+      "simbolo": "x_{2,7}",
+      "magnitud": "x1",
+      "unidad": "mol/mol",
       "rol": "calculada",
       "compartida": false,
       "impuesta": false,
@@ -360,10 +416,10 @@
         "in.F",
         "in.T",
         "in.p",
-        "in.x"
+        "in.x0"
       ],
-      "latex_general": "F_{1} = F_{1}^{dado}, \\quad T_{1} = T_{1}^{dado}, \\quad p_{1} = p_{1}^{dado}, \\quad x_{1} = x_{1}^{dado}",
-      "latex_activo": "F_{1} = F_{1}^{dado}, \\quad T_{1} = T_{1}^{dado}, \\quad p_{1} = p_{1}^{dado}, \\quad x_{1} = x_{1}^{dado}",
+      "latex_general": "F_{1} = F_{1}^{dado}, \\quad T_{1} = T_{1}^{dado}, \\quad p_{1} = p_{1}^{dado}, \\quad x0_{1} = x0_{1}^{dado}",
+      "latex_activo": "F_{1} = F_{1}^{dado}, \\quad T_{1} = T_{1}^{dado}, \\quad p_{1} = p_{1}^{dado}, \\quad x0_{1} = x0_{1}^{dado}",
       "terminos_descartados": [],
       "cuenta_como_ecuacion": false,
       "ejecutada": false,
@@ -384,20 +440,21 @@
       ],
       "origen_conexiones": [],
       "variables": [
-        "in.x"
+        "in.x0",
+        "in.x1"
       ],
-      "latex_general": "\\sum_i x_{i,1} = 1",
-      "latex_activo": "x_{2,1} = 1 - x_{1,1}",
+      "latex_general": "\\sum_{i=1}^{2} x_{i,1} = 1",
+      "latex_activo": "\\sum_{i=1}^{2} x_{i,1} = 1",
       "terminos_descartados": [],
-      "cuenta_como_ecuacion": false,
+      "cuenta_como_ecuacion": true,
       "ejecutada": false,
       "residuo": null,
       "escala": null,
       "unidad": null,
       "iteraciones": null,
-      "metodo": null,
-      "alcance": null,
-      "nota": "Se satisface por construccion: el estado binario se parametriza con la fraccion del primer componente. No es una ecuacion que el solver resuelva, asi que no tiene residuo."
+      "metodo": "propagacion algebraica",
+      "alcance": "algebraico_directo",
+      "nota": "Determina la fraccion que no se dio, de las 2 que tiene la corriente."
     },
     {
       "id": "in:entalpia",
@@ -412,8 +469,9 @@
       "variables": [
         "in.T",
         "in.p",
-        "in.x",
-        "in.h"
+        "in.h",
+        "in.x0",
+        "in.x1"
       ],
       "latex_general": "h_{1} = h(T_{1}, p_{1}, \\mathbf{x}_{1}; \\mathcal{M})",
       "latex_activo": "h_{1} = h(T_{1}, p_{1}, \\mathbf{x}_{1}; \\mathcal{M})",
@@ -462,20 +520,21 @@
       ],
       "origen_conexiones": [],
       "variables": [
-        "medio.x"
+        "medio.x0",
+        "medio.x1"
       ],
-      "latex_general": "\\sum_i x_{i,4} = 1",
-      "latex_activo": "x_{2,4} = 1 - x_{1,4}",
+      "latex_general": "\\sum_{i=1}^{2} x_{i,4} = 1",
+      "latex_activo": "\\sum_{i=1}^{2} x_{i,4} = 1",
       "terminos_descartados": [],
-      "cuenta_como_ecuacion": false,
+      "cuenta_como_ecuacion": true,
       "ejecutada": false,
       "residuo": null,
       "escala": null,
       "unidad": null,
       "iteraciones": null,
-      "metodo": null,
-      "alcance": null,
-      "nota": "Se satisface por construccion: el estado binario se parametriza con la fraccion del primer componente. No es una ecuacion que el solver resuelva, asi que no tiene residuo."
+      "metodo": "propagacion algebraica",
+      "alcance": "algebraico_directo",
+      "nota": "Determina la fraccion que no se dio, de las 2 que tiene la corriente."
     },
     {
       "id": "medio:entalpia",
@@ -491,8 +550,9 @@
       "variables": [
         "medio.T",
         "medio.p",
-        "medio.x",
-        "medio.h"
+        "medio.h",
+        "medio.x0",
+        "medio.x1"
       ],
       "latex_general": "h_{4} = h(T_{4}, p_{4}, \\mathbf{x}_{4}; \\mathcal{M})",
       "latex_activo": "h_{4} = h(T_{4}, p_{4}, \\mathbf{x}_{4}; \\mathcal{M})",
@@ -541,20 +601,21 @@
       ],
       "origen_conexiones": [],
       "variables": [
-        "out.x"
+        "out.x0",
+        "out.x1"
       ],
-      "latex_general": "\\sum_i x_{i,7} = 1",
-      "latex_activo": "x_{2,7} = 1 - x_{1,7}",
+      "latex_general": "\\sum_{i=1}^{2} x_{i,7} = 1",
+      "latex_activo": "\\sum_{i=1}^{2} x_{i,7} = 1",
       "terminos_descartados": [],
-      "cuenta_como_ecuacion": false,
+      "cuenta_como_ecuacion": true,
       "ejecutada": false,
       "residuo": null,
       "escala": null,
       "unidad": null,
       "iteraciones": null,
-      "metodo": null,
-      "alcance": null,
-      "nota": "Se satisface por construccion: el estado binario se parametriza con la fraccion del primer componente. No es una ecuacion que el solver resuelva, asi que no tiene residuo."
+      "metodo": "propagacion algebraica",
+      "alcance": "algebraico_directo",
+      "nota": "Determina la fraccion que no se dio, de las 2 que tiene la corriente."
     },
     {
       "id": "out:entalpia",
@@ -569,8 +630,9 @@
       "variables": [
         "out.T",
         "out.p",
-        "out.x",
-        "out.h"
+        "out.h",
+        "out.x0",
+        "out.x1"
       ],
       "latex_general": "h_{7} = h(T_{7}, p_{7}, \\mathbf{x}_{7}; \\mathcal{M})",
       "latex_activo": "h_{7} = h(T_{7}, p_{7}, \\mathbf{x}_{7}; \\mathcal{M})",
@@ -640,9 +702,9 @@
       "nota": "Convencion de signo, no una ley de transferencia. No se supone Q = U A dT: aqui Q sale del balance de energia o se impone."
     },
     {
-      "id": "cv1:materia_total",
+      "id": "cv1:materia_especie_0",
       "tipo": "balance",
-      "titulo": "Conservacion de materia · Primer volumen",
+      "titulo": "Conservacion de benzene · Primer volumen",
       "origen_bloques": [
         "cv1",
         "in",
@@ -654,52 +716,9 @@
       ],
       "variables": [
         "in.F",
-        "medio.F"
-      ],
-      "latex_general": "\\frac{dn}{dt} = \\sum_{in} F - \\sum_{out} F + \\sum_r \\sum_i \\nu_{ir}\\dot\\xi_r",
-      "latex_activo": "F_{4} = F_{1}",
-      "terminos_descartados": [
-        {
-          "termino": "acumulacion",
-          "latex": "\\frac{dn_i}{dt}",
-          "supuesto": "estacionario",
-          "motivo": "En estado estacionario no hay acumulacion de materia."
-        },
-        {
-          "termino": "generacion por reaccion",
-          "latex": "\\sum_r \\nu_{ir}\\dot\\xi_r",
-          "supuesto": "sinReaccion",
-          "motivo": "Sin reaccion no hay transformacion de especies."
-        }
-      ],
-      "cuenta_como_ecuacion": true,
-      "ejecutada": false,
-      "residuo": null,
-      "escala": null,
-      "unidad": "mol/s",
-      "iteraciones": null,
-      "metodo": "propagacion algebraica",
-      "alcance": "algebraico_directo",
-      "nota": null
-    },
-    {
-      "id": "cv1:materia_especie",
-      "tipo": "balance",
-      "titulo": "Conservacion por especie · Primer volumen",
-      "origen_bloques": [
-        "cv1",
-        "in",
-        "medio"
-      ],
-      "origen_conexiones": [
-        "c1",
-        "c3"
-      ],
-      "variables": [
-        "in.F",
-        "in.x",
+        "in.x0",
         "medio.F",
-        "medio.x"
+        "medio.x0"
       ],
       "latex_general": "\\frac{dn_i}{dt} = \\sum_{in} F x_i - \\sum_{out} F x_i + \\sum_r \\nu_{ir}\\dot\\xi_r",
       "latex_activo": "F_{4} x_{1,4} = F_{1} x_{1,1}",
@@ -714,7 +733,7 @@
           "termino": "generacion por reaccion",
           "latex": "\\sum_r \\nu_{ir}\\dot\\xi_r",
           "supuesto": "sinReaccion",
-          "motivo": "Sin reaccion no hay transformacion de especies."
+          "motivo": "Sin reaccion no hay transformacion de especies: el supuesto elimina a la vez la produccion, el consumo y los cierres cineticos."
         }
       ],
       "cuenta_como_ecuacion": true,
@@ -725,7 +744,95 @@
       "iteraciones": null,
       "metodo": "propagacion algebraica",
       "alcance": "algebraico_directo",
-      "nota": "Una relacion por especie independiente. En un binario sin reaccion, junto con el balance total, da x de salida igual a x de entrada."
+      "nota": "Una ecuacion por especie. Sin reaccion, junto con el cierre, da la composicion de salida igual a la de entrada."
+    },
+    {
+      "id": "cv1:materia_especie_1",
+      "tipo": "balance",
+      "titulo": "Conservacion de toluene · Primer volumen",
+      "origen_bloques": [
+        "cv1",
+        "in",
+        "medio"
+      ],
+      "origen_conexiones": [
+        "c1",
+        "c3"
+      ],
+      "variables": [
+        "in.F",
+        "in.x1",
+        "medio.F",
+        "medio.x1"
+      ],
+      "latex_general": "\\frac{dn_i}{dt} = \\sum_{in} F x_i - \\sum_{out} F x_i + \\sum_r \\nu_{ir}\\dot\\xi_r",
+      "latex_activo": "F_{4} x_{2,4} = F_{1} x_{2,1}",
+      "terminos_descartados": [
+        {
+          "termino": "acumulacion",
+          "latex": "\\frac{dn_i}{dt}",
+          "supuesto": "estacionario",
+          "motivo": "En estado estacionario no hay acumulacion de materia."
+        },
+        {
+          "termino": "generacion por reaccion",
+          "latex": "\\sum_r \\nu_{ir}\\dot\\xi_r",
+          "supuesto": "sinReaccion",
+          "motivo": "Sin reaccion no hay transformacion de especies: el supuesto elimina a la vez la produccion, el consumo y los cierres cineticos."
+        }
+      ],
+      "cuenta_como_ecuacion": true,
+      "ejecutada": false,
+      "residuo": null,
+      "escala": null,
+      "unidad": "mol/s",
+      "iteraciones": null,
+      "metodo": "propagacion algebraica",
+      "alcance": "algebraico_directo",
+      "nota": "Una ecuacion por especie. Sin reaccion, junto con el cierre, da la composicion de salida igual a la de entrada."
+    },
+    {
+      "id": "cv1:materia_total",
+      "tipo": "verificacion",
+      "titulo": "Conservacion de materia total · Primer volumen",
+      "origen_bloques": [
+        "cv1",
+        "in",
+        "medio"
+      ],
+      "origen_conexiones": [
+        "c1",
+        "c3"
+      ],
+      "variables": [
+        "in.F",
+        "medio.F"
+      ],
+      "latex_general": "\\frac{dn}{dt} = \\sum_{in} F - \\sum_{out} F + \\sum_r \\left(\\sum_i \\nu_{ir}\\right)\\dot\\xi_r",
+      "latex_activo": "F_{4} = F_{1}",
+      "terminos_descartados": [
+        {
+          "termino": "acumulacion",
+          "latex": "\\frac{dn_i}{dt}",
+          "supuesto": "estacionario",
+          "motivo": "En estado estacionario no hay acumulacion de materia."
+        },
+        {
+          "termino": "generacion por reaccion",
+          "latex": "\\sum_r \\nu_{ir}\\dot\\xi_r",
+          "supuesto": "sinReaccion",
+          "motivo": "Sin reaccion no hay transformacion de especies: el supuesto elimina a la vez la produccion, el consumo y los cierres cineticos."
+        }
+      ],
+      "cuenta_como_ecuacion": false,
+      "ejecutada": false,
+      "residuo": null,
+      "escala": "relativa al caudal de entrada",
+      "unidad": "mol/s",
+      "iteraciones": null,
+      "metodo": null,
+      "alcance": null,
+      "nota": "Suma de los balances por especie, asi que no anade informacion al sistema. Se mide porque es la comprobacion de que se aplicaron bien. OJO: el caudal molar total PUEDE cambiar con reaccion -- sum(nu) no tiene por que ser cero -- y eso no viola nada; lo que no cambia nunca es la masa."
     },
     {
       "id": "cv1:energia",
@@ -782,9 +889,9 @@
       "nota": null
     },
     {
-      "id": "cv2:materia_total",
+      "id": "cv2:materia_especie_0",
       "tipo": "balance",
-      "titulo": "Conservacion de materia · Segundo volumen",
+      "titulo": "Conservacion de benzene · Segundo volumen",
       "origen_bloques": [
         "cv2",
         "medio",
@@ -796,52 +903,9 @@
       ],
       "variables": [
         "medio.F",
-        "out.F"
-      ],
-      "latex_general": "\\frac{dn}{dt} = \\sum_{in} F - \\sum_{out} F + \\sum_r \\sum_i \\nu_{ir}\\dot\\xi_r",
-      "latex_activo": "F_{7} = F_{4}",
-      "terminos_descartados": [
-        {
-          "termino": "acumulacion",
-          "latex": "\\frac{dn_i}{dt}",
-          "supuesto": "estacionario",
-          "motivo": "En estado estacionario no hay acumulacion de materia."
-        },
-        {
-          "termino": "generacion por reaccion",
-          "latex": "\\sum_r \\nu_{ir}\\dot\\xi_r",
-          "supuesto": "sinReaccion",
-          "motivo": "Sin reaccion no hay transformacion de especies."
-        }
-      ],
-      "cuenta_como_ecuacion": true,
-      "ejecutada": false,
-      "residuo": null,
-      "escala": null,
-      "unidad": "mol/s",
-      "iteraciones": null,
-      "metodo": "propagacion algebraica",
-      "alcance": "algebraico_directo",
-      "nota": null
-    },
-    {
-      "id": "cv2:materia_especie",
-      "tipo": "balance",
-      "titulo": "Conservacion por especie · Segundo volumen",
-      "origen_bloques": [
-        "cv2",
-        "medio",
-        "out"
-      ],
-      "origen_conexiones": [
-        "c4",
-        "c6"
-      ],
-      "variables": [
-        "medio.F",
-        "medio.x",
+        "medio.x0",
         "out.F",
-        "out.x"
+        "out.x0"
       ],
       "latex_general": "\\frac{dn_i}{dt} = \\sum_{in} F x_i - \\sum_{out} F x_i + \\sum_r \\nu_{ir}\\dot\\xi_r",
       "latex_activo": "F_{7} x_{1,7} = F_{4} x_{1,4}",
@@ -856,7 +920,7 @@
           "termino": "generacion por reaccion",
           "latex": "\\sum_r \\nu_{ir}\\dot\\xi_r",
           "supuesto": "sinReaccion",
-          "motivo": "Sin reaccion no hay transformacion de especies."
+          "motivo": "Sin reaccion no hay transformacion de especies: el supuesto elimina a la vez la produccion, el consumo y los cierres cineticos."
         }
       ],
       "cuenta_como_ecuacion": true,
@@ -867,7 +931,95 @@
       "iteraciones": null,
       "metodo": "propagacion algebraica",
       "alcance": "algebraico_directo",
-      "nota": "Una relacion por especie independiente. En un binario sin reaccion, junto con el balance total, da x de salida igual a x de entrada."
+      "nota": "Una ecuacion por especie. Sin reaccion, junto con el cierre, da la composicion de salida igual a la de entrada."
+    },
+    {
+      "id": "cv2:materia_especie_1",
+      "tipo": "balance",
+      "titulo": "Conservacion de toluene · Segundo volumen",
+      "origen_bloques": [
+        "cv2",
+        "medio",
+        "out"
+      ],
+      "origen_conexiones": [
+        "c4",
+        "c6"
+      ],
+      "variables": [
+        "medio.F",
+        "medio.x1",
+        "out.F",
+        "out.x1"
+      ],
+      "latex_general": "\\frac{dn_i}{dt} = \\sum_{in} F x_i - \\sum_{out} F x_i + \\sum_r \\nu_{ir}\\dot\\xi_r",
+      "latex_activo": "F_{7} x_{2,7} = F_{4} x_{2,4}",
+      "terminos_descartados": [
+        {
+          "termino": "acumulacion",
+          "latex": "\\frac{dn_i}{dt}",
+          "supuesto": "estacionario",
+          "motivo": "En estado estacionario no hay acumulacion de materia."
+        },
+        {
+          "termino": "generacion por reaccion",
+          "latex": "\\sum_r \\nu_{ir}\\dot\\xi_r",
+          "supuesto": "sinReaccion",
+          "motivo": "Sin reaccion no hay transformacion de especies: el supuesto elimina a la vez la produccion, el consumo y los cierres cineticos."
+        }
+      ],
+      "cuenta_como_ecuacion": true,
+      "ejecutada": false,
+      "residuo": null,
+      "escala": null,
+      "unidad": "mol/s",
+      "iteraciones": null,
+      "metodo": "propagacion algebraica",
+      "alcance": "algebraico_directo",
+      "nota": "Una ecuacion por especie. Sin reaccion, junto con el cierre, da la composicion de salida igual a la de entrada."
+    },
+    {
+      "id": "cv2:materia_total",
+      "tipo": "verificacion",
+      "titulo": "Conservacion de materia total · Segundo volumen",
+      "origen_bloques": [
+        "cv2",
+        "medio",
+        "out"
+      ],
+      "origen_conexiones": [
+        "c4",
+        "c6"
+      ],
+      "variables": [
+        "medio.F",
+        "out.F"
+      ],
+      "latex_general": "\\frac{dn}{dt} = \\sum_{in} F - \\sum_{out} F + \\sum_r \\left(\\sum_i \\nu_{ir}\\right)\\dot\\xi_r",
+      "latex_activo": "F_{7} = F_{4}",
+      "terminos_descartados": [
+        {
+          "termino": "acumulacion",
+          "latex": "\\frac{dn_i}{dt}",
+          "supuesto": "estacionario",
+          "motivo": "En estado estacionario no hay acumulacion de materia."
+        },
+        {
+          "termino": "generacion por reaccion",
+          "latex": "\\sum_r \\nu_{ir}\\dot\\xi_r",
+          "supuesto": "sinReaccion",
+          "motivo": "Sin reaccion no hay transformacion de especies: el supuesto elimina a la vez la produccion, el consumo y los cierres cineticos."
+        }
+      ],
+      "cuenta_como_ecuacion": false,
+      "ejecutada": false,
+      "residuo": null,
+      "escala": "relativa al caudal de entrada",
+      "unidad": "mol/s",
+      "iteraciones": null,
+      "metodo": null,
+      "alcance": null,
+      "nota": "Suma de los balances por especie, asi que no anade informacion al sistema. Se mide porque es la comprobacion de que se aplicaron bien. OJO: el caudal molar total PUEDE cambiar con reaccion -- sum(nu) no tiene por que ser cero -- y eso no viola nada; lo que no cambia nunca es la masa."
     },
     {
       "id": "cv2:energia",
@@ -942,8 +1094,8 @@
         "in.h",
         "out.h"
       ],
-      "latex_general": "\\sum_j \\dot Q_j = F\\,(h_{salida} - h_{entrada})",
-      "latex_activo": "\\sum_j \\dot Q_j = F\\,(h_{salida} - h_{entrada})",
+      "latex_general": "\\sum_j \\dot Q_j = F_{salida} h_{salida} - F_{entrada} h_{entrada} + \\sum_r \\dot\\xi_r \\Delta H_{rxn,r}",
+      "latex_activo": "\\sum_j \\dot Q_j = F_{salida} h_{salida} - F_{entrada} h_{entrada} + \\sum_r \\dot\\xi_r \\Delta H_{rxn,r}",
       "terminos_descartados": [],
       "cuenta_como_ecuacion": false,
       "ejecutada": false,
@@ -986,10 +1138,10 @@
     "hay_errores": true
   },
   "analisis": {
-    "variables_totales": 17,
+    "variables_totales": 20,
     "impuestas": 9,
-    "incognitas": 8,
-    "ecuaciones_independientes": 9,
+    "incognitas": 11,
+    "ecuaciones_independientes": 12,
     "grados_libertad": -1,
     "rango": null,
     "rango_origen": "no se determina: el montaje no llego a ensamblarse.",
@@ -1004,7 +1156,7 @@
       "condicion": 3,
       "convencion": 2,
       "cierre": 3,
-      "verificacion": 1
+      "verificacion": 3
     },
     "nota_no_contadas": "Las especificaciones reducen las incognitas; no aumentan las ecuaciones. Las convenciones de signo no son ecuaciones. El cierre de composicion se satisface por la parametrizacion. La verificacion global es combinacion lineal de los balances."
   },
@@ -1015,39 +1167,109 @@
       "T": 300.0,
       "p": 101325.0,
       "x": 0.5,
+      "composicion": [
+        0.5,
+        null
+      ],
+      "por_especie": [
+        {
+          "componente": "benzene",
+          "x": 0.5,
+          "F_i": 50.0,
+          "unidad_F_i": "mol/s"
+        },
+        {
+          "componente": "toluene",
+          "x": null,
+          "F_i": null,
+          "unidad_F_i": "mol/s"
+        }
+      ],
       "h": null,
       "fase": null,
-      "beta": null
+      "beta": null,
+      "nota_F_i": "F_i = F x_i, derivado. No es una variable del sistema: declararlo como tal anadiria n incognitas y n ecuaciones que se cancelan."
     },
     "medio": {
       "F": null,
       "T": 310.0,
       "p": 101325.0,
       "x": null,
+      "composicion": [
+        null,
+        null
+      ],
+      "por_especie": [
+        {
+          "componente": "benzene",
+          "x": null,
+          "F_i": null,
+          "unidad_F_i": "mol/s"
+        },
+        {
+          "componente": "toluene",
+          "x": null,
+          "F_i": null,
+          "unidad_F_i": "mol/s"
+        }
+      ],
       "h": null,
       "fase": null,
-      "beta": null
+      "beta": null,
+      "nota_F_i": "F_i = F x_i, derivado. No es una variable del sistema: declararlo como tal anadiria n incognitas y n ecuaciones que se cancelan."
     },
     "out": {
       "F": null,
       "T": 320.0,
       "p": 101325.0,
       "x": null,
+      "composicion": [
+        null,
+        null
+      ],
+      "por_especie": [
+        {
+          "componente": "benzene",
+          "x": null,
+          "F_i": null,
+          "unidad_F_i": "mol/s"
+        },
+        {
+          "componente": "toluene",
+          "x": null,
+          "F_i": null,
+          "unidad_F_i": "mol/s"
+        }
+      ],
       "h": null,
       "fase": null,
-      "beta": null
+      "beta": null,
+      "nota_F_i": "F_i = F x_i, derivado. No es una variable del sistema: declararlo como tal anadiria n incognitas y n ecuaciones que se cancelan."
     }
   },
+  "reacciones": [],
+  "fuentes_por_volumen": {},
+  "conservacion": {},
   "capacidades": {
     "schema_version": 1,
     "modelos_termodinamicos": [
       "unifac_raoult"
     ],
-    "referencias_entalpia": [
-      "sensible_liquido_298.15K"
-    ],
-    "componentes": "cualquier par admitido por el proveedor UNIFAC (consulta /componentes/buscar)",
-    "numero_de_componentes": 2,
+    "referencias_entalpia": {
+      "sensible_liquido_298.15K": {
+        "incluye_formacion": false,
+        "T_ref": 298.15,
+        "fase_ref": "liquido",
+        "descripcion": "Entalpia sensible de cada especie referida a su liquido puro a 298.15 K. No incluye entalpias de formacion, asi que un balance con reaccion necesita el termino de calor de reaccion explicito."
+      }
+    },
+    "aviso_referencia": "`incluye_formacion` decide si el balance de energia lleva el termino de calor de reaccion. Con una referencia SENSIBLE las entalpias de formacion no estan en h, asi que el termino va explicito; con una que las incluyera, ya estaria dentro y sumarlo lo contaria dos veces. La respuesta dice en `terminos_descartados` cual de los dos casos aplico.",
+    "componentes": "los que el proveedor UNIFAC admita (consulta /componentes/buscar)",
+    "numero_de_componentes": {
+      "minimo": 2,
+      "maximo": 8,
+      "nota": "El orden importa: 'x0' es la fraccion del primero. 'x' a secas se admite como alias de 'x0' SOLO en binarios, porque con tres especies no identifica ninguna."
+    },
     "piezas": {
       "entrada": "Alimentacion: estado impuesto que entra al sistema.",
       "salida": "Salida: estado que abandona el sistema.",
@@ -1058,30 +1280,75 @@
       "trabajo": "Trabajo de eje: aporta W al balance del volumen conectado."
     },
     "variables_por_pieza": {
-      "entrada": [
-        "F",
-        "T",
-        "p",
-        "x"
-      ],
-      "salida": [
-        "p"
-      ],
-      "corriente": [
-        "p"
-      ],
-      "recipiente": [
-        "T"
-      ],
-      "reactor": [
-        "T"
-      ],
-      "calor": [
-        "Q"
-      ],
-      "trabajo": [
-        "W"
-      ]
+      "entrada": {
+        "binario": [
+          "F",
+          "T",
+          "p",
+          "x0",
+          "x1",
+          "x"
+        ],
+        "n_componentes": [
+          "F",
+          "T",
+          "p",
+          "x0",
+          "x1",
+          "x2",
+          "... x{n-1}"
+        ]
+      },
+      "salida": {
+        "binario": [
+          "p"
+        ],
+        "n_componentes": [
+          "p"
+        ]
+      },
+      "corriente": {
+        "binario": [
+          "p"
+        ],
+        "n_componentes": [
+          "p"
+        ]
+      },
+      "recipiente": {
+        "binario": [
+          "T"
+        ],
+        "n_componentes": [
+          "T"
+        ]
+      },
+      "reactor": {
+        "binario": [
+          "T",
+          "V"
+        ],
+        "n_componentes": [
+          "T",
+          "V"
+        ]
+      },
+      "calor": {
+        "binario": [
+          "Q"
+        ],
+        "n_componentes": [
+          "Q"
+        ]
+      },
+      "trabajo": {
+        "binario": [
+          "W"
+        ],
+        "n_componentes": [
+          "W"
+        ]
+      }
     },
     "unidades": {
       "F": [
@@ -1108,6 +1375,13 @@
         "W",
         "kW"
       ],
+      "V": [
+        "L",
+        "cm3",
+        "dm3",
+        "m3",
+        "mL"
+      ],
       "T": [
         "C",
         "K",
@@ -1129,10 +1403,41 @@
       "colisiones": "Un dato local y una especificacion explicita sobre la misma variable son un error, tambien si coinciden."
     },
     "topologias": [
-      "una alimentacion, uno o dos volumenes de control en serie, una salida",
+      "una alimentacion, uno o dos volumenes en serie, una salida",
       "una corriente intermedia entre dos volumenes, con estado unico compartido",
-      "una fuente de calor por volumen"
+      "una fuente de calor por volumen",
+      "volumenes de tipo 'recipiente' (sin reaccion) o 'reactor' (con una o varias reacciones de tasa especificada)"
     ],
+    "reaccion": {
+      "donde": "En un bloque de tipo 'reactor'. La produccion y la desaparicion quimica pertenecen al volumen donde ocurren: no son alimentaciones ficticias.",
+      "convencion_nu": "positivo producto, negativo reactivo. Un mismo evento produce unos componentes y consume otros, y por eso el signo va en el coeficiente y no en la tasa.",
+      "formas_de_declarar_la_tasa": {
+        "tasa": "irreversible, una sola direccion. Las brutas se conocen.",
+        "tasa_directa + tasa_inversa": "reversible. Las brutas se conocen. Las dos son >= 0.",
+        "tasa_neta": "solo el neto. Las brutas NO se conocen y se devuelven como null."
+      },
+      "bases": {
+        "integrada": [
+          "kmol/h",
+          "kmol/s",
+          "mol/h",
+          "mol/s"
+        ],
+        "volumetrica": [
+          "kmol/(m3*h)",
+          "kmol/(m3*s)",
+          "mol/(L*s)",
+          "mol/(cm3*s)",
+          "mol/(dm3*s)",
+          "mol/(m3*h)",
+          "mol/(m3*s)"
+        ],
+        "nota": "La UNIDAD declara la base, que es lo menos ambiguo posible. Una tasa volumetrica necesita el volumen del reactor ('V' como especificacion); si no se da, no se supone 1 m3: se diagnostica."
+      },
+      "brutas_frente_a_neto": "La fuente neta NO determina la generacion y el consumo brutos. En el equilibrio de una reaccion reversible r+ = r- > 0: el neto es cero y las brutas son POSITIVAS. Si solo se da la tasa neta, `generacion_bruta` y `consumo_bruto` salen null con su motivo, y nunca se rellenan con max(neto, 0) -- eso daria cero generacion en una reaccion que esta funcionando a toda velocidad. La `descomposicion_neta` SI se ofrece, en un campo aparte y etiquetada como lo que es: la descomposicion del neto, no el intercambio bruto.",
+      "derivadas_no_libres": "G_i y C_i se DERIVAN de la estequiometria y de las tasas. No son dos incognitas mas por especie: con n especies serian 2n variables nuevas y el problema quedaria indeterminado.",
+      "conservacion": "La estequiometria se valida contra la matriz elemental de 'thermo' (A @ nu = 0) y contra la masa (MW @ nu = 0) ANTES de resolver, y elementos y masa se MIDEN sobre los caudales resueltos despues. El caudal molar total SI puede cambiar: sum(nu) no tiene por que ser cero. La masa no cambia nunca."
+    },
     "especificacion_termica": {
       "modos": [
         "temperatura de salida impuesta",
@@ -1144,9 +1449,9 @@
     "supuestos_exigidos": {
       "estacionario": true,
       "sinTrabajo": true,
-      "sinReaccion": true,
       "sinMovimiento": true,
-      "adiabatico": "libre, pero incompatible con una fuente de calor conectada"
+      "adiabatico": "libre, pero incompatible con una fuente de calor conectada",
+      "sinReaccion": "libre. En true anula a la vez la produccion, el consumo y los cierres cineticos, y es incompatible con una reaccion declarada. En false exige que cada reactor declare su reaccion: la ausencia de una reaccion declarada no significa que no haya reaccion, significa que al balance por especie le falta un termino."
     },
     "fases": [
       "liquido",
@@ -1156,25 +1461,29 @@
     "nota_fases": "La fase se determina con el punto de burbuja y el de rocio; no se supone liquida.",
     "no_soportado": [
       "regimen transitorio (dE/dt, dn_i/dt)",
-      "reaccion quimica en el ensamblador de varios volumenes",
+      "cinetica: la tasa tiene que estar especificada. Una tasa que dependa de la composicion de salida hace el balance implicito y exige un solver acoplado; el CSTR con cinetica sigue en /diagrama/resolver",
+      "equilibrio quimico: el motor no calcula el avance a partir de K",
       "trabajo de eje",
       "energias cinetica y potencial",
       "mas de una alimentacion o mas de una salida por volumen",
-      "mas de dos volumenes",
+      "mas de dos volumenes, o mas de 8 componentes",
       "reciclos y ciclos",
       "caida de presion entre volumenes (la presion es uniforme)",
-      "mezclas de mas de dos componentes",
+      "entropia, exergia y potenciales quimicos",
+      "conduccion en solidos, difusion y balances de momento",
       "mallado, CFD y dinamica espacial"
     ],
     "tolerancias": {
       "inversion_h_T": 1e-09,
       "cierre_global": 1e-08,
+      "conservacion_elementos_y_masa": 1e-10,
       "nota": "La del cierre global es mas holgada porque es una suma de resultados y acumula el redondeo de los dos balances. Excederla no significa datos malos: significa un fallo del motor, y sale como error con estado 'no_convergente'."
     },
     "metodos": {
       "temperatura impuesta": "evaluacion algebraica directa, sin iteracion",
       "calor impuesto": "inversion escalar de h(T) con brentq, xtol 1e-10 K",
-      "topologia": "marcha aguas abajo; el sistema es triangular y no se resuelve como sistema acoplado"
+      "materia": "propagacion algebraica de los caudales por especie; con reaccion se suma nu_i xi, que es un dato y no una incognita",
+      "topologia": "marcha aguas abajo; el sistema es triangular -- tambien con reaccion, porque la tasa esta especificada y no depende de la salida -- y no se resuelve como sistema acoplado"
     }
   }
 }

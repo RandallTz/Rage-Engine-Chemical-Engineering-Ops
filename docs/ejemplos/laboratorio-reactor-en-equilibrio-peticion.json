@@ -1,0 +1,119 @@
+{
+  "version": 1,
+  "componentes": [
+    "isobutene",
+    "diisobutylene"
+  ],
+  "modelo_termodinamico": "unifac_raoult",
+  "referencia_entalpia": "sensible_liquido_298.15K",
+  "presion_sistema": {
+    "valor": 1000000.0,
+    "unidad": "Pa"
+  },
+  "bloques": [
+    {
+      "id": "in",
+      "tipo": "entrada",
+      "nombre": "Alimentacion de diisobutileno",
+      "datos": null
+    },
+    {
+      "id": "rx",
+      "tipo": "reactor",
+      "nombre": "Reactor de craqueo",
+      "datos": null
+    },
+    {
+      "id": "heat",
+      "tipo": "calor",
+      "nombre": "Aporte termico",
+      "datos": null
+    },
+    {
+      "id": "out",
+      "tipo": "salida",
+      "nombre": "Salida",
+      "datos": null
+    }
+  ],
+  "conexiones": [
+    {
+      "id": "c1",
+      "desde": "in",
+      "hacia": "rx",
+      "tipo": "materia"
+    },
+    {
+      "id": "c2",
+      "desde": "heat",
+      "hacia": "rx",
+      "tipo": "calor"
+    },
+    {
+      "id": "c3",
+      "desde": "rx",
+      "hacia": "out",
+      "tipo": "materia"
+    }
+  ],
+  "supuestos": {
+    "estacionario": true,
+    "adiabatico": false,
+    "sinTrabajo": true,
+    "sinReaccion": false,
+    "sinMovimiento": true
+  },
+  "especificaciones": [
+    {
+      "bloque_id": "in",
+      "variable": "F",
+      "valor": 100.0,
+      "unidad": "mol/s"
+    },
+    {
+      "bloque_id": "in",
+      "variable": "T",
+      "valor": 320.0,
+      "unidad": "K"
+    },
+    {
+      "bloque_id": "in",
+      "variable": "x0",
+      "valor": 0.5,
+      "unidad": "mol/mol"
+    },
+    {
+      "bloque_id": "rx",
+      "variable": "T",
+      "valor": 330.0,
+      "unidad": "K"
+    }
+  ],
+  "reacciones": [
+    {
+      "id": "dim",
+      "bloque_id": "rx",
+      "nu": [
+        -2.0,
+        1.0
+      ],
+      "tasa": null,
+      "tasa_directa": {
+        "valor": 5.0,
+        "unidad": "mol/s"
+      },
+      "tasa_inversa": {
+        "valor": 5.0,
+        "unidad": "mol/s"
+      },
+      "tasa_neta": null,
+      "cinetica": null,
+      "A": null,
+      "Ea": null
+    }
+  ],
+  "relaciones": null,
+  "estado": null,
+  "solver": null,
+  "accion": null
+}

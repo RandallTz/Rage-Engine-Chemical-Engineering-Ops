@@ -176,6 +176,10 @@ No cuenta como validación *"devuelve un array de la forma correcta"* ni
 - Dos volúmenes térmicos en serie dan $\dot Q_1 + \dot Q_2 = F\,\Delta h$ con
   residuo medido por debajo de $10^{-12}$, y **el calentador del laboratorio
   da el mismo número por los dos servicios**: 147842.851474 W.
+- Una reacción reversible en equilibrio ($r^+ = r^- = 5$ mol/s) da **fuente
+  neta cero con generación y consumo brutos positivos**, y una
+  estequiometría que no conserva los elementos se rechaza diciendo qué
+  elemento descuadra y en cuánto.
 
 El detalle completo, y **los límites**, en
 [`docs/12-validacion.md`](docs/12-validacion.md).
@@ -220,6 +224,14 @@ no hay ecuaciones de continuidad que escribir ni dos copias que igualar. Y
 el motor devuelve el sistema que de verdad ejecutó —qué cuenta como
 ecuación y qué no, qué término cayó por qué supuesto, y con qué algoritmo
 se resolvió— en lugar de un resultado sin procedencia.
+
+Resuelve balances molares **por especie** con transformación
+estequiométrica, y ahí está la distinción que más cuesta: **la fuente neta
+no determina la generación y el consumo brutos.** Una reacción reversible
+en equilibrio tiene la fuente neta a cero y las brutas positivas —las
+moléculas no están quietas, están yendo y viniendo a la misma velocidad—
+así que cuando solo se conoce la tasa neta, el motor devuelve las brutas
+como «no disponibles» en vez de inventarlas con `max(neto, 0)`.
 
 Detalle en [`docs/15-laboratorio.md`](docs/15-laboratorio.md); el contrato
 de la API, en

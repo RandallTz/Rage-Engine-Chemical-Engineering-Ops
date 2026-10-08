@@ -1,0 +1,116 @@
+{
+  "version": 1,
+  "componentes": [
+    "n-butane",
+    "isobutane"
+  ],
+  "modelo_termodinamico": "unifac_raoult",
+  "referencia_entalpia": "sensible_liquido_298.15K",
+  "presion_sistema": {
+    "valor": 500000.0,
+    "unidad": "Pa"
+  },
+  "bloques": [
+    {
+      "id": "in",
+      "tipo": "entrada",
+      "nombre": "Alimentacion de n-butano",
+      "datos": null
+    },
+    {
+      "id": "rx",
+      "tipo": "reactor",
+      "nombre": "Reactor de isomerizacion",
+      "datos": null
+    },
+    {
+      "id": "heat",
+      "tipo": "calor",
+      "nombre": "Aporte termico",
+      "datos": null
+    },
+    {
+      "id": "out",
+      "tipo": "salida",
+      "nombre": "Salida",
+      "datos": null
+    }
+  ],
+  "conexiones": [
+    {
+      "id": "c1",
+      "desde": "in",
+      "hacia": "rx",
+      "tipo": "materia"
+    },
+    {
+      "id": "c2",
+      "desde": "heat",
+      "hacia": "rx",
+      "tipo": "calor"
+    },
+    {
+      "id": "c3",
+      "desde": "rx",
+      "hacia": "out",
+      "tipo": "materia"
+    }
+  ],
+  "supuestos": {
+    "estacionario": true,
+    "adiabatico": false,
+    "sinTrabajo": true,
+    "sinReaccion": false,
+    "sinMovimiento": true
+  },
+  "especificaciones": [
+    {
+      "bloque_id": "in",
+      "variable": "F",
+      "valor": 100.0,
+      "unidad": "mol/s"
+    },
+    {
+      "bloque_id": "in",
+      "variable": "T",
+      "valor": 300.0,
+      "unidad": "K"
+    },
+    {
+      "bloque_id": "in",
+      "variable": "x0",
+      "valor": 1.0,
+      "unidad": "mol/mol"
+    },
+    {
+      "bloque_id": "rx",
+      "variable": "T",
+      "valor": 310.0,
+      "unidad": "K"
+    }
+  ],
+  "reacciones": [
+    {
+      "id": "mala",
+      "bloque_id": "rx",
+      "nu": [
+        -1.0,
+        2.0
+      ],
+      "tasa": {
+        "valor": 1.0,
+        "unidad": "mol/s"
+      },
+      "tasa_directa": null,
+      "tasa_inversa": null,
+      "tasa_neta": null,
+      "cinetica": null,
+      "A": null,
+      "Ea": null
+    }
+  ],
+  "relaciones": null,
+  "estado": null,
+  "solver": null,
+  "accion": null
+}

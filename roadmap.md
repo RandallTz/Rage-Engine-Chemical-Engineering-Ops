@@ -1735,3 +1735,206 @@ probar su camino de error contra un error de verdad.
   no se ha hecho por una métrica.
 - **Fase vapor no ideal**, que sigue siendo el límite termodinámico de
   fondo.
+
+---
+
+# Fase 18: El laboratorio aprende química
+
+Pedido en `frontend/ENTREGA_FUNDAMENTOS_CLAUDE.md`. Solo backend.
+
+Balances molares por especie y transformación estequiométrica en volúmenes
+concentrados, en régimen estacionario y con **tasa especificada**.
+
+## ✅ La precisión que decide el diseño: bruto no es neto
+
+El contrato lo pide con una insistencia que se entiende en cuanto se mira
+el caso: una reacción reversible **en equilibrio** tiene $r^+ = r^- > 0$.
+La fuente neta de cada especie es **cero** y cada especie se está
+produciendo y consumiendo a un ritmo **positivo**. Las moléculas no están
+quietas: están yendo y viniendo a la misma velocidad.
+
+Así que la fuente neta **no determina** las brutas. Un neto de cero es
+compatible con dos situaciones físicas distintas:
+
+| | $r^+$ | $r^-$ | neto | $G_i$ | $C_i$ |
+|---|---|---|---|---|---|
+| reacción parada | 0 | 0 | 0 | 0 | 0 |
+| equilibrio dinámico | 5 | 5 | 0 | $\|\nu_i\|\cdot 5$ | $\|\nu_i\|\cdot 5$ |
+
+Tres reglas, las tres implementadas:
+
+1. **Con $r^+$ y $r^-$ por separado**, las brutas se calculan: el evento
+   directo produce lo que tiene $\nu > 0$ y el inverso lo que tiene
+   $\nu < 0$, y las dos cosas generan.
+2. **Con solo la tasa neta**, salen `null` con su motivo. **Nunca**
+   rellenadas con $\max(\text{neto},0)$, que daría cero generación en una
+   reacción funcionando a toda velocidad.
+3. **La descomposición del neto** se ofrece aparte y etiquetada. Es el
+   signo del neto en dos casillas, **no** el intercambio bruto: en el
+   equilibrio da cero en las dos mientras las brutas valen 10 y 5.
+
+Y si **alguna** reacción de un volumen solo trae su neto, las brutas del
+volumen entero no están disponibles: $G_i$ es una suma y un término
+desconocido hace desconocida la suma. El motivo nombra la culpable.
+
+**$G_i$ y $C_i$ se derivan**, no son variables. Con $n$ especies serían
+$2n$ incógnitas nuevas y el problema quedaría indeterminado. Lo mismo con
+$F_i = F x_i$.
+
+## ✅ Los balances, en caudales y no en fracciones
+
+$$F_{i,sal} = F_{i,ent} + \sum_r \nu_{ir}\,\xi_r$$
+
+Porque el balance es **lineal en $F_i$ y no en $x_i$**: con reacción el
+caudal total cambia, y una ecuación en fracciones arrastraría ese cambio a
+todos los términos.
+
+El total sale de la suma y **puede cambiar**. Un caudal molar que cambia
+parece un balance roto y no lo es; lo que no cambia nunca es la masa.
+
+**Y el balance total deja de ser una ecuación independiente**: es la suma
+de los $n$ por especie, así que contarlo regalaría una ecuación. Pasa a
+`verificacion`, con su residuo medido.
+
+## ✅ Conservación: dos comprobaciones, no una
+
+**Antes de resolver**, la estequiometría se valida contra la matriz
+elemental que da `thermo`: $A\nu = 0$ y $MW\nu = 0$. Una $\nu$ que no la
+cumpla no es una reacción, es un dato mal puesto, y el diagnóstico dice
+**qué elemento descuadra y en cuánto**.
+
+**Después**, elementos y masa se **miden** sobre los caudales resueltos.
+No es la misma comprobación: aquello verifica que la reacción tenga
+sentido, esto que el balance se haya **aplicado** bien. Una reacción bien
+balanceada con un balance mal aplicado pasa la primera y falla la segunda.
+
+## ✅ El calor de reacción, sin contarlo dos veces
+
+La referencia de este motor es **sensible**: $h$ no incluye las entalpías
+de formación, así que el término va explícito:
+
+$$\dot Q + F_{ent} h_{ent} - F_{sal} h_{sal} - \sum_r \xi_r \Delta H_{rxn,r} = 0$$
+
+**$\Delta H_{rxn}$ se evalúa a la temperatura de REFERENCIA.** No es una
+aproximación: toda la dependencia con $T$ ya está en los términos
+sensibles, y corregirla aquí con Kirchhoff **sería contarla dos veces**.
+Es el error que el contrato pide evitar, visto desde el otro lado.
+
+Y la decisión de sumar el término **cuelga de una tabla de referencias**,
+no de que haya reacción, para que añadir una referencia obligue a declarar
+si incluye formación. Si la incluyera, el término no aparecería y
+figuraría en `terminos_descartados` con ese motivo.
+
+Con $\xi = 0$ el calor de reacción es cero **aunque las brutas sean
+positivas**: lo mueve el avance neto.
+
+## ⚠ El cierre global lo detectó solo
+
+La comprobación global estaba escrita para el caso sin reacción:
+
+$$\sum \dot Q = F\,(h_{sal} - h_{ent})$$
+
+y con reacción le faltan dos cosas: que el caudal **cambia** (no hay un
+$F$ que multiplique a las dos entalpías) y el calor de reacción. Dos
+reactores en serie dieron `no_convergente` porque los números no cuadraban
+con una fórmula incompleta. **Para eso se puso la guarda**, en la fase
+anterior, con el razonamiento de que medir un residuo y no actuar sobre él
+es la mitad que no protege de nada.
+
+La forma correcta sale de sumar los balances por volumen: los estados
+intermedios se cancelan —son la **misma** variable— y los términos de
+reacción se acumulan.
+
+$$\sum_j \dot Q_j = F_{sal} h_{sal} - F_{ent} h_{ent} + \sum_r \xi_r \Delta H_{rxn,r}$$
+
+## ✅ El método sigue siendo triangular, y eso no es casualidad
+
+**La tasa está especificada**, así que el avance es un dato y no depende
+de la composición de salida. El balance por especie sigue siendo
+explícito y la marcha aguas abajo sigue valiendo.
+
+Una tasa cinética $r(T, \mathbf{x}_{sal})$ rompería eso: el balance se
+volvería implícito y haría falta un solver acoplado. Por eso la cinética
+se **rechaza con diagnóstico** en vez de aproximarse, y el CSTR con
+cinética sigue en `/diagrama/resolver`.
+
+## ✅ La base de la tasa la declara la unidad
+
+`mol/s` es integrada y `mol/(m3*s)` volumétrica, y no hay forma de
+confundirlas leyendo. Es la distinción que el contrato pide explícitamente,
+hecha de la forma que **no depende de que nadie rellene un campo `base`**
+de acuerdo con la unidad. Una tasa volumétrica sin $V$ no se integra con
+1 m³: se diagnostica.
+
+## ⚠ Dos defectos anteriores que la química destapó
+
+Los dos eran invisibles mientras el laboratorio fuera binario:
+
+- **Una fracción molar de cero se rechazaba** como no física. El dominio
+  trataba todas las magnitudes igual, y para un caudal está bien —cero no
+  es un caudal pequeño, es la ausencia de corriente— pero para una
+  fracción es falso. Nadie escribe $x = 0$ en una mezcla de dos; con tres
+  especies y una alimentación pura es lo normal.
+- **El cierre de composición se evaluaba dos veces** en la corriente de
+  entrada, y la segunda vez tomaba la rama de «se dieron las $n$», que
+  mide el residuo de la suma. Pero una de esas fracciones se acababa de
+  **calcular**, así que medía el residuo de $1-(1-x)$: cero por
+  construcción. Es exactamente el error que este módulo denuncia en todos
+  los demás sitios, cometido por no distinguir un valor **impuesto** de
+  uno **calculado**. La bandera `impuesta` existe justo para eso y ahí no
+  se estaba usando.
+
+## El recuento cambió, y los grados de libertad no
+
+Las $n$ fracciones son ahora variables explícitas y el cierre es la
+ecuación que determina la que falta. El caso térmico pasa de «17
+variables, 9 incógnitas, 9 ecuaciones» a «20, 12, 12», y
+$\mathrm{GL} = 0$ en los dos: subieron a la vez una variable y una
+ecuación por corriente.
+
+**El criterio no ha cambiado nunca: una relación cuenta si y solo si
+determina algo.** El cierre cuenta cuando determina la fracción que falta
+y no cuenta si se dan las $n$ —ahí comprueba, y su residuo se mide—.
+Antes no contaba porque la segunda fracción de un binario no era una
+variable sino una expresión.
+
+## Verificación
+
+`tests/validar_laboratorio.py` sube a **ocho grupos y 230
+comprobaciones**. Los números de la reacción tampoco están escritos a
+mano: los avances y las fuentes se comparan contra lo que la
+estequiometría **obliga**, y la conservación contra la matriz atómica de
+`thermo`.
+
+Dos sistemas reales con propiedades completas y balance elemental exacto:
+
+| Caso | $\nu$ | Qué demuestra |
+|---|---|---|
+| n-butano → isobutano | $[-1,+1]$ | $\Sigma\nu=0$: el caudal molar no cambia |
+| diisobutileno → 2 isobuteno | $[+2,-1]$ | $\Sigma\nu=+1$: 100 → **110** mol/s, masa constante |
+| 2 isobuteno ⇌ diisobutileno | $[-2,+1]$ | reversible, y el equilibrio con $r^+=r^-$ |
+
+Residuos de elementos y masa por debajo de $10^{-12}$ en todos los casos.
+El montaje de dos reactores: 100 → 90 → 75 mol/s, seis variables
+compartidas, ningún estado duplicado, y cierre global **0.0** con
+$\Sigma\dot Q = -2\,517\,877.48$ W $=$ transporte $249\,622.52$ $+$
+reacción $-2\,767\,500.00$.
+
+Más **catorce rechazos** con su código, y los catorce presets de
+`/laboratorio/ejemplos` reenviados al endpoint — dos de ellos esperan
+`invalido` a propósito, para que la interfaz pueda probar su camino de
+error contra un error de verdad. **21/21 suites.**
+
+## ⬜ Lo que falta
+
+- **Cinética y equilibrio químico**, por lo dicho arriba.
+- **Entropía, exergía y potenciales químicos**: la siguiente entrega que
+  el contrato enumera. Necesita temperaturas de frontera para la segunda
+  ley y un ambiente explícito para la exergía.
+- **Conducción 1D, difusión binaria y balances de momento**: las otras
+  tres, cada una con sus casos analíticos independientes antes de
+  conectarse.
+- **Caída de presión entre volúmenes**, más de dos volúmenes, reciclos.
+- **El decantador sigue sin estar expuesto en ninguna API.**
+- **Fase vapor no ideal**, que sigue siendo el límite termodinámico de
+  fondo.

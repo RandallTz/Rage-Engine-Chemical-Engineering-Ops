@@ -1,0 +1,176 @@
+{
+  "version": 1,
+  "componentes": [
+    "isobutene",
+    "diisobutylene"
+  ],
+  "modelo_termodinamico": "unifac_raoult",
+  "referencia_entalpia": "sensible_liquido_298.15K",
+  "presion_sistema": {
+    "valor": 1000000.0,
+    "unidad": "Pa"
+  },
+  "bloques": [
+    {
+      "id": "in",
+      "tipo": "entrada",
+      "nombre": "Alimentacion",
+      "datos": null
+    },
+    {
+      "id": "rx1",
+      "tipo": "reactor",
+      "nombre": "Primer reactor",
+      "datos": null
+    },
+    {
+      "id": "h1",
+      "tipo": "calor",
+      "nombre": "Primer aporte termico",
+      "datos": null
+    },
+    {
+      "id": "medio",
+      "tipo": "corriente",
+      "nombre": "Corriente compartida",
+      "datos": null
+    },
+    {
+      "id": "rx2",
+      "tipo": "reactor",
+      "nombre": "Segundo reactor",
+      "datos": null
+    },
+    {
+      "id": "h2",
+      "tipo": "calor",
+      "nombre": "Segundo aporte termico",
+      "datos": null
+    },
+    {
+      "id": "out",
+      "tipo": "salida",
+      "nombre": "Salida final",
+      "datos": null
+    }
+  ],
+  "conexiones": [
+    {
+      "id": "c1",
+      "desde": "in",
+      "hacia": "rx1",
+      "tipo": "materia"
+    },
+    {
+      "id": "c2",
+      "desde": "h1",
+      "hacia": "rx1",
+      "tipo": "calor"
+    },
+    {
+      "id": "c3",
+      "desde": "rx1",
+      "hacia": "medio",
+      "tipo": "materia"
+    },
+    {
+      "id": "c4",
+      "desde": "medio",
+      "hacia": "rx2",
+      "tipo": "materia"
+    },
+    {
+      "id": "c5",
+      "desde": "h2",
+      "hacia": "rx2",
+      "tipo": "calor"
+    },
+    {
+      "id": "c6",
+      "desde": "rx2",
+      "hacia": "out",
+      "tipo": "materia"
+    }
+  ],
+  "supuestos": {
+    "estacionario": true,
+    "adiabatico": false,
+    "sinTrabajo": true,
+    "sinReaccion": false,
+    "sinMovimiento": true
+  },
+  "especificaciones": [
+    {
+      "bloque_id": "in",
+      "variable": "F",
+      "valor": 100.0,
+      "unidad": "mol/s"
+    },
+    {
+      "bloque_id": "in",
+      "variable": "T",
+      "valor": 320.0,
+      "unidad": "K"
+    },
+    {
+      "bloque_id": "in",
+      "variable": "x0",
+      "valor": 1.0,
+      "unidad": "mol/mol"
+    },
+    {
+      "bloque_id": "rx1",
+      "variable": "T",
+      "valor": 330.0,
+      "unidad": "K"
+    },
+    {
+      "bloque_id": "rx2",
+      "variable": "T",
+      "valor": 340.0,
+      "unidad": "K"
+    }
+  ],
+  "reacciones": [
+    {
+      "id": "dim1",
+      "bloque_id": "rx1",
+      "nu": [
+        -2.0,
+        1.0
+      ],
+      "tasa": {
+        "valor": 10.0,
+        "unidad": "mol/s"
+      },
+      "tasa_directa": null,
+      "tasa_inversa": null,
+      "tasa_neta": null,
+      "cinetica": null,
+      "A": null,
+      "Ea": null
+    },
+    {
+      "id": "dim2",
+      "bloque_id": "rx2",
+      "nu": [
+        -2.0,
+        1.0
+      ],
+      "tasa": {
+        "valor": 15.0,
+        "unidad": "mol/s"
+      },
+      "tasa_directa": null,
+      "tasa_inversa": null,
+      "tasa_neta": null,
+      "cinetica": null,
+      "A": null,
+      "Ea": null
+    }
+  ],
+  "relaciones": null,
+  "estado": null,
+  "solver": null,
+  "accion": null
+}

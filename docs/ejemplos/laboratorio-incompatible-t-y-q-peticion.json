@@ -137,6 +137,7 @@
       "unidad": "kW"
     }
   ],
+  "reacciones": [],
   "relaciones": null,
   "estado": null,
   "solver": null,

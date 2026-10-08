@@ -69,10 +69,12 @@ modulo (ver UNIDADES) y todo lo de dentro esta en SI.
 """
 
 import math
+import re
 
 import numpy as np
 
 from core import errores as codigos
+from core import estequiometria as est
 from core.errores import ErrorDeDatos, ErrorFisico, ErrorNumerico
 from core.flash import EvaluadorFlash
 from thermodynamics.elv import CalculadoraELV
@@ -95,7 +97,27 @@ MODELOS_DISPONIBLES = (MODELO_POR_OMISION,)
 # referencias distintas no se pueden restar, y la diferencia h(310)-h(300)
 # es justo lo que este modulo calcula.
 REFERENCIA_POR_OMISION = "sensible_liquido_298.15K"
-REFERENCIAS_DISPONIBLES = (REFERENCIA_POR_OMISION,)
+
+# Que sabe cada referencia de si misma.
+#
+# `incluye_formacion` es el campo que decide si el balance de energia
+# lleva el termino de calor de reaccion. Con una referencia SENSIBLE las
+# entalpias de formacion no estan en h, asi que el termino es obligatorio;
+# con una que las incluyera, el termino ya esta dentro y sumarlo lo
+# contaria dos veces. Esta en una tabla y no en un comentario para que
+# anadir una referencia obligue a declarar en que lado cae.
+REFERENCIAS = {
+    "sensible_liquido_298.15K": {
+        "incluye_formacion": False,
+        "T_ref": 298.15,
+        "fase_ref": "liquido",
+        "descripcion": "Entalpia sensible de cada especie referida a su liquido "
+                       "puro a 298.15 K. No incluye entalpias de formacion, asi "
+                       "que un balance con reaccion necesita el termino de calor "
+                       "de reaccion explicito.",
+    },
+}
+REFERENCIAS_DISPONIBLES = tuple(REFERENCIAS)
 
 # Tolerancia del residuo relativo de la inversion h(T).
 #
@@ -115,7 +137,17 @@ TOLERANCIA_INVERSION = 1e-9
 # un fallo, y por eso es un error y no una advertencia.
 TOLERANCIA_CIERRE = 1e-8
 
+# Tolerancia de la conservacion de elementos y masa, medida sobre los
+# caudales resueltos. Excederla no es un problema de los datos -- la
+# estequiometria ya se valido -- sino del motor al aplicar el balance.
+TOLERANCIA_CONSERVACION = 1e-10
+
 PRESION_POR_OMISION = 101325.0
+
+# Tope de especies. No es un limite fisico sino del servicio: cada especie
+# anade una variable por corriente y una ecuacion por volumen, y una
+# peticion con cien especies no merece un diagnostico, merece un no.
+MAX_COMPONENTES = 8
 
 # Tipos de pieza que el ensamblador entiende, con el papel de cada una.
 PIEZAS = {
@@ -153,12 +185,36 @@ UNIDADES = {
     "p": {"Pa": 1.0, "kPa": 1000.0, "bar": 1e5, "MPa": 1e6, "atm": 101325.0},
     "x": {"mol/mol": 1.0, "-": 1.0, "fraccion": 1.0},
     "Q": {"W": 1.0, "J/s": 1.0, "kW": 1000.0, "MW": 1e6},
+    "V": {"m3": 1.0, "L": 1e-3, "dm3": 1e-3, "cm3": 1e-6, "mL": 1e-6},
 }
 UNIDADES_TEMPERATURA = {"K": 0.0, "degC": 273.15, "C": 273.15, "°C": 273.15}
 
+# ---------------------------------------------------------------------
+# Unidades de las tasas de reaccion.
+#
+# La UNIDAD decide la base, que es lo menos ambiguo posible: 'mol/s' es
+# una tasa INTEGRADA sobre el volumen y 'mol/(m3*s)' es VOLUMETRICA, y no
+# hay forma de confundirlas leyendo. El contrato pide distinguirlas
+# explicitamente, y esta es la forma que no depende de que nadie rellene
+# un campo 'base' correctamente.
+#
+# Una tasa volumetrica necesita el volumen del reactor para integrarse. Si
+# no se da, no se supone 1 m3: se diagnostica.
+# ---------------------------------------------------------------------
+UNIDADES_TASA_INTEGRADA = {
+    "mol/s": 1.0, "mol/h": 1.0 / 3600.0,
+    "kmol/s": 1000.0, "kmol/h": 1000.0 / 3600.0,
+}
+UNIDADES_TASA_VOLUMETRICA = {
+    "mol/(m3*s)": 1.0, "mol/(m3*h)": 1.0 / 3600.0,
+    "kmol/(m3*s)": 1000.0, "kmol/(m3*h)": 1000.0 / 3600.0,
+    "mol/(L*s)": 1000.0, "mol/(dm3*s)": 1000.0,
+    "mol/(cm3*s)": 1e6,
+}
+
 # La unidad canonica de cada variable, que es la que viaja en la respuesta.
 UNIDAD_SI = {"F": "mol/s", "T": "K", "p": "Pa", "x": "mol/mol",
-             "h": "J/mol", "Q": "W", "W": "W"}
+             "h": "J/mol", "Q": "W", "W": "W", "V": "m3"}
 
 # ---------------------------------------------------------------------
 # Unidades de `bloques[].datos`.
@@ -181,31 +237,79 @@ UNIDAD_SI = {"F": "mol/s", "T": "K", "p": "Pa", "x": "mol/mol",
 UNIDADES_DATOS_LOCALES = {"F": "mol/s", "T": "K", "p": "Pa", "x": "mol/mol",
                           "Q": "kW"}
 
-# Variables que una especificacion puede fijar, y sobre que pieza.
-VARIABLES_DE_ESTADO = ("F", "T", "p", "x")
-VARIABLES_POR_PIEZA = {
-    "entrada": ("F", "T", "p", "x"),
-    "salida": ("p",),
-    "corriente": ("p",),
-    # En un volumen, 'T' significa la temperatura de SU SALIDA. No es la
-    # de la alimentacion: el contrato lo subraya porque confundirlas
-    # convierte un calentamiento en una identidad.
-    "recipiente": ("T",),
-    "reactor": ("T",),
-    "calor": ("Q",),
-    "trabajo": ("W",),
-}
+# ---------------------------------------------------------------------
+# Nombres de las fracciones molares.
+#
+# La composicion de una corriente de n especies son n variables con
+# nombre: `x0`, `x1`, ... `x{n-1}`, en el orden en que se declararon los
+# componentes. El indice es parte del NOMBRE, no de la magnitud: la unidad
+# y el dominio de `x7` son los de `x`, asi que las tablas se consultan por
+# magnitud y los nombres se traducen con `magnitud_de`.
+#
+# `x` a secas se admite como alias de `x0`, y SOLO en mezclas binarias.
+# Con tres especies, "x" no identifica ninguna: aceptarlo obligaria a
+# adivinar, y adivinar aqui silencia un dato puesto en el sitio
+# equivocado.
+# ---------------------------------------------------------------------
+_RE_COMPOSICION = re.compile(r"^x(\d+)$")
+
+
+def nombres_composicion(n):
+    return tuple(f"x{i}" for i in range(n))
+
+
+def magnitud_de(nombre):
+    """'x3' -> 'x'. Cualquier otro nombre se devuelve igual."""
+    return "x" if _RE_COMPOSICION.match(str(nombre)) else nombre
+
+
+def indice_composicion(nombre):
+    """El indice de una fraccion, o None si el nombre no es una fraccion."""
+    coincide = _RE_COMPOSICION.match(str(nombre))
+    return int(coincide.group(1)) if coincide else None
+
+
+# Variables que una especificacion puede fijar, y sobre que pieza. Depende
+# de n porque las fracciones son n, asi que es una funcion y no una tabla.
+def variables_de_pieza(tipo, n):
+    base = {
+        "entrada": ("F", "T", "p"),
+        "salida": ("p",),
+        "corriente": ("p",),
+        # En un volumen, 'T' significa la temperatura de SU SALIDA. No es
+        # la de la alimentacion: el contrato lo subraya porque
+        # confundirlas convierte un calentamiento en una identidad.
+        "recipiente": ("T",),
+        # El reactor admite ademas su volumen, que hace falta cuando una
+        # tasa viene en base volumetrica. Es un dato geometrico, no un
+        # estado: si no hay ninguna tasa volumetrica, no hace falta.
+        "reactor": ("T", "V"),
+        "calor": ("Q",),
+        "trabajo": ("W",),
+    }.get(tipo, ())
+    if tipo == "entrada":
+        base = base + nombres_composicion(n) + (("x",) if n == 2 else ())
+    return base
 
 # Dominio fisico de cada variable. Fuera de esto no se calcula: no son
 # limites del adaptador sino del significado (un caudal negativo no es un
 # caudal pequeno).
+# (minimo, maximo, minimo_incluido, descripcion)
+#
+# La inclusividad del minimo es EXPLICITA porque no es la misma para todas
+# las magnitudes, y tratarlas igual fue un error real: un caudal de cero no
+# es un caudal pequeno --es la ausencia de corriente-- pero una fraccion
+# molar de cero es perfectamente fisica y significa que esa especie no
+# esta. Con tres especies y una alimentacion pura, x = 0 es lo normal.
 DOMINIO = {
-    "F": (0.0, None, "estrictamente positivo"),
-    "T": (0.0, None, "estrictamente positivo en kelvin"),
-    "p": (0.0, None, "presion absoluta estrictamente positiva"),
-    "x": (0.0, 1.0, "fraccion molar en [0, 1]"),
-    "Q": (None, None, "cualquier signo; positivo hacia el volumen"),
-    "W": (None, None, "cualquier signo; positivo hacia el exterior"),
+    "F": (0.0, None, False, "estrictamente positivo"),
+    "T": (0.0, None, False, "estrictamente positivo en kelvin"),
+    "p": (0.0, None, False, "presion absoluta estrictamente positiva"),
+    "x": (0.0, 1.0, True, "fraccion molar en [0, 1]; cero es valido y significa "
+                          "que la especie no esta"),
+    "Q": (None, None, True, "cualquier signo; positivo hacia el volumen"),
+    "W": (None, None, True, "cualquier signo; positivo hacia el exterior"),
+    "V": (0.0, None, False, "volumen estrictamente positivo"),
 }
 
 
@@ -274,7 +378,7 @@ class Variable:
         self.id = id
         self.simbolo = simbolo
         self.magnitud = magnitud
-        self.unidad = UNIDAD_SI[magnitud]
+        self.unidad = UNIDAD_SI[magnitud_de(magnitud)]
         self.bloque_ids = list(bloque_ids)
         self.conexion_ids = list(conexion_ids)
         self.compartida = compartida
@@ -428,7 +532,7 @@ def convertir(magnitud, valor, unidad):
             f"El valor de {magnitud} no es un numero finito ({valor!r}).",
             codigo=codigos.LAB_VALOR_NO_FINITO,
         )
-    if magnitud == "T":
+    if magnitud_de(magnitud) == "T":
         if unidad not in UNIDADES_TEMPERATURA:
             raise ErrorDeDatos(
                 f"Unidad de temperatura no admitida: {unidad!r}. "
@@ -437,9 +541,8 @@ def convertir(magnitud, valor, unidad):
             )
         # Afin: factor 1 y desplazamiento. Por eso no esta en UNIDADES.
         return valor + UNIDADES_TEMPERATURA[unidad]
-    tabla = UNIDADES.get("W" if magnitud == "W" else magnitud)
-    if magnitud == "W":
-        tabla = UNIDADES["Q"]
+    magnitud = magnitud_de(magnitud)
+    tabla = UNIDADES["Q"] if magnitud == "W" else UNIDADES.get(magnitud)
     if tabla is None:
         raise ErrorDeDatos(f"Magnitud sin tabla de unidades: {magnitud!r}.",
                            codigo=codigos.LAB_VARIABLE_DESCONOCIDA)
@@ -454,9 +557,11 @@ def convertir(magnitud, valor, unidad):
 
 def _en_dominio(magnitud, valor):
     """None si el valor es admisible, o el motivo de que no lo sea."""
-    minimo, maximo, descripcion = DOMINIO[magnitud]
-    if minimo is not None and valor <= minimo:
-        return descripcion
+    minimo, maximo, minimo_incluido, descripcion = DOMINIO[magnitud_de(magnitud)]
+    if minimo is not None:
+        fuera = valor < minimo if minimo_incluido else valor <= minimo
+        if fuera:
+            return descripcion
     if maximo is not None and valor > maximo:
         return descripcion
     return None
@@ -491,6 +596,8 @@ class Montaje:
         self.componentes = []
         self.modelo = MODELO_POR_OMISION
         self.referencia = REFERENCIA_POR_OMISION
+        self.n = 0
+        self.reacciones = []
         self._numero = {}
 
     # -- utilidades -------------------------------------------------
@@ -507,10 +614,39 @@ class Montaje:
     def variable(self, id):
         return self.variables.get(id)
 
+    def composicion(self, bloque_id):
+        """Las n variables de fraccion de una corriente, en orden."""
+        estado = self.estados[bloque_id]
+        return [estado[nombre] for nombre in nombres_composicion(self.n)]
+
+    def composicion_valores(self, bloque_id):
+        """
+        Las n fracciones como array, o None si alguna falta.
+
+        None y no ceros: una fraccion que no se conoce no vale cero, y
+        rellenarla asi daria una composicion que suma menos de uno sin
+        que nadie se entere.
+        """
+        valores = [v.valor for v in self.composicion(bloque_id)]
+        if any(v is None for v in valores):
+            return None
+        return np.array(valores, dtype=float)
+
+    def fijar_composicion(self, bloque_id, valores, procedencia):
+        for v, valor in zip(self.composicion(bloque_id), np.asarray(valores)):
+            v.valor = float(valor)
+            v.procedencia = procedencia
+
     def _nueva_variable(self, bloque_id, magnitud, bloque_ids=None,
                         conexion_ids=(), compartida=False, simbolo=None):
         vid = f"{bloque_id}.{magnitud}"
         numero = self._numero.get(bloque_id, "?")
+        indice = indice_composicion(magnitud)
+        if simbolo is None and indice is not None:
+            # Dos subindices: la especie y la pieza. Con uno solo no se
+            # distingue "la fraccion del componente 2" de "la fraccion en
+            # la pieza 2", y en un reactor las dos cosas aparecen juntas.
+            simbolo = f"x_{{{indice + 1},{numero}}}"
         v = Variable(
             vid,
             simbolo or f"{magnitud}_{{{numero}}}",
@@ -613,16 +749,34 @@ def ensamblar(peticion):
 
     # --- 0. componentes y modelo -----------------------------------
     componentes = list(peticion.get("componentes") or [])
-    if len(componentes) != 2:
+    if len(componentes) < 2:
         m.avisar(
             codigos.LAB_NUMERO_DE_COMPONENTES, "error",
-            f"Esta entrega resuelve mezclas binarias y se dieron {len(componentes)} "
-            "componente(s).",
-            "Declara exactamente dos componentes; 'x' es la fraccion del primero.",
+            f"Hacen falta al menos dos componentes y se dieron {len(componentes)}.",
+            "Declara los componentes en orden: 'x0' es la fraccion del primero.",
+            categoria="modelo",
+        )
+        m.soportado = False
+    elif len(componentes) > MAX_COMPONENTES:
+        m.avisar(
+            codigos.LAB_NUMERO_DE_COMPONENTES, "error",
+            f"Esta entrega admite hasta {MAX_COMPONENTES} componentes y se dieron "
+            f"{len(componentes)}.",
+            "No es un limite fisico sino del servicio.",
+            categoria="modelo",
+        )
+        m.soportado = False
+    if len(componentes) != len(set(componentes)):
+        repetidos = sorted({c for c in componentes if componentes.count(c) > 1})
+        m.avisar(
+            codigos.LAB_NUMERO_DE_COMPONENTES, "error",
+            f"Hay componentes repetidos: {', '.join(repetidos)}.",
+            "Cada especie aparece una vez; su posicion define cual es su fraccion.",
             categoria="modelo",
         )
         m.soportado = False
     m.componentes = componentes
+    m.n = len(componentes)
 
     modelo = peticion.get("modelo_termodinamico") or MODELO_POR_OMISION
     if modelo not in MODELOS_DISPONIBLES:
@@ -797,15 +951,6 @@ def ensamblar(peticion):
             categoria="modelo",
         )
         m.soportado = False
-    if not supuestos["sinReaccion"]:
-        m.avisar(
-            codigos.LAB_SUPUESTO_NO_SOPORTADO, "error",
-            "La reaccion no esta implementada en el ensamblador de varios volumenes.",
-            "Marca 'sinReaccion'. El CSTR de un solo volumen sigue disponible en "
-            "/diagrama/resolver.",
-            categoria="modelo",
-        )
-        m.soportado = False
     if not supuestos["sinMovimiento"]:
         m.avisar(
             codigos.LAB_SUPUESTO_NO_SOPORTADO, "error",
@@ -833,18 +978,6 @@ def ensamblar(peticion):
             categoria="modelo", bloques=volumenes,
         )
         m.soportado = False
-    for bid in volumenes:
-        if bloques[bid]["tipo"] == "reactor":
-            m.avisar(
-                codigos.LAB_TOPOLOGIA_NO_SOPORTADA, "error",
-                f"El reactor {bid!r} no lo resuelve este ensamblador.",
-                "El CSTR demostrativo sigue en /diagrama/resolver, con su balance de "
-                "energia desactivado. Acoplarlo aqui exige resolver ese balance, no "
-                "solo escribirlo.",
-                categoria="modelo", bloques=[bid],
-            )
-            m.soportado = False
-
     if m.hay_errores:
         return m
 
@@ -1004,7 +1137,7 @@ def ensamblar(peticion):
         cxs = [c["id"] for c in entradas_de[bid] + salidas_de[bid]]
         duenos = [bid] + [v for v in vecinos if bloques[v]["tipo"] in PIEZAS_VOLUMEN]
         estado = {}
-        for magnitud in ("F", "T", "p", "x", "h"):
+        for magnitud in ("F", "T", "p", "h") + nombres_composicion(m.n):
             estado[magnitud] = m._nueva_variable(
                 bid, magnitud, bloque_ids=duenos, conexion_ids=cxs,
                 compartida=compartida,
@@ -1047,6 +1180,52 @@ def ensamblar(peticion):
     if m.hay_errores:
         return m
 
+    # --- 5b. las reacciones ----------------------------------------
+    # Despues de las especificaciones porque una tasa en base volumetrica
+    # necesita el volumen del reactor, y el volumen llega como
+    # especificacion.
+    m.reacciones = _leer_reacciones(m, peticion, bloques)
+    if m.hay_errores:
+        return m
+
+    # Un reactor sin reaccion y sin el supuesto que la anule no declara
+    # nada: el termino de transformacion se conserva en el balance y no
+    # hay quien lo determine. Es el mismo razonamiento que con el calor --
+    # la ausencia de un dato no es un supuesto.
+    # El supuesto dice que PUEDE haber reaccion y ningun volumen es un
+    # reactor. No invalida nada -- un recipiente no lleva termino de
+    # transformacion -- pero el montaje declara una intencion que su
+    # topologia no recoge, y callarlo deja al usuario creyendo que algo
+    # reacciona.
+    if not supuestos["sinReaccion"] and not any(
+            bloques[bid]["tipo"] == "reactor" for bid in m.volumenes):
+        m.avisar(
+            codigos.LAB_SIN_REACCION_DECLARADA, "advertencia",
+            "El montaje no marca 'sinReaccion' pero ningun volumen es un reactor, "
+            "asi que no hay ningun termino de transformacion en los balances.",
+            "Si esperabas reaccion, cambia el volumen a 'reactor' y declara la "
+            "reaccion. Si no, marca 'sinReaccion' para dejarlo dicho.",
+            bloques=list(m.volumenes),
+        )
+
+    for bid in m.volumenes:
+        if bloques[bid]["tipo"] != "reactor":
+            continue
+        if any(r.bloque_id == bid for r in m.reacciones):
+            continue
+        if supuestos["sinReaccion"]:
+            continue
+        m.avisar(
+            codigos.LAB_SIN_REACCION_DECLARADA, "error",
+            f"El reactor {bloques[bid].get('nombre') or bid!r} no declara ninguna "
+            "reaccion y el montaje no marca 'sinReaccion'.",
+            "Declara la reaccion con su estequiometria y su tasa, o marca "
+            "'sinReaccion' si de verdad no hay transformacion. La ausencia de una "
+            "reaccion declarada no significa que no haya reaccion: significa que "
+            "al balance por especie le falta un termino.",
+            bloques=[bid],
+        )
+
     # --- 6. las relaciones -----------------------------------------
     _construir_relaciones(m, bloques)
 
@@ -1054,6 +1233,253 @@ def ensamblar(peticion):
     _comprobar_modos(m, bloques)
 
     return m
+
+
+def _convertir_tasa(etiqueta, campo, dato):
+    """
+    Una tasa en SI, con su base, o un ErrorDeDatos.
+
+    Devuelve (valor, base, unidad). La base sale de la unidad, no de un
+    campo aparte: un campo 'base' que contradiga la unidad habria que
+    resolverlo adivinando, y aqui no se adivina.
+    """
+    if not isinstance(dato, dict):
+        raise ErrorDeDatos(
+            f"{etiqueta}: {campo} tiene que ser un objeto con 'valor' y 'unidad'.",
+            codigo=codigos.LAB_TASA_AMBIGUA,
+        )
+    valor, unidad = dato.get("valor"), dato.get("unidad")
+    if valor is None:
+        raise ErrorDeDatos(
+            f"{etiqueta}: falta el valor de {campo}. Un campo vacio llega como "
+            "null, y null no es cero.",
+            codigo=codigos.LAB_FALTA_ESPECIFICACION,
+        )
+    valor = float(valor)
+    if not math.isfinite(valor):
+        raise ErrorDeDatos(
+            f"{etiqueta}: {campo} no es un numero finito ({valor!r}).",
+            codigo=codigos.LAB_VALOR_NO_FINITO,
+        )
+    if unidad in UNIDADES_TASA_INTEGRADA:
+        return valor * UNIDADES_TASA_INTEGRADA[unidad], "integrada", unidad
+    if unidad in UNIDADES_TASA_VOLUMETRICA:
+        return valor * UNIDADES_TASA_VOLUMETRICA[unidad], "volumetrica", unidad
+    raise ErrorDeDatos(
+        f"{etiqueta}: unidad de tasa no admitida para {campo}: {unidad!r}. "
+        f"Integradas: {', '.join(sorted(UNIDADES_TASA_INTEGRADA))}. "
+        f"Volumetricas: {', '.join(sorted(UNIDADES_TASA_VOLUMETRICA))}. "
+        "La unidad es la que declara la base: 'mol/s' se integra sobre el volumen "
+        "y 'mol/(m3*s)' hay que integrarla.",
+        codigo=codigos.LAB_UNIDAD_INCOMPATIBLE,
+    )
+
+
+def _leer_reacciones(m, peticion, bloques):
+    """
+    Pasa `reacciones` de la peticion a objetos Reaccion validados.
+
+    Lo que se comprueba, y el orden importa: primero que la reaccion
+    PERTENEZCA a un reactor, luego que la estequiometria sea una reaccion
+    (elementos y masa), luego que las tasas esten declaradas sin
+    ambiguedad, y al final que la base volumetrica tenga su volumen.
+
+    Comprobar las tasas de una estequiometria que no conserva los
+    elementos seria perder el tiempo del usuario en el problema pequeno.
+    """
+    declaradas = peticion.get("reacciones") or []
+    if not declaradas:
+        return []
+
+    if m._supuestos.get("sinReaccion"):
+        m.avisar(
+            codigos.LAB_SUPUESTO_INCOHERENTE, "error",
+            f"Hay {len(declaradas)} reaccion(es) declarada(s) y el supuesto "
+            "'sinReaccion' las anula.",
+            "Quita el supuesto o quita las reacciones: tal como esta, el montaje "
+            "declara dos cosas incompatibles. 'sinReaccion' elimina a la vez la "
+            "produccion, el consumo y los cierres cineticos.",
+            bloques=sorted({r.get("bloque_id") for r in declaradas
+                            if r.get("bloque_id") in bloques}),
+        )
+        return []
+
+    try:
+        elementos, A = est.matriz_elemental(m.proveedor)
+        mw = est.masas_molares(m.proveedor)
+    except ErrorDeDatos as e:
+        m.avisar(e.codigo, "error", str(e),
+                 "Sin composicion elemental no se puede comprobar la "
+                 "estequiometria, y una estequiometria sin comprobar es un dato en "
+                 "el que no se puede confiar.",
+                 categoria="modelo")
+        return []
+    m._elementos, m._A, m._mw = elementos, A, mw
+
+    reacciones, vistos = [], set()
+    for i, d in enumerate(declaradas):
+        rid = d.get("id") or f"reaccion[{i}]"
+        etiqueta = f"reacciones[{i}] ({rid})"
+        bid = d.get("bloque_id")
+
+        if rid in vistos:
+            m.avisar(
+                codigos.LAB_ID_DUPLICADO, "error",
+                f"Hay mas de una reaccion con el identificador {rid!r}.",
+                "Cada reaccion necesita un identificador unico: los avances se "
+                "reportan por id.",
+            )
+            continue
+        vistos.add(rid)
+
+        if bid not in bloques:
+            m.avisar(
+                codigos.LAB_REFERENCIA_INEXISTENTE, "error",
+                f"{etiqueta}: el bloque {bid!r} no existe.",
+                "Una reaccion pertenece a un volumen del montaje.",
+                bloques=[bid] if bid else [],
+            )
+            continue
+        if bloques[bid]["tipo"] != "reactor":
+            m.avisar(
+                codigos.LAB_REACCION_EN_NO_REACTOR, "error",
+                f"{etiqueta}: {bid!r} es de tipo {bloques[bid]['tipo']!r} y una "
+                "reaccion pertenece a un reactor.",
+                "Cambia la pieza a 'reactor'. La produccion y la desaparicion "
+                "quimica pertenecen al volumen donde ocurren, no son "
+                "alimentaciones ficticias.",
+                bloques=[bid],
+            )
+            continue
+
+        if d.get("cinetica") is not None or d.get("A") is not None \
+                or d.get("Ea") is not None:
+            m.avisar(
+                codigos.LAB_CINETICA_NO_SOPORTADA, "error",
+                f"{etiqueta}: esta entrega resuelve reacciones de TASA "
+                "ESPECIFICADA, no cinetica.",
+                "Da la tasa directamente. Una tasa que dependa de la composicion "
+                "de salida hace el balance implicito y exige un solver acoplado, "
+                "que este ensamblador no tiene; el CSTR con cinetica sigue en "
+                "/diagrama/resolver.",
+                categoria="modelo", bloques=[bid],
+            )
+            continue
+
+        # --- las tasas, sin ambiguedad
+        tiene = {k: d.get(k) for k in
+                 ("tasa", "tasa_directa", "tasa_inversa", "tasa_neta")}
+        try:
+            if tiene["tasa"] is not None:
+                if any(tiene[k] is not None for k in
+                       ("tasa_directa", "tasa_inversa", "tasa_neta")):
+                    raise ErrorDeDatos(
+                        f"{etiqueta}: 'tasa' se dio junto con otras. Elige UNA "
+                        "forma: 'tasa' (irreversible), 'tasa_directa' mas "
+                        "'tasa_inversa' (reversible, con brutas), o 'tasa_neta' "
+                        "(solo el neto).",
+                        codigo=codigos.LAB_TASA_AMBIGUA,
+                    )
+                valor, base, unidad = _convertir_tasa(etiqueta, "tasa", tiene["tasa"])
+                modo, r_dir, r_inv, r_net = "irreversible", valor, None, None
+            elif tiene["tasa_directa"] is not None or tiene["tasa_inversa"] is not None:
+                if tiene["tasa_neta"] is not None:
+                    raise ErrorDeDatos(
+                        f"{etiqueta}: no se puede dar 'tasa_neta' junto con las "
+                        "direccionales. Con las direccionales el neto se calcula.",
+                        codigo=codigos.LAB_TASA_AMBIGUA,
+                    )
+                if tiene["tasa_directa"] is None or tiene["tasa_inversa"] is None:
+                    falta = ("tasa_inversa" if tiene["tasa_directa"] is not None
+                             else "tasa_directa")
+                    raise ErrorDeDatos(
+                        f"{etiqueta}: falta {falta}. Una reaccion reversible "
+                        "necesita las dos tasas, y con una sola no se sabe si la "
+                        "otra es cero o si simplemente no se dio -- que son dos "
+                        "situaciones fisicas distintas. Si la reaccion es "
+                        "irreversible, usa 'tasa'.",
+                        codigo=codigos.LAB_TASA_AMBIGUA,
+                    )
+                v_dir, base_dir, u_dir = _convertir_tasa(
+                    etiqueta, "tasa_directa", tiene["tasa_directa"])
+                v_inv, base_inv, u_inv = _convertir_tasa(
+                    etiqueta, "tasa_inversa", tiene["tasa_inversa"])
+                if base_dir != base_inv:
+                    raise ErrorDeDatos(
+                        f"{etiqueta}: la tasa directa esta en base {base_dir} "
+                        f"({u_dir}) y la inversa en {base_inv} ({u_inv}). Las dos "
+                        "tienen que estar en la misma base para poder restarse.",
+                        codigo=codigos.LAB_UNIDAD_INCOMPATIBLE,
+                    )
+                modo, base, unidad = "reversible_bruta", base_dir, f"{u_dir} / {u_inv}"
+                r_dir, r_inv, r_net = v_dir, v_inv, None
+            elif tiene["tasa_neta"] is not None:
+                valor, base, unidad = _convertir_tasa(
+                    etiqueta, "tasa_neta", tiene["tasa_neta"])
+                modo, r_dir, r_inv, r_net = "neta", None, None, valor
+            else:
+                raise ErrorDeDatos(
+                    f"{etiqueta}: no se declaro ninguna tasa. Hace falta 'tasa', o "
+                    "'tasa_directa' mas 'tasa_inversa', o 'tasa_neta'.",
+                    codigo=codigos.LAB_TASA_AMBIGUA,
+                )
+
+            # Las tasas BRUTAS son no negativas por definicion: el signo va
+            # en el coeficiente estequiometrico, no en la velocidad. Una
+            # tasa directa negativa es una reaccion que va hacia atras, y
+            # eso se escribe con la tasa inversa.
+            for nombre_tasa, v in (("tasa_directa", r_dir), ("tasa_inversa", r_inv)):
+                if v is not None and v < 0:
+                    raise ErrorDeDatos(
+                        f"{etiqueta}: {nombre_tasa} = {v:g} mol/s es negativa. Las "
+                        "tasas brutas son velocidades y no pueden serlo: el signo "
+                        "lo lleva el coeficiente estequiometrico (negativo "
+                        "reactivo, positivo producto). Una reaccion que avanza al "
+                        "reves se declara con 'tasa_inversa'.",
+                        codigo=codigos.LAB_TASA_NEGATIVA,
+                    )
+            if modo == "irreversible" and r_dir is not None and r_dir < 0:
+                raise ErrorDeDatos(
+                    f"{etiqueta}: 'tasa' = {r_dir:g} mol/s es negativa. Para una "
+                    "reaccion que avanza al reves, invierte los signos de nu o usa "
+                    "'tasa_directa' y 'tasa_inversa'.",
+                    codigo=codigos.LAB_TASA_NEGATIVA,
+                )
+
+            # --- la base volumetrica necesita el volumen
+            volumen = None
+            if base == "volumetrica":
+                v_V = m.variable(f"{bid}.V")
+                if v_V is None or v_V.valor is None:
+                    raise ErrorDeDatos(
+                        f"{etiqueta}: la tasa esta en base volumetrica ({unidad}) y "
+                        f"{bid!r} no declara su volumen.",
+                        codigo=codigos.LAB_FALTA_VOLUMEN_REACTOR,
+                    )
+                volumen = v_V.valor
+                factor = volumen
+                r_dir = None if r_dir is None else r_dir * factor
+                r_inv = None if r_inv is None else r_inv * factor
+                r_net = None if r_net is None else r_net * factor
+
+            reaccion = est.Reaccion(
+                rid, bid, d.get("nu"), modo, r_directa=r_dir, r_inversa=r_inv,
+                r_neta=r_net, base=base, unidad=unidad, volumen=volumen,
+            )
+            est.validar_estequiometria(reaccion, elementos, A, mw, m.componentes)
+            reacciones.append(reaccion)
+
+        except ErrorDeDatos as e:
+            datos = e.como_diccionario()
+            m.avisar(
+                datos.get("codigo") or codigos.LAB_ESTEQUIOMETRIA_INVALIDA, "error",
+                str(e),
+                "Revisa la declaracion de la reaccion.",
+                bloques=[bid],
+            )
+            continue
+
+    return reacciones
 
 
 def _especificaciones_de_datos_locales(m, peticion, bloques):
@@ -1088,13 +1514,13 @@ def _especificaciones_de_datos_locales(m, peticion, bloques):
                     bloques=[bid],
                 )
                 continue
-            if clave not in VARIABLES_POR_PIEZA.get(tipo, ()):
+            if clave not in variables_de_pieza(tipo, m.n):
                 m.avisar(
                     codigos.LAB_VARIABLE_DESCONOCIDA, "error",
                     f"{bid!r}: lleva un dato local {clave!r} y una pieza de tipo "
                     f"{tipo!r} no tiene esa variable.",
                     f"En {tipo!r} se puede fijar: "
-                    f"{', '.join(VARIABLES_POR_PIEZA.get(tipo, ())) or 'nada'}. "
+                    f"{', '.join(variables_de_pieza(tipo, m.n)) or 'nada'}. "
                     "Un dato que no corresponde a la pieza se perderia en silencio.",
                     bloques=[bid],
                 )
@@ -1150,8 +1576,22 @@ def _aplicar_especificaciones(m, peticion, bloques):
             )
             continue
         tipo = bloques[bid]["tipo"]
-        admitidas = VARIABLES_POR_PIEZA.get(tipo, ())
+        admitidas = variables_de_pieza(tipo, m.n)
         if variable not in admitidas:
+            # Un 'x' a secas en una mezcla de tres o mas no identifica
+            # ninguna fraccion. Aceptarlo obligaria a adivinar, y adivinar
+            # aqui silencia un dato puesto en el sitio equivocado.
+            if variable == "x" and tipo == "entrada" and m.n > 2:
+                m.avisar(
+                    codigos.LAB_VARIABLE_DESCONOCIDA, "error",
+                    f"{etiqueta}: 'x' a secas solo vale en una mezcla binaria, y hay "
+                    f"{m.n} componentes.",
+                    f"Usa el nombre con indice: "
+                    f"{', '.join(nombres_composicion(m.n))}, en el orden en que "
+                    "declaraste los componentes.",
+                    bloques=[bid],
+                )
+                continue
             m.avisar(
                 codigos.LAB_VARIABLE_DESCONOCIDA, "error",
                 f"{etiqueta}: {variable!r} no es una variable que se pueda fijar en "
@@ -1160,6 +1600,10 @@ def _aplicar_especificaciones(m, peticion, bloques):
                 bloques=[bid],
             )
             continue
+        # 'x' en un binario es alias de 'x0'. Se traduce aqui, una sola
+        # vez, para que todo lo demas hable un unico idioma.
+        if variable == "x":
+            variable = "x0"
 
         try:
             valor = convertir(variable, e.get("valor"), e.get("unidad"))
@@ -1168,14 +1612,20 @@ def _aplicar_especificaciones(m, peticion, bloques):
                      "Da el valor con una unidad admitida.", bloques=[bid])
             continue
 
+        fuente = (f"dato local de {bid!r} (unidad implicita "
+                  f"{UNIDADES_DATOS_LOCALES.get(magnitud_de(variable))})"
+                  if e.get("_origen") else f"especificacion explicita en {bid!r} "
+                  f"({e.get('unidad')})")
+
         motivo = _en_dominio(variable, valor)
         if motivo:
             m.avisar(
-                codigos.LAB_FRACCION_INVALIDA if variable == "x"
+                codigos.LAB_FRACCION_INVALIDA if magnitud_de(variable) == "x"
                 else codigos.LAB_VALOR_FUERA_DE_DOMINIO,
                 "error",
-                f"{etiqueta}: {variable} = {valor:g} {UNIDAD_SI[variable]} esta fuera "
-                f"del dominio fisico ({motivo}).",
+                f"{etiqueta}: {variable} = {valor:g} "
+                f"{UNIDAD_SI[magnitud_de(variable)]} esta fuera del dominio fisico "
+                f"({motivo}).",
                 "No es un limite del adaptador sino del significado de la magnitud.",
                 bloques=[bid],
             )
@@ -1183,10 +1633,25 @@ def _aplicar_especificaciones(m, peticion, bloques):
 
         # A que variable canonica apunta. La unica traduccion no trivial
         # es la 'T' de un volumen, que es la de su corriente de salida.
-        fuente = (f"dato local de {bid!r} (unidad implicita "
-                  f"{UNIDADES_DATOS_LOCALES.get(variable)})"
-                  if e.get("_origen") else f"especificacion explicita en {bid!r} "
-                  f"({e.get('unidad')})")
+        if tipo == "reactor" and variable == "V":
+            # El volumen es geometria del reactor, no estado de ninguna
+            # corriente. Se crea aqui, solo si se da: una variable que
+            # nadie usa y nadie determina ensuciaria el recuento.
+            v = m.variable(f"{bid}.V") or m._nueva_variable(bid, "V")
+            if f"{bid}.V" in vistas:
+                anterior, valor_anterior = vistas[f"{bid}.V"]
+                m.avisar(
+                    codigos.LAB_ESPECIFICACION_DUPLICADA, "error",
+                    f"El volumen de {bid!r} se fija dos veces: {valor_anterior:g} m3 "
+                    f"desde {anterior}, y {valor:g} m3 desde {etiqueta}.",
+                    "Una variable canonica se fija una sola vez.",
+                    bloques=[bid], variables=[v.id],
+                )
+                continue
+            v.imponer(valor, f"{fuente}: volumen del reactor")
+            vistas[f"{bid}.V"] = (etiqueta, valor)
+            continue
+
         if tipo in PIEZAS_VOLUMEN and variable == "T":
             salidas = m._salidas_de[bid]
             destino = salidas[0]["hacia"]
@@ -1217,8 +1682,8 @@ def _aplicar_especificaciones(m, peticion, bloques):
             m.avisar(
                 codigos.LAB_ESPECIFICACION_DUPLICADA, "error",
                 f"La variable {vid!r} se fija dos veces: {valor_anterior:g} "
-                f"{UNIDAD_SI[variable]} desde {anterior}, y {valor:g} "
-                f"{UNIDAD_SI[variable]} desde {etiqueta}."
+                f"{UNIDAD_SI[magnitud_de(variable)]} desde {anterior}, y {valor:g} "
+                f"{UNIDAD_SI[magnitud_de(variable)]} desde {etiqueta}."
                 + ("" if coinciden else " Y los dos valores no coinciden."),
                 "Una especificacion pertenece a una variable canonica y se fija una "
                 "sola vez. " + (
@@ -1276,7 +1741,7 @@ def _construir_relaciones(m, bloques):
         estado = m.estados[bid]
         j = numero[bid]
 
-        impuestas = [mag for mag in ("F", "T", "p", "x")
+        impuestas = [mag for mag in ("F", "T", "p") + nombres_composicion(m.n)
                      if estado[mag].impuesta]
         if impuestas:
             m.relaciones.append(Relacion(
@@ -1296,21 +1761,43 @@ def _construir_relaciones(m, bloques):
                      "aumentan las ecuaciones.",
             ))
 
-        # El cierre de composicion. Se satisface por la PARAMETRIZACION:
-        # el estado se describe con x y la segunda fraccion es 1-x, asi
-        # que no hay ecuacion que resolver ni residuo que medir.
+        # El cierre de composicion. Con las n fracciones como variables
+        # explicitas, el cierre SI determina una de ellas -- la que no se
+        # dio -- asi que SI es una ecuacion.
+        #
+        # Antes no lo era, y no es que el criterio haya cambiado: el
+        # criterio es el mismo de siempre, **una relacion cuenta si y solo
+        # si determina algo**. Con una sola fraccion en el estado, la
+        # segunda no era una variable sino una expresion, y el cierre no
+        # determinaba nada. Ahora si. Los grados de libertad dan lo mismo
+        # porque han subido a la vez una variable y una ecuacion.
+        nombres_x = nombres_composicion(m.n)
+        # Cuenta como ecuacion solo si DETERMINA una fraccion. Con las n
+        # dadas no calcula nada: comprueba. Contarla entonces daria grados
+        # de libertad negativos en un sistema bien planteado, que es justo
+        # el error que este modulo denuncia en otros sitios.
+        todas_dadas = all(estado[nx].impuesta for nx in nombres_x)
         m.relaciones.append(Relacion(
             id=f"{bid}:cierre",
             tipo="cierre",
             titulo=f"Cierre de composicion en {b.get('nombre') or bid}",
-            latex_general=r"\sum_i x_{i," + str(j) + "} = 1",
-            latex_activo=f"x_{{2,{j}}} = 1 - x_{{1,{j}}}",
+            latex_general=r"\sum_{i=1}^{" + str(m.n) + "} x_{i," + str(j) + "} = 1",
+            latex_activo=(r"\sum_{i=1}^{" + str(m.n) + "} x_{i," + str(j) + "} = 1"),
             origen_bloques=[bid],
-            variables=[estado["x"].id],
-            cuenta_como_ecuacion=False,
-            nota="Se satisface por construccion: el estado binario se parametriza "
-                 "con la fraccion del primer componente. No es una ecuacion que el "
-                 "solver resuelva, asi que no tiene residuo.",
+            variables=[estado[nx].id for nx in nombres_x],
+            cuenta_como_ecuacion=not todas_dadas,
+            metodo="propagacion algebraica",
+            alcance="algebraico_directo",
+            escala="adimensional" if todas_dadas else None,
+            nota=(
+                "Se dieron las n fracciones, asi que el cierre no calcula nada: "
+                "comprueba. Es una redundancia, no una ecuacion independiente, y "
+                "por eso no cuenta. Su residuo SI se mide: una redundancia que no "
+                "cuadra es un dato contradictorio."
+                if todas_dadas else
+                f"Determina la fraccion que no se dio, de las {m.n} que tiene la "
+                "corriente."
+            ),
         ))
 
         # La propiedad. ESTA si se evalua, y es donde entra el modelo.
@@ -1323,7 +1810,8 @@ def _construir_relaciones(m, bloques):
             origen_bloques=[bid],
             origen_conexiones=[c["id"] for c in
                                m._entradas_de[bid] + m._salidas_de[bid]],
-            variables=[estado[k].id for k in ("T", "p", "x", "h")],
+            variables=([estado[k].id for k in ("T", "p", "h")]
+                       + [estado[nx].id for nx in nombres_composicion(m.n)]),
             unidad="J/mol",
             cuenta_como_ecuacion=True,
             metodo=f"{m.modelo}: flash isotermico para determinar la fase, y "
@@ -1380,42 +1868,88 @@ def _construir_relaciones(m, bloques):
                 "termino": "generacion por reaccion",
                 "latex": r"\sum_r \nu_{ir}\dot\xi_r",
                 "supuesto": "sinReaccion",
-                "motivo": "Sin reaccion no hay transformacion de especies.",
+                "motivo": "Sin reaccion no hay transformacion de especies: el "
+                          "supuesto elimina a la vez la produccion, el consumo y "
+                          "los cierres cineticos.",
             })
 
+        reacciones_aqui = [r for r in m.reacciones if r.bloque_id == bid]
+        ids_reaccion = [r.id for r in reacciones_aqui]
+        nombres_x = nombres_composicion(m.n)
+
+        # --- n balances por especie. Son LAS ecuaciones de materia.
+        for i, comp in enumerate(m.componentes):
+            termino_reaccion = ""
+            if reacciones_aqui:
+                partes = []
+                for r in reacciones_aqui:
+                    coef = r.nu[i]
+                    if abs(coef) < 1e-15:
+                        continue
+                    signo = "+" if coef > 0 else "-"
+                    magnitud_coef = (
+                        "" if abs(abs(coef) - 1.0) < 1e-12 else f"{abs(coef):g}\\,")
+                    partes.append(
+                        f" {signo} {magnitud_coef}\\dot\\xi_{{{r.id}}}")
+                termino_reaccion = "".join(partes)
+
+            m.relaciones.append(Relacion(
+                id=f"{bid}:materia_especie_{i}",
+                tipo="balance",
+                titulo=f"Conservacion de {comp} · {nombre}",
+                latex_general=(r"\frac{dn_i}{dt} = \sum_{in} F x_i "
+                               r"- \sum_{out} F x_i + \sum_r \nu_{ir}\dot\xi_r"),
+                latex_activo=(f"F_{{{jo}}} x_{{{i + 1},{jo}}} = "
+                              f"F_{{{ji}}} x_{{{i + 1},{ji}}}{termino_reaccion}"),
+                terminos_descartados=descartados_materia,
+                origen_bloques=[bid, entrada, salida],
+                origen_conexiones=cx,
+                variables=[e_in["F"].id, e_in[nombres_x[i]].id,
+                           e_out["F"].id, e_out[nombres_x[i]].id],
+                unidad="mol/s",
+                cuenta_como_ecuacion=True,
+                metodo="propagacion algebraica",
+                alcance="algebraico_directo",
+                nota=(
+                    f"Una ecuacion por especie. El avance de "
+                    f"{', '.join(ids_reaccion)} entra con su coeficiente "
+                    "estequiometrico: positivo produce, negativo consume."
+                    if reacciones_aqui else
+                    "Una ecuacion por especie. Sin reaccion, junto con el cierre, "
+                    "da la composicion de salida igual a la de entrada."
+                ),
+            ))
+
+        # --- el balance TOTAL, que NO es independiente.
+        #
+        # Es la suma de los n balances por especie. Contarlo como ecuacion
+        # regalaria una ecuacion -- el mismo error que contar la
+        # verificacion global de energia. Y como suma, sirve de
+        # comprobacion: si los n se aplicaron bien, el total cuadra.
+        suma_nu = ([f" + {s_:g}\\,\\dot\\xi_{{{r.id}}}"
+                    for r, s_ in ((r, float(r.nu.sum())) for r in reacciones_aqui)
+                    if abs(s_) > 1e-15])
         m.relaciones.append(Relacion(
             id=f"{bid}:materia_total",
-            tipo="balance",
-            titulo=f"Conservacion de materia · {nombre}",
+            tipo="verificacion",
+            titulo=f"Conservacion de materia total · {nombre}",
             latex_general=(r"\frac{dn}{dt} = \sum_{in} F - \sum_{out} F "
-                           r"+ \sum_r \sum_i \nu_{ir}\dot\xi_r"),
-            latex_activo=f"F_{{{jo}}} = F_{{{ji}}}",
+                           r"+ \sum_r \left(\sum_i \nu_{ir}\right)\dot\xi_r"),
+            latex_activo=f"F_{{{jo}}} = F_{{{ji}}}" + "".join(suma_nu),
             terminos_descartados=descartados_materia,
             origen_bloques=[bid, entrada, salida],
             origen_conexiones=cx,
             variables=[e_in["F"].id, e_out["F"].id],
             unidad="mol/s",
-            cuenta_como_ecuacion=True,
-            metodo="propagacion algebraica",
-            alcance="algebraico_directo",
-        ))
-        m.relaciones.append(Relacion(
-            id=f"{bid}:materia_especie",
-            tipo="balance",
-            titulo=f"Conservacion por especie · {nombre}",
-            latex_general=(r"\frac{dn_i}{dt} = \sum_{in} F x_i - \sum_{out} F x_i "
-                           r"+ \sum_r \nu_{ir}\dot\xi_r"),
-            latex_activo=f"F_{{{jo}}} x_{{1,{jo}}} = F_{{{ji}}} x_{{1,{ji}}}",
-            terminos_descartados=descartados_materia,
-            origen_bloques=[bid, entrada, salida],
-            origen_conexiones=cx,
-            variables=[e_in["F"].id, e_in["x"].id, e_out["F"].id, e_out["x"].id],
-            unidad="mol/s",
-            cuenta_como_ecuacion=True,
-            metodo="propagacion algebraica",
-            alcance="algebraico_directo",
-            nota="Una relacion por especie independiente. En un binario sin reaccion, "
-                 "junto con el balance total, da x de salida igual a x de entrada.",
+            escala="relativa al caudal de entrada",
+            cuenta_como_ecuacion=False,
+            nota=(
+                "Suma de los balances por especie, asi que no anade informacion al "
+                "sistema. Se mide porque es la comprobacion de que se aplicaron "
+                "bien. OJO: el caudal molar total PUEDE cambiar con reaccion -- "
+                "sum(nu) no tiene por que ser cero -- y eso no viola nada; lo que "
+                "no cambia nunca es la masa."
+            ),
         ))
 
         # Energia. Aqui esta el termino que de verdad decide el problema.
@@ -1454,10 +1988,33 @@ def _construir_relaciones(m, bloques):
 
         terminos_q = [] if s["adiabatico"] else [f"\\dot Q_{{{numero[c['desde']]}}}"
                                                  for c in calores]
+        # El calor de reaccion. Entra EXPLICITAMENTE porque la referencia
+        # de entalpia de este motor es sensible: no incluye las entalpias
+        # de formacion. Si algun dia hubiera una referencia que si las
+        # incluyera, el termino NO debe aparecer -- estaria ya dentro de
+        # h -- y por eso la decision cuelga de la referencia y no de que
+        # haya reaccion.
+        incluye_formacion = REFERENCIAS[m.referencia]["incluye_formacion"]
+        termino_rxn = ""
+        if reacciones_aqui and not incluye_formacion:
+            termino_rxn = "".join(
+                f" - \\dot\\xi_{{{r.id}}}\\,\\Delta H_{{rxn,{r.id}}}"
+                for r in reacciones_aqui)
         latex_activo = (" + ".join(terminos_q + [f"F_{{{ji}}} h_{{{ji}}}"])
+                        + termino_rxn
                         + f" = F_{{{jo}}} h_{{{jo}}}")
         variables_energia = [e_in["F"].id, e_in["h"].id, e_out["F"].id, e_out["h"].id]
         variables_energia += [f"{c['desde']}.Q" for c in calores] if not s["adiabatico"] else []
+
+        if reacciones_aqui and incluye_formacion:
+            descartados_energia.append({
+                "termino": "calor de reaccion explicito",
+                "latex": r"\sum_r \dot\xi_r \Delta H_{rxn,r}",
+                "supuesto": f"referencia {m.referencia}",
+                "motivo": "La referencia de entalpia YA incluye las entalpias de "
+                          "formacion, asi que el calor de reaccion esta dentro de h. "
+                          "Sumarlo aparte lo contaria dos veces.",
+            })
 
         m.relaciones.append(Relacion(
             id=f"{bid}:energia",
@@ -1518,7 +2075,9 @@ def _construir_relaciones(m, bloques):
             id="global:energia",
             tipo="verificacion",
             titulo="Cierre global de energia",
-            latex_general=r"\sum_j \dot Q_j = F\,(h_{salida} - h_{entrada})",
+            latex_general=(
+                r"\sum_j \dot Q_j = F_{salida} h_{salida} - F_{entrada} h_{entrada}"
+                r" + \sum_r \dot\xi_r \Delta H_{rxn,r}"),
             origen_bloques=[entrada, salida] + todos_los_calores + list(m.volumenes),
             variables=([f"{q}.Q" for q in todos_los_calores]
                        + [m.estados[entrada]["h"].id, m.estados[salida]["h"].id]),
@@ -1664,7 +2223,7 @@ def _estado_completo(m, bloque_id, T, x):
     comun -- liquido subenfriado -- se corta en la comprobacion de burbuja
     y cuesta una sola llamada a UNIFAC.
     """
-    z = np.array([x, 1.0 - x], dtype=float)
+    z = np.asarray(x, dtype=float)
     return m.flash.isotermico(float(T), m.presion, z)
 
 
@@ -1703,33 +2262,110 @@ def resolver(peticion):
 
             # --- el estado de entrada
             if e_in["h"].valor is None:
-                T_in, x_in = e_in["T"].valor, e_in["x"].valor
+                T_in = e_in["T"].valor
+                x_in = _cerrar_composicion(m, entrada)
                 if T_in is None or x_in is None or e_in["F"].valor is None:
                     raise ErrorDeDatos(
                         f"La corriente que entra a {nombre!r} no tiene su estado "
-                        "completo (F, T y x).",
+                        "completo (F, T y la composicion).",
                         codigo=codigos.LAB_FALTA_ESPECIFICACION,
                     )
                 r_in = _estado_completo(m, entrada, T_in, x_in)
                 e_in["h"].valor = r_in["h"]
                 e_in["h"].procedencia = (
-                    f"h({T_in:.6g} K, {m.presion:.6g} Pa, x={x_in:.6g}) con "
-                    f"{m.modelo}; fase {r_in['fase']}"
+                    f"h({T_in:.6g} K, {m.presion:.6g} Pa, "
+                    f"x={_fmt_x(x_in)}) con {m.modelo}; fase {r_in['fase']}"
                 )
                 _marcar_entalpia(m, entrada, r_in)
 
-            F = e_in["F"].valor
+            F_in = e_in["F"].valor
             h_in = e_in["h"].valor
+            # Ya cerrada arriba si hizo falta; _cerrar_composicion es
+            # idempotente, asi que esto solo lee.
+            x_in = _cerrar_composicion(m, entrada)
+            if x_in is None:
+                raise ErrorDeDatos(
+                    f"La corriente que entra a {nombre!r} no tiene su composicion "
+                    "determinada.",
+                    codigo=codigos.LAB_FALTA_ESPECIFICACION,
+                )
+            F_i_in = F_in * x_in
 
-            # --- balances de materia: propagacion algebraica
-            e_out["F"].valor = F
-            e_out["F"].procedencia = f"balance de materia de {nombre!r}"
-            e_out["x"].valor = e_in["x"].valor
-            e_out["x"].procedencia = f"balance por especie de {nombre!r}"
+            # --- los balances por especie, CON reaccion
+            #
+            # Se trabaja con caudales por especie y no con fracciones,
+            # porque el balance es lineal en F_i y no en x_i: con reaccion
+            # el caudal total cambia, y una ecuacion escrita en fracciones
+            # arrastraria ese cambio a todos los terminos.
+            reacciones_aqui = [r for r in m.reacciones if r.bloque_id == bid]
+            avance = np.zeros(m.n, dtype=float)
+            for r in reacciones_aqui:
+                avance = avance + r.fuente_neta()
+            F_i_out = F_i_in + avance
+
+            # Un caudal de especie negativo significa que la tasa consume
+            # mas de lo que entra. No es un error numerico: es un dato
+            # imposible, y presentarlo como resultado daria composiciones
+            # negativas que parecen numeros.
+            negativas = [i for i in range(m.n) if F_i_out[i] < -1e-12 * max(F_in, 1.0)]
+            if negativas:
+                detalle = ", ".join(
+                    f"{m.componentes[i]}: entra {F_i_in[i]:.6g} y la reaccion "
+                    f"consume {-avance[i]:.6g} mol/s"
+                    for i in negativas)
+                raise ErrorFisico(
+                    f"{nombre!r}: la tasa especificada consume mas de lo que entra "
+                    f"({detalle}). El avance no cabe en la alimentacion.",
+                    codigo=codigos.LAB_CAUDAL_ESPECIE_NEGATIVO,
+                    equipo=bid,
+                )
+
+            F_out = float(np.sum(F_i_out))
+            if F_out <= 0:
+                raise ErrorFisico(
+                    f"{nombre!r}: el caudal de salida sale {F_out:.6g} mol/s.",
+                    codigo=codigos.LAB_CAUDAL_ESPECIE_NEGATIVO, equipo=bid,
+                )
+            x_out = F_i_out / F_out
+
+            e_out["F"].valor = F_out
+            e_out["F"].procedencia = (
+                f"suma de los balances por especie de {nombre!r}"
+                + (f" (el avance de {', '.join(r.id for r in reacciones_aqui)} "
+                   f"cambia el caudal total en {F_out - F_in:+.6g} mol/s)"
+                   if reacciones_aqui else "")
+            )
+            m.fijar_composicion(
+                salida, x_out,
+                f"balances por especie de {nombre!r}"
+                + (" con el avance de la reaccion" if reacciones_aqui else ""))
+            # El cierre de la salida lo satisface la normalizacion
+            # x_i = F_i / sum(F_j). Se marca aqui, donde de verdad ocurre:
+            # dejarlo sin ejecutar diria que el sistema tiene una ecuacion
+            # que no se uso.
+            _relacion(m, f"{salida}:cierre").ejecutar(
+                nota=f"lo satisface la normalizacion x_i = F_i / {F_out:.6g}: la "
+                     "composicion sale de los balances por especie, asi que suma 1 "
+                     "por construccion y no hay residuo que medir",
+            )
+            for i in range(m.n):
+                _relacion(m, f"{bid}:materia_especie_{i}").ejecutar(
+                    nota=(f"F_{i} de salida = {F_i_out[i]:.6g} mol/s "
+                          f"(entra {F_i_in[i]:.6g}, reaccion {avance[i]:+.6g})")
+                    if reacciones_aqui else
+                    "Sin reaccion, el caudal de esta especie se propaga.")
+
+            # El balance total: SUMA de los por especie, asi que se MIDE
+            # en vez de resolverse.
+            residuo_total = abs(F_out - (F_in + float(np.sum(avance))))
+            escala_total = max(abs(F_in), abs(F_out), 1.0)
             _relacion(m, f"{bid}:materia_total").ejecutar(
-                nota="F se propaga: una entrada, una salida y sin reaccion.")
-            _relacion(m, f"{bid}:materia_especie").ejecutar(
-                nota="Con F conservado, la composicion de salida iguala la de entrada.")
+                residuo=residuo_total / escala_total,
+                nota=(f"F pasa de {F_in:.6g} a {F_out:.6g} mol/s; la suma de los "
+                      f"coeficientes por el avance da {float(np.sum(avance)):+.6g} "
+                      "mol/s"),
+            )
+            F = F_in
 
             modo = modos.get(bid)
             calores = [c for c in m._fuentes
@@ -1737,21 +2373,47 @@ def resolver(peticion):
             v_Q = m.variable(f"{calores[0]['desde']}.Q") if calores else None
             rel_energia = _relacion(m, f"{bid}:energia")
 
+            # El calor de reaccion. Se suma SOLO si la referencia de
+            # entalpia no incluye las entalpias de formacion -- si las
+            # incluyera, ya estaria dentro de h y sumarlo lo contaria dos
+            # veces. La decision cuelga de la referencia, no de que haya
+            # reaccion.
+            calor_rxn = 0.0
+            if reacciones_aqui and not REFERENCIAS[m.referencia]["incluye_formacion"]:
+                if not hasattr(m, "_dH_rxn"):
+                    try:
+                        m._dH_rxn = est.entalpias_de_reaccion(m.proveedor, m.reacciones)
+                    except ErrorDeDatos as e:
+                        raise ErrorDeDatos(
+                            str(e), codigo=e.codigo, equipo=bid) from e
+                calor_rxn = est.calor_de_reaccion(reacciones_aqui, m._dH_rxn)
+                m.avisar(
+                    codigos.LAB_INFO_CALOR_REACCION, "informacion",
+                    f"{nombre!r}: el calor de reaccion aporta {-calor_rxn:+.6g} W al "
+                    f"balance (suma de xi dH_rxn = {calor_rxn:+.6g} W). La referencia "
+                    f"{m.referencia!r} es SENSIBLE: no incluye las entalpias de "
+                    "formacion, asi que el termino va explicito y no esta duplicado.",
+                    None, categoria="informacion",
+                    bloques=[bid], variables=[e_out["h"].id],
+                )
+
             if modo == "temperatura":
                 # Evaluacion directa: ninguna iteracion, ningun residuo.
                 T_out = e_out["T"].valor
-                r_out = _estado_completo(m, salida, T_out, e_out["x"].valor)
+                r_out = _estado_completo(m, salida, T_out, x_out)
                 e_out["h"].valor = r_out["h"]
                 e_out["h"].procedencia = (
-                    f"h({T_out:.6g} K, {m.presion:.6g} Pa, x={e_out['x'].valor:.6g}) "
+                    f"h({T_out:.6g} K, {m.presion:.6g} Pa, x={_fmt_x(x_out)}) "
                     f"con {m.modelo}; fase {r_out['fase']}"
                 )
                 _marcar_entalpia(m, salida, r_out)
-                Q = F * (r_out["h"] - h_in)
+                Q = F_out * r_out["h"] - F_in * h_in + calor_rxn
                 if v_Q is not None:
                     v_Q.valor = Q
                     v_Q.procedencia = (
-                        f"balance de energia de {nombre!r}: Q = F (h_salida - h_entrada)"
+                        f"balance de energia de {nombre!r}: "
+                        "Q = F_sal h_sal - F_ent h_ent"
+                        + (" + sum(xi dH_rxn)" if calor_rxn else "")
                     )
                 rel_energia.metodo = "evaluacion algebraica directa"
                 rel_energia.alcance = "algebraico_directo"
@@ -1759,25 +2421,27 @@ def resolver(peticion):
                     nota="Se despeja Q de la ecuacion, asi que se satisface por "
                          "construccion: no hay residuo que medir ni iteracion que "
                          "contar. Presentar un residuo de 1e-11 aqui seria presentar "
-                         "el error de redondeo como si fuera una convergencia.",
+                         "el error de redondeo como si fuera una convergencia."
+                         + (f" El calor de reaccion aporta {calor_rxn:+.6g} W."
+                            if calor_rxn else ""),
                 )
                 alcances.add("algebraico_directo")
 
             elif modo == "calor":
                 # Inversion escalar: h objetivo conocido, se busca T.
                 Q = v_Q.valor
-                h_objetivo = h_in + Q / F
+                # Con reaccion, F de salida NO es F de entrada, asi que la
+                # entalpia objetivo se divide por el caudal que de verdad
+                # sale. Usar el de entrada daria una temperatura
+                # plausible y equivocada.
+                h_objetivo = (F_in * h_in + Q - calor_rxn) / F_out
                 try:
-                    r_out = m.flash.a_entalpia(
-                        m.presion,
-                        np.array([e_out["x"].valor, 1.0 - e_out["x"].valor], dtype=float),
-                        h_objetivo,
-                    )
+                    r_out = m.flash.a_entalpia(m.presion, x_out, h_objetivo)
                 except ValueError as e:
                     raise ErrorFisico(
-                        f"{nombre!r}: con Q = {Q:g} W y F = {F:g} mol/s la entalpia "
-                        f"de salida ({h_objetivo:.6g} J/mol) cae fuera del dominio "
-                        f"del modelo. {e}",
+                        f"{nombre!r}: con Q = {Q:g} W y F = {F_out:g} mol/s la "
+                        f"entalpia de salida ({h_objetivo:.6g} J/mol) cae fuera del "
+                        f"dominio del modelo. {e}",
                         codigo=codigos.LAB_FUERA_DE_DOMINIO_TERMODINAMICO,
                         equipo=bid,
                     ) from e
@@ -1787,7 +2451,11 @@ def resolver(peticion):
                     f"inversion de h(T) en {nombre!r}: h_salida = h_entrada + Q/F"
                 )
                 e_out["h"].valor = r_out["h"]
-                e_out["h"].procedencia = f"h_entrada + Q/F en {nombre!r}"
+                e_out["h"].procedencia = (
+                    f"(F_ent h_ent + Q"
+                    + (" - sum(xi dH_rxn)" if calor_rxn else "")
+                    + f") / F_sal en {nombre!r}"
+                )
                 _marcar_entalpia(m, salida, r_out)
 
                 # El residuo de la inversion, MEDIDO: la entalpia del
@@ -1823,6 +2491,48 @@ def resolver(peticion):
                 raise ErrorDeDatos(
                     f"{nombre!r} no tiene modo termico resuelto.",
                     codigo=codigos.LAB_FALTA_ESPECIFICACION,
+                )
+
+            # --- las fuentes del volumen: G, C y el neto por especie.
+            #
+            # Se DERIVAN de la estequiometria y de las tasas. No son dos
+            # incognitas mas por especie: con n especies serian 2n
+            # variables nuevas y el problema quedaria indeterminado.
+            if reacciones_aqui:
+                m._fuentes_por_volumen = getattr(m, "_fuentes_por_volumen", {})
+                m._fuentes_por_volumen[bid] = est.fuentes_del_volumen(
+                    reacciones_aqui, m.n, m.componentes)
+
+                # Y la conservacion, MEDIDA sobre los caudales resueltos.
+                # Es independiente de haber validado la estequiometria:
+                # aquello comprueba que la reaccion tenga sentido, esto
+                # que el balance se haya aplicado bien.
+                medida = est.conservacion_medida(
+                    F_i_in, F_i_out, m._elementos, m._A, m._mw)
+                m._conservacion = getattr(m, "_conservacion", {})
+                m._conservacion[bid] = medida
+                peor = max(medida["residuo_elemental_maximo"],
+                           medida["masa"]["residuo_relativo"])
+                if peor > TOLERANCIA_CONSERVACION:
+                    raise ErrorNumerico(
+                        f"{nombre!r}: el balance no conserva los elementos o la "
+                        f"masa (residuo relativo {peor:.3e}, tolerancia "
+                        f"{TOLERANCIA_CONSERVACION:.0e}). La estequiometria se "
+                        "valido, asi que el fallo esta en como se aplico el "
+                        "balance -- es un fallo del motor, no de los datos.",
+                        codigo=codigos.LAB_CONSERVACION_NO_MEDIDA,
+                        equipo=bid,
+                    )
+                m.avisar(
+                    codigos.LAB_INFO_CONSERVACION, "informacion",
+                    f"{nombre!r}: elementos y masa conservados (residuo relativo "
+                    f"maximo {peor:.3e}). El caudal molar pasa de "
+                    f"{medida['caudal_molar']['entra_mol_s']:.6g} a "
+                    f"{medida['caudal_molar']['sale_mol_s']:.6g} mol/s"
+                    + (" -- cambia, y eso es correcto: sum(nu) no es cero."
+                       if medida["caudal_molar"]["cambia"] else "."),
+                    None, categoria="informacion",
+                    bloques=[bid, entrada, salida],
                 )
 
             m.avisar(
@@ -1883,6 +2593,95 @@ def _relacion(m, id):
     raise KeyError(id)
 
 
+def _fmt_x(x):
+    """La composicion para un mensaje, corta y legible."""
+    return "[" + ", ".join(f"{v:.6g}" for v in np.asarray(x)) + "]"
+
+
+def _cerrar_composicion(m, bloque_id):
+    """
+    Las n fracciones de una corriente, cerrando la que falte.
+
+    Tres caminos, y la diferencia entre ellos esta en si el valor fue
+    IMPUESTO o CALCULADO -- no en si esta presente. Confundir las dos
+    cosas llevaba a medir el residuo de 1 - (1 - x), que es cero por
+    construccion y no comprueba nada.
+
+      * ya resuelta antes: se devuelven los valores y no se vuelve a
+        tocar la relacion. La funcion es idempotente a proposito, porque
+        el solver mira la entrada de cada volumen y una corriente
+        intermedia es entrada de uno y salida de otro.
+      * las n IMPUESTAS: el cierre no calcula, comprueba. El residuo se
+        mide y una suma que no da 1 es un dato contradictorio.
+      * una sin imponer: el cierre la determina. Sin residuo, porque se
+        satisface por construccion.
+
+    Si faltan dos o mas por imponer y nadie las ha calculado, no hay nada
+    que cerrar: se devuelve None. Repartir la diferencia a partes iguales
+    seria inventar una composicion.
+    """
+    variables = m.composicion(bloque_id)
+    rel = _relacion(m, f"{bloque_id}:cierre")
+
+    if rel.ejecutada:
+        valores = [v.valor for v in variables]
+        if any(v is None for v in valores):
+            return None
+        return np.array(valores, dtype=float)
+
+    sin_imponer = [v for v in variables if not v.impuesta]
+
+    if not sin_imponer:
+        # Las n dadas: el cierre comprueba en vez de calcular, y por eso
+        # SI tiene residuo. Es la unica rama donde medirlo significa algo.
+        suma = sum(v.valor for v in variables)
+        if abs(suma - 1.0) > 1e-9:
+            raise ErrorDeDatos(
+                f"Las {len(variables)} fracciones de {bloque_id!r} suman "
+                f"{suma:.9g} y no 1. Al darlas todas, el cierre deja de calcular "
+                "y pasa a comprobar; esta comprobacion no la pasa.",
+                codigo=codigos.LAB_DATOS_COMPOSICION_INCOMPATIBLE,
+                equipo=bloque_id,
+            )
+        rel.ejecutar(
+            residuo=abs(suma - 1.0),
+            nota="se dieron las n fracciones, asi que el cierre comprueba en vez "
+                 "de calcular; el residuo es lo que le sobra a la suma",
+        )
+        return np.array([v.valor for v in variables], dtype=float)
+
+    if len(sin_imponer) > 1:
+        # Nadie las ha calculado todavia y faltan varias por imponer.
+        if any(v.valor is None for v in variables):
+            return None
+        # Las calculo otro paso (los balances por especie de un volumen
+        # aguas arriba). El cierre se satisface por la normalizacion.
+        rel.ejecutar(
+            nota="la composicion sale de los balances por especie, normalizada por "
+                 "el caudal total: el cierre se satisface por construccion y no "
+                 "hay residuo que medir",
+        )
+        return np.array([v.valor for v in variables], dtype=float)
+
+    # Exactamente una sin imponer: el cierre la determina.
+    pendiente = sin_imponer[0]
+    resto = sum(v.valor for v in variables if v is not pendiente)
+    valor = 1.0 - resto
+    if valor < -1e-9 or valor > 1.0 + 1e-9:
+        raise ErrorFisico(
+            f"El cierre de composicion de {bloque_id!r} da "
+            f"{pendiente.id} = {valor:.6g}, fuera de [0, 1]: las fracciones "
+            f"dadas suman {resto:.6g}.",
+            codigo=codigos.LAB_FRACCION_INVALIDA, equipo=bloque_id,
+        )
+    pendiente.valor = min(max(valor, 0.0), 1.0)
+    pendiente.procedencia = (
+        f"cierre de composicion: 1 menos la suma de las otras {len(variables) - 1}"
+    )
+    rel.ejecutar(nota=f"determina {pendiente.id} = {pendiente.valor:.6g}")
+    return np.array([v.valor for v in variables], dtype=float)
+
+
 def _marcar_entalpia(m, bloque_id, resultado_flash):
     """Marca la constitutiva como ejecutada y guarda la fase medida."""
     rel = _relacion(m, f"{bloque_id}:entalpia")
@@ -1916,16 +2715,30 @@ def _cerrar(m, analisis, alcances, iteraciones, residuos):
         primero, ultimo = m.volumenes[0], m.volumenes[-1]
         entrada = m._entradas_de[primero][0]["desde"]
         salida = m._salidas_de[ultimo][0]["hacia"]
-        F = m.estados[entrada]["F"].valor
         suma_Q = sum(v.valor for v in m.variables.values()
                      if v.magnitud == "Q" and v.valor is not None)
-        esperado = F * (m.estados[salida]["h"].valor - m.estados[entrada]["h"].valor)
-        escala = max(abs(suma_Q), abs(esperado), 1.0)
+        # El transporte, con los caudales de VERDAD: con reaccion el de
+        # salida no es el de entrada, asi que no hay un F que multiplique
+        # a las dos entalpias.
+        transporte = (m.estados[salida]["F"].valor * m.estados[salida]["h"].valor
+                      - m.estados[entrada]["F"].valor * m.estados[entrada]["h"].valor)
+        # Y el calor de reaccion de TODO el montaje. Al sumar los balances
+        # por volumen los estados intermedios se cancelan --la salida de
+        # uno es la entrada del siguiente, y es LA MISMA variable-- pero
+        # los terminos de reaccion no: se acumulan.
+        calor_rxn_total = 0.0
+        if m.reacciones and not REFERENCIAS[m.referencia]["incluye_formacion"]:
+            calor_rxn_total = est.calor_de_reaccion(m.reacciones, m._dH_rxn)
+        esperado = transporte + calor_rxn_total
+        escala = max(abs(suma_Q), abs(esperado), abs(transporte), 1.0)
         residuo_global = abs(suma_Q - esperado) / escala
         rel.ejecutar(
             residuo=residuo_global,
-            nota=(f"suma de calores {suma_Q:.6f} W frente a F (h_salida - h_entrada) "
-                  f"= {esperado:.6f} W"),
+            nota=(f"suma de calores {suma_Q:.6f} W frente a "
+                  f"F_sal h_sal - F_ent h_ent = {transporte:.6f} W"
+                  + (f" mas el calor de reaccion de todo el montaje "
+                     f"{calor_rxn_total:+.6f} W" if calor_rxn_total else "")
+                  + f", total esperado {esperado:.6f} W"),
         )
         if residuo_global > TOLERANCIA_CIERRE:
             # Un cierre que no cuadra no es un problema de los datos: los
@@ -2025,16 +2838,48 @@ def _respuesta(m, analisis, estado, convergencia):
     diagnosticos = sorted(m.diagnosticos,
                           key=lambda d: (orden.get(d.severidad, 3), d.codigo))
     estados = {}
+    nombres_x = nombres_composicion(m.n)
     for bid, estado_bloque in m.estados.items():
+        F = estado_bloque["F"].valor
+        fracciones = [estado_bloque[nx].valor for nx in nombres_x]
+        # Los caudales por especie. El contrato los pide y son DERIVADOS:
+        # F_i = F x_i. No son variables del sistema -- declararlos como
+        # tales anadiria n incognitas y n ecuaciones que se cancelan y
+        # ensuciaria el recuento -- pero si son lo que hace falta para
+        # comprobar la conservacion de elementos y de masa.
+        por_especie = [
+            {
+                "componente": m.componentes[i],
+                "x": fracciones[i],
+                "F_i": (None if F is None or fracciones[i] is None
+                        else float(F * fracciones[i])),
+                "unidad_F_i": "mol/s",
+            }
+            for i in range(m.n)
+        ]
         estados[bid] = {
             "fase": estado_bloque.get("fase"),
             "beta": estado_bloque.get("beta"),
-            **{k: estado_bloque[k].valor for k in ("F", "T", "p", "x", "h")},
+            "F": F,
+            "T": estado_bloque["T"].valor,
+            "p": estado_bloque["p"].valor,
+            "h": estado_bloque["h"].valor,
+            # 'x' se conserva en los binarios por compatibilidad: es la
+            # fraccion del primer componente, igual que antes.
+            "x": fracciones[0] if m.n == 2 else None,
+            "composicion": fracciones,
+            "por_especie": por_especie,
+            "nota_F_i": "F_i = F x_i, derivado. No es una variable del sistema: "
+                        "declararlo como tal anadiria n incognitas y n ecuaciones "
+                        "que se cancelan.",
         }
     return {
         "schema_version": SCHEMA_VERSION,
         "estado": estado,
         "componentes": list(m.componentes),
+        "reacciones": [r.como_diccionario(m.componentes) for r in m.reacciones],
+        "fuentes_por_volumen": getattr(m, "_fuentes_por_volumen", {}),
+        "conservacion": getattr(m, "_conservacion", {}),
         "modelo_termodinamico": m.modelo,
         "referencia_entalpia": m.referencia,
         "presion_sistema": m.presion,
@@ -2080,12 +2925,33 @@ def capacidades():
     return {
         "schema_version": SCHEMA_VERSION,
         "modelos_termodinamicos": list(MODELOS_DISPONIBLES),
-        "referencias_entalpia": list(REFERENCIAS_DISPONIBLES),
-        "componentes": "cualquier par admitido por el proveedor UNIFAC "
+        "referencias_entalpia": {
+            nombre: dict(datos) for nombre, datos in REFERENCIAS.items()
+        },
+        "aviso_referencia": (
+            "`incluye_formacion` decide si el balance de energia lleva el termino de "
+            "calor de reaccion. Con una referencia SENSIBLE las entalpias de "
+            "formacion no estan en h, asi que el termino va explicito; con una que "
+            "las incluyera, ya estaria dentro y sumarlo lo contaria dos veces. La "
+            "respuesta dice en `terminos_descartados` cual de los dos casos aplico."
+        ),
+        "componentes": "los que el proveedor UNIFAC admita "
                        "(consulta /componentes/buscar)",
-        "numero_de_componentes": 2,
+        "numero_de_componentes": {
+            "minimo": 2, "maximo": MAX_COMPONENTES,
+            "nota": "El orden importa: 'x0' es la fraccion del primero. 'x' a secas "
+                    "se admite como alias de 'x0' SOLO en binarios, porque con tres "
+                    "especies no identifica ninguna.",
+        },
         "piezas": dict(PIEZAS),
-        "variables_por_pieza": {k: list(v) for k, v in VARIABLES_POR_PIEZA.items()},
+        "variables_por_pieza": {
+            tipo: {
+                "binario": list(variables_de_pieza(tipo, 2)),
+                "n_componentes": list(variables_de_pieza(tipo, 3)) + ["... x{n-1}"]
+                if tipo == "entrada" else list(variables_de_pieza(tipo, 3)),
+            }
+            for tipo in PIEZAS
+        },
         "unidades": {
             **{k: sorted(v) for k, v in UNIDADES.items()},
             "T": sorted(UNIDADES_TEMPERATURA),
@@ -2104,10 +2970,57 @@ def capacidades():
                           "misma variable son un error, tambien si coinciden.",
         },
         "topologias": [
-            "una alimentacion, uno o dos volumenes de control en serie, una salida",
+            "una alimentacion, uno o dos volumenes en serie, una salida",
             "una corriente intermedia entre dos volumenes, con estado unico compartido",
             "una fuente de calor por volumen",
+            "volumenes de tipo 'recipiente' (sin reaccion) o 'reactor' (con una o "
+            "varias reacciones de tasa especificada)",
         ],
+        "reaccion": {
+            "donde": "En un bloque de tipo 'reactor'. La produccion y la "
+                     "desaparicion quimica pertenecen al volumen donde ocurren: no "
+                     "son alimentaciones ficticias.",
+            "convencion_nu": "positivo producto, negativo reactivo. Un mismo evento "
+                             "produce unos componentes y consume otros, y por eso el "
+                             "signo va en el coeficiente y no en la tasa.",
+            "formas_de_declarar_la_tasa": {
+                "tasa": "irreversible, una sola direccion. Las brutas se conocen.",
+                "tasa_directa + tasa_inversa": "reversible. Las brutas se conocen. "
+                                               "Las dos son >= 0.",
+                "tasa_neta": "solo el neto. Las brutas NO se conocen y se devuelven "
+                             "como null.",
+            },
+            "bases": {
+                "integrada": sorted(UNIDADES_TASA_INTEGRADA),
+                "volumetrica": sorted(UNIDADES_TASA_VOLUMETRICA),
+                "nota": "La UNIDAD declara la base, que es lo menos ambiguo posible. "
+                        "Una tasa volumetrica necesita el volumen del reactor ('V' "
+                        "como especificacion); si no se da, no se supone 1 m3: se "
+                        "diagnostica.",
+            },
+            "brutas_frente_a_neto": (
+                "La fuente neta NO determina la generacion y el consumo brutos. En "
+                "el equilibrio de una reaccion reversible r+ = r- > 0: el neto es "
+                "cero y las brutas son POSITIVAS. Si solo se da la tasa neta, "
+                "`generacion_bruta` y `consumo_bruto` salen null con su motivo, y "
+                "nunca se rellenan con max(neto, 0) -- eso daria cero generacion en "
+                "una reaccion que esta funcionando a toda velocidad. La "
+                "`descomposicion_neta` SI se ofrece, en un campo aparte y etiquetada "
+                "como lo que es: la descomposicion del neto, no el intercambio bruto."
+            ),
+            "derivadas_no_libres": (
+                "G_i y C_i se DERIVAN de la estequiometria y de las tasas. No son "
+                "dos incognitas mas por especie: con n especies serian 2n variables "
+                "nuevas y el problema quedaria indeterminado."
+            ),
+            "conservacion": (
+                "La estequiometria se valida contra la matriz elemental de 'thermo' "
+                "(A @ nu = 0) y contra la masa (MW @ nu = 0) ANTES de resolver, y "
+                "elementos y masa se MIDEN sobre los caudales resueltos despues. El "
+                "caudal molar total SI puede cambiar: sum(nu) no tiene por que ser "
+                "cero. La masa no cambia nunca."
+            ),
+        },
         "especificacion_termica": {
             "modos": ["temperatura de salida impuesta", "calor impuesto"],
             "excluyentes": True,
@@ -2115,28 +3028,38 @@ def capacidades():
                       "incognitas: fijar una determina la otra.",
         },
         "supuestos_exigidos": {
-            "estacionario": True, "sinTrabajo": True,
-            "sinReaccion": True, "sinMovimiento": True,
+            "estacionario": True, "sinTrabajo": True, "sinMovimiento": True,
             "adiabatico": "libre, pero incompatible con una fuente de calor conectada",
+            "sinReaccion": "libre. En true anula a la vez la produccion, el consumo "
+                           "y los cierres cineticos, y es incompatible con una "
+                           "reaccion declarada. En false exige que cada reactor "
+                           "declare su reaccion: la ausencia de una reaccion "
+                           "declarada no significa que no haya reaccion, significa "
+                           "que al balance por especie le falta un termino.",
         },
         "fases": ["liquido", "bifasico", "vapor"],
         "nota_fases": "La fase se determina con el punto de burbuja y el de rocio; no "
                       "se supone liquida.",
         "no_soportado": [
             "regimen transitorio (dE/dt, dn_i/dt)",
-            "reaccion quimica en el ensamblador de varios volumenes",
+            "cinetica: la tasa tiene que estar especificada. Una tasa que dependa "
+            "de la composicion de salida hace el balance implicito y exige un "
+            "solver acoplado; el CSTR con cinetica sigue en /diagrama/resolver",
+            "equilibrio quimico: el motor no calcula el avance a partir de K",
             "trabajo de eje",
             "energias cinetica y potencial",
             "mas de una alimentacion o mas de una salida por volumen",
-            "mas de dos volumenes",
+            f"mas de dos volumenes, o mas de {MAX_COMPONENTES} componentes",
             "reciclos y ciclos",
             "caida de presion entre volumenes (la presion es uniforme)",
-            "mezclas de mas de dos componentes",
+            "entropia, exergia y potenciales quimicos",
+            "conduccion en solidos, difusion y balances de momento",
             "mallado, CFD y dinamica espacial",
         ],
         "tolerancias": {
             "inversion_h_T": TOLERANCIA_INVERSION,
             "cierre_global": TOLERANCIA_CIERRE,
+            "conservacion_elementos_y_masa": TOLERANCIA_CONSERVACION,
             "nota": "La del cierre global es mas holgada porque es una suma de "
                     "resultados y acumula el redondeo de los dos balances. "
                     "Excederla no significa datos malos: significa un fallo del "
@@ -2145,7 +3068,11 @@ def capacidades():
         "metodos": {
             "temperatura impuesta": "evaluacion algebraica directa, sin iteracion",
             "calor impuesto": "inversion escalar de h(T) con brentq, xtol 1e-10 K",
-            "topologia": "marcha aguas abajo; el sistema es triangular y no se "
-                         "resuelve como sistema acoplado",
+            "materia": "propagacion algebraica de los caudales por especie; con "
+                       "reaccion se suma nu_i xi, que es un dato y no una incognita",
+            "topologia": "marcha aguas abajo; el sistema es triangular -- tambien "
+                         "con reaccion, porque la tasa esta especificada y no "
+                         "depende de la salida -- y no se resuelve como sistema "
+                         "acoplado",
         },
     }

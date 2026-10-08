@@ -43,7 +43,7 @@ sin tocarlos.
 | 12 | [Validación y límites](12-validacion.md) | Qué está comprobado, contra qué, y qué **no** hace el simulador |
 | 13 | [Especificaciones de diseño y barridos](13-especificaciones.md) | La pregunta inversa: pedir el resultado y obtener el dato. Grados de libertad con especificaciones, barridos de sensibilidad |
 | 14 | [Trazabilidad](14-trazabilidad.md) | De dónde sale este número: versión del motor y del proveedor, huella determinista de las entradas, diagnósticos con código estable, y **por qué no se fabrican residuos** |
-| 15 | [El laboratorio](15-laboratorio.md) | De un grafo de piezas a un sistema resuelto: identidad única de la corriente intermedia, qué cuenta como ecuación y qué no, y **por qué el método se declara y no se adorna** |
+| 15 | [El laboratorio](15-laboratorio.md) | De un grafo de piezas a un sistema resuelto: identidad única de la corriente intermedia, qué cuenta como ecuación y qué no, balances por especie con reacción, y **por qué la fuente neta no determina la generación bruta** |
 
 Y, fuera de la numeración, el contrato de la API del laboratorio para quien conecte la interfaz: [ENTREGA_LABORATORIO_CODEX.md](ENTREGA_LABORATORIO_CODEX.md). Los ejemplos exactos de petición y respuesta están en [ejemplos/](ejemplos/), **generados ejecutando el endpoint** y no escritos a mano: uno copiado a mano se queda obsoleto en silencio.
 

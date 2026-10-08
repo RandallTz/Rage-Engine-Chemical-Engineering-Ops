@@ -29,6 +29,11 @@ SUPUESTOS_BASE = {
 
 
 def _cabecera():
+    """
+    La parte comun. Los montajes reactivos sobreescriben `componentes`,
+    `presion_sistema` y `supuestos`: su quimica es otra y su presion de
+    trabajo tambien.
+    """
     return {
         "version": 1,
         "componentes": list(BINARIO),
@@ -208,6 +213,247 @@ def incompatible_t_y_q():
     return modelo
 
 
+# ---------------------------------------------------------------------
+# Los montajes con reaccion.
+#
+# Dos sistemas reales, elegidos porque el proveedor tiene de los dos TODO
+# lo que hace falta --grupos UNIFAC, entalpia de formacion liquida y
+# composicion elemental-- y porque su estequiometria cuadra exacta:
+#
+#   n-butano -> isobutano          isomerizacion, sum(nu) = 0, F constante
+#   2 isobuteno <-> diisobutileno  dimerizacion,  sum(nu) = -1, F baja
+#
+# La presion se sube por encima de 1 atm a proposito: estas especies
+# hierven muy por debajo de la temperatura de trabajo, y a presion
+# atmosferica saldrian en fase vapor. El flash lo detectaria y lo diria
+# --la fase se determina, no se supone-- pero el ejemplo se entiende mejor
+# en liquido.
+# ---------------------------------------------------------------------
+
+def reactor_isomerizacion():
+    """
+    A -> B: n-butano a isobutano, con la tasa especificada.
+
+    El caso mas simple con reaccion. Lo que demuestra: que el consumo de A
+    y la generacion de B son exactamente el avance, que con sum(nu) = 0 el
+    caudal molar NO cambia, y que los elementos y la masa se conservan --
+    medidos sobre los caudales resueltos, no supuestos.
+    """
+    return {
+        **_cabecera(),
+        "componentes": ["n-butane", "isobutane"],
+        "presion_sistema": {"valor": 500000.0, "unidad": "Pa"},
+        "supuestos": {**SUPUESTOS_BASE, "sinReaccion": False},
+        "bloques": [
+            {"id": "in", "tipo": "entrada", "nombre": "Alimentacion de n-butano"},
+            {"id": "rx", "tipo": "reactor", "nombre": "Reactor de isomerizacion"},
+            {"id": "heat", "tipo": "calor", "nombre": "Aporte termico"},
+            {"id": "out", "tipo": "salida", "nombre": "Salida"},
+        ],
+        "conexiones": [
+            {"id": "c1", "desde": "in", "hacia": "rx", "tipo": "materia"},
+            {"id": "c2", "desde": "heat", "hacia": "rx", "tipo": "calor"},
+            {"id": "c3", "desde": "rx", "hacia": "out", "tipo": "materia"},
+        ],
+        "especificaciones": [
+            {"bloque_id": "in", "variable": "F", "valor": 100.0, "unidad": "mol/s"},
+            {"bloque_id": "in", "variable": "T", "valor": 300.0, "unidad": "K"},
+            {"bloque_id": "in", "variable": "x0", "valor": 1.0, "unidad": "mol/mol"},
+            {"bloque_id": "rx", "variable": "T", "valor": 310.0, "unidad": "K"},
+        ],
+        "reacciones": [
+            {"id": "iso", "bloque_id": "rx", "nu": [-1.0, 1.0],
+             "tasa": {"valor": 20.0, "unidad": "mol/s"}},
+        ],
+    }
+
+
+def reactor_volumetrico():
+    """
+    La misma isomerizacion con la tasa en BASE VOLUMETRICA.
+
+    4 mol/(m3 s) en 5 m3 son 20 mol/s, asi que el resultado es identico al
+    del ejemplo anterior. Esta aqui para que se vea la distincion que el
+    contrato pide: la UNIDAD declara la base, y una tasa volumetrica
+    necesita el volumen del reactor. Si no se da, no se supone 1 m3.
+    """
+    modelo = reactor_isomerizacion()
+    modelo["reacciones"] = [
+        {"id": "iso", "bloque_id": "rx", "nu": [-1.0, 1.0],
+         "tasa": {"valor": 4.0, "unidad": "mol/(m3*s)"}},
+    ]
+    modelo["especificaciones"] = modelo["especificaciones"] + [
+        {"bloque_id": "rx", "variable": "V", "valor": 5.0, "unidad": "m3"},
+    ]
+    return modelo
+
+
+def reactor_a_dos_b():
+    """
+    A -> 2B: diisobutileno a isobuteno. El caudal molar CAMBIA.
+
+    Con sum(nu) = +1 y un avance de 10 mol/s, el caudal pasa de 100 a 110.
+    Y la masa no se mueve ni un gramo: es la distincion que el contrato
+    subraya, porque un caudal molar que cambia parece un balance roto y no
+    lo es.
+    """
+    modelo = reactor_isomerizacion()
+    modelo["componentes"] = ["isobutene", "diisobutylene"]
+    modelo["presion_sistema"] = {"valor": 1000000.0, "unidad": "Pa"}
+    modelo["bloques"] = [
+        {**b, "nombre": "Alimentacion de diisobutileno"} if b["id"] == "in"
+        else ({**b, "nombre": "Reactor de craqueo"} if b["id"] == "rx" else b)
+        for b in modelo["bloques"]
+    ]
+    modelo["especificaciones"] = [
+        {"bloque_id": "in", "variable": "F", "valor": 100.0, "unidad": "mol/s"},
+        {"bloque_id": "in", "variable": "T", "valor": 320.0, "unidad": "K"},
+        # x0 es el isobuteno: entra a cero, porque la alimentacion es
+        # dimero puro. Cero es una fraccion perfectamente valida y
+        # significa que esa especie no esta.
+        {"bloque_id": "in", "variable": "x0", "valor": 0.0, "unidad": "mol/mol"},
+        {"bloque_id": "rx", "variable": "T", "valor": 330.0, "unidad": "K"},
+    ]
+    modelo["reacciones"] = [
+        {"id": "crack", "bloque_id": "rx", "nu": [2.0, -1.0],
+         "tasa": {"valor": 10.0, "unidad": "mol/s"}},
+    ]
+    return modelo
+
+
+def reactor_reversible():
+    """
+    Reversible con la direccion INVERSA dominante.
+
+    r+ = 2 y r- = 8, asi que el avance neto es -6: el dimero se craquea
+    neto. Lo que demuestra: que la direccion inversa intercambia
+    produccion y consumo correctamente. El isobuteno se genera a 16 mol/s
+    (2 x r-) y se consume a 4 (2 x r+); el dimero se genera a 2 y se
+    consume a 8.
+    """
+    modelo = reactor_a_dos_b()
+    modelo["especificaciones"] = [
+        e if e["variable"] != "x0" else {**e, "valor": 0.5}
+        for e in modelo["especificaciones"]
+    ]
+    modelo["reacciones"] = [
+        {"id": "dim", "bloque_id": "rx", "nu": [-2.0, 1.0],
+         "tasa_directa": {"valor": 2.0, "unidad": "mol/s"},
+         "tasa_inversa": {"valor": 8.0, "unidad": "mol/s"}},
+    ]
+    return modelo
+
+
+def reactor_en_equilibrio():
+    """
+    EL CASO QUE EL CONTRATO EXIGE: r+ = r- > 0.
+
+    La fuente neta de cada especie es CERO y la generacion y el consumo
+    brutos son POSITIVOS. Las moleculas no estan quietas: estan yendo y
+    viniendo a la misma velocidad.
+
+    Es el ejemplo que desmonta la tentacion de derivar las brutas del
+    neto. Un neto de cero es compatible con una reaccion PARADA
+    (r+ = r- = 0) y con este equilibrio DINAMICO, y nada en la tasa neta
+    distingue los dos casos. Comparalo con `reactor_solo_neta`.
+    """
+    modelo = reactor_reversible()
+    modelo["reacciones"] = [
+        {"id": "dim", "bloque_id": "rx", "nu": [-2.0, 1.0],
+         "tasa_directa": {"valor": 5.0, "unidad": "mol/s"},
+         "tasa_inversa": {"valor": 5.0, "unidad": "mol/s"}},
+    ]
+    return modelo
+
+
+def reactor_solo_neta():
+    """
+    La misma situacion declarada SOLO con la tasa neta.
+
+    El avance neto es cero, igual que en el equilibrio, y la composicion
+    de salida es identica. Pero `generacion_bruta` y `consumo_bruto` salen
+    **null**, con su motivo, porque con este dato no se pueden saber.
+
+    Esta aqui para que la interfaz pueda probar ese camino: null no es
+    cero, y mostrar un cero donde el motor dice "no lo se" seria afirmar
+    que la reaccion esta parada cuando puede estar a toda velocidad.
+    """
+    modelo = reactor_en_equilibrio()
+    modelo["reacciones"] = [
+        {"id": "dim", "bloque_id": "rx", "nu": [-2.0, 1.0],
+         "tasa_neta": {"valor": 0.0, "unidad": "mol/s"}},
+    ]
+    return modelo
+
+
+def dos_reactores_en_serie():
+    """
+    Dos reactores que comparten una corriente intermedia, con reaccion.
+
+    Es el caso 4 de la aceptacion: el estado intermedio NO se duplica. Las
+    seis variables de la corriente (F, T, p, x0, x1 y h) salen con rol
+    'compartida' y citan los dos reactores.
+
+    Y el cierre global de energia incluye el calor de reaccion de TODO el
+    montaje: al sumar los balances por volumen los estados intermedios se
+    cancelan --son la MISMA variable-- pero los terminos de reaccion se
+    acumulan.
+    """
+    return {
+        **_cabecera(),
+        "componentes": ["isobutene", "diisobutylene"],
+        "presion_sistema": {"valor": 1000000.0, "unidad": "Pa"},
+        "supuestos": {**SUPUESTOS_BASE, "sinReaccion": False},
+        "bloques": [
+            {"id": "in", "tipo": "entrada", "nombre": "Alimentacion"},
+            {"id": "rx1", "tipo": "reactor", "nombre": "Primer reactor"},
+            {"id": "h1", "tipo": "calor", "nombre": "Primer aporte termico"},
+            {"id": "medio", "tipo": "corriente", "nombre": "Corriente compartida"},
+            {"id": "rx2", "tipo": "reactor", "nombre": "Segundo reactor"},
+            {"id": "h2", "tipo": "calor", "nombre": "Segundo aporte termico"},
+            {"id": "out", "tipo": "salida", "nombre": "Salida final"},
+        ],
+        "conexiones": [
+            {"id": "c1", "desde": "in", "hacia": "rx1", "tipo": "materia"},
+            {"id": "c2", "desde": "h1", "hacia": "rx1", "tipo": "calor"},
+            {"id": "c3", "desde": "rx1", "hacia": "medio", "tipo": "materia"},
+            {"id": "c4", "desde": "medio", "hacia": "rx2", "tipo": "materia"},
+            {"id": "c5", "desde": "h2", "hacia": "rx2", "tipo": "calor"},
+            {"id": "c6", "desde": "rx2", "hacia": "out", "tipo": "materia"},
+        ],
+        "especificaciones": [
+            {"bloque_id": "in", "variable": "F", "valor": 100.0, "unidad": "mol/s"},
+            {"bloque_id": "in", "variable": "T", "valor": 320.0, "unidad": "K"},
+            {"bloque_id": "in", "variable": "x0", "valor": 1.0, "unidad": "mol/mol"},
+            {"bloque_id": "rx1", "variable": "T", "valor": 330.0, "unidad": "K"},
+            {"bloque_id": "rx2", "variable": "T", "valor": 340.0, "unidad": "K"},
+        ],
+        "reacciones": [
+            {"id": "dim1", "bloque_id": "rx1", "nu": [-2.0, 1.0],
+             "tasa": {"valor": 10.0, "unidad": "mol/s"}},
+            {"id": "dim2", "bloque_id": "rx2", "nu": [-2.0, 1.0],
+             "tasa": {"valor": 15.0, "unidad": "mol/s"}},
+        ],
+    }
+
+
+def estequiometria_invalida():
+    """
+    Una estequiometria que NO conserva los elementos, para probar el
+    camino de error contra un error de verdad.
+
+    nu = [-1, +2] con n-butano e isobutano: salen 8 carbonos de donde
+    entraron 4. Eso no es una reaccion quimica, es un dato mal puesto, y
+    el motor lo dice con el descuadre de cada elemento.
+    """
+    modelo = reactor_isomerizacion()
+    modelo["reacciones"] = [
+        {"id": "mala", "bloque_id": "rx", "nu": [-1.0, 2.0],
+         "tasa": {"valor": 1.0, "unidad": "mol/s"}},
+    ]
+    return modelo
+
+
 EJEMPLOS_LABORATORIO = [
     {
         "id": "un-volumen-temperatura",
@@ -258,6 +504,80 @@ EJEMPLOS_LABORATORIO = [
                        "estado 'invalido' y LAB_ESPECIFICACION_EXCLUYENTE.",
         "estado_esperado": "invalido",
         "modelo": incompatible_t_y_q(),
+    },
+    # --- los reactivos
+    {
+        "id": "reactor-isomerizacion",
+        "nombre": "A -> B: isomerizacion de n-butano",
+        "descripcion": "El caso reactivo mas simple. Consumo de A y generacion de B "
+                       "iguales al avance; con sum(nu) = 0 el caudal molar no "
+                       "cambia; elementos y masa conservados y MEDIDOS.",
+        "estado_esperado": "resuelto",
+        "modelo": reactor_isomerizacion(),
+    },
+    {
+        "id": "reactor-volumetrico",
+        "nombre": "La misma reaccion con la tasa en base volumetrica",
+        "descripcion": "4 mol/(m3 s) en 5 m3 son 20 mol/s: resultado identico al "
+                       "anterior. La UNIDAD declara la base, y una tasa volumetrica "
+                       "necesita el volumen del reactor.",
+        "estado_esperado": "resuelto",
+        "modelo": reactor_volumetrico(),
+    },
+    {
+        "id": "reactor-a-dos-b",
+        "nombre": "A -> 2B: el caudal molar cambia y la masa no",
+        "descripcion": "Craqueo de diisobutileno. El caudal pasa de 100 a 110 mol/s "
+                       "y la masa no se mueve ni un gramo: un caudal molar que "
+                       "cambia parece un balance roto y no lo es.",
+        "estado_esperado": "resuelto",
+        "modelo": reactor_a_dos_b(),
+    },
+    {
+        "id": "reactor-reversible",
+        "nombre": "Reversible con la direccion inversa dominante",
+        "descripcion": "r+ = 2 y r- = 8, avance neto -6. La inversa intercambia "
+                       "produccion y consumo: el isobuteno se genera a 16 y se "
+                       "consume a 4 mol/s.",
+        "estado_esperado": "resuelto",
+        "modelo": reactor_reversible(),
+    },
+    {
+        "id": "reactor-en-equilibrio",
+        "nombre": "Equilibrio dinamico: neto cero, brutas POSITIVAS",
+        "descripcion": "r+ = r- = 5. La fuente neta es cero y las brutas valen 10 y "
+                       "5 mol/s. Es el caso que desmonta derivar las brutas del "
+                       "neto; comparalo con 'reactor-solo-neta'.",
+        "estado_esperado": "resuelto",
+        "modelo": reactor_en_equilibrio(),
+    },
+    {
+        "id": "reactor-solo-neta",
+        "nombre": "La misma situacion con solo la tasa neta (brutas NULL)",
+        "descripcion": "Misma composicion de salida que el equilibrio, pero "
+                       "generacion_bruta y consumo_bruto salen null con su motivo. "
+                       "null no es cero: el dato no esta.",
+        "estado_esperado": "resuelto",
+        "modelo": reactor_solo_neta(),
+    },
+    {
+        "id": "dos-reactores-en-serie",
+        "nombre": "Dos reactores compartiendo la corriente intermedia",
+        "descripcion": "El caso 4 de la aceptacion: el estado intermedio no se "
+                       "duplica. Y el cierre global incluye el calor de reaccion de "
+                       "todo el montaje.",
+        "estado_esperado": "resuelto",
+        "modelo": dos_reactores_en_serie(),
+    },
+    {
+        "id": "estequiometria-invalida",
+        "nombre": "Estequiometria que no conserva los elementos (se rechaza)",
+        "descripcion": "nu = [-1, +2]: salen 8 carbonos de donde entraron 4. "
+                       "Devuelve 200 con estado 'invalido' y "
+                       "LAB_ELEMENTOS_NO_CONSERVADOS, diciendo que elemento "
+                       "descuadra y en cuanto.",
+        "estado_esperado": "invalido",
+        "modelo": estequiometria_invalida(),
     },
 ]
 
