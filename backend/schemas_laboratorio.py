@@ -648,6 +648,217 @@ class CatalogoSustanciasResponse(BaseModel):
     nota: str
 
 
+# =====================================================================
+# Balanceo, equilibrio y lote
+# =====================================================================
+
+class BalancearRequest(BaseModel):
+    """
+    Que reaccion conserva los elementos entre estas especies.
+
+    Es el unico de los tres servicios que NO necesita propiedades
+    termodinamicas: solo la composicion elemental. Por eso admite especies
+    que no sirven para reaccionar --sin entalpia de formacion-- y lo dice
+    en vez de rechazarlas.
+    """
+    componentes: list[str] = Field(max_length=MAX_COMPONENTES)
+    reactivos: list[str] = Field(
+        default_factory=list,
+        description="Opcional. Orienta el SIGNO: la conservacion de elementos no "
+                    "distingue reactivo de producto, porque A@nu = 0 se cumple "
+                    "igual con nu y con -nu. Sin esta pista se orienta por "
+                    "convencion y la respuesta lo declara.")
+
+
+class ComprobarNuRequest(BaseModel):
+    """Juzga una nu dada, en vez de buscarla."""
+    componentes: list[str] = Field(max_length=MAX_COMPONENTES)
+    nu: list[float] = Field(
+        max_length=MAX_COMPONENTES,
+        description="Un coeficiente por componente, en el mismo orden.")
+
+
+class CantidadInicial(BaseModel):
+    componente: str = Field(min_length=1, max_length=120)
+    valor: float
+    unidad: str = Field(
+        min_length=1, max_length=24,
+        description="Cantidad ('mol', 'kmol', 'mmol') o caudal ('mol/s'...). El "
+                    "lote trabaja con cantidades; el equilibrio admite las dos "
+                    "porque solo le importan las proporciones.")
+
+
+class ReaccionDeRed(BaseModel):
+    """
+    Una reaccion de la red. Para /equilibrio basta la nu; para /lote hace
+    falta ademas la ley de velocidad.
+    """
+    id: str = Field(min_length=1, max_length=120)
+    nu: list[float] = Field(max_length=MAX_COMPONENTES)
+    ley_directa: Optional[LeyDeVelocidadEntrada] = Field(
+        None,
+        description="Obligatoria en /lote. Una tasa CONSTANTE no describe un "
+                    "lote: la composicion cambia y la tasa con ella.")
+    ley_inversa: Optional[LeyDeVelocidadEntrada] = Field(
+        None,
+        description="Con {'desde_equilibrio': true} se deriva de K_eq(T) por la "
+                    "ruta RIGUROSA (Kirchhoff e integral de dCp/T). Esa es la que "
+                    "hace que el final del lote coincida con /equilibrio.")
+
+
+class VentanaDeTiempo(BaseModel):
+    final: float = Field(gt=0.0)
+    unidad: str = Field("s", max_length=8)
+    muestras: int = Field(
+        200, ge=2, le=2000,
+        description="Puntos de la trayectoria devuelta. No cambian la precision "
+                    "de la integracion, solo cuanto se devuelve de ella.")
+
+
+class OpcionesIntegrador(BaseModel):
+    metodo: Optional[str] = Field(
+        None, max_length=24,
+        description="LSODA (por omision), Radau, BDF o RK45. LSODA detecta la "
+                    "rigidez sola, y una red con constantes muy distintas es "
+                    "rigida sin avisar.")
+    rtol: Optional[float] = Field(None, gt=0.0, le=1e-2)
+    atol: Optional[float] = Field(None, gt=0.0)
+
+
+class EquilibrioRequest(BaseModel):
+    componentes: list[str] = Field(max_length=MAX_COMPONENTES)
+    reacciones: list[ReaccionDeRed] = Field(max_length=MAX_REACCIONES)
+    estado_inicial: list[CantidadInicial] = Field(max_length=MAX_COMPONENTES)
+    T: ValorConUnidad
+    base_actividad: Optional[str] = Field(None, max_length=40)
+
+
+class LoteRequest(BaseModel):
+    componentes: list[str] = Field(max_length=MAX_COMPONENTES)
+    reacciones: list[ReaccionDeRed] = Field(max_length=MAX_REACCIONES)
+    estado_inicial: list[CantidadInicial] = Field(max_length=MAX_COMPONENTES)
+    T: ValorConUnidad
+    tiempo: VentanaDeTiempo
+    integrador: Optional[OpcionesIntegrador] = None
+    volumen: Optional[ValorConUnidad] = Field(
+        None,
+        description="Del lote. Hace falta si alguna constante esta en base "
+                    "volumetrica; si no se da, NO se supone 1 m3.")
+    base_actividad: Optional[str] = Field(None, max_length=40)
+
+
+class RespuestaReaccionesBase(BaseModel):
+    """Lo comun a los tres: estado, trazabilidad y diagnosticos."""
+    schema_version: int
+    estado: Literal["resuelto", "invalido", "no_convergente", "no_soportado"]
+    modelo_id: str
+    calculo: dict[str, Any]
+    diagnosticos: list[DiagnosticoLaboratorio]
+    resumen_diagnosticos: dict[str, Any]
+
+
+class BalancearResponse(RespuestaReaccionesBase):
+    especies: list[str]
+    elementos: list[str] = Field(default_factory=list)
+    matriz_elemental: list[list[int]] = Field(default_factory=list)
+    dimension_del_espacio: int = Field(
+        0,
+        description="Cuantas reacciones INDEPENDIENTES hay. Si es mayor que 1, la "
+                    "conservacion de elementos no determina una reaccion: "
+                    "determina un subespacio, y se devuelve la base entera.")
+    reacciones: list[dict[str, Any]] = Field(default_factory=list)
+    diagnostico: dict[str, Any] = Field(default_factory=dict)
+    aritmetica: Optional[str] = None
+    convencion_nu: Optional[str] = None
+    aptas_para_termodinamica: bool = Field(
+        True,
+        description="Si TODAS las especies tienen grupos UNIFAC. Balancear no los "
+                    "necesita --es la conservacion de los atomos-- pero "
+                    "/equilibrio y /lote si. Una reaccion puede estar balanceada y "
+                    "no ser calculable.")
+    sin_grupos_unifac: list[str] = Field(default_factory=list)
+
+
+class ComprobarNuResponse(RespuestaReaccionesBase):
+    especies: list[str]
+    nu: list[float]
+    elementos: list[str] = Field(default_factory=list)
+    residuo_elemental: dict[str, float] = Field(default_factory=dict)
+    conserva: bool = False
+    descuadre: dict[str, float] = Field(default_factory=dict)
+    mensaje: Optional[str] = None
+
+
+class EquilibrioResponse(RespuestaReaccionesBase):
+    componentes: list[str] = Field(default_factory=list)
+    T: Optional[float] = None
+    base_actividad: Optional[str] = None
+    avances: list[float] = Field(default_factory=list)
+    unidad_avance: Optional[str] = None
+    moles_equilibrio: list[float] = Field(default_factory=list)
+    composicion_equilibrio: list[float] = Field(default_factory=list)
+    propiedades_por_reaccion: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="dH, dS, dG y K a la T pedida, por las DOS rutas: la rigurosa "
+                    "(Kirchhoff e integral de dCp/T) y van't Hoff. Se dan las dos "
+                    "para que la diferencia se vea en vez de suponerse pequena.")
+    comprobacion: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="dG_rxn de cada reaccion en la solucion. Cero es equilibrio; "
+                    "el signo dice hacia donde se movería.")
+    potenciales_quimicos: Optional[dict[str, Any]] = Field(
+        None, description="mu_i = mu_i^0(T) + R T ln a_i, con el estado estandar "
+                          "declarado. Un mu sin estado estandar no se compara.")
+    estabilidad: Optional[dict[str, Any]] = Field(
+        None,
+        description="El hessiano de Gibbs y sus autovalores. dG = 0 dice que es "
+                    "un punto ESTACIONARIO, no que sea un minimo: lo decide la "
+                    "segunda derivada.")
+    convergencia: Optional[dict[str, Any]] = None
+    conservacion: Optional[dict[str, Any]] = None
+    especies_agotadas: list[dict[str, Any]] = Field(default_factory=list)
+    aviso_negativas: Optional[str] = None
+    aviso_tasas: Optional[str] = Field(
+        None, description="Imponer r+ = r- no demuestra equilibrio termodinamico.")
+
+
+class LoteResponse(RespuestaReaccionesBase):
+    componentes: list[str] = Field(default_factory=list)
+    T: Optional[float] = None
+    metodo: Optional[str] = None
+    descripcion_metodo: Optional[str] = None
+    tolerancias: Optional[dict[str, Any]] = None
+    t: list[float] = Field(default_factory=list)
+    unidad_tiempo: Optional[str] = None
+    moles: list[list[float]] = Field(
+        default_factory=list, description="Forma (especies, tiempos).")
+    unidad_moles: Optional[str] = None
+    trayectoria_por_especie: list[dict[str, Any]] = Field(default_factory=list)
+    n_muestras: Optional[int] = None
+    volumen_m3: Optional[float] = None
+    evaluaciones_de_la_ley: Optional[int] = None
+    pasos_del_integrador: Optional[int] = None
+    agotamientos: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Localizados con un EVENTO del integrador, no mirando las "
+                    "muestras: un cruce entre dos muestras se habria perdido.")
+    no_negatividad: Optional[dict[str, Any]] = None
+    conservacion: Optional[dict[str, Any]] = None
+    equilibrio_alcanzado: Optional[dict[str, Any]] = Field(
+        None,
+        description="dG_rxn en el ultimo punto. Con una cinetica "
+                    "termodinamicamente consistente tiende a cero y la "
+                    "composicion final coincide con /laboratorio/equilibrio.")
+    mensaje: Optional[str] = None
+
+
+class CapacidadesReaccionesResponse(BaseModel):
+    schema_version: int
+    servicios: dict[str, Any]
+    unidades: dict[str, Any]
+    comprobacion_cruzada: str
+
+
 class CapacidadesLaboratorioResponse(BaseModel):
     """Las capacidades solas, para consultarlas sin mandar un montaje."""
     schema_version: int

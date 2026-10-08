@@ -1,0 +1,235 @@
+{
+  "schema_version": 1,
+  "estado": "resuelto",
+  "modelo_id": "559289aac0f763aedd45d65270e191c6886cfcdbd197735d2ff7d7716eeded9e",
+  "calculo": {
+    "identificador": "<identificador de esta ejecucion>",
+    "instante_utc": "<instante UTC de la ejecucion>",
+    "motor": {
+      "version": "0.15.0",
+      "commit": "<commit de git, con sufijo -sucio si habia cambios>"
+    },
+    "proveedor_termodinamico": {
+      "identificador": "<identificador de esta ejecucion>",
+      "versiones": {
+        "thermo": "<version instalada de thermo>",
+        "chemicals": "<version instalada de chemicals>",
+        "fluids": "<version instalada de fluids>",
+        "numpy": "<version instalada de numpy>",
+        "scipy": "<version instalada de scipy>"
+      }
+    },
+    "huella_entradas": "559289aac0f763aedd45d65270e191c6886cfcdbd197735d2ff7d7716eeded9e",
+    "algoritmo_huella": "sha256"
+  },
+  "diagnosticos": [],
+  "resumen_diagnosticos": {
+    "total": 0,
+    "por_severidad": {},
+    "por_categoria": {},
+    "hay_errores": false
+  },
+  "componentes": [
+    "o-xylene",
+    "m-xylene",
+    "p-xylene"
+  ],
+  "T": 400.0,
+  "metodo": "LSODA",
+  "descripcion_metodo": "Adams/BDF con deteccion automatica de rigidez. Por omision: una red con constantes muy distintas se vuelve rigida sin avisar.",
+  "tolerancias": {
+    "rtol": 1e-10,
+    "atol": 1e-10,
+    "nota": "Declaradas y devueltas: una trayectoria sin tolerancia declarada no se puede reproducir ni comparar con otra."
+  },
+  "t": [
+    0.0,
+    62500.0,
+    125000.0,
+    187500.0,
+    250000.0,
+    312500.0,
+    375000.0,
+    437500.0,
+    500000.0
+  ],
+  "unidad_tiempo": "s",
+  "moles": [
+    [
+      100.0,
+      29.565176157620357,
+      29.56517615762036,
+      29.56517615762036,
+      29.56517615762036,
+      29.565176157620357,
+      29.565176157620357,
+      29.565176157620357,
+      29.565176157620357
+    ],
+    [
+      0.0,
+      70.43482384237973,
+      70.43482384237973,
+      70.43482384237973,
+      70.43482384237973,
+      70.43482384237973,
+      70.43482384237973,
+      70.43482384237973,
+      70.43482384237973
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ]
+  ],
+  "unidad_moles": "mol",
+  "trayectoria_por_especie": [
+    {
+      "componente": "o-xylene",
+      "moles": [
+        100.0,
+        29.565176157620357,
+        29.56517615762036,
+        29.56517615762036,
+        29.56517615762036,
+        29.565176157620357,
+        29.565176157620357,
+        29.565176157620357,
+        29.565176157620357
+      ],
+      "fraccion_molar": [
+        1.0,
+        0.2956517615762033,
+        0.2956517615762034,
+        0.2956517615762034,
+        0.2956517615762034,
+        0.2956517615762033,
+        0.2956517615762033,
+        0.2956517615762033,
+        0.2956517615762033
+      ],
+      "inicial": 100.0,
+      "final": 29.565176157620357
+    },
+    {
+      "componente": "m-xylene",
+      "moles": [
+        0.0,
+        70.43482384237973,
+        70.43482384237973,
+        70.43482384237973,
+        70.43482384237973,
+        70.43482384237973,
+        70.43482384237973,
+        70.43482384237973,
+        70.43482384237973
+      ],
+      "fraccion_molar": [
+        0.0,
+        0.7043482384237967,
+        0.7043482384237967,
+        0.7043482384237967,
+        0.7043482384237967,
+        0.7043482384237967,
+        0.7043482384237967,
+        0.7043482384237967,
+        0.7043482384237967
+      ],
+      "inicial": 0.0,
+      "final": 70.43482384237973
+    },
+    {
+      "componente": "p-xylene",
+      "moles": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fraccion_molar": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "inicial": 0.0,
+      "final": 0.0
+    }
+  ],
+  "n_muestras": 9,
+  "volumen_m3": null,
+  "evaluaciones_de_la_ley": 360,
+  "pasos_del_integrador": 360,
+  "agotamientos": [],
+  "no_negatividad": {
+    "peor_valor": 0.0,
+    "violaciones": [],
+    "total_violaciones": 0,
+    "cumple": true,
+    "evaluaciones_con_recorte": 0,
+    "nota": "La ley se evalua con los moles recortados a cero --UNIFAC con fracciones negativas no significa nada-- pero la comprobacion se hace sobre la trayectoria DEVUELTA. Recortar y callarse convertiria un dato imposible en una curva plausible."
+  },
+  "conservacion": {
+    "residuo_elemental_maximo": 9.094947017729283e-16,
+    "por_elemento": [
+      8.526512829121202e-16,
+      9.094947017729283e-16
+    ],
+    "masa": {
+      "inicial": 10616.5,
+      "final": 10616.50000000001,
+      "residuo_relativo": 8.566803577195199e-16,
+      "unidad": "g"
+    },
+    "moles_totales": {
+      "inicial": 100.0,
+      "final": 100.00000000000009,
+      "nota": "El total PUEDE cambiar si sum(nu) no es cero. La masa no."
+    },
+    "escala": "residuos relativos al valor inicial; adimensionales"
+  },
+  "equilibrio_alcanzado": {
+    "composicion_final": [
+      0.2956517615762033,
+      0.7043482384237967,
+      0.0
+    ],
+    "distancia": [
+      {
+        "reaccion": 0,
+        "nu": [
+          -1.0,
+          1.0,
+          0.0
+        ],
+        "K": 2.3823576584449104,
+        "Q": 2.3823576584449104,
+        "ln_Q_menos_ln_K": -1.1102230246251565e-16,
+        "dG_rxn": -3.692363134423555e-13,
+        "unidad_dG": "J/mol",
+        "en_equilibrio": true,
+        "direccion": "en equilibrio",
+        "criterio": "dG_rxn = R T ln(Q/K). Cero es equilibrio; el signo dice hacia donde se mueve. El umbral de 1 J/mol es una tolerancia practica, no una ley."
+      }
+    ],
+    "nota": "dG_rxn en el ultimo punto de la trayectoria. Si la cinetica es termodinamicamente consistente (ley_inversa con desde_equilibrio) y el tiempo basta, tiende a cero y la composicion final coincide con /laboratorio/equilibrio. Si la cinetica NO lo es, no tiene por que: dos constantes cualesquiera dan un estado estacionario que no es el equilibrio termodinamico."
+  },
+  "mensaje": "The solver successfully reached the end of the integration interval."
+}

@@ -75,6 +75,7 @@ import numpy as np
 
 from core import errores as codigos
 from core import cinetica as cin
+from core import equilibrio as eqm
 from core import estequiometria as est
 from core.errores import ErrorDeDatos, ErrorFisico, ErrorNumerico
 from core.flash import EvaluadorFlash
@@ -2465,13 +2466,19 @@ def _K_eq_de(m):
     """
     K_eq(T) de cada reaccion, para las inversas derivadas del equilibrio.
 
-    Se construye un GestorReaccion con la estequiometria del montaje y se
-    le piden sus K: reutiliza la maquinaria de van't Hoff ya validada en
-    thermodynamics/reaccion.py en vez de reescribirla.
+    Usa la ruta RIGUROSA de `core/equilibrio.py`: Kirchhoff para dH --que
+    sale de las entalpias sensibles sin integrar nada-- y la integral de
+    dCp/T para dS. No van't Hoff.
 
-    OJO con lo que esto significa y lo que no: van't Hoff supone dH_rxn
-    CONSTANTE con la temperatura. Es una aproximacion, se declara como tal
-    en la respuesta, y lejos de T_std se nota.
+    POR QUE SE CAMBIO. Van't Hoff supone dH_rxn constante con la
+    temperatura, y la diferencia no es decorativa: con los xilenos a 400 K
+    da K = 2.441 frente a 2.382 de la ruta rigurosa, y un lote con esa K
+    convergia a una composicion 0.5 % distinta de la que el servicio de
+    equilibrio calculaba. Dos partes del motor contestando cosas distintas
+    a la misma pregunta es peor que una aproximacion declarada.
+
+    Se cachea por (reaccion, T) redondeada: dentro de un lazo de Newton la
+    T se repite mucho y cada K cuesta una integral numerica.
     """
     if hasattr(m, "_gestor_K"):
         return m._gestor_K
@@ -2482,22 +2489,39 @@ def _K_eq_de(m):
         m._gestor_K = None
         return None
 
-    NU = np.array([r.nu for r in necesitan], dtype=float)
-    try:
-        gestor = GestorReaccion(m.proveedor, NU, A=1.0, Ea=0.0)
-    except Exception as e:
-        raise ErrorDeDatos(
-            f"No se puede calcular K_eq para las reacciones que la piden: {e}. "
-            "Hace falta la energia de Gibbs de formacion de todas las especies; "
-            "consultala en /laboratorio/sustancias/buscar antes de usar "
-            "'desde_equilibrio'.",
-            codigo=codigos.LAB_EQUILIBRIO_NO_UTILIZABLE,
-        ) from e
-
-    indices = {r.id: j for j, r in enumerate(necesitan)}
+    calculadora = entalpia_de(m.proveedor)
+    por_id = {r.id: np.asarray(r.nu, dtype=float) for r in necesitan}
+    cache = {}
 
     def K_de(reaccion_id, T):
-        return float(gestor.K_eq_de_cada_una(float(T))[indices[reaccion_id]])
+        clave = (reaccion_id, round(float(T), 9))
+        if clave in cache:
+            return cache[clave]
+        try:
+            propiedades = eqm.propiedades_de_reaccion(
+                m.proveedor, calculadora, por_id[reaccion_id], float(T))
+        except ErrorDeDatos as e:
+            raise ErrorDeDatos(
+                f"No se puede calcular K_eq para {reaccion_id!r}: {e} "
+                "Consulta las propiedades en /laboratorio/sustancias/buscar "
+                "antes de usar 'desde_equilibrio'.",
+                codigo=codigos.LAB_EQUILIBRIO_NO_UTILIZABLE,
+            ) from e
+        valor = float(propiedades["riguroso"]["K"])
+        # Se guardan las dos para poder declarar la diferencia.
+        m._K_detalle = getattr(m, "_K_detalle", {})
+        m._K_detalle[reaccion_id] = {
+            "ruta": "rigurosa (Kirchhoff para dH, integral de dCp/T para dS)",
+            "K": valor,
+            "K_vant_hoff": propiedades["vant_hoff"]["K"],
+            "diferencia_relativa_con_vant_hoff":
+                propiedades["vant_hoff"]["diferencia_relativa_con_riguroso"],
+            "dG": propiedades["riguroso"]["dG"],
+            "dH": propiedades["riguroso"]["dH"],
+            "T": float(T),
+        }
+        cache[clave] = valor
+        return valor
 
     m._gestor_K = K_de
     return K_de

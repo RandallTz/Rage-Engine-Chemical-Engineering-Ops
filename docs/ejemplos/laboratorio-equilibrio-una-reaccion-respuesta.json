@@ -1,0 +1,231 @@
+{
+  "schema_version": 1,
+  "estado": "resuelto",
+  "modelo_id": "2425300dde4168a39a5d18a7bd96308e4fe7e0157a233a70e39ce47230254ccc",
+  "calculo": {
+    "identificador": "<identificador de esta ejecucion>",
+    "instante_utc": "<instante UTC de la ejecucion>",
+    "motor": {
+      "version": "0.15.0",
+      "commit": "<commit de git, con sufijo -sucio si habia cambios>"
+    },
+    "proveedor_termodinamico": {
+      "identificador": "<identificador de esta ejecucion>",
+      "versiones": {
+        "thermo": "<version instalada de thermo>",
+        "chemicals": "<version instalada de chemicals>",
+        "fluids": "<version instalada de fluids>",
+        "numpy": "<version instalada de numpy>",
+        "scipy": "<version instalada de scipy>"
+      }
+    },
+    "huella_entradas": "2425300dde4168a39a5d18a7bd96308e4fe7e0157a233a70e39ce47230254ccc",
+    "algoritmo_huella": "sha256"
+  },
+  "diagnosticos": [
+    {
+      "codigo": "LAB_INFO_FASE",
+      "severidad": "informacion",
+      "categoria": "informacion",
+      "mensaje": "El equilibrio agota: p-xylene. Su actividad se recorto a un suelo para poder tomar logaritmos.",
+      "accion_sugerida": null,
+      "bloque_ids": [],
+      "conexion_ids": [],
+      "variable_ids": []
+    }
+  ],
+  "resumen_diagnosticos": {
+    "total": 1,
+    "por_severidad": {
+      "informacion": 1
+    },
+    "por_categoria": {
+      "informacion": 1
+    },
+    "hay_errores": false
+  },
+  "componentes": [
+    "o-xylene",
+    "m-xylene",
+    "p-xylene"
+  ],
+  "T": 400.0,
+  "base_actividad": "actividad",
+  "avances": [
+    70.43482384237967
+  ],
+  "unidad_avance": "las mismas que n0 (mol o mol/s)",
+  "moles_equilibrio": [
+    29.56517615762033,
+    70.43482384237967,
+    0.0
+  ],
+  "composicion_equilibrio": [
+    0.29565176157620326,
+    0.7043482384237967,
+    0.0
+  ],
+  "propiedades_por_reaccion": [
+    {
+      "T": 400.0,
+      "T_ref": 298.15,
+      "en_referencia": {
+        "dH": -1000.0,
+        "dS": 4.9199336469437585,
+        "dG": -2466.8782168362814,
+        "K": 2.7050691123465644,
+        "unidades": {
+          "dH": "J/mol",
+          "dS": "J/(mol K)",
+          "dG": "J/mol",
+          "K": "adimensional"
+        },
+        "origen": "propiedades de formacion de 'thermo' (Hfm y Gfm) a 298.15 K. No dependen de ningun modelo de Cp."
+      },
+      "riguroso": {
+        "dH": -1499.7074004676178,
+        "dS": 3.468438426028981,
+        "dG": -2887.0827708792103,
+        "K": 2.3823576584449104,
+        "metodo": "Kirchhoff para dH --que sale de las entalpias sensibles sin integrar nada-- e integracion numerica de dCp/T para dS (scipy.integrate.quad)",
+        "error_estimado_integral_S": 1.6114834143929642e-14
+      },
+      "vant_hoff": {
+        "K": 2.4410124553999375,
+        "aproximacion": "supone dH_rxn CONSTANTE con la temperatura",
+        "diferencia_relativa_con_riguroso": 0.02462048330447332
+      },
+      "dCp": {
+        "en_T": -4.282531449128584,
+        "en_T_ref": -5.6711322260809425,
+        "unidad": "J/(mol K)",
+        "nota": "Si dCp no es despreciable, van't Hoff y el camino riguroso se separan al alejarse de T_ref. Se dan los dos para que la diferencia se vea en vez de suponerse pequena."
+      },
+      "nu": [
+        -1.0,
+        1.0,
+        0.0
+      ],
+      "convencion": "K = exp(-dG/RT) con dG = suma de nu_i mu_i^0. Actividades adimensionales referidas al liquido puro."
+    }
+  ],
+  "comprobacion": [
+    {
+      "reaccion": 0,
+      "nu": [
+        -1.0,
+        1.0,
+        0.0
+      ],
+      "K": 2.3823576584449104,
+      "Q": 2.382357658444911,
+      "ln_Q_menos_ln_K": 1.1102230246251565e-16,
+      "dG_rxn": 3.692363134423555e-13,
+      "unidad_dG": "J/mol",
+      "en_equilibrio": true,
+      "direccion": "en equilibrio",
+      "criterio": "dG_rxn = R T ln(Q/K). Cero es equilibrio; el signo dice hacia donde se mueve. El umbral de 1 J/mol es una tolerancia practica, no una ley."
+    }
+  ],
+  "potenciales_quimicos": {
+    "T": 400.0,
+    "estado_estandar": "liquido puro a la T de la mezcla y la p del sistema",
+    "base_actividad": "actividad",
+    "por_especie": [
+      {
+        "indice": 0,
+        "x": 0.29565176157620326,
+        "actividad": 0.29565176157620326,
+        "gamma": 1.0,
+        "mu_estandar": 152743.19426854502,
+        "mu": 148690.48241141412,
+        "unidad": "J/mol",
+        "actividad_recortada": false
+      },
+      {
+        "indice": 1,
+        "x": 0.7043482384237967,
+        "actividad": 0.7043482384237967,
+        "gamma": 1.0,
+        "mu_estandar": 149856.11149766584,
+        "mu": 148690.48241141415,
+        "unidad": "J/mol",
+        "actividad_recortada": false
+      },
+      {
+        "indice": 2,
+        "x": 0.0,
+        "actividad": 0.0,
+        "gamma": null,
+        "mu_estandar": 152940.35209780806,
+        "mu": 45729.709085239054,
+        "unidad": "J/mol",
+        "actividad_recortada": true
+      }
+    ],
+    "nota_recorte": "Una actividad por debajo de 1e-14 se recorta a ese suelo para evaluar el logaritmo. ln(0) es menos infinito, y una especie ausente con nu distinto de cero reventaria la ecuacion. Cuando se recorta se dice, porque significa que el equilibrio empuja a agotar esa especie."
+  },
+  "estabilidad": {
+    "hessiano_de_gibbs": [
+      [
+        159.70786625985056
+      ]
+    ],
+    "autovalores": [
+      159.70786625985056
+    ],
+    "definido_positivo": true,
+    "es_minimo": true,
+    "criterio": "dG = 0 dice que es un punto ESTACIONARIO de la energia de Gibbs, no que sea un minimo. Lo decide la segunda derivada: el hessiano de G respecto de los avances tiene que ser definido positivo. Se calcula por diferencias finitas y se dan los autovalores, que son el criterio -- no una etiqueta.",
+    "unidad": "J/mol por unidad de avance al cuadrado"
+  },
+  "convergencia": {
+    "metodo": "scipy.optimize.least_squares con trf y limites, sobre los avances; residuo ln Q - ln K escalado",
+    "residuo_escalado": 1.1102230246251565e-16,
+    "tolerancia": 1e-10,
+    "convergio": true,
+    "evaluaciones_de_funcion": 93,
+    "evaluaciones_con_recorte": 93,
+    "escala_residuo": "ln Q - ln K dividido por max(|ln K|, 1). Se usa el logaritmo porque Q recorre ordenes de magnitud: con dG de -60 kJ/mol, K vale 1e10 y un residuo Q - K no se puede escalar de forma util",
+    "restricciones": [
+      "restricciones elementales: se cumplen POR CONSTRUCCION, porque un avance sobre una nu validada conserva los elementos. Anadirlas como ecuaciones habria contado dos veces lo mismo",
+      "no negatividad: el avance se acota al interior del simplex estequiometrico, y las actividades se recortan a un suelo relativo de 1e-14 para poder tomar logaritmos"
+    ],
+    "mensaje": "`gtol` termination condition is satisfied."
+  },
+  "conservacion": {
+    "elementos": {
+      "C": {
+        "entra": 800.0,
+        "sale": 800.0,
+        "residuo_relativo": 0.0
+      },
+      "H": {
+        "entra": 1000.0,
+        "sale": 1000.0,
+        "residuo_relativo": 0.0
+      }
+    },
+    "residuo_elemental_maximo": 0.0,
+    "masa": {
+      "entra_g_s": 10616.5,
+      "sale_g_s": 10616.5,
+      "residuo_relativo": 0.0
+    },
+    "caudal_molar": {
+      "entra_mol_s": 100.0,
+      "sale_mol_s": 100.0,
+      "cambia": false,
+      "nota": "El caudal molar total PUEDE cambiar: sum(nu) no tiene por que ser cero. La masa no cambia nunca."
+    },
+    "escala": "residuos relativos a lo que entra; adimensionales"
+  },
+  "especies_agotadas": [
+    {
+      "indice": 2,
+      "moles": 0.0
+    }
+  ],
+  "aviso_negativas": null,
+  "aviso_tasas": "Imponer r+ = r- NO demuestra equilibrio termodinamico: describe un estado estacionario con esas dos tasas. El equilibrio es Q = K, y K sale de dG de FORMACION, no de ninguna cinetica. Este servicio calcula eso; usa 'comprobacion' para saber si un estado cualquiera lo cumple."
+}

@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "estado": "resuelto",
+  "modelo_id": "6c7613d12df06b9f3ed591e147987aa082156a764e57098ad6c2c86311d3c014",
+  "calculo": {
+    "identificador": "<identificador de esta ejecucion>",
+    "instante_utc": "<instante UTC de la ejecucion>",
+    "motor": {
+      "version": "0.15.0",
+      "commit": "<commit de git, con sufijo -sucio si habia cambios>"
+    },
+    "proveedor_termodinamico": {
+      "identificador": "<identificador de esta ejecucion>",
+      "versiones": {
+        "thermo": "<version instalada de thermo>",
+        "chemicals": "<version instalada de chemicals>",
+        "fluids": "<version instalada de fluids>",
+        "numpy": "<version instalada de numpy>",
+        "scipy": "<version instalada de scipy>"
+      }
+    },
+    "huella_entradas": "6c7613d12df06b9f3ed591e147987aa082156a764e57098ad6c2c86311d3c014",
+    "algoritmo_huella": "sha256"
+  },
+  "diagnosticos": [
+    {
+      "codigo": "LAB_INFO_FASE",
+      "severidad": "informacion",
+      "categoria": "informacion",
+      "mensaje": "Balanceado, pero methane, oxygen, carbon dioxide no tiene(n) grupos UNIFAC: esta reaccion NO se puede usar en /laboratorio/equilibrio ni en /laboratorio/lote con este modelo. Balancear solo necesita los atomos; calcular necesita ademas la termodinamica.",
+      "accion_sugerida": "Consulta las capacidades de cada especie en /laboratorio/sustancias/buscar.",
+      "bloque_ids": [],
+      "conexion_ids": [],
+      "variable_ids": []
+    }
+  ],
+  "resumen_diagnosticos": {
+    "total": 1,
+    "por_severidad": {
+      "informacion": 1
+    },
+    "por_categoria": {
+      "informacion": 1
+    },
+    "hay_errores": false
+  },
+  "especies": [
+    "methane",
+    "oxygen",
+    "carbon dioxide",
+    "water"
+  ],
+  "elementos": [
+    "C",
+    "H",
+    "O"
+  ],
+  "matriz_elemental": [
+    [
+      1,
+      0,
+      1,
+      0
+    ],
+    [
+      4,
+      0,
+      0,
+      2
+    ],
+    [
+      0,
+      2,
+      2,
+      1
+    ]
+  ],
+  "dimension_del_espacio": 1,
+  "reacciones": [
+    {
+      "nu": [
+        -1,
+        -2,
+        1,
+        2
+      ],
+      "nu_por_especie": {
+        "methane": -1,
+        "oxygen": -2,
+        "carbon dioxide": 1,
+        "water": 2
+      },
+      "orientacion": "orientada con la pista del usuario: methane es reactivo, asi que su coeficiente es negativo",
+      "residuo_elemental": {
+        "C": 0,
+        "H": 0,
+        "O": 0
+      },
+      "conserva": true,
+      "latex": "\\mathrm{methane} + 2\\,\\mathrm{oxygen} \\longrightarrow \\mathrm{carbon dioxide} + 2\\,\\mathrm{water}"
+    }
+  ],
+  "diagnostico": {
+    "caso": "unica",
+    "mensaje": "Hay una sola reaccion independiente, unica salvo escala. Los coeficientes son los enteros minimos."
+  },
+  "aritmetica": "exacta (fractions.Fraction y eliminacion de Gauss sobre los racionales). Los coeficientes son enteros minimos, no floats redondeados.",
+  "convencion_nu": "positivo producto, negativo reactivo",
+  "aptas_para_termodinamica": false,
+  "sin_grupos_unifac": [
+    "methane",
+    "oxygen",
+    "carbon dioxide"
+  ]
+}

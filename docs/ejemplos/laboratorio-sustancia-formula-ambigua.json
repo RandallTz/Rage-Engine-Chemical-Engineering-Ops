@@ -1,0 +1,104 @@
+{
+  "consulta": "C2H6O",
+  "encontrada": true,
+  "identificacion": "formula",
+  "identificacion_fiable": false,
+  "sustancia": {
+    "id": "115-10-6",
+    "cas": "115-10-6",
+    "nombre": "dimethyl ether",
+    "nombre_iupac": "methoxymethane",
+    "formula": "C2H6O",
+    "masa_molar": 46.06844,
+    "unidad_masa_molar": "g/mol",
+    "carga": 0,
+    "smiles": "COC",
+    "inchi_key": "LCGLNKUTAGEVQW-UHFFFAOYSA-N"
+  },
+  "candidatos": [
+    {
+      "id": "64-17-5",
+      "cas": "64-17-5",
+      "nombre": "ethanol",
+      "nombre_iupac": "ethanol",
+      "formula": "C2H6O",
+      "masa_molar": 46.06844,
+      "unidad_masa_molar": "g/mol",
+      "carga": 0,
+      "smiles": "CCO",
+      "inchi_key": "LFQSCWFLJHTTHZ-UHFFFAOYSA-N"
+    }
+  ],
+  "candidatos_totales": 1,
+  "capacidades": {
+    "elv": {
+      "disponible": true,
+      "falta": []
+    },
+    "entalpia": {
+      "disponible": true,
+      "falta": []
+    },
+    "reaccion": {
+      "disponible": true,
+      "falta": []
+    },
+    "equilibrio": {
+      "disponible": true,
+      "falta": []
+    }
+  },
+  "propiedades": {
+    "T_ebullicion": {
+      "valor": 248.367837876,
+      "unidad": "K"
+    },
+    "T_fusion": {
+      "valor": 133.4,
+      "unidad": "K"
+    },
+    "T_critica": {
+      "valor": 400.378,
+      "unidad": "K"
+    },
+    "p_critica": {
+      "valor": 5336800.0,
+      "unidad": "Pa"
+    },
+    "entalpia_formacion": {
+      "valor": -184020.0,
+      "unidad": "J/mol",
+      "referencia": "estado estandar a 298.15 K",
+      "nota": "Sin ella no hay calor de reaccion, y suponerla cero convertiria una reaccion exotermica en un calentador neutro."
+    },
+    "gibbs_formacion": {
+      "valor": -112553.445,
+      "unidad": "J/mol",
+      "referencia": "estado estandar a 298.15 K",
+      "nota": "Sin ella no hay K(T) ni dG de reaccion."
+    }
+  },
+  "composicion_elemental": {
+    "atomos": {
+      "C": 2,
+      "H": 6,
+      "O": 1
+    },
+    "nota": "Es lo que valida una estequiometria: A @ nu tiene que ser cero. Sin composicion elemental no se puede comprobar que una reaccion sea una reaccion."
+  },
+  "modelos_soportados": [
+    "unifac_raoult"
+  ],
+  "fases": [
+    "liquido",
+    "bifasico",
+    "vapor"
+  ],
+  "referencias": {
+    "entalpia": "sensible_liquido_298.15K",
+    "formacion": "estado estandar a 298.15 K (Hfm y Gfm de 'thermo')",
+    "nota": "La referencia de entalpia del motor es SENSIBLE: no incluye las entalpias de formacion, asi que un balance con reaccion lleva el calor de reaccion explicito. Ver docs/15-laboratorio.md."
+  },
+  "mensaje": null,
+  "aviso": "'C2H6O' es una FORMULA, y una formula no identifica una sustancia. Se resolvio a 'dimethyl ether' (CAS 115-10-6), pero hay 1 sustancia(s) mas con la misma formula. Confirma la eleccion con su CAS, su nombre o su SMILES antes de calcular: dos isomeros pueden diferir en cien grados de temperatura de ebullicion."
+}

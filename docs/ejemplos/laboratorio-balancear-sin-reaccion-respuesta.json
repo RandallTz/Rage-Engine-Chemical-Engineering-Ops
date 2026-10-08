@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "estado": "invalido",
+  "modelo_id": "f66c3de51137775504cba6ab69040403fa9b2ffa5cf26d96f3d5e30287150572",
+  "calculo": {
+    "identificador": "<identificador de esta ejecucion>",
+    "instante_utc": "<instante UTC de la ejecucion>",
+    "motor": {
+      "version": "0.15.0",
+      "commit": "<commit de git, con sufijo -sucio si habia cambios>"
+    },
+    "proveedor_termodinamico": {
+      "identificador": "<identificador de esta ejecucion>",
+      "versiones": {
+        "thermo": "<version instalada de thermo>",
+        "chemicals": "<version instalada de chemicals>",
+        "fluids": "<version instalada de fluids>",
+        "numpy": "<version instalada de numpy>",
+        "scipy": "<version instalada de scipy>"
+      }
+    },
+    "huella_entradas": "f66c3de51137775504cba6ab69040403fa9b2ffa5cf26d96f3d5e30287150572",
+    "algoritmo_huella": "sha256"
+  },
+  "diagnosticos": [
+    {
+      "codigo": "LAB_SIN_BALANCE_POSIBLE",
+      "severidad": "error",
+      "categoria": "modelo",
+      "mensaje": "No hay ninguna combinacion de estas especies que conserve los elementos. No es que el balanceo haya fallado: es que estas especies no reaccionan entre si. Revisa si falta alguna.",
+      "accion_sugerida": "Revisa si falta alguna especie: una reaccion incompleta no cuadra.",
+      "bloque_ids": [],
+      "conexion_ids": [],
+      "variable_ids": []
+    }
+  ],
+  "resumen_diagnosticos": {
+    "total": 1,
+    "por_severidad": {
+      "error": 1
+    },
+    "por_categoria": {
+      "modelo": 1
+    },
+    "hay_errores": true
+  },
+  "especies": [
+    "methane",
+    "nitrogen"
+  ],
+  "elementos": [
+    "C",
+    "H",
+    "N"
+  ],
+  "matriz_elemental": [
+    [
+      1,
+      0
+    ],
+    [
+      4,
+      0
+    ],
+    [
+      0,
+      2
+    ]
+  ],
+  "dimension_del_espacio": 0,
+  "reacciones": [],
+  "diagnostico": {
+    "caso": "sin_reaccion",
+    "mensaje": "No hay ninguna combinacion de estas especies que conserve los elementos. No es que el balanceo haya fallado: es que estas especies no reaccionan entre si. Revisa si falta alguna."
+  },
+  "aritmetica": "exacta (fractions.Fraction y eliminacion de Gauss sobre los racionales). Los coeficientes son enteros minimos, no floats redondeados.",
+  "convencion_nu": "positivo producto, negativo reactivo",
+  "aptas_para_termodinamica": false,
+  "sin_grupos_unifac": [
+    "methane",
+    "nitrogen"
+  ]
+}

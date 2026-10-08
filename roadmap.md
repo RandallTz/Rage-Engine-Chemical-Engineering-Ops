@@ -2147,3 +2147,175 @@ No están, y conviene que no se dé por hecho:
   automática, y sensibilidad e incertidumbre.
 - **Fase vapor no ideal**, que sigue siendo el límite termodinámico de
   fondo.
+
+---
+
+# Fase 20: Lote transitorio, equilibrio calculado y balanceo exacto
+
+Prioridad vigente de `frontend/PENDIENTES_BACKEND_CLAUDE.md`: puntos **3**
+y **4**, más la parte de la «migración de exploraciones locales» que
+corresponde al balanceo racional y a Hess/Kirchhoff. Solo backend.
+
+## ✅ Balanceo con aritmética EXACTA
+
+$A\nu = 0$ con `fractions.Fraction` y eliminación de Gauss sobre los
+racionales, no con floats. La respuesta correcta son enteros pequeños, y
+un método numérico los devuelve como `0.9999999999999998`: con SVD hay que
+*reconocer* los enteros, y eso es adivinar — `0.333333` puede ser 1/3 o el
+redondeo de otra cosa. El residuo elemental sale **exactamente 0**.
+
+Y las tres respuestas posibles importan las tres:
+
+| Dimensión | Qué significa |
+|---|---|
+| 0 | No hay reacción, y decirlo **es** la respuesta |
+| 1 | Una reacción, única salvo escala y signo |
+| > 1 | Un **subespacio**: se devuelve la base y no se elige |
+
+El tercero no es raro. `CO/CO₂/H₂/H₂O/CH₄` da **dimensión 2** —
+desplazamiento de gas de agua y metanación — y devolver una cualquiera
+sería decidir qué química ocurre.
+
+**El signo no lo decide la conservación.** $A\nu = 0$ se cumple igual con
+$\nu$ y con $-\nu$, así que o lo dice el usuario o es una convención, y se
+declara como tal.
+
+### ⚠ Y exigía grupos UNIFAC sin necesitarlos
+
+El módulo lo decía y el servicio hacía lo contrario: construía un
+`ProveedorTermodinamico` completo, que exige UNIFAC, así que **la
+combustión del metano fallaba** — el ejemplo canónico de un balanceo.
+Balancear es la conservación de los átomos: hace falta saber de qué está
+hecha cada especie y nada más. Corregido, con `aptas_para_termodinamica`
+avisando de que esa reacción no se puede calcular.
+
+## ✅ Equilibrio químico calculado
+
+El punto 4. $Q_r = K_r(T)$, con $K$ de $\Delta G$ de **formación** y no de
+ninguna cinética.
+
+**K por dos rutas y la diferencia medida.** Van't Hoff supone $\Delta H$
+constante; la ruta rigurosa usa Kirchhoff para $\Delta H$ y la integral de
+$\Delta C_p/T$ para $\Delta S$. Se devuelven las dos: con los xilenos a
+400 K difieren un **2.5 %**, y con los butanos $C_p$ pasa de 142 a 211
+J/(mol·K) entre 300 y 400 K. La aproximación no es inocua, y ahora no hay
+que confiar en que lo sea.
+
+**Un detalle que ahorra una integral:** $\Delta H(T) = \nu\cdot(H_f +
+h_{sens}(T))$. Las entalpías sensibles ya llevan dentro la integral de
+$\Delta C_p$ que Kirchhoff pide. Es la **misma identidad** que explica por
+qué el balance de energía no debe corregir $\Delta H$ con Kirchhoff (fase
+18): allí lo contaría dos veces y aquí lo da gratis.
+
+**El criterio de estabilidad es el hessiano, no $\Delta G = 0$.** Cero dice
+que es un punto *estacionario* de la energía de Gibbs, no que sea un
+mínimo. Se calcula el hessiano por diferencias centradas y se devuelven
+los autovalores, que son el criterio y no una etiqueta.
+
+**Las restricciones elementales se cumplen por construcción** —un avance
+sobre una ν validada conserva los elementos— y añadirlas como ecuaciones
+habría contado dos veces lo mismo. La que sí hay que imponer es la no
+negatividad, porque $\ln 0 = -\infty$.
+
+**Y el residuo se mide en $\ln Q - \ln K$.** Con $\Delta G$ de −60 kJ/mol,
+$K$ vale $10^{10}$: un residuo $Q - K$ no se puede escalar de forma útil.
+
+## ✅ Lote transitorio
+
+El punto 3. $dn_i/dt = \sum_r \nu_{ir} r_r(T, \mathbf{x}(t))$, integrado
+con `solve_ivp`. Usa **las mismas leyes** que el CSTR: la ley es la misma
+física en los dos regímenes, y tener dos implementaciones sería tener dos
+físicas que se pueden separar.
+
+**El agotamiento se detecta con un EVENTO del integrador**, no mirando si
+algún número salió negativo. Un chequeo a posteriori sobre las muestras
+**se perdería el cruce si cae entre dos**. El evento lo localiza con la
+misma precisión que la trayectoria.
+
+**La no negatividad se comprueba sobre lo DEVUELTO.** Se recorta al
+*evaluar* la ley —UNIFAC con fracciones negativas no significa nada— y se
+comprueba sobre la trayectoria. Recortar y callarse convertiría un dato
+imposible en una curva plausible.
+
+**LSODA por omisión** porque una red con constantes muy distintas es
+rígida sin avisar, y LSODA cambia solo. Las tolerancias se declaran y
+viajan en la respuesta: una trayectoria sin tolerancia declarada no se
+puede reproducir.
+
+## ✅ La verificación: soluciones analíticas
+
+Las redes de primer orden las tienen, y las tres topologías que el
+contrato nombra son exactamente ésas. Con los xilenos —o-, m- y p-, todos
+C8H10— $\gamma = 1$ **exactamente**, así que la base de actividad correcta
+coincide con la ideal y la analítica vale sin aproximar nada.
+
+| Red | Solución | Coincide a |
+|---|---|---|
+| A → B | $n_A = n_{A0}e^{-kt/N}$ | $10^{-7}$ mol sobre 100 |
+| A → B → C | la clásica consecutiva | $10^{-7}$ mol |
+| A → B, A → C | $n_A = n_{A0}e^{-(k_1+k_2)t/N}$ | $10^{-7}$ mol |
+| A ⇌ B | relajación exponencial | $10^{-6}$ mol |
+
+Y dos consecuencias que no son el valor de una curva: el máximo del
+intermedio cae donde el álgebra lo pone, y la selectividad de la paralela
+es exactamente $k_1/k_2$. Con los cuatro integradores sale lo mismo.
+
+Del equilibrio: la **razón de actividades en la solución ES K**, pedida al
+proveedor por separado, a $10^{-12}$ relativo, con $\Delta G_{rxn}=0$ y
+$\sum\nu_i\mu_i=0$. Y Le Chatelier sale solo: siendo exotérmica, K baja de
+2.593 a 2.382 al subir de 330 a 400 K.
+
+## ⚠ Y la comprobación cruzada forzó un cambio de resultado
+
+Un lote con cinética termodinámicamente consistente debe converger, cuando
+$t\to\infty$, a la composición que calcula el servicio de equilibrio: son
+dos caminos sin nada en común, uno integra una ODE y el otro resuelve
+$\ln Q = \ln K$.
+
+No coincidían. Con los xilenos a 400 K el lote llegaba a una composición
+**0.5 % distinta**, y el motivo era que `desde_equilibrio` usaba **van't
+Hoff** (K = 2.441) mientras el servicio de equilibrio usaba la ruta
+rigurosa (K = 2.382).
+
+Dos partes del motor contestando cosas distintas a la misma pregunta es
+peor que una aproximación declarada, así que `desde_equilibrio` pasó a la
+ruta rigurosa. **Ahora coinciden a $5.6\times10^{-17}$.**
+
+Es un cambio de resultado visible: un cálculo guardado con
+`desde_equilibrio` da otro número. Está dicho en la entrega.
+
+## ⚠ Dos defectos de la entrega anterior corregidos
+
+- **`codigos.LAB_CAUDAL_NO_FISICO` no existía** (el código se llama
+  `CAUDAL_NO_FISICO`, sin prefijo). Un `AttributeError` en el camino de
+  error, que es justo donde menos se mira.
+- **El arranque del equilibrio caía en el límite** cuando la alimentación
+  no traía alguno de los productos: con $n_B = 0$ el avance tiene que ser
+  estrictamente positivo, y $\xi = 0$ está exactamente en la frontera.
+
+## Verificación
+
+`tests/validar_laboratorio.py` sube a **trece grupos y 389
+comprobaciones**. Treinta pares petición/respuesta en `docs/ejemplos/`,
+generados **ejecutando** el endpoint. **21/21 suites.**
+
+## ⬜ Lo que queda
+
+- **Punto 6: entropía, segunda ley y exergía.** Los potenciales químicos
+  ya están, con su estado estándar declarado; falta el balance de entropía
+  con temperatura de frontera y la exergía con ambiente explícito.
+- **Punto 7: conducción 1D** en capas y contactos.
+- **Punto 8: difusión y películas.**
+- **Punto 9: momento e hidráulica.**
+- **Punto 10: más de dos volúmenes**, puertos tipados, y el **decantador
+  expuesto** — que sigue sin ruta HTTP desde la fase 17.
+- **Los transversales**: expresiones tipadas con comprobación dimensional
+  automática, y sensibilidad e incertidumbre.
+- **El lote adiabático**, declarado como no soportado.
+- **Que `/diagrama/resolver` consuma el mismo ensamblador** que el
+  laboratorio. Hoy los módulos de física (`cinetica`, `equilibrio`,
+  `lote`, `balanceo`, `estequiometria`) ya están separados de sus
+  endpoints y de la UI; lo que falta es que el diagrama los use, y eso es
+  una refactorización de lo existente y no una capacidad nueva.
+- **Fase vapor no ideal**, que sigue siendo el límite termodinámico de
+  fondo.

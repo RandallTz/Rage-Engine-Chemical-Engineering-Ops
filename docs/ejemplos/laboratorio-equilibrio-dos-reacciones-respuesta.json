@@ -1,0 +1,276 @@
+{
+  "schema_version": 1,
+  "estado": "resuelto",
+  "modelo_id": "49f96902697a833630917256353f54d16850fe09a15ddbaff9e0e29781d75dd3",
+  "calculo": {
+    "identificador": "<identificador de esta ejecucion>",
+    "instante_utc": "<instante UTC de la ejecucion>",
+    "motor": {
+      "version": "0.15.0",
+      "commit": "<commit de git, con sufijo -sucio si habia cambios>"
+    },
+    "proveedor_termodinamico": {
+      "identificador": "<identificador de esta ejecucion>",
+      "versiones": {
+        "thermo": "<version instalada de thermo>",
+        "chemicals": "<version instalada de chemicals>",
+        "fluids": "<version instalada de fluids>",
+        "numpy": "<version instalada de numpy>",
+        "scipy": "<version instalada de scipy>"
+      }
+    },
+    "huella_entradas": "49f96902697a833630917256353f54d16850fe09a15ddbaff9e0e29781d75dd3",
+    "algoritmo_huella": "sha256"
+  },
+  "diagnosticos": [],
+  "resumen_diagnosticos": {
+    "total": 0,
+    "por_severidad": {},
+    "por_categoria": {},
+    "hay_errores": false
+  },
+  "componentes": [
+    "o-xylene",
+    "m-xylene",
+    "p-xylene"
+  ],
+  "T": 400.0,
+  "base_actividad": "actividad",
+  "avances": [
+    76.87753816189124,
+    21.79156411977266
+  ],
+  "unidad_avance": "las mismas que n0 (mol o mol/s)",
+  "moles_equilibrio": [
+    23.122461838108762,
+    55.08597404211858,
+    21.79156411977266
+  ],
+  "composicion_equilibrio": [
+    0.23122461838108763,
+    0.5508597404211858,
+    0.21791564119772658
+  ],
+  "propiedades_por_reaccion": [
+    {
+      "T": 400.0,
+      "T_ref": 298.15,
+      "en_referencia": {
+        "dH": -1000.0,
+        "dS": 4.9199336469437585,
+        "dG": -2466.8782168362814,
+        "K": 2.7050691123465644,
+        "unidades": {
+          "dH": "J/mol",
+          "dS": "J/(mol K)",
+          "dG": "J/mol",
+          "K": "adimensional"
+        },
+        "origen": "propiedades de formacion de 'thermo' (Hfm y Gfm) a 298.15 K. No dependen de ningun modelo de Cp."
+      },
+      "riguroso": {
+        "dH": -1499.7074004676178,
+        "dS": 3.468438426028981,
+        "dG": -2887.0827708792103,
+        "K": 2.3823576584449104,
+        "metodo": "Kirchhoff para dH --que sale de las entalpias sensibles sin integrar nada-- e integracion numerica de dCp/T para dS (scipy.integrate.quad)",
+        "error_estimado_integral_S": 1.6114834143929642e-14
+      },
+      "vant_hoff": {
+        "K": 2.4410124553999375,
+        "aproximacion": "supone dH_rxn CONSTANTE con la temperatura",
+        "diferencia_relativa_con_riguroso": 0.02462048330447332
+      },
+      "dCp": {
+        "en_T": -4.282531449128584,
+        "en_T_ref": -5.6711322260809425,
+        "unidad": "J/(mol K)",
+        "nota": "Si dCp no es despreciable, van't Hoff y el camino riguroso se separan al alejarse de T_ref. Se dan los dos para que la diferencia se vea en vez de suponerse pequena."
+      },
+      "nu": [
+        -1.0,
+        1.0,
+        0.0
+      ],
+      "convencion": "K = exp(-dG/RT) con dG = suma de nu_i mu_i^0. Actividades adimensionales referidas al liquido puro."
+    },
+    {
+      "T": 400.0,
+      "T_ref": 298.15,
+      "en_referencia": {
+        "dH": 1000.0,
+        "dS": -5.233686348399075,
+        "dG": 2560.4235847751843,
+        "K": 0.35598622662721285,
+        "unidades": {
+          "dH": "J/mol",
+          "dS": "J/(mol K)",
+          "dG": "J/mol",
+          "K": "adimensional"
+        },
+        "origen": "propiedades de formacion de 'thermo' (Hfm y Gfm) a 298.15 K. No dependen de ningun modelo de Cp."
+      },
+      "riguroso": {
+        "dH": 1049.8324758758718,
+        "dS": -5.08602031066602,
+        "dG": 3084.2406001422796,
+        "K": 0.39559188157607755,
+        "metodo": "Kirchhoff para dH --que sale de las entalpias sensibles sin integrar nada-- e integracion numerica de dCp/T para dS (scipy.integrate.quad)",
+        "error_estimado_integral_S": 4.6520531158452354e-11
+      },
+      "vant_hoff": {
+        "K": 0.39449505631969595,
+        "aproximacion": "supone dH_rxn CONSTANTE con la temperatura",
+        "diferencia_relativa_con_riguroso": 0.0027726182145390464
+      },
+      "dCp": {
+        "en_T": 0.07187924711809046,
+        "en_T_ref": 0.5657348369483088,
+        "unidad": "J/(mol K)",
+        "nota": "Si dCp no es despreciable, van't Hoff y el camino riguroso se separan al alejarse de T_ref. Se dan los dos para que la diferencia se vea en vez de suponerse pequena."
+      },
+      "nu": [
+        0.0,
+        -1.0,
+        1.0
+      ],
+      "convencion": "K = exp(-dG/RT) con dG = suma de nu_i mu_i^0. Actividades adimensionales referidas al liquido puro."
+    }
+  ],
+  "comprobacion": [
+    {
+      "reaccion": 0,
+      "nu": [
+        -1.0,
+        1.0,
+        0.0
+      ],
+      "K": 2.3823576584449104,
+      "Q": 2.38235765844491,
+      "ln_Q_menos_ln_K": -2.220446049250313e-16,
+      "dG_rxn": -7.38472626884711e-13,
+      "unidad_dG": "J/mol",
+      "en_equilibrio": true,
+      "direccion": "en equilibrio",
+      "criterio": "dG_rxn = R T ln(Q/K). Cero es equilibrio; el signo dice hacia donde se mueve. El umbral de 1 J/mol es una tolerancia practica, no una ley."
+    },
+    {
+      "reaccion": 1,
+      "nu": [
+        0.0,
+        -1.0,
+        1.0
+      ],
+      "K": 0.39559188157607755,
+      "Q": 0.39559188157607755,
+      "ln_Q_menos_ln_K": 0.0,
+      "dG_rxn": 0.0,
+      "unidad_dG": "J/mol",
+      "en_equilibrio": true,
+      "direccion": "en equilibrio",
+      "criterio": "dG_rxn = R T ln(Q/K). Cero es equilibrio; el signo dice hacia donde se mueve. El umbral de 1 J/mol es una tolerancia practica, no una ley."
+    }
+  ],
+  "potenciales_quimicos": {
+    "T": 400.0,
+    "estado_estandar": "liquido puro a la T de la mezcla y la p del sistema",
+    "base_actividad": "actividad",
+    "por_especie": [
+      {
+        "indice": 0,
+        "x": 0.23122461838108763,
+        "actividad": 0.23122461838108763,
+        "gamma": 1.0,
+        "mu_estandar": 152743.19426854502,
+        "mu": 147873.0288296282,
+        "unidad": "J/mol",
+        "actividad_recortada": false
+      },
+      {
+        "indice": 1,
+        "x": 0.5508597404211858,
+        "actividad": 0.5508597404211858,
+        "gamma": 1.0,
+        "mu_estandar": 149856.11149766584,
+        "mu": 147873.02882962822,
+        "unidad": "J/mol",
+        "actividad_recortada": false
+      },
+      {
+        "indice": 2,
+        "x": 0.21791564119772658,
+        "actividad": 0.21791564119772658,
+        "gamma": 1.0,
+        "mu_estandar": 152940.35209780806,
+        "mu": 147873.02882962817,
+        "unidad": "J/mol",
+        "actividad_recortada": false
+      }
+    ],
+    "nota_recorte": "Una actividad por debajo de 1e-14 se recorta a ese suelo para evaluar el logaritmo. ln(0) es menos infinito, y una especie ausente con nu distinto de cero reventaria la ecuacion. Cuando se recorta se dice, porque significa que el equilibrio empuja a agotar esa especie."
+  },
+  "estabilidad": {
+    "hessiano_de_gibbs": [
+      [
+        204.2079868260771,
+        -60.37445564288646
+      ],
+      [
+        -60.37445564288646,
+        212.99246873240918
+      ]
+    ],
+    "autovalores": [
+      148.0662152345131,
+      269.1342403239732
+    ],
+    "definido_positivo": true,
+    "es_minimo": true,
+    "criterio": "dG = 0 dice que es un punto ESTACIONARIO de la energia de Gibbs, no que sea un minimo. Lo decide la segunda derivada: el hessiano de G respecto de los avances tiene que ser definido positivo. Se calcula por diferencias finitas y se dan los autovalores, que son el criterio -- no una etiqueta.",
+    "unidad": "J/mol por unidad de avance al cuadrado"
+  },
+  "convergencia": {
+    "metodo": "scipy.optimize.least_squares con trf y limites, sobre los avances; residuo ln Q - ln K escalado",
+    "residuo_escalado": 2.220446049250313e-16,
+    "tolerancia": 1e-10,
+    "convergio": true,
+    "evaluaciones_de_funcion": 49,
+    "evaluaciones_con_recorte": 4,
+    "escala_residuo": "ln Q - ln K dividido por max(|ln K|, 1). Se usa el logaritmo porque Q recorre ordenes de magnitud: con dG de -60 kJ/mol, K vale 1e10 y un residuo Q - K no se puede escalar de forma util",
+    "restricciones": [
+      "restricciones elementales: se cumplen POR CONSTRUCCION, porque un avance sobre una nu validada conserva los elementos. Anadirlas como ecuaciones habria contado dos veces lo mismo",
+      "no negatividad: el avance se acota al interior del simplex estequiometrico, y las actividades se recortan a un suelo relativo de 1e-14 para poder tomar logaritmos"
+    ],
+    "mensaje": "`xtol` termination condition is satisfied."
+  },
+  "conservacion": {
+    "elementos": {
+      "C": {
+        "entra": 800.0,
+        "sale": 800.0,
+        "residuo_relativo": 0.0
+      },
+      "H": {
+        "entra": 1000.0,
+        "sale": 999.9999999999999,
+        "residuo_relativo": 1.1368683772161603e-16
+      }
+    },
+    "residuo_elemental_maximo": 1.1368683772161603e-16,
+    "masa": {
+      "entra_g_s": 10616.5,
+      "sale_g_s": 10616.5,
+      "residuo_relativo": 0.0
+    },
+    "caudal_molar": {
+      "entra_mol_s": 100.0,
+      "sale_mol_s": 100.0,
+      "cambia": false,
+      "nota": "El caudal molar total PUEDE cambiar: sum(nu) no tiene por que ser cero. La masa no cambia nunca."
+    },
+    "escala": "residuos relativos a lo que entra; adimensionales"
+  },
+  "especies_agotadas": [],
+  "aviso_negativas": null,
+  "aviso_tasas": "Imponer r+ = r- NO demuestra equilibrio termodinamico: describe un estado estacionario con esas dos tasas. El equilibrio es Q = K, y K sale de dG de FORMACION, no de ninguna cinetica. Este servicio calcula eso; usa 'comprobacion' para saber si un estado cualquiera lo cumple."
+}

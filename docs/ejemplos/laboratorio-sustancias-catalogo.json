@@ -1,0 +1,72 @@
+{
+  "identificadores_admitidos": [
+    {
+      "tipo": "cas",
+      "identifica": true,
+      "ejemplo": "64-17-5",
+      "nota": "El id estable. Es lo que conviene guardar."
+    },
+    {
+      "tipo": "nombre",
+      "identifica": true,
+      "ejemplo": "ethanol",
+      "nota": "En ingles. Los sinonimos tambien valen."
+    },
+    {
+      "tipo": "smiles",
+      "identifica": true,
+      "ejemplo": "CCO",
+      "nota": "Identifica la estructura."
+    },
+    {
+      "tipo": "inchi_key",
+      "identifica": true,
+      "ejemplo": "LFQSCWFLJHTTHZ-UHFFFAOYSA-N",
+      "nota": "Identifica la estructura."
+    },
+    {
+      "tipo": "formula",
+      "identifica": false,
+      "ejemplo": "C2H6O",
+      "nota": "NO identifica una sustancia. 'C2H6O' resuelve a dimetil eter y el etanol tiene la misma formula; hierven a 248 K y a 352 K. La respuesta lo avisa y lista los candidatos."
+    }
+  ],
+  "capacidades": {
+    "elv": {
+      "descripcion": "Equilibrio liquido-vapor: puntos de burbuja y rocio, flash.",
+      "necesita": [
+        "grupos UNIFAC",
+        "presion de saturacion"
+      ]
+    },
+    "entalpia": {
+      "descripcion": "Entalpia sensible h(T, x) y balances de energia sin reaccion.",
+      "necesita": [
+        "Cp del liquido",
+        "entalpia de vaporizacion"
+      ]
+    },
+    "reaccion": {
+      "descripcion": "Balances con reaccion y calor de reaccion.",
+      "necesita": [
+        "entalpia de formacion (Hfm)"
+      ]
+    },
+    "equilibrio": {
+      "descripcion": "Constante de equilibrio K(T) y dG de reaccion.",
+      "necesita": [
+        "energia de Gibbs de formacion (Gfm)"
+      ]
+    }
+  },
+  "id_estable": "cas",
+  "max_candidatos": 25,
+  "modelos": [
+    "unifac_raoult"
+  ],
+  "referencias": {
+    "entalpia": "sensible_liquido_298.15K",
+    "formacion": "estado estandar a 298.15 K"
+  },
+  "nota": "Una sustancia puede tener grupos UNIFAC y no tener entalpia de formacion: sirve para un ELV y no para un balance reactivo. El diciclopentadieno es ese caso. Por eso las capacidades se declaran una por una y no como un unico 'apto'."
+}

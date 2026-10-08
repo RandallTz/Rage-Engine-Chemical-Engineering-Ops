@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "servicios": {
+    "balancear": {
+      "que_hace": "Encuentra las nu que conservan los elementos entre unas especies, con aritmetica EXACTA.",
+      "necesita": [
+        "composicion elemental"
+      ],
+      "no_necesita": [
+        "propiedades termodinamicas",
+        "tasas"
+      ],
+      "respuestas": {
+        "dimension 0": "no hay reaccion posible entre esas especies",
+        "dimension 1": "una reaccion, unica salvo escala y signo",
+        "dimension > 1": "un SUBESPACIO de reacciones: se devuelve la base y no se elige una"
+      },
+      "signo": "La conservacion de elementos no distingue reactivo de producto: A@nu = 0 se cumple con nu y con -nu. Da 'reactivos' para orientarla, o se orienta por convencion y se dice."
+    },
+    "equilibrio": {
+      "que_hace": "La composicion de equilibrio, K(T), los potenciales quimicos y el criterio de estabilidad.",
+      "necesita": [
+        "entalpia y energia de Gibbs de formacion"
+      ],
+      "no_necesita": [
+        "cinetica"
+      ],
+      "K": {
+        "riguroso": "Kirchhoff para dH e integral de dCp/T para dS",
+        "vant_hoff": "se devuelve tambien, para que la diferencia se vea en vez de suponerse pequena"
+      },
+      "estabilidad": "dG = 0 dice que es un punto estacionario, no que sea un minimo. Se calcula el hessiano de Gibbs y se dan sus autovalores.",
+      "aviso": "Imponer r+ = r- NO demuestra equilibrio termodinamico."
+    },
+    "lote": {
+      "que_hace": "La trayectoria de un lote isotermo integrando el sistema de ODEs.",
+      "necesita": [
+        "leyes de velocidad"
+      ],
+      "metodos": {
+        "LSODA": "Adams/BDF con deteccion automatica de rigidez. Por omision: una red con constantes muy distintas se vuelve rigida sin avisar.",
+        "Radau": "Runge-Kutta implicito de orden 5. Para sistemas rigidos.",
+        "BDF": "Formulas de diferenciacion hacia atras. Para sistemas rigidos.",
+        "RK45": "Runge-Kutta explicito 4(5). Rapido si el sistema NO es rigido; con constantes muy distintas da pasos diminutos."
+      },
+      "tolerancias_por_omision": {
+        "rtol": 1e-10,
+        "atol": "1e-12 por mol total"
+      },
+      "agotamiento": "se detecta con un EVENTO del integrador, no mirando las muestras: un cruce entre dos muestras se habria perdido",
+      "no_soportado": [
+        "lote adiabatico o no isotermo",
+        "volumen variable"
+      ]
+    }
+  },
+  "unidades": {
+    "cantidad": [
+      "mol",
+      "kmol",
+      "mmol"
+    ],
+    "caudal": [
+      "kmol/h",
+      "kmol/s",
+      "mol/h",
+      "mol/s"
+    ],
+    "tiempo": [
+      "s",
+      "min",
+      "h",
+      "ms"
+    ],
+    "temperatura": [
+      "C",
+      "K",
+      "degC",
+      "°C"
+    ],
+    "volumen": [
+      "L",
+      "cm3",
+      "dm3",
+      "m3",
+      "mL"
+    ]
+  },
+  "comprobacion_cruzada": "Un lote con cinetica termodinamicamente consistente (ley_inversa con desde_equilibrio) converge, cuando t tiende a infinito, a la MISMA composicion que /laboratorio/equilibrio. Son dos caminos independientes --uno integra una ODE, el otro resuelve ln Q = ln K-- y coinciden a 1e-17 con los xilenos."
+}

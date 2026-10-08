@@ -299,6 +299,14 @@ class ReaccionCinetica:
                 ({"origen": "derivada del equilibrio",
                   "expresion": "k_inv = k_dir / K_eq(T)",
                   "K_eq_usada": self._K_eq,
+                  "ruta_de_K": "rigurosa: Kirchhoff para dH --que sale de las "
+                               "entalpias sensibles sin integrar nada-- e "
+                               "integracion numerica de dCp/T para dS. NO van't "
+                               "Hoff: la diferencia llega al medio por ciento en "
+                               "la composicion de equilibrio a 100 K de la "
+                               "referencia, y dos partes del motor contestando "
+                               "cosas distintas a la misma pregunta es peor que "
+                               "una aproximacion declarada.",
                   "nota": "Es la restriccion que impone la termodinamica: en el "
                           "equilibrio r+ = r- obliga a que la razon de las "
                           "constantes sea K_eq. Con este modo la ley directa usa "

@@ -37,6 +37,15 @@ from backend.schemas_laboratorio import (
     EjemploLaboratorio, BusquedaSustanciaResponse, CatalogoSustanciasResponse,
 )
 from backend.nucleo_sustancias import buscar_sustancia, catalogo_sustancias
+from backend.schemas_laboratorio import (
+    BalancearRequest, BalancearResponse, ComprobarNuRequest, ComprobarNuResponse,
+    EquilibrioRequest, EquilibrioResponse, LoteRequest, LoteResponse,
+    CapacidadesReaccionesResponse,
+)
+from backend.nucleo_reacciones import (
+    balancear as balancear_reaccion, comprobar_estequiometria,
+    resolver_equilibrio, resolver_lote, capacidades_reacciones,
+)
 from backend.ejemplos_laboratorio import (
     EJEMPLOS_LABORATORIO, EJEMPLOS_LABORATORIO_POR_ID,
 )
@@ -378,3 +387,81 @@ def laboratorio_sustancias_catalogo():
     vez de limitarse a no ofrecerla.
     """
     return catalogo_sustancias()
+
+
+# ---------------------------------------------------------------------
+# Balanceo, equilibrio quimico y lote transitorio.
+#
+# Tres endpoints y no uno porque contestan tres preguntas con requisitos
+# distintos: balancear solo necesita atomos, el equilibrio necesita dG de
+# formacion y no cinetica, y el lote necesita leyes de velocidad y no dG.
+# Meterlas en uno con una bandera obligaria a declarar datos que no hacen
+# falta y a devolver campos vacios.
+# ---------------------------------------------------------------------
+
+@app.post("/laboratorio/balancear", response_model=BalancearResponse,
+          summary="Las reacciones que conservan los elementos, en aritmetica exacta")
+def laboratorio_balancear(request: BalancearRequest):
+    """
+    Resuelve A @ nu = 0 con `fractions.Fraction`, no con floats.
+
+    La respuesta correcta son enteros pequenos, y un metodo numerico los
+    devuelve como 0.9999999999999998; con aritmetica exacta no hay nada
+    que reconocer.
+
+    Tres casos y los tres importan: sin reaccion posible, una reaccion
+    unica, o un SUBESPACIO de reacciones independientes -- y en el tercero
+    se devuelve la base entera, porque elegir una seria decidir que
+    quimica ocurre.
+    """
+    return balancear_reaccion(request)
+
+
+@app.post("/laboratorio/comprobar-estequiometria",
+          response_model=ComprobarNuResponse,
+          summary="Juzga una nu dada en vez de buscarla")
+def laboratorio_comprobar_nu(request: ComprobarNuRequest):
+    """Si una nu conserva los elementos, y cuanto descuadra si no."""
+    return comprobar_estequiometria(request)
+
+
+@app.post("/laboratorio/equilibrio", response_model=EquilibrioResponse,
+          summary="Composicion de equilibrio, K(T), potenciales y estabilidad")
+def laboratorio_equilibrio(request: EquilibrioRequest):
+    """
+    El equilibrio termodinamico de verdad, calculado de dG de FORMACION.
+
+    **Imponer r+ = r- no demuestra equilibrio termodinamico**: describe un
+    estado estacionario con esas dos tasas. Aqui K sale de las propiedades
+    de formacion y no de ninguna cinetica.
+
+    Se devuelven K por las DOS rutas --la rigurosa, con Kirchhoff y la
+    integral de dCp/T, y van't Hoff-- para que la diferencia se vea. Y el
+    criterio de estabilidad: dG = 0 dice que es un punto estacionario, no
+    que sea un minimo, y eso lo decide el hessiano.
+    """
+    return resolver_equilibrio(request)
+
+
+@app.post("/laboratorio/lote", response_model=LoteResponse,
+          summary="La trayectoria de un lote isotermo")
+def laboratorio_lote(request: LoteRequest):
+    """
+    Integra dn_i/dt = sum_r nu_ir r_r(T, x(t)) con el estado inicial dado.
+
+    Usa las MISMAS leyes de velocidad que el CSTR: la ley es la misma
+    fisica en los dos regimenes, y tener dos implementaciones seria tener
+    dos fisicas que se pueden separar.
+
+    El agotamiento se detecta con un EVENTO del integrador, no mirando las
+    muestras -- un cruce entre dos muestras se habria perdido -- y la no
+    negatividad se comprueba sobre la trayectoria devuelta.
+    """
+    return resolver_lote(request)
+
+
+@app.get("/laboratorio/reacciones/capacidades",
+         response_model=CapacidadesReaccionesResponse,
+         summary="Que admiten los tres servicios de reaccion, y que no")
+def laboratorio_reacciones_capacidades():
+    return capacidades_reacciones()

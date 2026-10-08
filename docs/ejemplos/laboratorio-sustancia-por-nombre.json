@@ -1,0 +1,91 @@
+{
+  "consulta": "ethanol",
+  "encontrada": true,
+  "identificacion": "nombre",
+  "identificacion_fiable": true,
+  "sustancia": {
+    "id": "64-17-5",
+    "cas": "64-17-5",
+    "nombre": "ethanol",
+    "nombre_iupac": "ethanol",
+    "formula": "C2H6O",
+    "masa_molar": 46.06844,
+    "unidad_masa_molar": "g/mol",
+    "carga": 0,
+    "smiles": "CCO",
+    "inchi_key": "LFQSCWFLJHTTHZ-UHFFFAOYSA-N"
+  },
+  "candidatos": [],
+  "candidatos_totales": 0,
+  "capacidades": {
+    "elv": {
+      "disponible": true,
+      "falta": []
+    },
+    "entalpia": {
+      "disponible": true,
+      "falta": []
+    },
+    "reaccion": {
+      "disponible": true,
+      "falta": []
+    },
+    "equilibrio": {
+      "disponible": true,
+      "falta": []
+    }
+  },
+  "propiedades": {
+    "T_ebullicion": {
+      "valor": 351.570441659,
+      "unidad": "K"
+    },
+    "T_fusion": {
+      "valor": 159.05,
+      "unidad": "K"
+    },
+    "T_critica": {
+      "valor": 514.71,
+      "unidad": "K"
+    },
+    "p_critica": {
+      "valor": 6268000.0,
+      "unidad": "Pa"
+    },
+    "entalpia_formacion": {
+      "valor": -277030.0,
+      "unidad": "J/mol",
+      "referencia": "estado estandar a 298.15 K",
+      "nota": "Sin ella no hay calor de reaccion, y suponerla cero convertiria una reaccion exotermica en un calentador neutro."
+    },
+    "gibbs_formacion": {
+      "valor": -174275.52703588537,
+      "unidad": "J/mol",
+      "referencia": "estado estandar a 298.15 K",
+      "nota": "Sin ella no hay K(T) ni dG de reaccion."
+    }
+  },
+  "composicion_elemental": {
+    "atomos": {
+      "C": 2,
+      "H": 6,
+      "O": 1
+    },
+    "nota": "Es lo que valida una estequiometria: A @ nu tiene que ser cero. Sin composicion elemental no se puede comprobar que una reaccion sea una reaccion."
+  },
+  "modelos_soportados": [
+    "unifac_raoult"
+  ],
+  "fases": [
+    "liquido",
+    "bifasico",
+    "vapor"
+  ],
+  "referencias": {
+    "entalpia": "sensible_liquido_298.15K",
+    "formacion": "estado estandar a 298.15 K (Hfm y Gfm de 'thermo')",
+    "nota": "La referencia de entalpia del motor es SENSIBLE: no incluye las entalpias de formacion, asi que un balance con reaccion lleva el calor de reaccion explicito. Ver docs/15-laboratorio.md."
+  },
+  "mensaje": null,
+  "aviso": null
+}

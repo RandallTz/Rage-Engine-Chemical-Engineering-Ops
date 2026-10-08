@@ -1,0 +1,12 @@
+{
+  "componentes": [
+    "methane",
+    "oxygen",
+    "carbon dioxide",
+    "water"
+  ],
+  "reactivos": [
+    "methane",
+    "oxygen"
+  ]
+}

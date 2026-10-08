@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "estado": "invalido",
+  "modelo_id": "b2057212617d533c300f3681e6e2482572b02f706d5399d3067f1c2abd5ac013",
+  "calculo": {
+    "identificador": "<identificador de esta ejecucion>",
+    "instante_utc": "<instante UTC de la ejecucion>",
+    "motor": {
+      "version": "0.15.0",
+      "commit": "<commit de git, con sufijo -sucio si habia cambios>"
+    },
+    "proveedor_termodinamico": {
+      "identificador": "<identificador de esta ejecucion>",
+      "versiones": {
+        "thermo": "<version instalada de thermo>",
+        "chemicals": "<version instalada de chemicals>",
+        "fluids": "<version instalada de fluids>",
+        "numpy": "<version instalada de numpy>",
+        "scipy": "<version instalada de scipy>"
+      }
+    },
+    "huella_entradas": "b2057212617d533c300f3681e6e2482572b02f706d5399d3067f1c2abd5ac013",
+    "algoritmo_huella": "sha256"
+  },
+  "diagnosticos": [
+    {
+      "codigo": "LAB_ELEMENTOS_NO_CONSERVADOS",
+      "severidad": "error",
+      "categoria": "datos",
+      "mensaje": "NO conserva los elementos: C +8, H +10. Eso no es una reaccion quimica, es un dato mal puesto.",
+      "accion_sugerida": "Usa /laboratorio/balancear para obtener los coeficientes que si cuadran.",
+      "bloque_ids": [],
+      "conexion_ids": [],
+      "variable_ids": []
+    }
+  ],
+  "resumen_diagnosticos": {
+    "total": 1,
+    "por_severidad": {
+      "error": 1
+    },
+    "por_categoria": {
+      "datos": 1
+    },
+    "hay_errores": true
+  },
+  "especies": [
+    "o-xylene",
+    "m-xylene",
+    "p-xylene"
+  ],
+  "nu": [
+    -1.0,
+    2.0,
+    0.0
+  ],
+  "elementos": [
+    "C",
+    "H"
+  ],
+  "residuo_elemental": {
+    "C": 8.0,
+    "H": 10.0
+  },
+  "conserva": false,
+  "descuadre": {
+    "C": 8.0,
+    "H": 10.0
+  },
+  "mensaje": "NO conserva los elementos: C +8, H +10. Eso no es una reaccion quimica, es un dato mal puesto."
+}

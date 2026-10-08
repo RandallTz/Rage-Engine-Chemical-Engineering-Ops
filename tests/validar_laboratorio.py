@@ -62,6 +62,7 @@ from core import errores as codigos
 from core import laboratorio as lab
 from core.flash import EvaluadorFlash
 from thermodynamics.elv import CalculadoraELV
+from thermodynamics.entalpia import entalpia_de
 from thermodynamics.proveedor import ProveedorTermodinamico
 
 fallos = []
@@ -2208,6 +2209,569 @@ check("10.17 Y un montaje con esa especie se rechaza por la Hf que falta",
 check("10.18 Es el mismo fallo que el catálogo avisaba ANTES de calcular",
       d_dicpd["capacidades"]["reaccion"]["disponible"] is False,
       "por eso el editor de especies puede impedirlo en vez de dejarlo llegar aquí")
+
+
+# =====================================================================
+print("\n" + "=" * 76)
+print("11. BALANCEO EXACTO: el espacio nulo de la matriz elemental")
+print("=" * 76)
+# =====================================================================
+# Los coeficientes correctos son enteros pequeños, y un método numérico
+# los devuelve como 0.9999999999999998. Con `fractions.Fraction` no hay
+# nada que reconocer. Lo que se comprueba es que salgan los enteros que
+# cualquiera escribiría a mano, y que los tres casos posibles se
+# distingan.
+
+def balancear_http(componentes, reactivos=None):
+    r = cliente.post("/laboratorio/balancear",
+                     json={"componentes": componentes,
+                           "reactivos": list(reactivos or [])})
+    assert r.status_code == 200, (r.status_code, r.text[:200])
+    return r.json()
+
+
+b_metano = balancear_http(["methane", "oxygen", "carbon dioxide", "water"],
+                          ["methane", "oxygen"])
+check("11.1 La combustión del metano sale con los enteros de siempre",
+      b_metano["estado"] == "resuelto"
+      and b_metano["reacciones"][0]["nu"] == [-1, -2, 1, 2],
+      f"ν = {b_metano['reacciones'][0]['nu']}")
+check("11.2 Y no necesita grupos UNIFAC: balancear es conservar átomos",
+      b_metano["aptas_para_termodinamica"] is False
+      and b_metano["dimension_del_espacio"] == 1,
+      "el metano no tiene grupos UNIFAC y aun así se balancea")
+check("11.3 Pero se avisa de que esa reacción NO se puede calcular",
+      any("no se puede usar" in d["mensaje"].lower()
+          for d in b_metano["diagnosticos"]),
+      "balancear necesita átomos; calcular necesita además termodinámica")
+
+b_amoniaco = balancear_http(["nitrogen", "hydrogen", "ammonia"],
+                            ["nitrogen", "hydrogen"])
+check("11.4 La síntesis de amoniaco también",
+      b_amoniaco["reacciones"][0]["nu"] == [-1, -3, 2],
+      f"ν = {b_amoniaco['reacciones'][0]['nu']}")
+
+b_xil = balancear_http(["o-xylene", "m-xylene"])
+check("11.5 Una isomerización da ν = [−1, +1]",
+      b_xil["reacciones"][0]["nu"] == [-1, 1])
+check("11.6 Y la aritmética se declara como exacta",
+      "exacta" in b_xil["aritmetica"] and "Fraction" in b_xil["aritmetica"],
+      b_xil["aritmetica"][:85])
+
+# Los tres casos.
+b_nada = balancear_http(["methane", "nitrogen"])
+check("11.7 Sin reacción posible se dice que no hay reacción",
+      b_nada["dimension_del_espacio"] == 0
+      and b_nada["estado"] == "invalido"
+      and any(d["codigo"] == codigos.LAB_SIN_BALANCE_POSIBLE
+              for d in errores_de(b_nada)),
+      b_nada["diagnostico"]["mensaje"][:90])
+
+b_sub = balancear_http(["carbon monoxide", "carbon dioxide", "hydrogen",
+                        "water", "methane"])
+check("11.8 Con varias reacciones independientes se devuelve la BASE",
+      b_sub["dimension_del_espacio"] == 2
+      and len(b_sub["reacciones"]) == 2,
+      f"dimensión {b_sub['dimension_del_espacio']}: desplazamiento de gas de "
+      "agua y metanación")
+check("11.9 Y se avisa de que elegir una sería decidir qué química ocurre",
+      any(d["codigo"] == codigos.LAB_BALANCEO_NO_UNICO
+          and d["severidad"] == "advertencia" for d in b_sub["diagnosticos"]),
+      "advertencia, no error: las dos reacciones son válidas")
+check("11.10 Todas las reacciones de la base conservan los elementos",
+      all(rx["conserva"] for rx in b_sub["reacciones"])
+      and all(all(v == 0 for v in rx["residuo_elemental"].values())
+              for rx in b_sub["reacciones"]),
+      "residuo exactamente cero, no 1e-16")
+
+# El signo no lo decide la conservación.
+b_sin_pista = balancear_http(["nitrogen", "hydrogen", "ammonia"])
+check("11.11 Sin pista de reactivos, el signo es una CONVENCIÓN y se dice",
+      "CONVENCION" in b_sin_pista["reacciones"][0]["orientacion"]
+      or "convencion" in b_sin_pista["reacciones"][0]["orientacion"],
+      b_sin_pista["reacciones"][0]["orientacion"][:95])
+check("11.12 Con la pista, se orienta y lo declara",
+      "pista del usuario" in b_amoniaco["reacciones"][0]["orientacion"],
+      b_amoniaco["reacciones"][0]["orientacion"][:85])
+
+# Y juzgar una ν dada, que es el problema inverso.
+def comprobar_http(componentes, nu):
+    r = cliente.post("/laboratorio/comprobar-estequiometria",
+                     json={"componentes": componentes, "nu": nu})
+    assert r.status_code == 200, (r.status_code, r.text[:200])
+    return r.json()
+
+
+c_bien = comprobar_http(["o-xylene", "m-xylene", "p-xylene"], [-1, 1, 0])
+c_mal = comprobar_http(["o-xylene", "m-xylene", "p-xylene"], [-1, 2, 0])
+check("11.13 Una ν correcta se acepta",
+      c_bien["conserva"] is True and c_bien["estado"] == "resuelto")
+check("11.14 Y una incorrecta dice QUÉ elemento descuadra y en cuánto",
+      c_mal["conserva"] is False
+      and c_mal["descuadre"] == {"C": 8.0, "H": 10.0},
+      c_mal["mensaje"][:88])
+
+check("11.15 Las dos respuestas serializan a JSON estricto",
+      bool(json.dumps(b_sub, allow_nan=False))
+      and bool(json.dumps(c_mal, allow_nan=False)))
+
+
+# =====================================================================
+print("\n" + "=" * 76)
+print("12. EQUILIBRIO QUIMICO: K de dG de formacion, no de ninguna cinetica")
+print("=" * 76)
+# =====================================================================
+# El sistema es la tríada de xilenos: o-, m- y p-, todos C8H10, con
+# propiedades completas y γ = 1 exactamente. Esa última propiedad es la
+# que permite comprobar el equilibrio contra la razón de actividades sin
+# que UNIFAC se interponga.
+
+XIL = ["o-xylene", "m-xylene", "p-xylene"]
+_prov_xil = ProveedorTermodinamico(XIL)
+
+
+def equilibrio_http(reacciones, inicial, T=400.0, base=None):
+    cuerpo = {
+        "componentes": XIL, "reacciones": reacciones,
+        "estado_inicial": inicial, "T": {"valor": T, "unidad": "K"},
+    }
+    if base:
+        cuerpo["base_actividad"] = base
+    r = cliente.post("/laboratorio/equilibrio", json=cuerpo)
+    assert r.status_code == 200, (r.status_code, r.text[:300])
+    return r.json()
+
+
+INICIAL_O = [{"componente": "o-xylene", "valor": 100.0, "unidad": "mol"}]
+eq1 = equilibrio_http([{"id": "om", "nu": [-1.0, 1.0, 0.0]}], INICIAL_O)
+check("12.1 El equilibrio de una reacción se resuelve",
+      eq1["estado"] == "resuelto" and eq1["convergencia"]["convergio"] is True,
+      f"residuo {eq1['convergencia']['residuo_escalado']:.2e}")
+
+# LA comprobación: la razón de actividades en la solución tiene que ser K.
+x_eq = np.array(eq1["composicion_equilibrio"])
+K_eq = eq1["propiedades_por_reaccion"][0]["riguroso"]["K"]
+gamma = np.asarray(_prov_xil.coeficientes_actividad(400.0, x_eq), dtype=float)
+a = x_eq * gamma
+razon = a[1] / a[0]
+check("12.2 Y la razón de actividades ES K, pedida al proveedor por separado",
+      abs(razon - K_eq) < 1e-12 * K_eq,
+      f"a_m/a_o = {razon!r} frente a K = {K_eq!r}")
+check("12.3 Con dG_rxn exactamente cero en la solución",
+      abs(eq1["comprobacion"][0]["dG_rxn"]) < 1e-6
+      and eq1["comprobacion"][0]["en_equilibrio"] is True,
+      f"dG = {eq1['comprobacion'][0]['dG_rxn']:.3e} J/mol")
+
+# K por las dos rutas, y la diferencia visible.
+pr = eq1["propiedades_por_reaccion"][0]
+check("12.4 Se dan K por las DOS rutas: rigurosa y van't Hoff",
+      pr["riguroso"]["K"] > 0 and pr["vant_hoff"]["K"] > 0,
+      f"rigurosa {pr['riguroso']['K']:.6f}, van't Hoff {pr['vant_hoff']['K']:.6f}")
+check("12.5 Y la diferencia se mide: a 100 K de la referencia es del 2.5 %",
+      pr["vant_hoff"]["diferencia_relativa_con_riguroso"] > 0.01,
+      f"{pr['vant_hoff']['diferencia_relativa_con_riguroso']:.3%} — "
+      "la aproximación no es inocua")
+check("12.6 La ruta rigurosa declara cómo obtiene ΔH y ΔS",
+      "Kirchhoff" in pr["riguroso"]["metodo"]
+      and "dCp/T" in pr["riguroso"]["metodo"],
+      pr["riguroso"]["metodo"][:92])
+check("12.7 Y van't Hoff declara su aproximación",
+      "CONSTANTE" in pr["vant_hoff"]["aproximacion"],
+      pr["vant_hoff"]["aproximacion"])
+
+# ΔH(T) sale de las entalpías sensibles, sin integrar nada. Se comprueba
+# contra la calculadora de entalpía por el camino corto.
+_calc_xil = entalpia_de(_prov_xil)
+Hf_xil = np.asarray(_prov_xil.entalpias_formacion_liquido(), dtype=float)
+nu_om = np.array([-1.0, 1.0, 0.0])
+
+
+def _h_puro(T, i):
+    e = np.zeros(3)
+    e[i] = 1.0
+    return _calc_xil.h_liquido(float(T), e)
+
+
+dH_corto = float(nu_om @ Hf_xil) + sum(
+    nu_om[i] * _h_puro(400.0, i) for i in range(3))
+check("12.8 ΔH(T) coincide con ν·(Hf + h_sens) pedido por separado",
+      abs(pr["riguroso"]["dH"] - dH_corto) < 1e-9 * abs(dH_corto),
+      f"{pr['riguroso']['dH']:.6f} frente a {dH_corto:.6f} J/mol")
+check("12.9 Y a la T de referencia ΔH es exactamente ν·Hf",
+      abs(pr["en_referencia"]["dH"] - float(nu_om @ Hf_xil)) < 1e-9,
+      f"{pr['en_referencia']['dH']:.1f} J/mol, de las propiedades de formación")
+
+# Le Chatelier, que no depende de ningún dato.
+eq_frio = equilibrio_http([{"id": "om", "nu": [-1.0, 1.0, 0.0]}], INICIAL_O,
+                          T=330.0)
+K_frio = eq_frio["propiedades_por_reaccion"][0]["riguroso"]["K"]
+check("12.10 Le Chatelier: siendo exotérmica, K baja al subir T",
+      pr["riguroso"]["dH"] < 0 and K_eq < K_frio,
+      f"K(330) = {K_frio:.4f} > K(400) = {K_eq:.4f} con ΔH = "
+      f"{pr['riguroso']['dH']:.0f} J/mol")
+
+# La estabilidad: dG = 0 no basta.
+check("12.11 El criterio de estabilidad es el HESSIANO, no dG = 0",
+      eq1["estabilidad"]["definido_positivo"] is True
+      and all(v > 0 for v in eq1["estabilidad"]["autovalores"]),
+      f"autovalores {[round(v, 2) for v in eq1['estabilidad']['autovalores']]}")
+check("12.12 Y se declara que dG = 0 solo dice «punto estacionario»",
+      "estacionario" in eq1["estabilidad"]["criterio"].lower(),
+      eq1["estabilidad"]["criterio"][:92])
+
+# Los potenciales químicos, con estado estándar declarado.
+pq = eq1["potenciales_quimicos"]
+check("12.13 Los potenciales químicos declaran su estado estándar",
+      "liquido puro" in pq["estado_estandar"],
+      pq["estado_estandar"])
+check("12.14 Y en el equilibrio Σ ν_i μ_i = 0",
+      abs(sum(nu_om[i] * pq["por_especie"][i]["mu"] for i in range(3))) < 1.0,
+      f"Σ ν μ = {sum(nu_om[i] * pq['por_especie'][i]['mu'] for i in range(3)):.3e}"
+      " J/mol — que es la condición de equilibrio escrita con potenciales")
+
+# Dos reacciones acopladas.
+eq2 = equilibrio_http([{"id": "om", "nu": [-1.0, 1.0, 0.0]},
+                       {"id": "mp", "nu": [0.0, -1.0, 1.0]}], INICIAL_O)
+check("12.15 Dos reacciones acopladas también se resuelven",
+      eq2["estado"] == "resuelto"
+      and all(abs(c["dG_rxn"]) < 1e-6 for c in eq2["comprobacion"]),
+      f"x_eq = {[round(v, 6) for v in eq2['composicion_equilibrio']]}")
+check("12.16 Con las restricciones elementales cumplidas por construcción",
+      eq2["conservacion"]["residuo_elemental_maximo"] < 1e-12,
+      f"residuo elemental {eq2['conservacion']['residuo_elemental_maximo']:.2e}; "
+      "un avance sobre una ν validada conserva los elementos")
+check("12.17 Y se declara que no se añadieron como ecuaciones",
+      any("POR CONSTRUCCION" in r
+          for r in eq2["convergencia"]["restricciones"]),
+      "añadirlas habría contado dos veces lo mismo")
+check("12.18 El hessiano de dos reacciones es 2x2 y definido positivo",
+      len(eq2["estabilidad"]["autovalores"]) == 2
+      and eq2["estabilidad"]["definido_positivo"] is True,
+      f"autovalores {[round(v, 1) for v in eq2['estabilidad']['autovalores']]}")
+
+# El residuo en logaritmos, y por qué.
+check("12.19 El residuo se mide en ln Q − ln K, no en Q − K",
+      "ln Q" in eq2["convergencia"]["escala_residuo"],
+      eq2["convergencia"]["escala_residuo"][:95])
+
+# La advertencia que el contrato pedía.
+check("12.20 Y la respuesta avisa de que r⁺ = r⁻ no demuestra equilibrio",
+      "NO demuestra equilibrio termodinamico" in eq1["aviso_tasas"],
+      eq1["aviso_tasas"][:95])
+
+# Los rechazos.
+eq_mal = equilibrio_http([{"id": "x", "nu": [-1.0, 2.0, 0.0]}], INICIAL_O)
+check("12.21 Una ν que no conserva los elementos se rechaza",
+      eq_mal["estado"] == "invalido"
+      and any(d["codigo"] == codigos.LAB_ELEMENTOS_NO_CONSERVADOS
+              for d in errores_de(eq_mal)),
+      ", ".join(d["codigo"] for d in errores_de(eq_mal))[:70])
+
+r_vacio = cliente.post("/laboratorio/equilibrio", json={
+    "componentes": XIL, "reacciones": [{"id": "om", "nu": [-1.0, 1.0, 0.0]}],
+    "estado_inicial": [{"componente": "o-xylene", "valor": 0.0,
+                        "unidad": "mol"}],
+    "T": {"valor": 400.0, "unidad": "K"}}).json()
+check("12.22 Una alimentación sin materia se rechaza",
+      r_vacio["estado"] == "invalido",
+      ", ".join(d["codigo"] for d in errores_de(r_vacio))[:60])
+
+check("12.23 La respuesta serializa a JSON estricto",
+      bool(json.dumps(eq2, allow_nan=False)))
+
+
+# =====================================================================
+print("\n" + "=" * 76)
+print("13. LOTE TRANSITORIO: contra las soluciones analiticas")
+print("=" * 76)
+# =====================================================================
+# Las redes de PRIMER ORDEN tienen solución analítica, y los tres
+# topologías que el contrato nombra --consecutiva, paralela y reversible--
+# son exactamente ésas. Así que no hay un solo número escrito a mano: se
+# comparan contra el álgebra.
+#
+# Con los xilenos γ = 1 exactamente, así que la base de actividad correcta
+# coincide con la ideal y la solución analítica vale sin aproximar nada.
+
+N0 = 100.0
+T_LOTE = 400.0
+
+
+def ley_de(k, componente):
+    return {"k_ref": {"valor": k, "unidad": "mol/s"},
+            "T_ref": {"valor": T_LOTE, "unidad": "K"}, "Ea": 0.0,
+            "base_actividad": "actividad", "ordenes": {componente: 1.0}}
+
+
+def lote_http(reacciones, t_final, muestras=9, inicial=None, integrador=None):
+    cuerpo = {
+        "componentes": XIL, "reacciones": reacciones,
+        "estado_inicial": inicial or [{"componente": "o-xylene",
+                                       "valor": N0, "unidad": "mol"}],
+        "T": {"valor": T_LOTE, "unidad": "K"},
+        "tiempo": {"final": t_final, "unidad": "s", "muestras": muestras},
+    }
+    if integrador:
+        cuerpo["integrador"] = integrador
+    r = cliente.post("/laboratorio/lote", json=cuerpo)
+    assert r.status_code == 200, (r.status_code, r.text[:300])
+    return r.json()
+
+
+# --- 13.1 A -> B
+#   r = k x_A = k n_A/N  =>  n_A = n_A0 exp(-k t / N)
+k1, k2 = 0.5, 0.2
+ka, kb = k1 / N0, k2 / N0
+l1 = lote_http([{"id": "om", "nu": [-1.0, 1.0, 0.0],
+                 "ley_directa": ley_de(k1, "o-xylene")}], 400.0)
+t = np.array(l1["t"])
+n = np.array(l1["moles"])
+nA_exacto = N0 * np.exp(-ka * t)
+check("13.1 A → B coincide con n_A = n_A0 e^(−kt/N)",
+      l1["estado"] == "resuelto"
+      and float(np.max(np.abs(n[0] - nA_exacto))) < 1e-7,
+      f"error máximo {float(np.max(np.abs(n[0] - nA_exacto))):.2e} mol sobre "
+      f"{N0:.0f}")
+check("13.2 Y el producto es el resto, porque Σν = 0",
+      float(np.max(np.abs(n[1] - (N0 - nA_exacto)))) < 1e-7)
+check("13.3 El método y las tolerancias se declaran",
+      l1["metodo"] == "LSODA" and l1["tolerancias"]["rtol"] > 0
+      and l1["tolerancias"]["atol"] > 0,
+      f"{l1['metodo']}, rtol={l1['tolerancias']['rtol']:.0e}, "
+      f"atol={l1['tolerancias']['atol']:.0e}")
+check("13.4 Y se dice por qué: sin tolerancia no se reproduce",
+      "reproducir" in l1["tolerancias"]["nota"],
+      l1["tolerancias"]["nota"][:88])
+
+# --- 13.5 consecutiva A -> B -> C
+l2 = lote_http([{"id": "om", "nu": [-1.0, 1.0, 0.0],
+                 "ley_directa": ley_de(k1, "o-xylene")},
+                {"id": "mp", "nu": [0.0, -1.0, 1.0],
+                 "ley_directa": ley_de(k2, "m-xylene")}], 1200.0, muestras=13)
+t2 = np.array(l2["t"])
+n2 = np.array(l2["moles"])
+nA2 = N0 * np.exp(-ka * t2)
+nB2 = N0 * ka / (kb - ka) * (np.exp(-ka * t2) - np.exp(-kb * t2))
+check("13.5 Consecutiva A → B → C coincide con la solución clásica",
+      float(np.max(np.abs(n2[0] - nA2))) < 1e-7
+      and float(np.max(np.abs(n2[1] - nB2))) < 1e-7
+      and float(np.max(np.abs(n2[2] - (N0 - nA2 - nB2)))) < 1e-7,
+      f"errores {float(np.max(np.abs(n2[0] - nA2))):.1e}, "
+      f"{float(np.max(np.abs(n2[1] - nB2))):.1e}, "
+      f"{float(np.max(np.abs(n2[2] - (N0 - nA2 - nB2)))):.1e} mol")
+check("13.6 Y el máximo del intermedio está donde el álgebra lo pone",
+      abs(float(np.max(n2[1])) - float(np.max(nB2))) < 1e-6,
+      f"{float(np.max(n2[1])):.4f} mol frente a {float(np.max(nB2)):.4f}")
+
+# --- 13.7 paralela A -> B, A -> C
+l3 = lote_http([{"id": "om", "nu": [-1.0, 1.0, 0.0],
+                 "ley_directa": ley_de(k1, "o-xylene")},
+                {"id": "op", "nu": [-1.0, 0.0, 1.0],
+                 "ley_directa": ley_de(k2, "o-xylene")}], 800.0, muestras=11)
+t3 = np.array(l3["t"])
+n3 = np.array(l3["moles"])
+ksum = ka + kb
+nA3 = N0 * np.exp(-ksum * t3)
+nB3 = N0 * ka / ksum * (1 - np.exp(-ksum * t3))
+check("13.7 Paralela A → B, A → C coincide con la analítica",
+      float(np.max(np.abs(n3[0] - nA3))) < 1e-7
+      and float(np.max(np.abs(n3[1] - nB3))) < 1e-7,
+      f"errores {float(np.max(np.abs(n3[0] - nA3))):.1e} y "
+      f"{float(np.max(np.abs(n3[1] - nB3))):.1e} mol")
+check("13.8 Y la selectividad es exactamente k₁/k₂",
+      abs(float(n3[1][-1] / n3[2][-1]) - k1 / k2) < 1e-9,
+      f"B/C = {float(n3[1][-1] / n3[2][-1])!r} frente a {k1 / k2!r}")
+
+# --- 13.9 reversible A <-> B
+l4 = lote_http([{"id": "om", "nu": [-1.0, 1.0, 0.0],
+                 "ley_directa": ley_de(k1, "o-xylene"),
+                 "ley_inversa": ley_de(k2, "m-xylene")}], 2000.0, muestras=11)
+t4 = np.array(l4["t"])
+n4 = np.array(l4["moles"])
+nA_inf = N0 * kb / ksum
+nA4 = nA_inf + (N0 - nA_inf) * np.exp(-ksum * t4)
+check("13.9 Reversible A ⇌ B coincide con la analítica",
+      float(np.max(np.abs(n4[0] - nA4))) < 1e-6,
+      f"error máximo {float(np.max(np.abs(n4[0] - nA4))):.2e} mol")
+check("13.10 Y el estado estacionario cinético da n_B/n_A = k₁/k₂",
+      abs(float(n4[1][-1] / n4[0][-1]) - k1 / k2) < 1e-5,
+      f"{float(n4[1][-1] / n4[0][-1]):.6f} frente a {k1 / k2:.6f}")
+
+# --- 13.11 LA COMPROBACION QUE CRUZA LOS DOS SERVICIOS
+#
+# Un lote con cinética termodinámicamente consistente converge, cuando t
+# tiende a infinito, a la misma composición que /laboratorio/equilibrio.
+# Son dos caminos independientes: uno integra una ODE y el otro resuelve
+# ln Q = ln K.
+l_cons = lote_http([{"id": "om", "nu": [-1.0, 1.0, 0.0],
+                     "ley_directa": ley_de(1.0, "o-xylene"),
+                     "ley_inversa": {"desde_equilibrio": True}}],
+                   500000.0, muestras=5)
+x_lote = np.array(l_cons["equilibrio_alcanzado"]["composicion_final"])
+x_servicio = np.array(eq1["composicion_equilibrio"])
+check("13.11 El lote con cinética consistente llega al EQUILIBRIO calculado",
+      l_cons["estado"] == "resuelto"
+      and float(np.max(np.abs(x_lote - x_servicio))) < 1e-12,
+      f"diferencia máxima {float(np.max(np.abs(x_lote - x_servicio))):.2e} entre "
+      "integrar una ODE y resolver ln Q = ln K")
+check("13.12 Y dG_rxn al final de la trayectoria es cero",
+      abs(l_cons["equilibrio_alcanzado"]["distancia"][0]["dG_rxn"]) < 1e-6,
+      f"{l_cons['equilibrio_alcanzado']['distancia'][0]['dG_rxn']:.2e} J/mol")
+
+# Y la mitad negativa de lo mismo: una cinética que NO es consistente se
+# para en un estacionario que no es el equilibrio termodinámico. Es la
+# advertencia del contrato, medida.
+x_incons = np.array(n4[:, -1]) / float(np.sum(n4[:, -1]))
+check("13.13 Una cinética NO consistente para en otro sitio, y se mide",
+      float(np.max(np.abs(x_incons - x_servicio))) > 1e-3,
+      f"k₁/k₂ = {k1 / k2:.4f} frente a K = {K_eq:.4f}: el estacionario cinético "
+      "no es el equilibrio termodinámico")
+
+# --- 13.14 agotamiento por EVENTO
+l_rapida = lote_http([{"id": "om", "nu": [-1.0, 1.0, 0.0],
+                       "ley_directa": ley_de(50.0, "o-xylene")}], 2000.0)
+check("13.14 El agotamiento se detecta con un EVENTO del integrador",
+      l_rapida["agotamientos"]
+      and l_rapida["agotamientos"][0]["componente"] == "o-xylene",
+      f"o-xileno se agota en t = {l_rapida['agotamientos'][0]['instante']:.4f} s")
+check("13.15 Y se dice por qué no se mira las muestras",
+      "entre dos muestras" in l_rapida["agotamientos"][0]["nota"],
+      "un cruce entre dos muestras se habría perdido")
+
+# --- 13.16 no negatividad y conservación
+check("13.16 La no negatividad se comprueba sobre la trayectoria DEVUELTA",
+      l2["no_negatividad"]["cumple"] is True
+      and "trayectoria DEVUELTA" in l2["no_negatividad"]["nota"],
+      "recortar y callarse convertiría un dato imposible en una curva plausible")
+check("13.17 Elementos y masa conservados a lo largo de la trayectoria",
+      l2["conservacion"]["residuo_elemental_maximo"] < 1e-12
+      and l2["conservacion"]["masa"]["residuo_relativo"] < 1e-12,
+      f"elemental {l2['conservacion']['residuo_elemental_maximo']:.1e}, masa "
+      f"{l2['conservacion']['masa']['residuo_relativo']:.1e}")
+check("13.18 Y la masa se mide, no se supone",
+      abs(l2["conservacion"]["masa"]["inicial"]
+          - l2["conservacion"]["masa"]["final"]) < 1e-9,
+      f"{l2['conservacion']['masa']['inicial']:.6f} g constantes")
+
+# --- 13.19 el integrador se puede elegir
+for metodo in ("Radau", "BDF", "RK45"):
+    lm = lote_http([{"id": "om", "nu": [-1.0, 1.0, 0.0],
+                     "ley_directa": ley_de(k1, "o-xylene")}], 400.0,
+                   integrador={"metodo": metodo})
+    tm = np.array(lm["t"])
+    nm = np.array(lm["moles"])
+    check(f"13.19 Con {metodo} sale el mismo resultado",
+          lm["estado"] == "resuelto"
+          and float(np.max(np.abs(nm[0] - N0 * np.exp(-ka * tm)))) < 1e-5,
+          f"error {float(np.max(np.abs(nm[0] - N0 * np.exp(-ka * tm)))):.1e} mol")
+
+# --- 13.20 los rechazos
+def lote_malo(nombre, cuerpo, codigo_esperado):
+    r = cliente.post("/laboratorio/lote", json=cuerpo)
+    if r.status_code != 200:
+        check(nombre, False, f"HTTP {r.status_code}")
+        return
+    d = r.json()
+    vistos = [x["codigo"] for x in errores_de(d)]
+    check(nombre, codigo_esperado in vistos,
+          f"estado={d['estado']}, códigos={', '.join(vistos[:2]) or 'ninguno'}")
+
+
+BASE_LOTE = {
+    "componentes": XIL,
+    "estado_inicial": [{"componente": "o-xylene", "valor": N0, "unidad": "mol"}],
+    "T": {"valor": T_LOTE, "unidad": "K"},
+    "tiempo": {"final": 100.0, "unidad": "s", "muestras": 5},
+}
+
+lote_malo("13.20 Un lote sin ley de velocidad se rechaza",
+          {**BASE_LOTE,
+           "reacciones": [{"id": "om", "nu": [-1.0, 1.0, 0.0]}]},
+          codigos.LAB_LEY_INVALIDA)
+
+lote_malo("13.21 Un método de integración desconocido",
+          {**BASE_LOTE,
+           "reacciones": [{"id": "om", "nu": [-1.0, 1.0, 0.0],
+                           "ley_directa": ley_de(k1, "o-xylene")}],
+           "integrador": {"metodo": "Euler"}},
+          codigos.LAB_METODO_NO_SOPORTADO)
+
+lote_malo("13.22 Una unidad de tiempo no admitida",
+          {**BASE_LOTE,
+           "tiempo": {"final": 1.0, "unidad": "dias", "muestras": 5},
+           "reacciones": [{"id": "om", "nu": [-1.0, 1.0, 0.0],
+                           "ley_directa": ley_de(k1, "o-xylene")}]},
+          codigos.LAB_UNIDAD_INCOMPATIBLE)
+
+lote_malo("13.23 Un estado inicial con moles negativos",
+          {**BASE_LOTE,
+           "estado_inicial": [{"componente": "o-xylene", "valor": -5.0,
+                               "unidad": "mol"}],
+           "reacciones": [{"id": "om", "nu": [-1.0, 1.0, 0.0],
+                           "ley_directa": ley_de(k1, "o-xylene")}]},
+          codigos.LAB_VALOR_FUERA_DE_DOMINIO)
+
+lote_malo("13.24 Un componente del estado inicial que no está en la mezcla",
+          {**BASE_LOTE,
+           "estado_inicial": [{"componente": "benzene", "valor": 10.0,
+                               "unidad": "mol"}],
+           "reacciones": [{"id": "om", "nu": [-1.0, 1.0, 0.0],
+                           "ley_directa": ley_de(k1, "o-xylene")}]},
+          codigos.LAB_VARIABLE_DESCONOCIDA)
+
+lote_malo("13.25 Una base volumétrica sin el volumen del lote",
+          {**BASE_LOTE,
+           "reacciones": [{"id": "om", "nu": [-1.0, 1.0, 0.0],
+                           "ley_directa": {**ley_de(k1, "o-xylene"),
+                                           "k_ref": {"valor": 1.0,
+                                                     "unidad": "mol/(m3*s)"}}}]},
+          codigos.LAB_FALTA_VOLUMEN_REACTOR)
+
+lote_malo("13.26 Una ν que no conserva los elementos",
+          {**BASE_LOTE,
+           "reacciones": [{"id": "om", "nu": [-1.0, 2.0, 0.0],
+                           "ley_directa": ley_de(k1, "o-xylene")}]},
+          codigos.LAB_ELEMENTOS_NO_CONSERVADOS)
+
+check("13.27 Un tiempo final no positivo lo rechaza el esquema",
+      cliente.post("/laboratorio/lote", json={
+          **BASE_LOTE, "tiempo": {"final": 0.0, "unidad": "s", "muestras": 5},
+          "reacciones": [{"id": "om", "nu": [-1.0, 1.0, 0.0],
+                          "ley_directa": ley_de(k1, "o-xylene")}]
+      }).status_code == 422,
+      "es una cuestión de forma, no de física")
+
+# --- 13.28 trazabilidad y serialización
+check("13.28 Cambiar una constante cinética cambia el modelo_id",
+      lote_http([{"id": "om", "nu": [-1.0, 1.0, 0.0],
+                  "ley_directa": ley_de(0.6, "o-xylene")}], 400.0)["modelo_id"]
+      != l1["modelo_id"],
+      "la cinética es física: entra en la huella")
+check("13.29 Y cambiar la tolerancia también: cambia la trayectoria devuelta",
+      lote_http([{"id": "om", "nu": [-1.0, 1.0, 0.0],
+                  "ley_directa": ley_de(k1, "o-xylene")}], 400.0,
+                integrador={"rtol": 1e-8})["modelo_id"] != l1["modelo_id"])
+for nombre, rr in (("A→B", l1), ("consecutiva", l2), ("reversible", l4),
+                   ("consistente", l_cons)):
+    try:
+        json.dumps(rr, allow_nan=False)
+        ok, detalle = True, ""
+    except (TypeError, ValueError) as e:
+        ok, detalle = False, str(e)[:70]
+    check(f"13.30 La respuesta «{nombre}» serializa a JSON estricto", ok, detalle)
+
+cap_rx = cliente.get("/laboratorio/reacciones/capacidades").json()
+check("13.31 Las capacidades declaran qué necesita y qué NO cada servicio",
+      set(cap_rx["servicios"]) == {"balancear", "equilibrio", "lote"}
+      and "no_necesita" in cap_rx["servicios"]["balancear"],
+      "balancear no necesita termodinámica; equilibrio no necesita cinética")
+check("13.32 Y declaran la comprobación cruzada entre lote y equilibrio",
+      "1e-17" in cap_rx["comprobacion_cruzada"],
+      cap_rx["comprobacion_cruzada"][:95])
+check("13.33 El lote adiabático se declara NO soportado",
+      any("adiabatico" in s for s in
+          cap_rx["servicios"]["lote"]["no_soportado"]),
+      ", ".join(cap_rx["servicios"]["lote"]["no_soportado"]))
 
 
 print("\n" + "=" * 76)

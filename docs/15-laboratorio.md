@@ -9,8 +9,11 @@ isotermo, así que **dos volúmenes en serie no se podían resolver**.
 
 Este capítulo documenta el ensamblador que sí los resuelve
 (`core/laboratorio.py`), las tres decisiones que le dan forma, la
-estequiometría que se le añadió después (`core/estequiometria.py`) y la
-cinética que rompió su estructura triangular (`core/cinetica.py`).
+estequiometría que se le añadió después (`core/estequiometria.py`), la
+cinética que rompió su estructura triangular (`core/cinetica.py`), y los
+tres servicios que crecieron de ahí: el balanceo exacto
+(`core/balanceo.py`), el equilibrio calculado (`core/equilibrio.py`) y el
+lote transitorio (`core/lote.py`).
 
 El contrato de la API, los códigos de diagnóstico y los ejemplos exactos
 están en [`ENTREGA_LABORATORIO_CODEX.md`](ENTREGA_LABORATORIO_CODEX.md).
@@ -769,18 +772,208 @@ mira `Hfm`. Comprobar otra daría un apto que luego falla.
 
 ---
 
+## 15.9septies Balanceo exacto, y por qué exacto
+
+$A\cdot\nu = 0$ resuelto con `fractions.Fraction` y eliminación de Gauss
+sobre los racionales.
+
+**Por qué no numérico.** La respuesta correcta son enteros pequeños, y un
+método numérico los devuelve como `0.9999999999999998`. Con SVD se obtiene
+una base del espacio nulo en floats y luego hay que *reconocer* los
+enteros, que es adivinar: `0.333333` puede ser 1/3 o el redondeo de otra
+cosa. Con `Fraction` no hay nada que reconocer — los coeficientes **son**
+racionales, y se escalan al mínimo entero multiplicando por el mcm de los
+denominadores y dividiendo por el mcd de los numeradores.
+
+El residuo elemental sale **exactamente 0**, no $10^{-16}$.
+
+### Las tres respuestas, y las tres importan
+
+| Dimensión del espacio nulo | Qué significa |
+|---|---|
+| 0 | No hay reacción. Estas especies no se combinan conservando los elementos, y decirlo **es** la respuesta |
+| 1 | Una reacción, única salvo escala y signo |
+| > 1 | Un **subespacio**: la conservación no determina una reacción. Se devuelve la base entera |
+
+El tercero no es raro: `CO/CO₂/H₂/H₂O/CH₄` da **dimensión 2** —
+desplazamiento de gas de agua y metanación. Devolver una cualquiera sería
+elegir qué química ocurre.
+
+### El signo no lo decide la conservación
+
+$A\nu = 0$ se cumple igual con $\nu$ y con $-\nu$: la conservación de
+elementos no sabe qué es reactivo. Se admite una pista y, sin ella, se
+orienta por convención y **se dice que es una convención**. Suponer una
+dirección en silencio es cómo una reacción sale escrita al revés sin que
+nadie se entere.
+
+### Y no necesita el proveedor
+
+Balancear **es** la conservación de los átomos: hace falta la composición
+elemental y nada más. El servicio construía un `ProveedorTermodinamico`
+completo, que exige grupos UNIFAC, y eso excluía la combustión del
+metano — el ejemplo canónico de un balanceo. Ahora los átomos se resuelven
+por el camino corto y el proveedor se deja para quien lo necesita, con
+`aptas_para_termodinamica` avisando de que esa reacción no se puede
+calcular.
+
+---
+
+## 15.9octies Equilibrio químico calculado
+
+### La advertencia que da sentido al módulo
+
+**Imponer $r^+ = r^-$ no demuestra equilibrio termodinámico.** Describe un
+estado estacionario con esas dos tasas, nada más: dos constantes
+cinéticas cualesquiera lo producen. El equilibrio exige
+
+$$ Q_r = K_r(T) \qquad\Longleftrightarrow\qquad \Delta G_{rxn} = 0 $$
+
+y $K$ sale de $\Delta G$ de **formación**, no de ninguna cinética.
+
+Está medido en la suite por los dos lados: una cinética consistente
+(`desde_equilibrio`) llega al equilibrio calculado, y una que no lo es
+para en otro sitio — $k_1/k_2 = 2.5$ frente a $K = 2.38$.
+
+### K(T): dos rutas y la diferencia medida
+
+$$ \text{van't Hoff:}\quad K(T) = K(T_{ref})\exp\!\left[-\frac{\Delta H(T_{ref})}{R}\left(\frac1T-\frac1{T_{ref}}\right)\right] $$
+
+supone $\Delta H$ **constante** con la temperatura. La ruta rigurosa:
+
+$$ \Delta H(T) = \Delta H(T_{ref}) + \int \Delta C_p\,dT \qquad \Delta S(T) = \Delta S(T_{ref}) + \int \frac{\Delta C_p}{T}\,dT $$
+$$ \Delta G(T) = \Delta H(T) - T\,\Delta S(T) \qquad K = e^{-\Delta G(T)/RT} $$
+
+Se devuelven **las dos**, con la diferencia relativa medida. Con los
+xilenos a 400 K es del **2.5 %**, y con los butanos el $C_p$ pasa de 142 a
+211 J/(mol·K) entre 300 y 400 K: la aproximación no es inocua.
+
+### Un detalle que ahorra una integral
+
+$\Delta H(T)$ **no hace falta integrarla**:
+
+$$ \Delta H_{rxn}(T) = \nu\cdot\left(H_f + h_{sens}(T)\right) $$
+
+Las entalpías sensibles del motor ya la llevan dentro, porque
+$\nu\cdot h_{sens}(T)$ es exactamente la integral de $\Delta C_p$ que
+Kirchhoff pide. Es la **misma identidad** que explica por qué el balance de
+energía no debe corregir $\Delta H$ con Kirchhoff (§15.9bis): allí lo
+contaría dos veces, y aquí lo da gratis.
+
+La integral que sí hace falta es la de la **entropía**, $\Delta C_p/T$,
+que no está tabulada.
+
+### El criterio de estabilidad
+
+$\Delta G = 0$ dice que es un punto **estacionario** de la energía de
+Gibbs, no que sea un **mínimo**. Lo decide la segunda derivada: el
+hessiano de $G$ respecto de los avances tiene que ser definido positivo.
+
+Se calcula por diferencias finitas centradas y se devuelven los
+**autovalores**, que son el criterio — no una etiqueta. Solo hace falta
+derivar la parte de mezcla, $RT\sum n_i\ln a_i$, porque la estándar es
+lineal en los avances y no aporta al hessiano.
+
+### Las restricciones, y la que no hace falta
+
+**Las elementales se cumplen por construcción**: un avance sobre una ν
+validada conserva los elementos. Añadirlas como ecuaciones habría contado
+dos veces lo mismo, y la respuesta lo declara.
+
+**La no negatividad sí hace falta**, y es la parte delicada: una especie en
+cero tiene actividad cero y $\ln 0 = -\infty$. El avance se acota al
+interior del simplex estequiométrico y las actividades se recortan a un
+suelo relativo, **diciendo cuándo se recorta** — porque recortar significa
+que el equilibrio empuja a agotar esa especie.
+
+**Y el residuo se mide en $\ln Q - \ln K$.** Con $\Delta G$ de −60 kJ/mol,
+$K$ vale $10^{10}$: un residuo $Q - K$ no se puede escalar de forma útil.
+
+---
+
+## 15.9nonies Lote transitorio
+
+$$ \frac{dn_i}{dt} = \sum_r \nu_{ir}\,r_r(T,\mathbf{x}(t)) \qquad n_i(0)=n_{i0} $$
+
+Deja de ser un sistema algebraico —implícito o no— y pasa a ser un sistema
+de ODEs. Usa **las mismas leyes de velocidad** que el CSTR: la ley es la
+misma física en los dos regímenes, y tener dos implementaciones sería
+tener dos físicas que se pueden separar.
+
+### Las cuatro cosas que el contrato pedía
+
+**Estado inicial compatible.** Moles no negativos que sumen algo. Una base
+volumétrica necesita el volumen, y si no se da **no se supone 1 m³**.
+
+**Tolerancias declaradas.** `rtol` y `atol` viajan en la respuesta: una
+trayectoria sin tolerancia declarada no se puede reproducir ni comparar.
+
+**Agotamiento por EVENTO.** No se detecta mirando si algún número salió
+negativo: se detecta con un evento del integrador, que localiza el instante
+del cruce con la misma precisión que la trayectoria. Un chequeo a
+posteriori sobre los puntos muestreados **se perdería el cruce si cae
+entre dos muestras**.
+
+**No negatividad comprobada sobre lo devuelto.** Una ley con órdenes
+positivos la respeta sola —la tasa cae a cero cuando el reactivo se
+agota— pero el integrador puede pasarse por debajo en un paso. Se recorta
+al **evaluar** la ley, porque UNIFAC con fracciones negativas no significa
+nada, y se **comprueba** sobre la trayectoria devuelta. Recortar y callarse
+convertiría un dato imposible en una curva plausible.
+
+### El integrador, y por qué LSODA por omisión
+
+Una red con constantes muy distintas es **rígida sin avisar**, y LSODA
+cambia solo entre no rígido y rígido. `Radau` y `BDF` están para quien ya
+sepa que la suya lo es; `RK45` es más rápido si no lo es.
+
+### La verificación: soluciones analíticas
+
+Las redes de **primer orden** las tienen, y las tres topologías que el
+contrato nombra son exactamente ésas. Con los xilenos $\gamma = 1$
+exactamente, así que la base de actividad correcta coincide con la ideal y
+la analítica vale sin aproximar nada.
+
+| Red | Solución | Coincide a |
+|---|---|---|
+| A → B | $n_A = n_{A0}e^{-kt/N}$ | $10^{-7}$ mol sobre 100 |
+| A → B → C | la clásica consecutiva | $10^{-7}$ mol |
+| A → B, A → C | $n_A = n_{A0}e^{-(k_1+k_2)t/N}$ | $10^{-7}$ mol |
+| A ⇌ B | relajación exponencial a $n_A^\infty$ | $10^{-6}$ mol |
+
+Y dos consecuencias que no son el valor de una curva: el **máximo del
+intermedio** cae donde el álgebra lo pone, y la **selectividad** de la
+paralela es exactamente $k_1/k_2$.
+
+### Y la comprobación que cruza los dos servicios
+
+Un lote con cinética termodinámicamente consistente converge, cuando
+$t\to\infty$, a la **misma** composición que el servicio de equilibrio.
+Son dos caminos sin nada en común —uno integra una ODE, el otro resuelve
+$\ln Q = \ln K$— y coinciden a $5.6\times10^{-17}$.
+
+Esa coincidencia obligó a un cambio: `desde_equilibrio` usaba van't Hoff y
+el lote convergía a una composición **0.5 % distinta** de la que el
+equilibrio calculaba. Dos partes del motor contestando cosas distintas a
+la misma pregunta es peor que una aproximación declarada, así que
+`desde_equilibrio` pasó a la ruta rigurosa.
+
+---
+
 ## 15.10 Límites
 
 - **Trabajo de eje y régimen transitorio se rechazan** con diagnóstico.
   Un montaje que el motor no sabe resolver tiene que decirlo en vez de
   devolver números de otro problema.
-- **El equilibrio químico calculado.** El motor no obtiene la composición
-  de equilibrio a partir de $\Delta G$ y $K$; lo único de ese territorio es
-  `desde_equilibrio`, que usa $K_{eq}$ para hacer consistente una inversa
-  **cinética**, que es otra cosa.
-- **El régimen de lote (transitorio).** Es otro régimen: estado inicial,
-  integración en el tiempo, muestreo y tolerancias del integrador.
-  `estacionario` sigue siendo obligatorio.
+- **El equilibrio en el ENSAMBLADOR.** `/laboratorio/resolver` no busca
+  la composición de equilibrio de un volumen: para eso está
+  `/laboratorio/equilibrio` (§15.9octies), que es un servicio aparte.
+- **El lote ADIABÁTICO.** El isotermo sí está (§15.9nonies); el adiabático
+  añade la ecuación de la energía al sistema de ODEs, y las soluciones
+  analíticas con las que se comprueba el isotermo son todas isotermas.
+- **El régimen transitorio en el ENSAMBLADOR.** `/laboratorio/resolver`
+  sigue exigiendo `estacionario`; el transitorio vive en
+  `/laboratorio/lote`, que es un servicio aparte con su propio contrato.
 - **Mezclar en un mismo volumen reacciones de tasa dada con reacciones
   cinéticas.** Las primeras se propagan y las segundas exigen resolver un
   sistema; combinarlas necesita un solver que incluya las dos.
@@ -801,7 +994,7 @@ mira `Hfm`. Comprobar otra daría un apto que luego falla.
 
 ## 15.11 Qué comprueba la validación
 
-`tests/validar_laboratorio.py`, diez grupos y **312 comprobaciones**. **Los números no están
+`tests/validar_laboratorio.py`, trece grupos y **389 comprobaciones**. **Los números no están
 escritos a mano**: se comparan contra llamadas independientes al mismo
 proveedor. Si copiara la salida del ensamblador como valor esperado, la
 prueba bendeciría cualquier error que tuviera, y para siempre.

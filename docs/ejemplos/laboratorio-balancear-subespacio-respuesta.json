@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "estado": "resuelto",
+  "modelo_id": "60554b8177be030a929217e589b74ff5006a0aba574c2c825500ba3e42de366a",
+  "calculo": {
+    "identificador": "<identificador de esta ejecucion>",
+    "instante_utc": "<instante UTC de la ejecucion>",
+    "motor": {
+      "version": "0.15.0",
+      "commit": "<commit de git, con sufijo -sucio si habia cambios>"
+    },
+    "proveedor_termodinamico": {
+      "identificador": "<identificador de esta ejecucion>",
+      "versiones": {
+        "thermo": "<version instalada de thermo>",
+        "chemicals": "<version instalada de chemicals>",
+        "fluids": "<version instalada de fluids>",
+        "numpy": "<version instalada de numpy>",
+        "scipy": "<version instalada de scipy>"
+      }
+    },
+    "huella_entradas": "60554b8177be030a929217e589b74ff5006a0aba574c2c825500ba3e42de366a",
+    "algoritmo_huella": "sha256"
+  },
+  "diagnosticos": [
+    {
+      "codigo": "LAB_INFO_FASE",
+      "severidad": "informacion",
+      "categoria": "informacion",
+      "mensaje": "Balanceado, pero carbon monoxide, carbon dioxide, hydrogen, methane no tiene(n) grupos UNIFAC: esta reaccion NO se puede usar en /laboratorio/equilibrio ni en /laboratorio/lote con este modelo. Balancear solo necesita los atomos; calcular necesita ademas la termodinamica.",
+      "accion_sugerida": "Consulta las capacidades de cada especie en /laboratorio/sustancias/buscar.",
+      "bloque_ids": [],
+      "conexion_ids": [],
+      "variable_ids": []
+    },
+    {
+      "codigo": "LAB_BALANCEO_NO_UNICO",
+      "severidad": "advertencia",
+      "categoria": "modelo",
+      "mensaje": "Hay 2 reacciones INDEPENDIENTES entre estas especies, asi que la conservacion de elementos no determina una: determina un subespacio. Se devuelve la base entera. Cualquier combinacion lineal de ellas tambien conserva los elementos, y elegir una por ti seria decidir que quimica ocurre.",
+      "accion_sugerida": "Elige cual de las reacciones de la base describe tu quimica, o trabaja con todas: cualquier combinacion lineal tambien conserva los elementos.",
+      "bloque_ids": [],
+      "conexion_ids": [],
+      "variable_ids": []
+    }
+  ],
+  "resumen_diagnosticos": {
+    "total": 2,
+    "por_severidad": {
+      "informacion": 1,
+      "advertencia": 1
+    },
+    "por_categoria": {
+      "informacion": 1,
+      "modelo": 1
+    },
+    "hay_errores": false
+  },
+  "especies": [
+    "carbon monoxide",
+    "carbon dioxide",
+    "hydrogen",
+    "water",
+    "methane"
+  ],
+  "elementos": [
+    "C",
+    "H",
+    "O"
+  ],
+  "matriz_elemental": [
+    [
+      1,
+      1,
+      0,
+      0,
+      1
+    ],
+    [
+      0,
+      0,
+      2,
+      2,
+      4
+    ],
+    [
+      1,
+      2,
+      0,
+      1,
+      0
+    ]
+  ],
+  "dimension_del_espacio": 2,
+  "reacciones": [
+    {
+      "nu": [
+        -1,
+        1,
+        1,
+        -1,
+        0
+      ],
+      "nu_por_especie": {
+        "carbon monoxide": -1,
+        "carbon dioxide": 1,
+        "hydrogen": 1,
+        "water": -1,
+        "methane": 0
+      },
+      "orientacion": "el signo es una CONVENCION: la conservacion de elementos no distingue reactivo de producto, y A @ nu = 0 se cumple igual con nu y con -nu. Se orienta para que carbon monoxide salga como reactivo. Da 'reactivos' si quieres otra direccion.",
+      "residuo_elemental": {
+        "C": 0,
+        "H": 0,
+        "O": 0
+      },
+      "conserva": true,
+      "latex": "\\mathrm{carbon monoxide} + \\mathrm{water} \\longrightarrow \\mathrm{carbon dioxide} + \\mathrm{hydrogen}"
+    },
+    {
+      "nu": [
+        -2,
+        1,
+        -2,
+        0,
+        1
+      ],
+      "nu_por_especie": {
+        "carbon monoxide": -2,
+        "carbon dioxide": 1,
+        "hydrogen": -2,
+        "water": 0,
+        "methane": 1
+      },
+      "orientacion": "el signo es una CONVENCION: la conservacion de elementos no distingue reactivo de producto, y A @ nu = 0 se cumple igual con nu y con -nu. Se orienta para que carbon monoxide salga como reactivo. Da 'reactivos' si quieres otra direccion.",
+      "residuo_elemental": {
+        "C": 0,
+        "H": 0,
+        "O": 0
+      },
+      "conserva": true,
+      "latex": "2\\,\\mathrm{carbon monoxide} + 2\\,\\mathrm{hydrogen} \\longrightarrow \\mathrm{carbon dioxide} + \\mathrm{methane}"
+    }
+  ],
+  "diagnostico": {
+    "caso": "subespacio",
+    "mensaje": "Hay 2 reacciones INDEPENDIENTES entre estas especies, asi que la conservacion de elementos no determina una: determina un subespacio. Se devuelve la base entera. Cualquier combinacion lineal de ellas tambien conserva los elementos, y elegir una por ti seria decidir que quimica ocurre."
+  },
+  "aritmetica": "exacta (fractions.Fraction y eliminacion de Gauss sobre los racionales). Los coeficientes son enteros minimos, no floats redondeados.",
+  "convencion_nu": "positivo producto, negativo reactivo",
+  "aptas_para_termodinamica": false,
+  "sin_grupos_unifac": [
+    "carbon monoxide",
+    "carbon dioxide",
+    "hydrogen",
+    "methane"
+  ]
+}

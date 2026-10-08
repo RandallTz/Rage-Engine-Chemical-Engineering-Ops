@@ -1,0 +1,51 @@
+{
+  "componentes": [
+    "o-xylene",
+    "m-xylene",
+    "p-xylene"
+  ],
+  "reacciones": [
+    {
+      "id": "om",
+      "nu": [
+        -1.0,
+        1.0,
+        0.0
+      ],
+      "ley_directa": {
+        "k_ref": {
+          "valor": 1.0,
+          "unidad": "mol/s"
+        },
+        "T_ref": {
+          "valor": 400.0,
+          "unidad": "K"
+        },
+        "Ea": 0.0,
+        "base_actividad": "actividad",
+        "ordenes": {
+          "o-xylene": 1.0
+        }
+      },
+      "ley_inversa": {
+        "desde_equilibrio": true
+      }
+    }
+  ],
+  "estado_inicial": [
+    {
+      "componente": "o-xylene",
+      "valor": 100.0,
+      "unidad": "mol"
+    }
+  ],
+  "T": {
+    "valor": 400.0,
+    "unidad": "K"
+  },
+  "tiempo": {
+    "final": 500000.0,
+    "unidad": "s",
+    "muestras": 9
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "consulta": "dicyclopentadiene",
+  "encontrada": true,
+  "identificacion": "nombre",
+  "identificacion_fiable": true,
+  "sustancia": {
+    "id": "77-73-6",
+    "cas": "77-73-6",
+    "nombre": "dicyclopentadiene",
+    "nombre_iupac": "",
+    "formula": "C10H12",
+    "masa_molar": 132.20228,
+    "unidad_masa_molar": "g/mol",
+    "carga": 0,
+    "smiles": "C1C=CC2C1C3CC2C=C3",
+    "inchi_key": "HECLRDQVFMWTQS-UHFFFAOYSA-N"
+  },
+  "candidatos": [],
+  "candidatos_totales": 0,
+  "capacidades": {
+    "elv": {
+      "disponible": true,
+      "falta": []
+    },
+    "entalpia": {
+      "disponible": true,
+      "falta": []
+    },
+    "reaccion": {
+      "disponible": false,
+      "falta": [
+        "entalpia de formacion (Hfm)"
+      ]
+    },
+    "equilibrio": {
+      "disponible": false,
+      "falta": [
+        "entalpia de formacion (Hfm)",
+        "energia de Gibbs de formacion (Gfm)"
+      ]
+    }
+  },
+  "propiedades": {
+    "T_ebullicion": {
+      "valor": 442.9367,
+      "unidad": "K"
+    },
+    "T_fusion": {
+      "valor": 305.15,
+      "unidad": "K"
+    },
+    "T_critica": {
+      "valor": 665.0,
+      "unidad": "K"
+    },
+    "p_critica": {
+      "valor": 3755105.0,
+      "unidad": "Pa"
+    },
+    "entalpia_formacion": {
+      "valor": null,
+      "unidad": "J/mol",
+      "referencia": "estado estandar a 298.15 K",
+      "nota": "Sin ella no hay calor de reaccion, y suponerla cero convertiria una reaccion exotermica en un calentador neutro."
+    },
+    "gibbs_formacion": {
+      "valor": null,
+      "unidad": "J/mol",
+      "referencia": "estado estandar a 298.15 K",
+      "nota": "Sin ella no hay K(T) ni dG de reaccion."
+    }
+  },
+  "composicion_elemental": {
+    "atomos": {
+      "C": 10,
+      "H": 12
+    },
+    "nota": "Es lo que valida una estequiometria: A @ nu tiene que ser cero. Sin composicion elemental no se puede comprobar que una reaccion sea una reaccion."
+  },
+  "modelos_soportados": [
+    "unifac_raoult"
+  ],
+  "fases": [
+    "liquido",
+    "bifasico",
+    "vapor"
+  ],
+  "referencias": {
+    "entalpia": "sensible_liquido_298.15K",
+    "formacion": "estado estandar a 298.15 K (Hfm y Gfm de 'thermo')",
+    "nota": "La referencia de entalpia del motor es SENSIBLE: no incluye las entalpias de formacion, asi que un balance con reaccion lleva el calor de reaccion explicito. Ver docs/15-laboratorio.md."
+  },
+  "mensaje": "'dicyclopentadiene' sirve para equilibrio liquido-vapor, pero NO para reaccion: falta entalpia de formacion (Hfm). Enterarse de esto al resolver --cuando el calor de reaccion sale NaN-- es tarde.",
+  "aviso": null
+}

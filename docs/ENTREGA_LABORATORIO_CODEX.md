@@ -10,15 +10,19 @@ especie y transformación estequiométrica**. Reutiliza el proveedor de
 propiedades, el flash y la calculadora de entalpía existentes. Sin CFD,
 sin mallado, sin columna completa y sin interpretar LaTeX.
 
-> **Tercera entrega** (catálogo de sustancias, cinética y energía
-> acoplada), respondiendo a `frontend/PENDIENTES_BACKEND_CLAUDE.md`
-> puntos 1, 2 y 5. Lo anterior sigue funcionando y está comprobado; lo que
-> cambió de forma visible está en
-> [§11](#11-qué-cambió-respecto-a-las-entregas-anteriores).
+> **Cuarta entrega** (lote transitorio, equilibrio químico calculado y
+> balanceo exacto), respondiendo a la prioridad vigente de
+> `frontend/PENDIENTES_BACKEND_CLAUDE.md`: puntos **3** y **4**, más la
+> parte de la «migración de exploraciones locales» que corresponde al
+> balanceo racional y a Hess/Kirchhoff.
 >
-> **Lo que NO está en esta entrega**, de ese mismo documento: el punto 3
-> (lote transitorio con integración ODE) y el punto 4 (equilibrio químico
-> calculado a partir de ΔG). Ver [§12](#12-lo-que-queda-de-la-lista).
+> Lo anterior sigue funcionando y está comprobado. Lo que cambió de forma
+> visible está en [§11](#11-qué-cambió-respecto-a-las-entregas-anteriores),
+> y **hay un cambio de resultado**: `desde_equilibrio` pasa a usar la K
+> rigurosa en vez de van't Hoff.
+>
+> **Lo que NO está**: las áreas 6–10 y los transversales. Ver
+> [§12](#12-lo-que-queda-de-la-lista).
 
 ---
 
@@ -34,6 +38,11 @@ sin mallado, sin columna completa y sin interpretar LaTeX.
 | `GET` | `/laboratorio/ejemplos/{id}` | Uno concreto |
 | `GET` | `/laboratorio/sustancias/buscar?q=` | Identifica una sustancia **y dice cómo la identificó** |
 | `GET` | `/laboratorio/sustancias/catalogo` | Qué identificadores y capacidades admite |
+| `POST` | `/laboratorio/balancear` | Las ν que conservan los elementos, en **aritmética exacta** |
+| `POST` | `/laboratorio/comprobar-estequiometria` | Juzga una ν dada |
+| `POST` | `/laboratorio/equilibrio` | Composición de equilibrio, K(T), μ y estabilidad |
+| `POST` | `/laboratorio/lote` | La trayectoria de un lote isotermo |
+| `GET` | `/laboratorio/reacciones/capacidades` | Qué admiten esos tres, y qué no |
 
 Hay tres rutas de cálculo y no una, aunque el contrato permitía una sola.
 `/validar` y `/resolver` dicen en la URL lo que hacen, y eso evita el
@@ -98,6 +107,32 @@ reporta, pero un ejemplo que se entienda conviene que no lo haga):
 | `laboratorio-cinetica-desde-equilibrio-*` | `k_inv = k_dir / K_eq(T)`, con sus dos avisos |
 | `laboratorio-cinetica-volumetrica-*` | `10 mol/(m³·s) × 5 m³ = 50 mol/s`: idéntico al isotermo |
 | `laboratorio-cinetica-orden-negativo-*` | Un rechazo: la tasa divergiría al agotarse la especie |
+
+Y los de esta entrega (xilenos: o-, m- y p-, todos C8H10, con propiedades
+completas y **γ = 1 exactamente**, que es lo que permite comprobar contra
+el álgebra sin que UNIFAC se interponga):
+
+| Archivo (`-peticion` / `-respuesta`) | Qué muestra |
+|---|---|
+| `laboratorio-balancear-combustion-*` | CH₄ + 2 O₂ → CO₂ + 2 H₂O, **sin necesitar UNIFAC** |
+| `laboratorio-balancear-subespacio-*` | CO/CO₂/H₂/H₂O/CH₄: **dimensión 2**, se devuelve la base |
+| `laboratorio-balancear-sin-reaccion-*` | CH₄/N₂: no hay reacción posible, y eso es la respuesta |
+| `laboratorio-comprobar-nu-incorrecta-*` | Una ν que descuadra, con qué elemento y en cuánto |
+| `laboratorio-equilibrio-una-reaccion-*` | K(T) por las dos rutas, μ y el hessiano |
+| `laboratorio-equilibrio-dos-reacciones-*` | Dos reacciones acopladas, hessiano 2×2 |
+| `laboratorio-lote-primer-orden-*` | La trayectoria más simple |
+| `laboratorio-lote-consecutiva-*` | A → B → C, con el máximo del intermedio |
+| `laboratorio-lote-paralela-*` | A → B, A → C, con la selectividad |
+| `laboratorio-lote-hacia-el-equilibrio-*` | Cinética consistente: llega al equilibrio calculado |
+
+Y del catálogo:
+
+| Archivo | Qué muestra |
+|---|---|
+| `laboratorio-sustancia-formula-ambigua.json` | `C2H6O` → dimetil éter, con etanol entre los candidatos |
+| `laboratorio-sustancia-por-nombre.json` | La misma consulta bien hecha |
+| `laboratorio-sustancia-sin-entalpia-de-formacion.json` | Sirve para ELV y no para reacción |
+| `laboratorio-sustancias-catalogo.json`, `laboratorio-reacciones-capacidades.json` | Las capacidades |
 
 ### Lo mínimo
 
@@ -573,6 +608,18 @@ de unidades, es un dato que no describe ninguna reacción química.
 
 Y `LAB_TASA_AMBIGUA` cubre también dar una ley **y** una tasa a la vez:
 una reacción tiene la tasa dada **o** calculada, no las dos.
+
+### Balanceo, equilibrio y lote
+
+| Código | Categoría | Cuándo |
+|---|---|---|
+| `LAB_SIN_BALANCE_POSIBLE` | modelo | No hay ninguna ν que conserve los elementos entre esas especies |
+| `LAB_BALANCEO_NO_UNICO` | modelo (**advertencia**) | Hay varias reacciones independientes: se devuelve la base y no se elige una |
+| `LAB_EQUILIBRIO_SIN_CONVERGENCIA` | **numérica** | El equilibrio no convergió; el mensaje trae el residuo y la tolerancia |
+| `LAB_EQUILIBRIO_NO_UTILIZABLE` | física | Faltan propiedades de formación, o el hessiano no es definido positivo (**advertencia** en este segundo caso) |
+| `LAB_METODO_NO_SOPORTADO` | datos | Un método de integración que no está |
+| `LAB_INTEGRACION_FALLIDA` | **numérica** | `solve_ivp` no pudo avanzar |
+| `LAB_TRAYECTORIA_NEGATIVA` | **numérica** | La trayectoria devuelta tiene moles negativos |
 
 ### Modelo y resultado
 
@@ -1104,6 +1151,227 @@ significa que el sistema pide salirse del dominio del modelo.
 
 ---
 
+## 7sexies. Balanceo exacto
+
+`POST /laboratorio/balancear`
+
+Resuelve $A\cdot\nu = 0$ con `fractions.Fraction` y eliminación de Gauss
+sobre los racionales. **No con floats**: la respuesta correcta son enteros
+pequeños, y un método numérico los devuelve como `0.9999999999999998`.
+Con aritmética exacta no hay nada que reconocer — y `0.333333` puede ser
+1/3 o el redondeo de otra cosa.
+
+```json
+{"componentes": ["methane", "oxygen", "carbon dioxide", "water"],
+ "reactivos": ["methane", "oxygen"]}
+```
+
+```jsonc
+"reacciones": [{
+  "nu": [-1, -2, 1, 2],
+  "nu_por_especie": {"methane": -1, "oxygen": -2, …},
+  "orientacion": "orientada con la pista del usuario: methane es reactivo…",
+  "residuo_elemental": {"C": 0, "H": 0, "O": 0},   // exactamente cero
+  "conserva": true,
+  "latex": "\\mathrm{methane} + 2\\,\\mathrm{oxygen} \\longrightarrow …"
+}]
+```
+
+### Tres respuestas, y las tres importan
+
+| `dimension_del_espacio` | Qué significa |
+|---|---|
+| **0** | No hay reacción. Estas especies no se combinan conservando los elementos, y decirlo **es** la respuesta. `estado: "invalido"`, `LAB_SIN_BALANCE_POSIBLE` |
+| **1** | Una reacción, única salvo escala y signo. El caso que se espera |
+| **> 1** | Un **subespacio**. Se devuelve la base entera y sale `LAB_BALANCEO_NO_UNICO` como **advertencia** |
+
+El tercero no es un caso raro: `CO/CO₂/H₂/H₂O/CH₄` da dimensión **2** —
+desplazamiento de gas de agua y metanación. Elegir una por ti sería
+decidir qué química ocurre.
+
+### El signo no lo decide la conservación
+
+$A\nu = 0$ se cumple igual con $\nu$ y con $-\nu$: la conservación de
+elementos no sabe qué es reactivo. Da `reactivos` para orientarla; sin la
+pista se orienta por convención y `orientacion` **lo dice**.
+
+### Y no necesita grupos UNIFAC
+
+Balancear **es** la conservación de los átomos: hace falta saber de qué
+está hecha cada especie y nada más. Por eso la combustión del metano
+funciona aunque el metano no tenga grupos UNIFAC. `aptas_para_termodinamica`
+avisa de que esa reacción **no** se puede usar en `/equilibrio` ni en
+`/lote`: balancear necesita átomos, calcular necesita además termodinámica.
+
+---
+
+## 7septies. Equilibrio químico calculado
+
+`POST /laboratorio/equilibrio`
+
+### La advertencia que da sentido al servicio
+
+**Imponer $r^+ = r^-$ no demuestra equilibrio termodinámico.** Describe un
+estado estacionario con esas dos tasas, nada más — dos constantes
+cualesquiera lo producen. El equilibrio exige algo distinto y más fuerte:
+
+$$ Q_r = K_r(T) \qquad\text{equivalentemente}\qquad \Delta G_{rxn} = 0 $$
+
+y $K$ sale de $\Delta G$ de **formación**, no de ninguna cinética. La
+respuesta lo lleva escrito en `aviso_tasas`.
+
+### K(T) por dos rutas, y la diferencia medida
+
+| Ruta | Cómo |
+|---|---|
+| `riguroso` | Kirchhoff para ΔH e integración numérica de ΔCp/T para ΔS |
+| `vant_hoff` | Supone ΔH **constante** con T |
+
+Se devuelven **las dos**, y `diferencia_relativa_con_riguroso` la mide.
+Con los xilenos a 400 K es del **2.5 %**: la aproximación no es inocua, y
+ahora no hay que confiar en que lo sea.
+
+Un detalle que ahorra una integral: **ΔH(T) no hace falta integrarla.**
+
+$$ \Delta H_{rxn}(T) = \nu\cdot\left(H_f + h_{sens}(T)\right) $$
+
+Las entalpías sensibles ya la llevan dentro. Es la misma identidad que
+explica por qué el balance de energía **no** debe corregir ΔH con
+Kirchhoff (§7bis): ahí lo contaría dos veces, y aquí lo da gratis. La
+integral que sí hace falta es la de la **entropía**, ΔCp/T, que no está
+tabulada.
+
+### El criterio de estabilidad
+
+$\Delta G = 0$ dice que es un punto **estacionario** de la energía de
+Gibbs, **no** que sea un mínimo. Lo decide la segunda derivada:
+
+```jsonc
+"estabilidad": {
+  "hessiano_de_gibbs": [[148.1, …], …],
+  "autovalores": [148.1, 269.1],
+  "definido_positivo": true,
+  "es_minimo": true
+}
+```
+
+Se calcula por diferencias finitas y se dan los **autovalores**, que son
+el criterio — no una etiqueta. Si no es definido positivo, sale una
+advertencia: el punto puede ser una silla o el borde del dominio.
+
+### Potenciales químicos, con estado estándar declarado
+
+$$ \mu_i = \mu_i^0(T) + RT\ln a_i $$
+
+El estado estándar de este motor es el **líquido puro a la T de la mezcla
+y la p del sistema**, que es el convenio que corresponde a $a_i = x_i\gamma_i$
+con $\gamma\to 1$ cuando $x\to 1$ — lo que UNIFAC da. Decirlo importa: un
+μ sin estado estándar declarado no se compara con otro.
+
+En el equilibrio se cumple $\sum_i \nu_i\mu_i = 0$, que es la condición
+escrita con potenciales. Está comprobado.
+
+### Las restricciones, y la que no hace falta
+
+**Las elementales se cumplen por construcción**: un avance sobre una ν
+validada conserva los elementos. Añadirlas como ecuaciones habría contado
+dos veces lo mismo, y la respuesta lo declara en
+`convergencia.restricciones`.
+
+**La no negatividad sí hace falta imponerla**, y es la parte delicada:
+una especie en cero tiene actividad cero y $\ln 0 = -\infty$. El avance se
+acota al interior del simplex estequiométrico y las actividades se
+recortan a un suelo relativo, diciendo cuándo se recorta.
+
+**El residuo se mide en $\ln Q - \ln K$, no en $Q - K$.** Con ΔG de
+−60 kJ/mol, K vale $10^{10}$: un residuo $Q-K$ no se puede escalar de
+forma útil.
+
+---
+
+## 7octies. Lote transitorio
+
+`POST /laboratorio/lote`
+
+$$ \frac{dn_i}{dt} = \sum_r \nu_{ir}\,r_r(T, \mathbf{x}(t)) \qquad n_i(0) = n_{i0} $$
+
+Deja de ser un sistema algebraico y pasa a ser un sistema de ODEs. Usa
+**las mismas leyes de velocidad** que el CSTR: la ley es la misma física
+en los dos regímenes, y tener dos implementaciones sería tener dos físicas
+que se pueden separar.
+
+```json
+{"componentes": ["o-xylene", "m-xylene", "p-xylene"],
+ "reacciones": [{"id": "om", "nu": [-1.0, 1.0, 0.0],
+                 "ley_directa": {"k_ref": {"valor": 0.5, "unidad": "mol/s"},
+                                 "T_ref": {"valor": 400.0, "unidad": "K"},
+                                 "Ea": 0.0, "ordenes": {"o-xylene": 1.0}}}],
+ "estado_inicial": [{"componente": "o-xylene", "valor": 100.0, "unidad": "mol"}],
+ "T": {"valor": 400.0, "unidad": "K"},
+ "tiempo": {"final": 400.0, "unidad": "s", "muestras": 9}}
+```
+
+### El integrador se declara
+
+| Método | Para qué |
+|---|---|
+| `LSODA` (por omisión) | Detecta la rigidez **solo**, y una red con constantes muy distintas es rígida sin avisar |
+| `Radau`, `BDF` | Para quien ya sepa que la suya lo es |
+| `RK45` | Rápido si **no** es rígido |
+
+`rtol` y `atol` se declaran y **viajan en la respuesta**: una trayectoria
+sin tolerancia declarada no se puede reproducir ni comparar con otra. Por
+omisión `rtol = 1e-10` y `atol = 1e-12` por mol total.
+
+`muestras` no cambia la precisión de la integración, solo cuánto se
+devuelve de ella.
+
+### El agotamiento se detecta con un EVENTO
+
+```jsonc
+"agotamientos": [{"especie": 0, "componente": "o-xylene",
+                  "instante": 55.19339009340264, "unidad": "s",
+                  "nota": "localizado por un evento del integrador, no mirando
+                           las muestras: un cruce entre dos muestras se habría
+                           perdido"}]
+```
+
+Un chequeo a posteriori sobre los puntos muestreados se perdería el cruce
+si cae entre dos muestras. El evento lo localiza con la misma precisión
+que la trayectoria.
+
+### La no negatividad se comprueba sobre lo DEVUELTO
+
+Una ley de acción de masas con órdenes positivos la respeta sola —la tasa
+cae a cero cuando el reactivo se agota— pero el integrador puede pasarse
+por debajo en un paso. Se recorta al **evaluar** la ley, porque UNIFAC con
+fracciones negativas no significa nada, y se **comprueba** sobre la
+trayectoria devuelta. Recortar y callarse convertiría un dato imposible en
+una curva plausible.
+
+### Y la comprobación que cruza los dos servicios
+
+`equilibrio_alcanzado` trae `dG_rxn` en el último punto. Con una cinética
+termodinámicamente consistente (`ley_inversa` con `desde_equilibrio`) y
+tiempo suficiente, **tiende a cero y la composición final coincide con
+`/laboratorio/equilibrio`** — a $5.6\times10^{-17}$ con los xilenos. Son
+dos caminos independientes: uno integra una ODE y el otro resuelve
+$\ln Q = \ln K$.
+
+Y la mitad negativa, que es la advertencia del contrato **medida**: una
+cinética que **no** es consistente para en un estacionario que no es el
+equilibrio. Con $k_1/k_2 = 2.5$ frente a $K = 2.38$, la diferencia se ve.
+
+### Lo que NO hace
+
+**Isotermo.** Un lote adiabático añade la ecuación de la energía al
+sistema de ODEs, y eso es otra entrega: exige su propia verificación, y
+las soluciones analíticas con las que se comprueba ésta son todas
+isotermas. Está declarado en
+`capacidades.servicios.lote.no_soportado`.
+
+---
+
 ## 8. Lo que está verificado
 
 `tests/validar_laboratorio.py`. **Los números no están escritos a
@@ -1136,7 +1404,7 @@ con 2 MW la corriente intermedia sale a 367.5 K con `beta = 0.3018`, y 1
 MW más sube la temperatura solo **2.1 K** porque casi todo va a calor
 latente — frente a los ~10 K que costaban 0.15 MW en la zona líquida.
 
-Los diez grupos de la suite (**312 comprobaciones**) cubren: uno y dos
+Los trece grupos de la suite (**389 comprobaciones**) cubren: uno y dos
 volúmenes con continuidad y conservación; los modos excluyentes; los
 montajes mal formados (ids, referencias, puertos, aislados, ciclos,
 null/NaN, fracciones, unidades, modelo y componentes); el dominio
@@ -1175,6 +1443,42 @@ escritos a mano:
   reactor sin reacción declarada, unidad de tasa no admitida y bases
   mezcladas.
 
+### Y lo que se comprueba del lote y del equilibrio
+
+Aquí las **soluciones analíticas** hacen todo el trabajo. Las redes de
+primer orden las tienen, y las tres topologías que el contrato nombra son
+exactamente ésas:
+
+| Red | Analítico | Coincide a |
+|---|---|---|
+| A → B | $n_A = n_{A0}e^{-kt/N}$ | $10^{-7}$ mol sobre 100 |
+| A → B → C | solución clásica consecutiva | $10^{-7}$ mol |
+| A → B, A → C | $n_A = n_{A0}e^{-(k_1+k_2)t/N}$ | $10^{-7}$ mol |
+| A ⇌ B | $n_A = n_A^\infty + (n_{A0}-n_A^\infty)e^{-(k_1+k_2)t/N}$ | $10^{-6}$ mol |
+
+Y además: el **máximo del intermedio** de la consecutiva cae donde el
+álgebra lo pone, y la **selectividad** de la paralela es exactamente
+$k_1/k_2$. Con los cuatro métodos de integración sale lo mismo.
+
+Del **equilibrio**, la comprobación es que la razón de actividades en la
+solución **es K**, pedida al proveedor por separado: coincide a
+$10^{-12}$ relativo, con $\Delta G_{rxn} = 0$ y
+$\sum_i\nu_i\mu_i = 0$. Y Le Chatelier sale solo: siendo exotérmica,
+K baja de 2.593 a 2.382 al subir de 330 a 400 K.
+
+ΔH(T) se comprueba contra $\nu\cdot(H_f + h_{sens})$ pedido por separado, y
+a la T de referencia es exactamente $\nu\cdot H_f$.
+
+**Y la comprobación que cruza los dos servicios**, que es la más fuerte de
+toda la entrega: un lote con cinética termodinámicamente consistente
+converge a la **misma** composición que `/laboratorio/equilibrio`, a
+$5.6\times10^{-17}$. Integrar una ODE y resolver $\ln Q = \ln K$ son dos
+caminos sin nada en común, y coinciden al último bit.
+
+Del **balanceo**: la combustión del metano sale `[-1, -2, 1, 2]`, el
+amoniaco `[-1, -3, 2]`, y el subespacio CO/CO₂/H₂/H₂O/CH₄ sale con
+dimensión 2 y residuo elemental **exactamente cero**, no $10^{-16}$.
+
 ### Y lo que se comprueba de la cinética
 
 Los casos de **primer y segundo orden en base de fracción molar tienen
@@ -1197,7 +1501,8 @@ use `brentq` **acotado**, que varias usen `hybr`, que el acoplado declare
 **el arranque y el solver** y no sólo el solver, y que los límites de
 temperatura vengan de la tabla de entalpía.
 
-**Once rechazos más** de la cinética. Y del catálogo: que `C2H6O` salga
+**Once rechazos más** de la cinética, más **nueve** del lote y del
+equilibrio. Y del catálogo: que `C2H6O` salga
 marcado como no fiable con el etanol entre los candidatos, que nombre, CAS
 y SMILES den la misma sustancia, y que el diciclopentadieno salga apto
 para ELV y **no** para reacción — el mismo fallo que el motor da luego con
@@ -1234,29 +1539,42 @@ De `PENDIENTES_BACKEND_CLAUDE.md`, esta entrega cubre los puntos **1**
 implícito declarado) y **5** (reactores con energía acoplada: isotérmico,
 adiabático y con Q impuesto).
 
-**No están, y lo digo para que no se dé por hecho:**
+Con esta cuarta entrega quedan cubiertos los puntos **3** (lote
+transitorio) y **4** (equilibrio químico calculado), y la parte de la
+«migración de exploraciones locales» que corresponde al **balanceo
+racional** y a **Hess/Kirchhoff** — los dos están ahora en el backend con
+contrato, casos analíticos y unidades, y el frontend puede dejar de tener
+su propia implementación.
 
-- **Punto 3, lote transitorio.** Es otro régimen: estado inicial,
-  integración ODE en el tiempo, muestreo, tolerancias del integrador,
-  agotamiento y no negatividad a lo largo de la trayectoria. Nada de eso
-  se resuelve con lo que hay; `estacionario` sigue siendo obligatorio y
-  quitarlo da `LAB_SUPUESTO_NO_SOPORTADO`.
-- **Punto 4, equilibrio químico calculado.** El motor **no** obtiene la
-  composición de equilibrio a partir de $\Delta G$ y $K$. Lo único que hay
-  de ese territorio es `desde_equilibrio`, que usa $K_{eq}$ para hacer
-  consistente una **inversa cinética** — que es otra cosa. Y la
-  advertencia que el contrato pedía está puesta donde corresponde:
-  **imponer $r^+ = r^-$ no demuestra equilibrio termodinámico.**
-- **Puntos 6 a 10** (entropía y exergía, conducción, difusión, momento,
-  más de dos volúmenes y el decantador expuesto) siguen igual.
-- **Los transversales** (expresiones tipadas con comprobación dimensional
-  automática, sensibilidad e incertidumbre) tampoco están empezados.
+**Lo que NO está, y lo digo para que no se dé por hecho:**
 
-Lo que sí cumple esta entrega del requisito transversal es la parte de
-«todas las capacidades nuevas deben anunciar límites y ejemplos
-reproducibles»: `capacidades` declara lo no soportado una por una, y los
-veinte presets de `/laboratorio/ejemplos` son peticiones que se reenvían
-al endpoint y la suite comprueba que dan el estado que prometen.
+- **Punto 6: entropía, Gibbs/potencial químico, segunda ley y exergía.**
+  Los potenciales químicos **sí** están (en `/equilibrio`), con su estado
+  estándar declarado. Lo que falta es el balance de entropía con
+  temperatura de frontera, y la exergía con ambiente explícito.
+- **Punto 7: conducción 1D** en capas y contactos; luego capacidad
+  concentrada transitoria.
+- **Punto 8: difusión y películas.**
+- **Punto 9: momento e hidráulica**, con presión no uniforme.
+- **Punto 10: más de dos volúmenes**, puertos tipados, y el **decantador
+  expuesto** — que sigue existiendo en el motor sin ruta HTTP.
+- **Los transversales**: expresiones tipadas con comprobación dimensional
+  automática, y sensibilidad e incertidumbre.
+- **El lote adiabático**, que añade la ecuación de la energía al sistema
+  de ODEs. Está declarado en `capacidades`.
+- **El ensamblador común a laboratorio y operaciones compuestas** que pide
+  la sección de migración: hoy `core/laboratorio.py` ya está separado de
+  sus endpoints (`backend/nucleo_laboratorio.py`) y de la UI, y
+  `core/cinetica.py`, `core/equilibrio.py`, `core/lote.py` y
+  `core/balanceo.py` son módulos de física sin nada de HTTP. Lo que falta
+  es que `/diagrama/resolver` consuma ese mismo ensamblador, y eso es una
+  refactorización de lo existente, no una capacidad nueva.
+
+Del requisito transversal, esta entrega cumple la parte de «todas las
+capacidades nuevas deben anunciar límites y ejemplos reproducibles»:
+`capacidades` declara lo no soportado servicio por servicio, y los
+treinta presets y pares petición/respuesta de `docs/ejemplos/` se generan
+**ejecutando** el endpoint.
 
 ---
 
@@ -1304,6 +1622,19 @@ hay cinética.
 **7. El modo adiabático existe.** Antes un volumen adiabático no se podía
 resolver; ahora es el tercer modo térmico, y marcarlo **más** imponer la
 temperatura es un error.
+
+**8. `desde_equilibrio` CAMBIA DE RESULTADO.** Usaba van't Hoff y ahora
+usa la ruta rigurosa (Kirchhoff e integral de ΔCp/T). La respuesta declara
+la ruta en `ley_inversa.ruta_de_K`.
+
+No es un ajuste cosmético y conviene saber por qué se hizo: se vio al
+cruzar el lote con el servicio de equilibrio. Con los xilenos a 400 K,
+van't Hoff da K = 2.441 y la ruta rigurosa K = 2.382, y el lote convergía
+a una composición **0.5 % distinta** de la que `/equilibrio` calculaba.
+Dos partes del motor contestando cosas distintas a la misma pregunta es
+peor que una aproximación declarada. Ahora coinciden a $10^{-17}$.
+
+Si tenías un resultado guardado con `desde_equilibrio`, cambiará.
 
 Y dos defectos que la reacción destapó y que estaban desde la primera
 entrega:

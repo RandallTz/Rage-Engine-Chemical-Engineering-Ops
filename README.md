@@ -184,6 +184,11 @@ No cuenta como validación *"devuelve un array de la forma correcta"* ni
   $\xi = kF_{A0}/(F_0+k)$ a $10^{-12}$, y un reactor adiabático se verifica
   por dos caminos: imponer la temperatura que salió da el mismo avance, y
   el calor liberado iguala al calentamiento sensible.
+- Un lote transitorio reproduce las soluciones analíticas de las redes
+  consecutiva, paralela y reversible a $10^{-7}$ mol sobre 100, y **el
+  final de la trayectoria coincide con el equilibrio calculado a
+  $5.6\times10^{-17}$** — integrar una ODE y resolver $\ln Q = \ln K$ son
+  dos caminos sin nada en común.
 
 El detalle completo, y **los límites**, en
 [`docs/12-validacion.md`](docs/12-validacion.md).
