@@ -1,0 +1,239 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-tabla]{babel}
+\usepackage{amsmath,amssymb,amsfonts,amsthm}
+\usepackage{booktabs}
+\usepackage[margin=25mm]{geometry}
+\usepackage{microtype}
+\usepackage{hyperref}
+\usepackage{cite}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    citecolor=black,
+    urlcolor=blue
+}
+
+\newtheorem{teorema}{Teorema}
+\newtheorem{proposicion}{Proposición}
+\newtheorem{definicion}{Definición}
+\newtheorem{corolario}{Corolario}
+
+\title{\textbf{Fundamentos Algebraicos y Difeomorfismos de Escala en la Adimensionalización Canónica de Sistemas Continuos Multidimensionales de Transporte y Reacción}}
+\author{\textbf{Comunidad de Modelado Matemático y Fenómenos de Transporte}}
+\date{Octubre de 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+\noindent La adimensionalización de ecuaciones diferenciales en derivadas parciales (EDP) constituye el pilar analítico para la reducción de grados de libertad paramétricos, la identificación de regímenes asintóticos y el escalamiento riguroso de reactores y equipos de proceso. En este artículo formalizamos la teoría algebraica subyacente a la transformación de modelos continuos de transporte multicomponente bajo el grupo de Lie de dilataciones canónicas. Extendemos el análisis convencional en una dimensión espacial hacia dominios multidimensionales continuos $\mathbb{R}^n$ ($n \in \{1, 2, 3\}$), introduciendo de manera sistemática los tensores de difusividad, los números de Fourier y Péclet direccionales, y los parámetros geométricos de esbeltez o relación de aspecto ($\mathcal{A}_j = L_1/L_j$). Demostramos cómo la balanza dominante de Kruskal induce una familia finita de formulaciones canónicas duales y cómo el teorema de equivalencia recíproca por retro-sustitución garantiza la invariancia física sin pérdida de información diferencial.
+\end{abstract}
+
+\vspace{5mm}
+\noindent\textbf{Palabras clave:} Análisis dimensional, Teorema $\Pi$ de Buckingham, Balanza dominante, Escalamiento anisotrópico, Reducción asintótica, Transporte y reacción.
+
+\section{Introducción y Motivación Científica}
+En el modelado matemático de fenómenos de transporte acoplados (mecánica de fluidos, transferencia de calor y transferencia de masa con reacción química), los sistemas continuos vienen descritos por ecuaciones de balance diferencial del tipo:
+\begin{equation}
+\frac{\partial c_i}{\partial t} + \nabla \cdot (\mathbf{v} c_i) = \nabla \cdot (D_i \nabla c_i) + R_i(c_1, \dots, c_m, T), \qquad i = 1, \dots, m,
+\label{eq:balance_general}
+\end{equation}
+sujetas a condiciones de contorno e iniciales en un dominio abierto y acotado $\Omega \subset \mathbb{R}^n$ con frontera regular $\partial\Omega$. 
+
+Resolver o analizar directamente estas ecuaciones en su forma dimensional plantea severas limitaciones:
+\begin{enumerate}
+    \item \textbf{Proliferación paramétrica:} Los coeficientes físicos ($D_i, k_r, \mathbf{v}, \ell_j$) generan un espacio paramétrico de dimensión elevada que dificulta el barrido numérico y la optimización.
+    \item \textbf{Oscurecimiento de escalas dominantes:} En presencia de procesos acoplados a velocidades dispares (e.g. difusión rápida y reacción lenta, o transporte en microcanales de gran relación de esbeltez), la importancia relativa de cada sumando queda enmascarada por las unidades elegidas.
+    \item \textbf{Rigidez geométrica:} La dependencia explícita del tamaño del equipo impide transferir soluciones entre escalas piloto e industrial.
+\end{enumerate}
+
+La técnica de adimensionalización canónica aborda estos desafíos proyectando el sistema continuo sobre variedades invariantes bajo grupos de dilatación de Lie. No obstante, en la literatura científica persiste a menudo una aplicación ad-hoc o heurística de este procedimiento, omitiendo la certificación de retro-sustitución, restringiéndose a dominios unidimensionales isotrópicos o confundiendo la fijación de escalas con aproximaciones asintóticas prematuras. 
+
+El propósito de este trabajo es presentar un marco algebraico riguroso y determinista para la deducción completa, verificación y certificación de modelos adimensionales en $n$ dimensiones.
+
+\section{Estructura Algebraica de Dimensiones y Teorema $\Pi$ de Buckingham}
+
+\subsection{El Espacio Vectorial de Dimensiones Físicas}
+Sea una base dimensional ortonormal del sistema internacional formada por $d$ magnitudes fundamentales:
+\begin{equation}
+\mathcal{B} = \{\mathsf{M}, \mathsf{L}, \mathsf{T}, \mathsf{\Theta}, \mathsf{N}, \mathsf{I}, \mathsf{J}\}, \qquad d = \dim(\mathcal{B}) \le 7.
+\end{equation}
+Toda magnitud o parámetro dimensional $p_k$ posee una fórmula dimensional única dada por el monomio:
+\begin{equation}
+[p_k] = \prod_{l=1}^d B_l^{M_{lk}}, \qquad M_{lk} \in \mathbb{Q}.
+\end{equation}
+Definiendo el vector de exponentes $\mathbf{v}_k = (M_{1k}, M_{2k}, \dots, M_{dk})^T \in \mathbb{Q}^d$, la compatibilidad dimensional de un conjunto de $p$ parámetros $\{p_1, \dots, p_p\}$ se codifica en la matriz dimensional:
+\begin{equation}
+\mathbf{M} = \begin{pmatrix} M_{11} & M_{12} & \cdots & M_{1p} \\ M_{21} & M_{22} & \cdots & M_{2p} \\ \vdots & \vdots & \ddots & \vdots \\ M_{d1} & M_{d2} & \cdots & M_{dp} \end{pmatrix} \in \mathbb{Q}^{d \times p}.
+\end{equation}
+
+\subsection{Teorema de Vaschy-Buckingham y Espacio Nulo}
+\begin{teorema}[Vaschy-Buckingham]
+Sea un proceso físico gobernado por una relación funcional homogénea $\mathcal{F}(p_1, p_2, \dots, p_p) = 0$. Si el rango de la matriz dimensional asociada es $r = \mathrm{rank}(\mathbf{M}) \le d$, entonces existen exactamente $p - r$ productos adimensionales independientes $\Pi_1, \dots, \Pi_{p-r}$ tales que la relación es reducible a:
+\begin{equation}
+\Phi(\Pi_1, \Pi_2, \dots, \Pi_{p-r}) = 0.
+\end{equation}
+Los vectores de exponentes de cada invariante $\Pi_j = \prod_{k=1}^p p_k^{\alpha_{jk}}$ constituyen una base del núcleo o espacio nulo de la matriz dimensional:
+\begin{equation}
+\mathbf{M} \boldsymbol{\alpha}_j = \mathbf{0}, \qquad \boldsymbol{\alpha}_j \in \mathbb{Q}^p \setminus \{\mathbf{0}\}.
+\end{equation}
+\end{teorema}
+
+\section{Difeomorfismos de Escala de Lie y Regla de la Cadena}
+
+\subsection{Grupo de Dilataciones Canónicas}
+El reescalamiento formal consiste en la acción del grupo abeliano de dilataciones $\mathcal{G} \cong (\mathbb{R}_{>0})^{m+n+1}$ sobre el espacio fibrado de variables independientes $(\mathbf{x}, t) \in \mathbb{R}^n \times \mathbb{R}_{\ge 0}$ y campos dependientes $\mathbf{c} \in \mathbb{R}^m$:
+\begin{equation}
+\mathbf{x} = \mathbf{L} \hat{\mathbf{x}}, \qquad t = t_{\mathrm{ref}} \hat{t}, \qquad c_i = c_{i,\mathrm{ref}} \hat{c}_i,
+\label{eq:difeomorfismos}
+\end{equation}
+donde $\mathbf{L} = \mathrm{diag}(x_{1,\mathrm{ref}}, \dots, x_{n,\mathrm{ref}})$. Las variables denotadas con circunflejo $(\hat{\cdot})$ son estrictamente adimensionales y de orden de magnitud unidad en el régimen de interés, $\hat{c}_i = \mathcal{O}(1)$, $\hat{x}_j = \mathcal{O}(1)$, $\hat{t} = \mathcal{O}(1)$.
+
+\subsection{Transformación Diferencial de Operadores}
+Bajo el difeomorfismo (\ref{eq:difeomorfismos}), la regla de la cadena proyecta los operadores continuos al espacio escalado:
+\begin{equation}
+\frac{\partial}{\partial t} = \frac{1}{t_{\mathrm{ref}}} \frac{\partial}{\partial \hat{t}}, \qquad \frac{\partial}{\partial x_j} = \frac{1}{x_{j,\mathrm{ref}}} \frac{\partial}{\partial \hat{x}_j}.
+\end{equation}
+Para la derivada de segundo orden de un campo escalar $c$:
+\begin{equation}
+\frac{\partial^2 c}{\partial x_j^2} = \frac{c_{\mathrm{ref}}}{x_{j,\mathrm{ref}}^2} \frac{\partial^2 \hat{c}}{\partial \hat{x}_j^2}.
+\end{equation}
+
+\section{Transporte Multidimensional Anisotrópico y Relaciones de Aspecto}
+
+\subsection{El Operador Laplaciano en Coordenadas Cartesianas Múltiples}
+Consideremos el operador laplaciano cartesiano en $\mathbb{R}^n$:
+\begin{equation}
+\nabla^2 c = \sum_{j=1}^n \frac{\partial^2 c}{\partial x_j^2}.
+\end{equation}
+Al introducir escalas de longitud independientes $x_{1,\mathrm{ref}}, \dots, x_{n,\mathrm{ref}}$ (requeridas cuando la geometría del dominio físico presenta asimetría de escalas, como en películas descendentes, capilares o placas planas), el laplaciano transformado toma la forma:
+\begin{equation}
+\nabla^2 c = c_{\mathrm{ref}} \sum_{j=1}^n \frac{1}{x_{j,\mathrm{ref}}^2} \frac{\partial^2 \hat{c}}{\partial \hat{x}_j^2}.
+\end{equation}
+Tomando como escala axial de referencia $L_x \equiv x_{1,\mathrm{ref}}$, factorizamos globalmente:
+\begin{equation}
+\nabla^2 c = \frac{c_{\mathrm{ref}}}{L_x^2} \left[ \frac{\partial^2 \hat{c}}{\partial \hat{x}_1^2} + \sum_{j=2}^n \mathcal{A}_j^2 \frac{\partial^2 \hat{c}}{\partial \hat{x}_j^2} \right],
+\end{equation}
+donde se definen los \textbf{factores de forma o relaciones de aspecto (esbeltez)}:
+\begin{equation}
+\mathcal{A}_j \equiv \frac{x_{1,\mathrm{ref}}}{x_{j,\mathrm{ref}}} = \frac{L_x}{L_j}, \qquad j = 2, \dots, n.
+\end{equation}
+
+\subsection{Estructura Bidimensional ($x, y$)}
+En un dominio bidimensional rectangular de longitud $L_x$ y espesor transversal $L_y$:
+\begin{equation}
+\nabla_{x,y}^2 c = \frac{c_{\mathrm{ref}}}{L_x^2} \left[ \frac{\partial^2 \hat{c}}{\partial \hat{x}^2} + \mathcal{A}_y^2 \frac{\partial^2 \hat{c}}{\partial \hat{y}^2} \right], \qquad \mathcal{A}_y = \frac{L_x}{L_y}.
+\end{equation}
+Alternativamente, normalizando respecto al transporte transversal (común en teoría de capa límite y lubricación donde $L_y \ll L_x$ y definimos $\epsilon \equiv L_y/L_x \ll 1$):
+\begin{equation}
+\nabla_{x,y}^2 c = \frac{c_{\mathrm{ref}}}{L_y^2} \left[ \epsilon^2 \frac{\partial^2 \hat{c}}{\partial \hat{x}^2} + \frac{\partial^2 \hat{c}}{\partial \hat{y}^2} \right].
+\end{equation}
+Cuando $\epsilon \to 0$, el término de difusión axial $\epsilon^2 \frac{\partial^2 \hat{c}}{\partial \hat{x}^2} \sim \mathcal{O}(\epsilon^2)$ deviene asintóticamente despreciable frente a la difusión transversal $\frac{\partial^2 \hat{c}}{\partial \hat{y}^2} \sim \mathcal{O}(1)$, deduciéndose con total rigor las ecuaciones parabólicas de capa límite (Prandtl) sin necesidad de conjeturas empíricas.
+
+\subsection{Estructura Tridimensional ($x, y, z$)}
+Para un sistema continuo en $\mathbb{R}^3$ con advección axial $u$ y transporte transversal:
+\begin{equation}
+\nabla_{x,y,z}^2 c = \frac{c_{\mathrm{ref}}}{L_x^2} \left[ \frac{\partial^2 \hat{c}}{\partial \hat{x}^2} + \mathcal{A}_y^2 \frac{\partial^2 \hat{c}}{\partial \hat{y}^2} + \mathcal{A}_z^2 \frac{\partial^2 \hat{c}}{\partial \hat{z}^2} \right].
+\end{equation}
+El balance de convección-difusión-reacción:
+\begin{equation}
+\frac{\partial c}{\partial t} + u \frac{\partial c}{\partial x} + v \frac{\partial c}{\partial y} = D \nabla_{x,y}^2 c - k_1 c,
+\end{equation}
+se proyecta al espacio adimensional como:
+\begin{equation}
+\frac{\partial \hat{c}}{\partial \hat{t}} + \mathrm{Pe}_x^* \frac{\partial \hat{c}}{\partial \hat{x}} + \mathrm{Pe}_y^* \frac{\partial \hat{c}}{\partial \hat{y}} = \mathrm{Fo}_x \frac{\partial^2 \hat{c}}{\partial \hat{x}^2} + \mathrm{Fo}_y \frac{\partial^2 \hat{c}}{\partial \hat{y}^2} - \mathrm{Da}_t \hat{c},
+\end{equation}
+donde los coeficientes adimensionales direccionales satisfacen:
+\begin{equation}
+\mathrm{Fo}_x = \frac{D t_{\mathrm{ref}}}{L_x^2}, \qquad \mathrm{Fo}_y = \frac{D t_{\mathrm{ref}}}{L_y^2} = \mathrm{Fo}_x \mathcal{A}_y^2,
+\end{equation}
+\begin{equation}
+\mathrm{Pe}_x^* = \frac{u t_{\mathrm{ref}}}{L_x}, \qquad \mathrm{Pe}_y^* = \frac{v t_{\mathrm{ref}}}{L_y}, \qquad \mathrm{Da}_t = k_1 t_{\mathrm{ref}}.
+\end{equation}
+
+\section{El Principio de la Balanza Dominante (Kruskal) y Formulaciones Canónicas}
+
+\subsection{Selección del Factor Rector Global}
+Dividiendo la ecuación escalada miembro a miembro por el factor dimensional del término rector (usualmente el término de acumulación temporal $\Phi = c_{\mathrm{ref}}/t_{\mathrm{ref}}$ o el término de difusión axial $\Phi = D c_{\mathrm{ref}}/L_x^2$), su coeficiente se normaliza unívocamente a la unidad ($1$).
+
+Fijar un grupo a la unidad ($\Pi_j = 1$) no es una simplificación arbitraria: representa la determinación física de una escala de referencia libre en términos de las propiedades constitutivas del fluido o medio continuo.
+
+\subsection{Catálogo de Regímenes Asintóticos Canónicos}
+Para el balance clásico de difusión-reacción $\frac{\partial c}{\partial t} = D \nabla^2 c + k c - a c^2$, surgen naturalmente las siguientes formulaciones canónicas:
+
+\begin{table}[h!]
+\centering
+\small
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Formulación} & \textbf{Escala temporal ($t_{\mathrm{ref}}$)} & \textbf{Escala espacial ($x_{\mathrm{ref}}$)} & \textbf{Grupos canónicos emergentes} \\
+\midrule
+1. Tiempo difusivo & $t_{\mathrm{ref}} = L^2/D$ & $L$ libre & $\mathrm{Da} = \frac{k L^2}{D}$ (Damköhler difusivo), $\Pi_a = \frac{a c_{\mathrm{ref}} L^2}{D}$ \\
+2. Tiempo reactivo & $t_{\mathrm{ref}} = 1/k$ & $L$ libre & $\mathrm{Fo} = \frac{D}{k L^2} = \frac{1}{\mathrm{Da}}$, $\Pi_a = \frac{a c_{\mathrm{ref}}}{k}$ \\
+3. Cinética normalizada & $t_{\mathrm{ref}} = 1/k$ & $c_{\mathrm{ref}} = k/a$ & $\frac{\partial \hat{c}}{\partial \hat{t}} = \frac{D}{k L^2} \nabla^2 \hat{c} + \hat{c} - \hat{c}^2$ \\
+4. Longitud intrínseca & $t_{\mathrm{ref}} = 1/k$ & $L = \sqrt{D/k}$ & $\frac{\partial \hat{c}}{\partial \hat{t}} = \nabla^2 \hat{c} + \hat{c} - \hat{c}^2$ (longitud de difusión-reacción) \\
+\bottomrule
+\end{tabular}
+\caption{Formulaciones canónicas deducidas del balance dominante.}
+\label{tab:formulaciones}
+\end{table}
+
+\section{Condiciones de Contorno e Invariantes de Interfase}
+Las condiciones de frontera sobre $\partial\Omega$ imponen restricciones adicionales que generan invariantes adimensionales característicos de interfase:
+
+\begin{itemize}
+    \item \textbf{Condición de Dirichlet (concentración prescrita en la pared):}
+    \begin{equation}
+    c|_{\partial\Omega} = c_0 \quad \Longrightarrow \quad \hat{c}|_{\partial\hat{\Omega}} = \frac{c_0}{c_{\mathrm{ref}}}.
+    \end{equation}
+    Si se selecciona $c_{\mathrm{ref}} = c_0$, la condición se normaliza canónicamente a $\hat{c}|_{\partial\hat{\Omega}} = 1$.
+
+    \item \textbf{Condición de Neumann (flujo másico prescrito):}
+    \begin{equation}
+    -D (\nabla c \cdot \mathbf{n}) = q_0 \quad \Longrightarrow \quad -(\nabla_{\hat{\mathbf{x}}} \hat{c} \cdot \hat{\mathbf{n}}) = \frac{q_0 L_x}{D c_{\mathrm{ref}}} \equiv \Pi_q.
+    \end{equation}
+
+    \item \textbf{Condición de Robin (resistencia convectiva de película en interfase):}
+    \begin{equation}
+    -D (\nabla c \cdot \mathbf{n}) = k_c (c - c_\infty),
+    \end{equation}
+    donde $k_c$ es el coeficiente de transferencia de materia. Al sustituir las escalas $c = c_{\mathrm{ref}} \hat{c}$ y $\mathbf{x} = L_x \hat{\mathbf{x}}$:
+    \begin{equation}
+    -\frac{D c_{\mathrm{ref}}}{L_x} (\nabla_{\hat{\mathbf{x}}} \hat{c} \cdot \hat{\mathbf{n}}) = k_c c_{\mathrm{ref}} (\hat{c} - \hat{c}_\infty) \quad \Longrightarrow \quad -(\nabla_{\hat{\mathbf{x}}} \hat{c} \cdot \hat{\mathbf{n}}) = \mathrm{Sh} \, (\hat{c} - \hat{c}_\infty),
+    \end{equation}
+    haciendo emerger de forma estrictamente deductiva el \textbf{Número de Sherwood} ($\mathrm{Sh} = \frac{k_c L_x}{D}$) o, en transporte térmico, el \textbf{Número de Biot} ($\mathrm{Bi} = \frac{h L_x}{k_T}$).
+\end{itemize}
+
+\section{Teorema de Certificación por Retro-sustitución Exacta}
+
+\begin{teorema}[Conservación Diferencial y Equivalencia Recíproca]
+Sea $\mathcal{E}_{\mathrm{dim}}(\mathbf{c}, \mathbf{x}, t; \mathbf{p}) = 0$ un sistema continuo de ecuaciones diferenciales de orden $k$. Sea $\mathcal{T}: (\mathbf{x}, t, \mathbf{c}) \mapsto (\hat{\mathbf{x}}, \hat{t}, \hat{\mathbf{c}})$ el difeomorfismo de escala inducido por la elección de referencias $(\mathbf{L}, t_{\mathrm{ref}}, \mathbf{c}_{\mathrm{ref}})$, y sea $\mathcal{E}_{\mathrm{adim}}(\hat{\mathbf{c}}, \hat{\mathbf{x}}, \hat{t}; \boldsymbol{\Pi}) = 0$ el sistema adimensional resultante.
+Entonces, la aplicación del difeomorfismo inverso $\mathcal{T}^{-1}$:
+\begin{equation}
+\hat{\mathbf{x}} = \mathbf{L}^{-1} \mathbf{x}, \qquad \hat{t} = \frac{t}{t_{\mathrm{ref}}}, \qquad \hat{c}_i = \frac{c_i}{c_{i,\mathrm{ref}}},
+\end{equation}
+satisface la identidad algebraica:
+\begin{equation}
+\mathcal{T}^{-1} \left[ \mathcal{E}_{\mathrm{adim}}(\hat{\mathbf{c}}, \hat{\mathbf{x}}, \hat{t}; \boldsymbol{\Pi}) \right] \equiv \boldsymbol{\Phi}^{-1} \mathcal{E}_{\mathrm{dim}}(\mathbf{c}, \mathbf{x}, t; \mathbf{p}) \equiv 0,
+\end{equation}
+demostrando que el sistema adimensional es analíticamente equivalente al sistema original si y solo si los factores globales satisfacen $\Phi_j \ne 0$ en todo el dominio.
+\end{teorema}
+
+\section{Conclusiones}
+El análisis dimensional riguroso de sistemas continuos multicomponentes no es una mera simplificación formal, sino un difeomorfismo exacto en el espacio de funciones que preserva la estructura topológica y diferencial de los balances de materia, momento y energía. En dominios multidimensionales continuos ($n \ge 2$), el escalamiento anisotrópico introduce de forma natural los parámetros de esbeltez $\mathcal{A}_j$, permitiendo conectar de manera transparente la teoría completa con las reducciones asintóticas de capa límite y lubricación. 
+
+La implementación de este protocolo en entornos computacionales deterministas con verificación por retro-sustitución abre la puerta a la automatización formal y reproducible del modelado en ingeniería de reactores y fisicoquímica aplicada.
+
+\begin{thebibliography}{99}
+\bibitem{buckingham1914} E. Buckingham, ``On physically similar systems; illustrations of the use of dimensional equations'', \emph{Physical Review}, vol. 4, no. 4, pp. 345--376, 1914.
+\bibitem{kruskal1962} M. D. Kruskal, ``Asymptotology'', in \emph{Mathematical Models in Physical Sciences}, Prentice-Hall, pp. 17--48, 1962.
+\bibitem{barenblatt1996} G. I. Barenblatt, \emph{Scaling, Self-similarity, and Intermediate Asymptotics}, Cambridge University Press, 1996.
+\bibitem{bird2007} R. B. Bird, W. E. Stewart, and E. N. Lightfoot, \emph{Transport Phenomena}, 2nd ed., John Wiley \& Sons, 2007.
+\bibitem{bluman1989} G. W. Bluman and S. Kumei, \emph{Symmetries and Differential Equations}, Springer-Verlag, 1989.
+\end{thebibliography}
+
+\end{document}

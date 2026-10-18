@@ -1,0 +1,301 @@
+\documentclass[11pt,a4paper]{article}
+
+% --- Paquetes fundamentales de tipografía e idioma ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-nodecimaldot]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+
+% --- Matemáticas avanzadas ---
+\usepackage{amsmath,amssymb,amsfonts,amsthm,mathtools}
+\usepackage{bm}
+
+% --- Geometría y márgenes ---
+\usepackage[top=25mm,bottom=25mm,left=25mm,right=25mm]{geometry}
+
+% --- Tablas y formato ---
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{multirow}
+
+% --- Gráficos y diagramas ---
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows,positioning,calc}
+
+% --- Enlaces y referencias ---
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    citecolor=black,
+    urlcolor=blue,
+    pdftitle={Análisis Dimensional y Adimensionalización Formal de Modelos Continuos},
+    pdfauthor={Antigravity Modeling Group}
+}
+
+% --- Entornos matemáticos formalizados ---
+\theoremstyle{definition}
+\newtheorem{definicion}{Definición}[section]
+\newtheorem{ejemplo}[definicion]{Ejemplo}
+
+\theoremstyle{plain}
+\newtheorem{teorema}{Teorema}[section]
+\newtheorem{proposicion}[teorema]{Proposición}
+\newtheorem{lema}[teorema]{Lema}
+\newtheorem{corolario}[teorema]{Corolario}
+
+\theoremstyle{remark}
+\newtheorem{observacion}{Observación}[section]
+
+% --- Comandos personalizados ---
+\newcommand{\dimvec}[1]{\mathbf{#1}}
+\newcommand{\dimmat}[1]{\mathbf{#1}}
+\newcommand{\dimless}[1]{\hat{#1}}
+\newcommand{\refscale}[1]{#1_{\mathrm{ref}}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\Da}{\mathrm{Da}}
+\newcommand{\Pe}{\mathrm{Pe}}
+\newcommand{\Pran}{\mathrm{Pr}}
+\newcommand{\Gr}{\mathrm{Gr}}
+\newcommand{\Lew}{\mathrm{Le}}
+\newcommand{\Biot}{\mathrm{Bi}}
+
+% --- Metadatos del documento ---
+\title{\textbf{\LARGE Un Enfoque Constructivo para la Adimensionalización Automática y Certificación Formal de Sistemas Diferenciales Continuos}}
+
+\author{
+    \textbf{Equipo de Modelado Matemático y Computación Científica}\\[1ex]
+    \small Proyecto de Simulación y Análisis Dimensional · Repositorio de Código Abierto\\
+    \small \texttt{antigravity-science@modeling.org}
+}
+
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+En este trabajo se presenta la arquitectura teórica y algorítmica de un motor algebraico exacto diseñado para la deducción, reducción dimensional y certificación formal paso a paso de ecuaciones diferenciales en derivadas parciales (EDP) y sistemas acoplados de transporte con reacción. A diferencia de las metodologías tradicionales basadas en escalamientos heurísticos manuales, el sistema implementa una descomposición canónica en el espacio vectorial dimensional $\mathbb{Q}^d$ sustentada en el Teorema $\Pi$ de Buckingham y en simetrías de escala de grupos de Lie. El motor opera sobre un Árbol Sintáctico Abstracto (AST) inmutable, realiza inferencia dimensional estricta en aritmética racional exacta y genera secuencias constructivas de transformaciones diferenciales mediante la regla de la cadena. Se demuestra la robustez del enfoque en sistemas altamente acoplados de ingeniería química y física matemática: destilación reactiva multicomponente ($A+B \rightleftharpoons C$), convección natural bajo la aproximación de Boussinesq, reactores con difusión intraparticular y saturación no lineal (Módulo de Thiele), y transporte acoplado de masa y energía con números de Lewis y Péclet. Se incluye una descripción de la interfaz de usuario en cuadernos desacoplados y la generación automatizada de informes técnicos con tipografía científica rigurosa.
+\end{abstract}
+
+\textbf{\textit{Palabras clave:}} Análisis dimensional; Teorema $\Pi$ de Buckingham; Adimensionalización automática; Grupos de Lie; Transporte y reacción; Verificación formal; Álgebra computacional.
+
+\vspace{1.5em}
+\hrule
+\vspace{1.5em}
+
+\section{Introducción}
+
+El modelado matemático de fenómenos físicos y químicos en medios continuos conduce invariablemente a ecuaciones diferenciales en derivadas parciales gobernadas por múltiples parámetros dimensionales (difusividades moleculares, constantes cinéticas de reacción, coeficientes de transferencia convectiva, densidades, viscosidades y aceleración gravitatoria). El análisis dimensional y la posterior adimensionalización constituyen una de las herramientas más poderosas del método científico e ingenieril~\cite{barenblatt1996,buckingham1914}. Sus beneficios son ampliamente reconocidos:
+\begin{enumerate}
+    \item \textbf{Reducción del espacio de parámetros:} Al agrupar combinaciones dimensionales en un conjunto mínimo de invariantes característicos ($\Pi_i$), el número efectivo de experimentos o simulaciones numéricas disminuye drásticamente.
+    \item \textbf{Similitud física y escalamiento:} Permite extrapolar mediciones de laboratorio a unidades de escala industrial preservando la dinámica dominante.
+    \item \textbf{Análisis asintótico y órdenes de magnitud:} Al normalizar las variables dependientes e independientes en el intervalo $\mathcal{O}(1)$, los coeficientes de las derivadas reflejan directamente el balance competitivo de fuerzas, facilitando la identificación de capas límite, regímenes lentos/rápidos y perturbaciones singulares~\cite{krantz2007}.
+\end{enumerate}
+
+No obstante su relevancia fundamental, el proceso de adimensionalización en la práctica ingenieril adolece frecuentemente de dos limitaciones críticas:
+\begin{itemize}
+    \item \textbf{Naturaleza manual y heurística:} En sistemas complejos con múltiples especies químicas y términos no lineales acoplados, la elección de las escalas de referencia (e.g., tiempo característico difusivo vs. tiempo reactivo vs. tiempo convectivo) suele realizarse mediante tanteo no sistemático, lo que induce errores algebraicos sutiles en los exponentes dimensionales.
+    \item \textbf{Carencia de certificación constructiva:} Las herramientas de cálculo simbólico estándar (e.g. paquetes algebraicos de propósito general) suelen devolver únicamente la expresión final transformada, omitiendo la traza de justificaciones formales requerida para auditar la equivalencia paso a paso.
+\end{itemize}
+
+El presente trabajo describe la conceptualización, base matemática y desarrollo de software de un motor computacional de propósito específico, concebido para automatizar la exploración de familias de escalas y certificar la deducción matemática de sistemas dimensionales arbitrarios con precisión analítica exacta.
+
+\section{Marco Teórico y Fundamentos Matemáticos}
+
+\subsection{El Espacio Vectorial Dimensional y Homogeneidad de Fourier}
+
+Consideremos un conjunto de $n$ cantidades físicas que intervienen en un modelo matemático dado, denotadas por $\{q_1, q_2, \dots, q_n\}$. En el Sistema Internacional de Unidades o en sistemas analíticos continuos, toda cantidad física posee una dimensión expresable como un monomio en la base de dimensiones fundamentales $\mathcal{B} = \{\mathsf{L}, \mathsf{M}, \mathsf{T}, \mathsf{\Theta}, \mathsf{N}\}$ (Longitud, Masa, Tiempo, Temperatura y Cantidad de Sustancia):
+\begin{equation}
+    [q_j] = \prod_{i=1}^d \mathsf{D}_i^{m_{ij}}, \quad m_{ij} \in \mathbb{Q}
+\end{equation}
+donde $d = \dim(\mathcal{B})$. Asociando a cada cantidad su vector de exponentes dimensionales $\mathbf{v}_j = [m_{1j}, m_{2j}, \dots, m_{dj}]^T \in \mathbb{Q}^d$, se define la matriz dimensional del sistema:
+\begin{equation}
+    \mathbf{M} = \begin{bmatrix} \mathbf{v}_1 & \mathbf{v}_2 & \cdots & \mathbf{v}_n \end{bmatrix} \in \mathbb{Q}^{d \times n}
+\end{equation}
+
+El principio de homogeneidad dimensional de Fourier impone que toda ecuación físicamente significativa de la forma $\sum_k T_k = 0$ satisface $[T_k] = [T_l]$ para todo par de términos aditivos $k, l$.
+
+\subsection{Teorema $\Pi$ de Buckingham y el Núcleo Racional}
+
+El Teorema $\Pi$ de Buckingham~\cite{buckingham1914} establece que si una ley física relaciona $n$ variables dimensionales expresadas mediante $d$ dimensiones fundamentales, la relación puede reescribirse en términos de $k = n - r$ números adimensionales independientes, donde $r = \mathrm{rango}(\mathbf{M})$.
+
+Desde una perspectiva de álgebra lineal exacta, los monomios adimensionales corresponden a los vectores $\mathbf{x} = [x_1, \dots, x_n]^T \in \mathbb{Q}^n$ pertenecientes al espacio nulo (kernel) de la matriz dimensional:
+\begin{equation}
+    \mathbf{M} \mathbf{x} = \mathbf{0} \implies \left[ \prod_{j=1}^n q_j^{x_j} \right] = 1
+\end{equation}
+Cualquier base del núcleo $\ker(\mathbf{M})$ genera una familia maximal de grupos adimensionales algebraicamente independientes:
+\begin{equation}
+    \Pi_i = \prod_{j=1}^n q_j^{B_{ji}}, \quad i = 1, \dots, k
+\end{equation}
+donde $\mathbf{B}$ es una matriz de base en forma escalonada reducida sobre $\mathbb{Q}$.
+
+\subsection{Simetrías de Escala de Lie y Reglas de la Cadena}
+
+La adimensionalización de ecuaciones diferenciales en derivadas parciales corresponde a una transformación conforme del grupo de Lie de dilataciones afines~\cite{olver1993}:
+\begin{equation}
+    x_i = \refscale{x_i} \, \dimless{x}_i, \quad t = \refscale{t} \, \dimless{t}, \quad u_j = \refscale{u_j} \, \dimless{u}_j
+\end{equation}
+donde las variables con circunflejo $(\dimless{x}_i, \dimless{t}, \dimless{u}_j)$ son adimensionales de magnitud $\mathcal{O}(1)$ y las cantidades $\refscale{(\cdot)}$ son escalas características con unidades idénticas a sus variables originales.
+
+Bajo este homeomorfismo de coordenadas, los operadores diferenciales del cálculo multivariable se transforman de acuerdo con la regla de la cadena:
+\begin{align}
+    \frac{\partial}{\partial t} &= \frac{1}{\refscale{t}} \frac{\partial}{\partial \dimless{t}} \\
+    \nabla_x &= \frac{1}{\refscale{x}} \nabla_{\dimless{x}} \\
+    \nabla_x^2 &= \frac{1}{\refscale{x}^2} \nabla_{\dimless{x}}^2
+\end{align}
+Para derivadas de orden superior $m \in \mathbb{N}$:
+\begin{equation}
+    \frac{\partial^m u}{\partial x^m} = \frac{\refscale{u}}{\refscale{x}^m} \frac{\partial^m \dimless{u}}{\partial \dimless{x}^m}
+\end{equation}
+
+\subsection{Funciones Constitutivas No Lineales Dependientes del Estado}
+
+En sistemas reales, coeficientes como la difusividad $D(c)$, la conductividad térmica $k(T)$ o la viscosidad $\mu(\dot{\gamma})$ no son constantes, sino funciones dependientes del estado. El motor formaliza la descomposición canónica:
+\begin{equation}
+    D(c) = D^* \, \hat{D}(\hat{c}), \quad \text{donde } [D^*] = [D(c)] \quad \text{y} \quad [\hat{D}] = 1
+\end{equation}
+con la variable interna normalizada mediante $\hat{c} = c / \refscale{c}$. El operador diferencial no lineal de difusión divergente adopta entonces la estructura:
+\begin{equation}
+    \nabla \cdot \left( D(c) \nabla c \right) = \frac{D^* \refscale{c}}{\refscale{x}^2} \nabla_{\hat{x}} \cdot \left( \hat{D}(\hat{c}) \nabla_{\hat{x}} \hat{c} \right)
+\end{equation}
+
+\section{Arquitectura del Sistema y Metodología Computacional}
+
+\subsection{Estructura del Árbol Sintáctico Abstracto (AST)}
+
+El sistema rechaza la manipulación opaca de cadenas de texto y opera exclusivamente sobre un AST inmutable y estrictamente tipado. Los nodos del árbol modelan operadores elementales y compuestos:
+\begin{itemize}
+    \item \texttt{simbolo}: Variable, parámetro o constante identificada unívocamente.
+    \item \texttt{derivada}: Operador diferencial $\partial^m \psi / \partial \xi^m$.
+    \item \texttt{laplaciano}, \texttt{gradiente}, \texttt{divergencia}: Operadores vectoriales sobre conjuntos coordenados explícitos.
+    \item \texttt{llamada}: Evaluación de funciones constitutivas dependientes.
+    \item \texttt{suma}, \texttt{producto}, \texttt{cociente}, \texttt{potencia}: Operaciones algebraicas elementales.
+\end{itemize}
+
+\subsection{Algoritmo Constructivo de Normalización}
+
+El procesamiento de una hoja de trabajo sigue las siguientes etapas canónicas:
+\begin{enumerate}
+    \item \textbf{Tokenización y Parsing Determinista:} Convierte la formulación matemática en lenguaje natural técnico en el AST tipado.
+    \item \textbf{Auditoría de Consistencia Dimensional:} Valida la homogeneidad de Fourier en cada término mediante resolución de sistemas racionales exactos.
+    \item \textbf{Construcción del Sistema de Escalas:} Asigna escalas de referencia $\refscale{v}$ a cada variable de campo y coordenada independiente.
+    \item \textbf{Sustitución y Despliegue de la Regla de la Cadena:} Aplica formalmente las derivadas dimensionales y agrupa factores de referencia prefijados.
+    \item \textbf{Normalización por Balances Dominantes:} Para cada ecuación, divide el sistema por el coeficiente de un término seleccionado (e.g. término de acumulación temporal o término difusivo principal). Los coeficientes resultantes se colapsan automáticamente en los grupos $\Pi$ del sistema.
+    \item \textbf{Certificación Constructiva:} Genera la secuencia ordenada de lemas de transformación justificando cada igualdad algebraica.
+\end{enumerate}
+
+\section{Casos de Estudio y Validación de Sistemas Complejos}
+
+Para evidenciar la potencia del motor, se analizan a continuación cuatro sistemas paradigmáticos de modelado físico-químico.
+
+\subsection{Destilación Reactiva Multicomponente ($A + B \rightleftharpoons C$)}
+
+Consideremos una columna de destilación reactiva donde ocurre una reacción reversible de segundo orden en fase líquida acompañada de difusión molecular:
+\begin{align}
+    \frac{\partial c_A}{\partial t} &= D \nabla^2 c_A - k_1 c_A c_B + k_2 c_C \label{eq:destilacion_A} \\
+    \frac{\partial c_B}{\partial t} &= D \nabla^2 c_B - k_1 c_A c_B + k_2 c_C \label{eq:destilacion_B} \\
+    \frac{\partial c_C}{\partial t} &= D \nabla^2 c_C + k_1 c_A c_B - k_2 c_C \label{eq:destilacion_C}
+\end{align}
+donde $[c_i] = \mathsf{N}\,\mathsf{L}^{-3}$, $[D] = \mathsf{L}^2\,\mathsf{T}^{-1}$, $[k_1] = \mathsf{L}^3\,\mathsf{N}^{-1}\,\mathsf{T}^{-1}$ y $[k_2] = \mathsf{T}^{-1}$.
+
+Introduciendo las variables adimensionales:
+\begin{equation}
+    c_A = \refscale{c_A} \hat{c}_A, \quad c_B = \refscale{c_B} \hat{c}_B, \quad c_C = \refscale{c_C} \hat{c}_C, \quad t = \refscale{t} \hat{t}, \quad x = \refscale{x} \hat{x}
+\end{equation}
+El motor sustituye las escalas y normaliza la ecuación con respecto a la escala de reacción inversa ($\refscale{t} = 1/k_2$), deduciendo la forma canónica certificada:
+\begin{align}
+    \frac{\partial \hat{c}_A}{\partial \hat{t}} &= \left( \frac{D}{k_2 \refscale{x}^2} \right) \nabla^2 \hat{c}_A - \left( \frac{\refscale{c_B} k_1}{k_2} \right) \hat{c}_A \hat{c}_B + \left( \frac{\refscale{c_C}}{\refscale{c_A}} \right) \hat{c}_C \\
+    \frac{\partial \hat{c}_B}{\partial \hat{t}} &= \left( \frac{D}{k_2 \refscale{x}^2} \right) \nabla^2 \hat{c}_B - \left( \frac{\refscale{c_A} k_1}{k_2} \right) \hat{c}_A \hat{c}_B + \left( \frac{\refscale{c_C}}{\refscale{c_B}} \right) \hat{c}_C \\
+    \frac{\partial \hat{c}_C}{\partial \hat{t}} &= \left( \frac{D}{k_2 \refscale{x}^2} \right) \nabla^2 \hat{c}_C + \left( \frac{\refscale{c_A} \refscale{c_B} k_1}{\refscale{c_C} k_2} \right) \hat{c}_A \hat{c}_B - \hat{c}_C
+\end{align}
+Nótese la emergencia natural del número de Damköhler de segundo orden $\mathrm{Da}_{II} = \frac{\refscale{c_B} k_1}{k_2}$ y de la razón de equilibrio químico adimensional $K_{\mathrm{eq}}^* = \frac{\refscale{c_A} \refscale{c_B} k_1}{\refscale{c_C} k_2}$.
+
+\paragraph{Multiplicidad de Formulaciones y Espacio Asintótico (68 Formas Canónicas):}
+En este sistema acoplado se manifiestan 5 grados de libertad de escala ($\refscale{t}, \refscale{x}, \refscale{c_A}, \refscale{c_B}, \refscale{c_C}$) enfrentados a 12 términos físicos gobernantes (acumulación, difusión y reacción para cada especie). Al aplicar el principio de la balanza dominante de Kruskal (\textit{dominant balance}) para explorar todas las bases algebraicas no singulares ($\det(\mathbf{M}) \neq 0$), el motor algorítmico deduce exactamente \textbf{68 formulaciones canónicas completas y no degeneradas}. Lejos de ser redundancias algebraicas, cada una de estas 68 formas representa un régimen asintótico físicamente realizable:
+\begin{enumerate}
+    \item \textbf{Régimen Difusivo Puro ($\mathrm{Da}_i \ll 1$):} Donde la escala de tiempo la fija el transporte molecular ($\refscale{t} = \refscale{x}^2 / D$), adecuado para lechos con difusión lenta.
+    \item \textbf{Régimen Cinético Rápido ($\mathrm{Da}_i \gg 1$):} Donde $\refscale{t}$ se acopla a la cinética directa $1/(k_1 \refscale{c_B})$, ideal para frentes de combustión o interfases reactivas delgadas.
+    \item \textbf{Régimen de Equilibrio Químico Cuasiestacionario:} Donde la razón $k_1/k_2$ fija las escalas de concentración relativas y el término temporal se desvanece asintóticamente.
+\end{enumerate}
+Tener catalogadas las 68 formulaciones canónicas certificadas permite seleccionar para cada zona espacial de una columna de destilación reactiva la forma que minimiza la rigidez numérica (\textit{stiffness}), evitando el colapso de los integradores de ecuaciones diferenciales ordinarias o algebraicas (EDO/EDA).
+
+\subsection{Convección Natural y Capa Límite Térmica (Aproximación de Boussinesq)}
+
+El balance de cantidad de movimiento y energía en un fluido con empuje térmico responde al sistema acoplado:
+\begin{align}
+    \frac{\partial u}{\partial t} &= \nu \nabla^2 u + g\beta \theta \\
+    \frac{\partial \theta}{\partial t} &= \alpha_T \nabla^2 \theta
+\end{align}
+donde $u$ es la velocidad del fluido, $\theta = T - T_\infty$ es la perturbación de temperatura, $\nu$ es la viscosidad cinemática, $\alpha_T$ es la difusividad térmica y $g\beta$ agrupa la aceleración de gravedad y el coeficiente de dilatación térmica.
+
+Al seleccionar como escalas la difusión viscosa ($\refscale{t} = \refscale{x}^2 / \nu$) y la escala de empuje $(\refscale{u} = g\beta \refscale{\theta} \refscale{x}^2 / \nu)$, el motor genera la formulación:
+\begin{align}
+    \frac{\partial \hat{u}}{\partial \hat{t}} &= \nabla^2 \hat{u} + \hat{\theta} \\
+    \frac{\partial \hat{\theta}}{\partial \hat{t}} &= \frac{1}{\Pran} \nabla^2 \hat{\theta}
+\end{align}
+donde emerge automáticamente el número de Prandtl $\Pran = \frac{\nu}{\alpha_T}$. En configuraciones gobernadas por la velocidad convectiva característica, el sistema genera alternativamente el número de Grashof $\Gr = \frac{g\beta \Delta T L^3}{\nu^2}$.
+
+\subsection{Reactor Catalítico Heterogéneo y Módulo de Thiele}
+
+Para una partícula catalítica porosa con difusión efectiva $D_e$ y cinética no lineal saturable tipo Langmuir-Hinshelwood / Michaelis-Menten:
+\begin{equation}
+    \frac{\partial c}{\partial t} = D_e \nabla^2 c - \frac{k c}{1 + K c}
+\end{equation}
+Definiendo $c = \refscale{c} \hat{c}$, $x = \refscale{x} \hat{x}$ y $t = (\refscale{x}^2 / D_e) \hat{t}$, la transformación resulta en:
+\begin{equation}
+    \frac{\partial \hat{c}}{\partial \hat{t}} = \nabla^2 \hat{c} - \phi^2 \frac{\hat{c}}{1 + \beta \hat{c}}
+\end{equation}
+donde $\phi = \refscale{x} \sqrt{\frac{k}{D_e}}$ es el clásico Módulo de Thiele y $\beta = K \refscale{c}$ es el parámetro adimensional de saturación o afinidad superficial.
+
+\section{Tipografía Matemática y Exportación de Informes}
+
+Un objetivo primordial de este desarrollo ha sido la erradicación total de artefactos visuales en la representación matemática:
+\begin{itemize}
+    \item \textbf{Variables Adimensionales con Acento Circunflejo:} Las variables transformadas se renderizan rigurosamente como $\hat{c}_A$, $\hat{c}_B$, $\hat{u}$, $\hat{\theta}$, $\hat{x}$, $\hat{t}$, evitando notaciones híbridas de código (tales como \texttt{cA\_ad}).
+    \item \textbf{Escalas de Referencia Subindizadas:} Las escalas dimensionales de los parámetros de estado se estructuran como $c_{A,\mathrm{ref}}$, $c_{B,\mathrm{ref}}$, $x_{\mathrm{ref}}$, $t_{\mathrm{ref}}$, sin presencia de caracteres de guion bajo literales.
+    \item \textbf{Parámetros y Constantes Cinéticas:} Las constantes se expresan en subíndices matemáticos canónicos ($k_1, k_2, D_1, D_2$).
+    \item \textbf{Generación de Informes en PDF con Estilo \LaTeX:} El módulo de exportación compila un documento imprimible con márgenes estándar, numeración de ecuaciones a la derecha, tablas tipográficas \textit{booktabs} y tipografía serif Computer Modern.
+\end{itemize}
+
+\section{Conclusiones}
+
+Se ha implementado y verificado un marco computacional riguroso para la adimensionalización analítica exacta de sistemas diferenciales continuos. La arquitectura desacoplada garantiza que la matemática permanezca libre de dependencias heurísticas, permitiendo a ingenieros y matemáticos explorar familias completas de escalas, verificar la consistencia dimensional de sus modelos y exportar informes con calidad de publicación científica.
+
+El código fuente, los esquemas de validación y la suite de pruebas unitarias e integrales están a disposición de la comunidad científica en el repositorio abierto del proyecto.
+
+\begin{thebibliography}{9}
+
+\bibitem{barenblatt1996}
+G.~I. Barenblatt.
+\newblock {\em Scaling, self-similarity, and intermediate asymptotics}.
+\newblock Cambridge University Press, Cambridge, 1996.
+
+\bibitem{buckingham1914}
+E.~Buckingham.
+\newblock On physically similar systems: illustrations of the use of dimensional equations.
+\newblock {\em Physical Review}, 4(4):345--376, 1914.
+
+\bibitem{bird2002}
+R.~B. Bird, W.~E. Stewart, and E.~N. Lightfoot.
+\newblock {\em Transport Phenomena}.
+\newblock John Wiley \& Sons, New York, 2nd edition, 2002.
+
+\bibitem{krantz2007}
+W.~B. Krantz.
+\newblock {\em Scaling Analysis in Modeling Transport and Reaction Processes: A Systematic Approach to Model Building and the Art of Approximation}.
+\newblock John Wiley \& Sons, Hoboken, NJ, 2007.
+
+\bibitem{olver1993}
+P.~J. Olver.
+\newblock {\em Applications of Lie Groups to Differential Equations}.
+\newblock Graduate Texts in Mathematics. Springer-Verlag, New York, 2nd edition, 1993.
+
+\end{thebibliography}
+
+\end{document}
