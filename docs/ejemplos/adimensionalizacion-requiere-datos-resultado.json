@@ -1,0 +1,168 @@
+{
+ "formato": "adimensionalizacion.resultado",
+ "version": 1,
+ "operacion": "adimensionalizar",
+ "estado": "requiere_datos",
+ "nucleo": "1.0.0",
+ "vinculo": {
+  "documentoId": "doc-prueba",
+  "modeloId": "modelo-prueba",
+  "modeloRevision": 1,
+  "formaId": null,
+  "eleccion": {
+   "escalas": [
+    {
+     "simboloId": "t",
+     "transformar": true,
+     "nuevoNombre": "t_ad",
+     "dimension": null,
+     "valor": {
+      "tipo": "libre"
+     }
+    },
+    {
+     "simboloId": "x",
+     "transformar": true,
+     "nuevoNombre": "x_ad",
+     "dimension": null,
+     "valor": {
+      "tipo": "libre"
+     }
+    },
+    {
+     "simboloId": "c",
+     "transformar": true,
+     "nuevoNombre": "c_ad",
+     "dimension": null,
+     "valor": {
+      "tipo": "libre"
+     }
+    }
+   ],
+   "objetivos": [],
+   "presentacion": "factorizada"
+  },
+  "opciones": {
+   "presupuesto": 200,
+   "maxObjetivos": null,
+   "desde": 0,
+   "gruposPi": true,
+   "maxExponentePi": 4,
+   "maxDenominadorPi": 4,
+   "presentacion": "factorizada"
+  },
+  "firma": "sha256:83f4372ffeda316987f21002060471df2cd9806ea186f1c0ff8a82eaf4f97747"
+ },
+ "diagnosticos": [
+  {
+   "ruta": "simbolos.t",
+   "codigo": "dimension_indeterminada",
+   "severidad": "aviso",
+   "mensaje": "las ecuaciones no determinan la dimension de t"
+  },
+  {
+   "ruta": "simbolos.x",
+   "codigo": "dimension_indeterminada",
+   "severidad": "aviso",
+   "mensaje": "las ecuaciones no determinan la dimension de x"
+  },
+  {
+   "ruta": "simbolos.c",
+   "codigo": "dimension_indeterminada",
+   "severidad": "aviso",
+   "mensaje": "las ecuaciones no determinan la dimension de c"
+  },
+  {
+   "ruta": "simbolos.D",
+   "codigo": "dimension_indeterminada",
+   "severidad": "aviso",
+   "mensaje": "las ecuaciones no determinan la dimension de D"
+  },
+  {
+   "ruta": "simbolos.k",
+   "codigo": "dimension_indeterminada",
+   "severidad": "aviso",
+   "mensaje": "las ecuaciones no determinan la dimension de k"
+  },
+  {
+   "ruta": "simbolos.a",
+   "codigo": "dimension_indeterminada",
+   "severidad": "aviso",
+   "mensaje": "las ecuaciones no determinan la dimension de a"
+  },
+  {
+   "ruta": "simbolos.ell",
+   "codigo": "dimension_indeterminada",
+   "severidad": "aviso",
+   "mensaje": "las ecuaciones no determinan la dimension de ell"
+  },
+  {
+   "ruta": "modelo",
+   "codigo": "datos_indispensables",
+   "severidad": "aviso",
+   "simbolos": [
+    "t",
+    "x",
+    "c"
+   ],
+   "mensaje": "basta declarar la dimension de t, x, c para determinar todas las demas"
+  },
+  {
+   "ruta": "modelo",
+   "codigo": "dimensiones_pendientes",
+   "severidad": "error",
+   "simbolos": [
+    "t",
+    "x",
+    "c"
+   ],
+   "mensaje": "faltan dimensiones: declare las de t, x, c (el resto se infiere)"
+  }
+ ],
+ "dimensional": {
+  "estado": "indeterminado",
+  "simbolos": [
+   {
+    "id": "t",
+    "dimension": null,
+    "origen": "indeterminada"
+   },
+   {
+    "id": "x",
+    "dimension": null,
+    "origen": "indeterminada"
+   },
+   {
+    "id": "c",
+    "dimension": null,
+    "origen": "indeterminada"
+   },
+   {
+    "id": "D",
+    "dimension": null,
+    "origen": "indeterminada"
+   },
+   {
+    "id": "k",
+    "dimension": null,
+    "origen": "indeterminada"
+   },
+   {
+    "id": "a",
+    "dimension": null,
+    "origen": "indeterminada"
+   },
+   {
+    "id": "ell",
+    "dimension": null,
+    "origen": "indeterminada"
+   }
+  ],
+  "funciones": [],
+  "faltantes": [
+   "t",
+   "x",
+   "c"
+  ]
+ }
+}

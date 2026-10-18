@@ -1,0 +1,202 @@
+{
+ "formato": "adimensionalizacion.resultado",
+ "version": 1,
+ "operacion": "analizar",
+ "estado": "correcto",
+ "nucleo": "1.0.0",
+ "vinculo": {
+  "documentoId": "doc-prueba",
+  "modeloId": "modelo-prueba",
+  "modeloRevision": 1,
+  "firma": "sha256:01e03e6bcd7dc30546fb1eac40a4f174d91b99a6a0ef23fcdc03e144e393a390"
+ },
+ "diagnosticos": [],
+ "dimensional": {
+  "estado": "compatible",
+  "simbolos": [
+   {
+    "id": "t",
+    "dimension": {
+     "T": {
+      "n": 1,
+      "d": 1
+     }
+    },
+    "origen": "declarada"
+   },
+   {
+    "id": "x",
+    "dimension": {
+     "L": {
+      "n": 1,
+      "d": 1
+     }
+    },
+    "origen": "declarada"
+   },
+   {
+    "id": "c",
+    "dimension": {
+     "L": {
+      "n": -3,
+      "d": 1
+     },
+     "N": {
+      "n": 1,
+      "d": 1
+     }
+    },
+    "origen": "declarada"
+   },
+   {
+    "id": "D",
+    "dimension": {
+     "L": {
+      "n": 2,
+      "d": 1
+     },
+     "T": {
+      "n": -1,
+      "d": 1
+     }
+    },
+    "origen": "declarada"
+   },
+   {
+    "id": "k",
+    "dimension": {
+     "T": {
+      "n": -1,
+      "d": 1
+     }
+    },
+    "origen": "declarada"
+   },
+   {
+    "id": "a",
+    "dimension": {
+     "L": {
+      "n": 3,
+      "d": 1
+     },
+     "N": {
+      "n": -1,
+      "d": 1
+     },
+     "T": {
+      "n": -1,
+      "d": 1
+     }
+    },
+    "origen": "declarada"
+   },
+   {
+    "id": "ell",
+    "dimension": {
+     "L": {
+      "n": 1,
+      "d": 1
+     }
+    },
+    "origen": "declarada"
+   }
+  ],
+  "funciones": [],
+  "faltantes": []
+ },
+ "terminos": [
+  {
+   "id": "balance:ecuaciones[0].izquierda",
+   "ecuacionId": "balance",
+   "lado": "izquierda",
+   "ruta": "ecuaciones[0].izquierda",
+   "expresion": {
+    "tipo": "derivada",
+    "expresion": {
+     "tipo": "simbolo",
+     "id": "c"
+    },
+    "respecto": "t",
+    "orden": 1
+   },
+   "divididoEn": 1
+  },
+  {
+   "id": "balance:ecuaciones[0].derecha.argumentos[0]",
+   "ecuacionId": "balance",
+   "lado": "derecha",
+   "ruta": "ecuaciones[0].derecha.argumentos[0]",
+   "expresion": {
+    "tipo": "producto",
+    "argumentos": [
+     {
+      "tipo": "laplaciano",
+      "expresion": {
+       "tipo": "simbolo",
+       "id": "c"
+      },
+      "coordenadas": [
+       "x"
+      ]
+     },
+     {
+      "tipo": "simbolo",
+      "id": "D"
+     }
+    ]
+   },
+   "divididoEn": 1
+  },
+  {
+   "id": "balance:ecuaciones[0].derecha.argumentos[1]",
+   "ecuacionId": "balance",
+   "lado": "derecha",
+   "ruta": "ecuaciones[0].derecha.argumentos[1]",
+   "expresion": {
+    "tipo": "producto",
+    "argumentos": [
+     {
+      "tipo": "simbolo",
+      "id": "c"
+     },
+     {
+      "tipo": "simbolo",
+      "id": "k"
+     }
+    ]
+   },
+   "divididoEn": 1
+  },
+  {
+   "id": "balance:ecuaciones[0].derecha.argumentos[2]",
+   "ecuacionId": "balance",
+   "lado": "derecha",
+   "ruta": "ecuaciones[0].derecha.argumentos[2]",
+   "expresion": {
+    "tipo": "producto",
+    "argumentos": [
+     {
+      "tipo": "numero",
+      "valor": -1
+     },
+     {
+      "tipo": "simbolo",
+      "id": "a"
+     },
+     {
+      "tipo": "potencia",
+      "base": {
+       "tipo": "simbolo",
+       "id": "c"
+      },
+      "exponente": {
+       "tipo": "numero",
+       "valor": 2
+      }
+     }
+    ]
+   },
+   "divididoEn": 1
+  }
+ ]
+}

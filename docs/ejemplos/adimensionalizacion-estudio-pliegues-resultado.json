@@ -1,0 +1,3907 @@
+{
+ "formato": "adimensionalizacion.resultado",
+ "version": 1,
+ "operacion": "estudiar",
+ "estado": "correcto",
+ "nucleo": "1.0.0",
+ "vinculo": {
+  "documentoId": "doc-prueba",
+  "modeloId": "modelo-prueba",
+  "modeloRevision": 1,
+  "formaId": "forma-1",
+  "eleccion": {
+   "escalas": [
+    {
+     "simboloId": "t",
+     "transformar": true,
+     "nuevoNombre": "t_ad",
+     "dimension": null,
+     "valor": {
+      "tipo": "libre"
+     }
+    },
+    {
+     "simboloId": "u",
+     "transformar": false,
+     "nuevoNombre": "u_ad",
+     "dimension": null,
+     "valor": {
+      "tipo": "libre"
+     }
+    }
+   ],
+   "objetivos": [
+    {
+     "id": "k",
+     "ecuacionId": "e",
+     "termino": {
+      "tipo": "producto",
+      "argumentos": [
+       {
+        "tipo": "simbolo",
+        "id": "k"
+       },
+       {
+        "tipo": "simbolo",
+        "id": "u"
+       }
+      ]
+     },
+     "valor": 1,
+     "accion": "normalizar"
+    }
+   ],
+   "presentacion": "factorizada"
+  },
+  "estudio": {
+   "valores": [
+    {
+     "simboloId": "k",
+     "valor": 1,
+     "unidad": "1/s"
+    },
+    {
+     "simboloId": "p",
+     "valor": 0.0
+    }
+   ],
+   "analisis": [
+    "estabilidad",
+    "continuacion"
+   ],
+   "continuacion": {
+    "parametroId": "p",
+    "desde": -1,
+    "hasta": 1
+   },
+   "cajaEstados": 3
+  },
+  "firma": "sha256:1be1c5c4607e243450edf55b9d66aa98858e630f7e5165ed1b3e14b057599fdb"
+ },
+ "diagnosticos": [],
+ "dimensional": {
+  "estado": "compatible",
+  "simbolos": [
+   {
+    "id": "t",
+    "dimension": {
+     "T": {
+      "n": 1,
+      "d": 1
+     }
+    },
+    "origen": "declarada"
+   },
+   {
+    "id": "u",
+    "dimension": {},
+    "origen": "declarada"
+   },
+   {
+    "id": "k",
+    "dimension": {
+     "T": {
+      "n": -1,
+      "d": 1
+     }
+    },
+    "origen": "declarada"
+   },
+   {
+    "id": "p",
+    "dimension": {},
+    "origen": "declarada"
+   }
+  ],
+  "funciones": [],
+  "faltantes": []
+ },
+ "terminos": [
+  {
+   "id": "e:ecuaciones[0].izquierda",
+   "ecuacionId": "e",
+   "lado": "izquierda",
+   "ruta": "ecuaciones[0].izquierda",
+   "expresion": {
+    "tipo": "derivada",
+    "expresion": {
+     "tipo": "simbolo",
+     "id": "u"
+    },
+    "respecto": "t",
+    "orden": 1
+   },
+   "divididoEn": 1
+  },
+  {
+   "id": "e:ecuaciones[0].derecha.argumentos[0]",
+   "ecuacionId": "e",
+   "lado": "derecha",
+   "ruta": "ecuaciones[0].derecha.argumentos[0]",
+   "expresion": {
+    "tipo": "producto",
+    "argumentos": [
+     {
+      "tipo": "simbolo",
+      "id": "k"
+     },
+     {
+      "tipo": "simbolo",
+      "id": "p"
+     }
+    ]
+   },
+   "divididoEn": 1
+  },
+  {
+   "id": "e:ecuaciones[0].derecha.argumentos[1]",
+   "ecuacionId": "e",
+   "lado": "derecha",
+   "ruta": "ecuaciones[0].derecha.argumentos[1]",
+   "expresion": {
+    "tipo": "producto",
+    "argumentos": [
+     {
+      "tipo": "simbolo",
+      "id": "k"
+     },
+     {
+      "tipo": "simbolo",
+      "id": "u"
+     }
+    ]
+   },
+   "divididoEn": 1
+  },
+  {
+   "id": "e:ecuaciones[0].derecha.argumentos[2]",
+   "ecuacionId": "e",
+   "lado": "derecha",
+   "ruta": "ecuaciones[0].derecha.argumentos[2]",
+   "expresion": {
+    "tipo": "producto",
+    "argumentos": [
+     {
+      "tipo": "numero",
+      "valor": -1
+     },
+     {
+      "tipo": "simbolo",
+      "id": "k"
+     },
+     {
+      "tipo": "potencia",
+      "base": {
+       "tipo": "simbolo",
+       "id": "u"
+      },
+      "exponente": {
+       "tipo": "numero",
+       "valor": 3
+      }
+     }
+    ]
+   },
+   "divididoEn": 1
+  }
+ ],
+ "formaBase": {
+  "id": "forma-1",
+  "nombre": "Forma 1",
+  "padreId": null,
+  "modeloRevision": 1,
+  "escalas": [
+   {
+    "simboloId": "t",
+    "transformar": true,
+    "nuevoNombre": "t_ad",
+    "dimension": null,
+    "valor": {
+     "tipo": "libre"
+    }
+   },
+   {
+    "simboloId": "u",
+    "transformar": false,
+    "nuevoNombre": "u_ad",
+    "dimension": null,
+    "valor": {
+     "tipo": "libre"
+    }
+   }
+  ],
+  "objetivos": [
+   {
+    "id": "k",
+    "ecuacionId": "e",
+    "termino": {
+     "tipo": "producto",
+     "argumentos": [
+      {
+       "tipo": "simbolo",
+       "id": "k"
+      },
+      {
+       "tipo": "simbolo",
+       "id": "u"
+      }
+     ]
+    },
+    "valor": 1,
+    "accion": "normalizar"
+   }
+  ],
+  "presentacion": "factorizada"
+ },
+ "formulacion": {
+  "desarrollo": [
+   {
+    "id": "P1",
+    "operacion": "analisis_dimensional",
+    "regla": "homogeneidad dimensional",
+    "justificacion": "todos los terminos de 'e' tienen dimension T^-1",
+    "antes": {
+     "tipo": "igualdad",
+     "igualdad": {
+      "id": "e",
+      "izquierda": {
+       "tipo": "derivada",
+       "expresion": {
+        "tipo": "simbolo",
+        "id": "u"
+       },
+       "respecto": "t",
+       "orden": 1
+      },
+      "derecha": {
+       "tipo": "suma",
+       "argumentos": [
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "simbolo",
+           "id": "k"
+          },
+          {
+           "tipo": "simbolo",
+           "id": "p"
+          }
+         ]
+        },
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "simbolo",
+           "id": "k"
+          },
+          {
+           "tipo": "simbolo",
+           "id": "u"
+          }
+         ]
+        },
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "numero",
+           "valor": -1
+          },
+          {
+           "tipo": "producto",
+           "argumentos": [
+            {
+             "tipo": "simbolo",
+             "id": "k"
+            },
+            {
+             "tipo": "potencia",
+             "base": {
+              "tipo": "simbolo",
+              "id": "u"
+             },
+             "exponente": {
+              "tipo": "numero",
+              "valor": 3
+             }
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "despues": {
+     "tipo": "igualdad",
+     "igualdad": {
+      "id": "e",
+      "izquierda": {
+       "tipo": "derivada",
+       "expresion": {
+        "tipo": "simbolo",
+        "id": "u"
+       },
+       "respecto": "t",
+       "orden": 1
+      },
+      "derecha": {
+       "tipo": "suma",
+       "argumentos": [
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "simbolo",
+           "id": "k"
+          },
+          {
+           "tipo": "simbolo",
+           "id": "p"
+          }
+         ]
+        },
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "simbolo",
+           "id": "k"
+          },
+          {
+           "tipo": "simbolo",
+           "id": "u"
+          }
+         ]
+        },
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "numero",
+           "valor": -1
+          },
+          {
+           "tipo": "producto",
+           "argumentos": [
+            {
+             "tipo": "simbolo",
+             "id": "k"
+            },
+            {
+             "tipo": "potencia",
+             "base": {
+              "tipo": "simbolo",
+              "id": "u"
+             },
+             "exponente": {
+              "tipo": "numero",
+              "valor": 3
+             }
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "supuestos": [
+     "dimensiones exactas con exponentes racionales"
+    ],
+    "objetosAfectados": [
+     "e"
+    ]
+   },
+   {
+    "id": "P2",
+    "operacion": "cambio_variables",
+    "regla": "mapa multiplicativa",
+    "justificacion": "t = g(t_ad) con inversa h demostrada: h(g(t_ad)) = t_ad y g(h(t)) = t en forma canonica",
+    "antes": {
+     "tipo": "igualdad",
+     "igualdad": {
+      "id": "mapa:t",
+      "izquierda": {
+       "tipo": "simbolo",
+       "id": "t"
+      },
+      "derecha": {
+       "tipo": "producto",
+       "argumentos": [
+        {
+         "tipo": "simbolo",
+         "id": "t_ref"
+        },
+        {
+         "tipo": "simbolo",
+         "id": "t_ad"
+        }
+       ]
+      }
+     }
+    },
+    "despues": {
+     "tipo": "igualdad",
+     "igualdad": {
+      "id": "inversa:t",
+      "izquierda": {
+       "tipo": "simbolo",
+       "id": "t_ad"
+      },
+      "derecha": {
+       "tipo": "cociente",
+       "numerador": {
+        "tipo": "simbolo",
+        "id": "t"
+       },
+       "denominador": {
+        "tipo": "simbolo",
+        "id": "t_ref"
+       }
+      }
+     }
+    },
+    "supuestos": [
+     "t_ref > 0"
+    ],
+    "objetosAfectados": [
+     "t",
+     "t_ad",
+     "t_ref"
+    ]
+   },
+   {
+    "id": "P3",
+    "operacion": "regla_cadena",
+    "regla": "derivada respecto de la nueva variable",
+    "justificacion": "d/dt = (1/g'(t_ad)) d/dt_ad (g' constante)",
+    "antes": {
+     "tipo": "igualdad",
+     "igualdad": {
+      "id": "mapa:t",
+      "izquierda": {
+       "tipo": "simbolo",
+       "id": "t"
+      },
+      "derecha": {
+       "tipo": "producto",
+       "argumentos": [
+        {
+         "tipo": "simbolo",
+         "id": "t_ref"
+        },
+        {
+         "tipo": "simbolo",
+         "id": "t_ad"
+        }
+       ]
+      }
+     }
+    },
+    "despues": {
+     "tipo": "igualdad",
+     "igualdad": {
+      "id": "jacobiano:t",
+      "izquierda": {
+       "tipo": "derivada",
+       "expresion": {
+        "tipo": "simbolo",
+        "id": "t"
+       },
+       "respecto": "t_ad",
+       "orden": 1
+      },
+      "derecha": {
+       "tipo": "simbolo",
+       "id": "t_ref"
+      }
+     }
+    },
+    "supuestos": [],
+    "objetosAfectados": [
+     "t",
+     "t_ad"
+    ]
+   },
+   {
+    "id": "P4",
+    "operacion": "sustitucion",
+    "regla": "sustitucion de variables",
+    "justificacion": "termino e:ecuaciones[0].izquierda",
+    "antes": {
+     "tipo": "expresion",
+     "expresion": {
+      "tipo": "derivada",
+      "expresion": {
+       "tipo": "simbolo",
+       "id": "u"
+      },
+      "respecto": "t",
+      "orden": 1
+     }
+    },
+    "despues": {
+     "tipo": "expresion",
+     "expresion": {
+      "tipo": "derivada",
+      "expresion": {
+       "tipo": "simbolo",
+       "id": "u"
+      },
+      "respecto": "t",
+      "orden": 1
+     }
+    },
+    "supuestos": [
+     "t = t_ref*t_ad"
+    ],
+    "objetosAfectados": [
+     "e:ecuaciones[0].izquierda"
+    ]
+   },
+   {
+    "id": "P5",
+    "operacion": "regla_cadena",
+    "regla": "regla de la cadena",
+    "justificacion": "derivadas de e:ecuaciones[0].izquierda respecto de las nuevas variables",
+    "antes": {
+     "tipo": "expresion",
+     "expresion": {
+      "tipo": "derivada",
+      "expresion": {
+       "tipo": "simbolo",
+       "id": "u"
+      },
+      "respecto": "t",
+      "orden": 1
+     }
+    },
+    "despues": {
+     "tipo": "expresion",
+     "expresion": {
+      "tipo": "producto",
+      "argumentos": [
+       {
+        "tipo": "potencia",
+        "base": {
+         "tipo": "simbolo",
+         "id": "t_ref"
+        },
+        "exponente": {
+         "tipo": "numero",
+         "valor": -1
+        }
+       },
+       {
+        "tipo": "derivada",
+        "expresion": {
+         "tipo": "simbolo",
+         "id": "u"
+        },
+        "respecto": "t_ad",
+        "orden": 1
+       }
+      ]
+     }
+    },
+    "supuestos": [
+     "escalas y referencias constantes",
+     "coordenadas cartesianas"
+    ],
+    "objetosAfectados": [
+     "e:ecuaciones[0].izquierda"
+    ]
+   },
+   {
+    "id": "P6",
+    "operacion": "factorizacion",
+    "regla": "linealidad: extraccion de factores constantes",
+    "justificacion": "coeficiente y nucleo de e:ecuaciones[0].izquierda",
+    "antes": {
+     "tipo": "expresion",
+     "expresion": {
+      "tipo": "producto",
+      "argumentos": [
+       {
+        "tipo": "potencia",
+        "base": {
+         "tipo": "simbolo",
+         "id": "t_ref"
+        },
+        "exponente": {
+         "tipo": "numero",
+         "valor": -1
+        }
+       },
+       {
+        "tipo": "derivada",
+        "expresion": {
+         "tipo": "simbolo",
+         "id": "u"
+        },
+        "respecto": "t_ad",
+        "orden": 1
+       }
+      ]
+     }
+    },
+    "despues": {
+     "tipo": "expresion",
+     "expresion": {
+      "tipo": "producto",
+      "argumentos": [
+       {
+        "tipo": "cociente",
+        "numerador": {
+         "tipo": "numero",
+         "valor": 1
+        },
+        "denominador": {
+         "tipo": "simbolo",
+         "id": "t_ref"
+        }
+       },
+       {
+        "tipo": "derivada",
+        "expresion": {
+         "tipo": "simbolo",
+         "id": "u"
+        },
+        "respecto": "t_ad",
+        "orden": 1
+       }
+      ]
+     }
+    },
+    "supuestos": [
+     "escalas y parametros constantes"
+    ],
+    "objetosAfectados": [
+     "e:ecuaciones[0].izquierda"
+    ]
+   },
+   {
+    "id": "P7",
+    "operacion": "sustitucion",
+    "regla": "sustitucion de variables",
+    "justificacion": "termino e:ecuaciones[0].derecha.argumentos[0]",
+    "antes": {
+     "tipo": "expresion",
+     "expresion": {
+      "tipo": "producto",
+      "argumentos": [
+       {
+        "tipo": "simbolo",
+        "id": "k"
+       },
+       {
+        "tipo": "simbolo",
+        "id": "p"
+       }
+      ]
+     }
+    },
+    "despues": {
+     "tipo": "expresion",
+     "expresion": {
+      "tipo": "producto",
+      "argumentos": [
+       {
+        "tipo": "simbolo",
+        "id": "k"
+       },
+       {
+        "tipo": "simbolo",
+        "id": "p"
+       }
+      ]
+     }
+    },
+    "supuestos": [],
+    "objetosAfectados": [
+     "e:ecuaciones[0].derecha.argumentos[0]"
+    ]
+   },
+   {
+    "id": "P8",
+    "operacion": "sustitucion",
+    "regla": "sustitucion de variables",
+    "justificacion": "termino e:ecuaciones[0].derecha.argumentos[1]",
+    "antes": {
+     "tipo": "expresion",
+     "expresion": {
+      "tipo": "producto",
+      "argumentos": [
+       {
+        "tipo": "simbolo",
+        "id": "k"
+       },
+       {
+        "tipo": "simbolo",
+        "id": "u"
+       }
+      ]
+     }
+    },
+    "despues": {
+     "tipo": "expresion",
+     "expresion": {
+      "tipo": "producto",
+      "argumentos": [
+       {
+        "tipo": "simbolo",
+        "id": "k"
+       },
+       {
+        "tipo": "simbolo",
+        "id": "u"
+       }
+      ]
+     }
+    },
+    "supuestos": [],
+    "objetosAfectados": [
+     "e:ecuaciones[0].derecha.argumentos[1]"
+    ]
+   },
+   {
+    "id": "P9",
+    "operacion": "sustitucion",
+    "regla": "sustitucion de variables",
+    "justificacion": "termino e:ecuaciones[0].derecha.argumentos[2]",
+    "antes": {
+     "tipo": "expresion",
+     "expresion": {
+      "tipo": "producto",
+      "argumentos": [
+       {
+        "tipo": "numero",
+        "valor": -1
+       },
+       {
+        "tipo": "simbolo",
+        "id": "k"
+       },
+       {
+        "tipo": "potencia",
+        "base": {
+         "tipo": "simbolo",
+         "id": "u"
+        },
+        "exponente": {
+         "tipo": "numero",
+         "valor": 3
+        }
+       }
+      ]
+     }
+    },
+    "despues": {
+     "tipo": "expresion",
+     "expresion": {
+      "tipo": "producto",
+      "argumentos": [
+       {
+        "tipo": "numero",
+        "valor": -1
+       },
+       {
+        "tipo": "simbolo",
+        "id": "k"
+       },
+       {
+        "tipo": "potencia",
+        "base": {
+         "tipo": "simbolo",
+         "id": "u"
+        },
+        "exponente": {
+         "tipo": "numero",
+         "valor": 3
+        }
+       }
+      ]
+     }
+    },
+    "supuestos": [],
+    "objetosAfectados": [
+     "e:ecuaciones[0].derecha.argumentos[2]"
+    ]
+   },
+   {
+    "id": "P10",
+    "operacion": "sustitucion",
+    "regla": "igualdad completa antes de cancelar factores",
+    "justificacion": "ecuacion 'e'",
+    "antes": {
+     "tipo": "igualdad",
+     "igualdad": {
+      "id": "e",
+      "izquierda": {
+       "tipo": "derivada",
+       "expresion": {
+        "tipo": "simbolo",
+        "id": "u"
+       },
+       "respecto": "t",
+       "orden": 1
+      },
+      "derecha": {
+       "tipo": "suma",
+       "argumentos": [
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "simbolo",
+           "id": "k"
+          },
+          {
+           "tipo": "simbolo",
+           "id": "p"
+          }
+         ]
+        },
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "simbolo",
+           "id": "k"
+          },
+          {
+           "tipo": "simbolo",
+           "id": "u"
+          }
+         ]
+        },
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "numero",
+           "valor": -1
+          },
+          {
+           "tipo": "producto",
+           "argumentos": [
+            {
+             "tipo": "simbolo",
+             "id": "k"
+            },
+            {
+             "tipo": "potencia",
+             "base": {
+              "tipo": "simbolo",
+              "id": "u"
+             },
+             "exponente": {
+              "tipo": "numero",
+              "valor": 3
+             }
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "despues": {
+     "tipo": "igualdad",
+     "igualdad": {
+      "id": "e",
+      "izquierda": {
+       "tipo": "derivada",
+       "expresion": {
+        "tipo": "simbolo",
+        "id": "u"
+       },
+       "respecto": "t",
+       "orden": 1
+      },
+      "derecha": {
+       "tipo": "suma",
+       "argumentos": [
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "simbolo",
+           "id": "k"
+          },
+          {
+           "tipo": "simbolo",
+           "id": "p"
+          }
+         ]
+        },
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "simbolo",
+           "id": "k"
+          },
+          {
+           "tipo": "simbolo",
+           "id": "u"
+          }
+         ]
+        },
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "numero",
+           "valor": -1
+          },
+          {
+           "tipo": "producto",
+           "argumentos": [
+            {
+             "tipo": "simbolo",
+             "id": "k"
+            },
+            {
+             "tipo": "potencia",
+             "base": {
+              "tipo": "simbolo",
+              "id": "u"
+             },
+             "exponente": {
+              "tipo": "numero",
+              "valor": 3
+             }
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "supuestos": [
+     "t = t_ref*t_ad",
+     "t_ref > 0"
+    ],
+    "objetosAfectados": [
+     "e"
+    ]
+   },
+   {
+    "id": "P11",
+    "operacion": "regla_cadena",
+    "regla": "igualdad completa tras la regla de la cadena",
+    "justificacion": "ecuacion 'e'",
+    "antes": {
+     "tipo": "igualdad",
+     "igualdad": {
+      "id": "e",
+      "izquierda": {
+       "tipo": "derivada",
+       "expresion": {
+        "tipo": "simbolo",
+        "id": "u"
+       },
+       "respecto": "t",
+       "orden": 1
+      },
+      "derecha": {
+       "tipo": "suma",
+       "argumentos": [
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "simbolo",
+           "id": "k"
+          },
+          {
+           "tipo": "simbolo",
+           "id": "p"
+          }
+         ]
+        },
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "simbolo",
+           "id": "k"
+          },
+          {
+           "tipo": "simbolo",
+           "id": "u"
+          }
+         ]
+        },
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "numero",
+           "valor": -1
+          },
+          {
+           "tipo": "producto",
+           "argumentos": [
+            {
+             "tipo": "simbolo",
+             "id": "k"
+            },
+            {
+             "tipo": "potencia",
+             "base": {
+              "tipo": "simbolo",
+              "id": "u"
+             },
+             "exponente": {
+              "tipo": "numero",
+              "valor": 3
+             }
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "despues": {
+     "tipo": "igualdad",
+     "igualdad": {
+      "id": "e",
+      "izquierda": {
+       "tipo": "producto",
+       "argumentos": [
+        {
+         "tipo": "potencia",
+         "base": {
+          "tipo": "simbolo",
+          "id": "t_ref"
+         },
+         "exponente": {
+          "tipo": "numero",
+          "valor": -1
+         }
+        },
+        {
+         "tipo": "derivada",
+         "expresion": {
+          "tipo": "simbolo",
+          "id": "u"
+         },
+         "respecto": "t_ad",
+         "orden": 1
+        }
+       ]
+      },
+      "derecha": {
+       "tipo": "suma",
+       "argumentos": [
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "simbolo",
+           "id": "k"
+          },
+          {
+           "tipo": "simbolo",
+           "id": "p"
+          }
+         ]
+        },
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "simbolo",
+           "id": "k"
+          },
+          {
+           "tipo": "simbolo",
+           "id": "u"
+          }
+         ]
+        },
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "numero",
+           "valor": -1
+          },
+          {
+           "tipo": "producto",
+           "argumentos": [
+            {
+             "tipo": "simbolo",
+             "id": "k"
+            },
+            {
+             "tipo": "potencia",
+             "base": {
+              "tipo": "simbolo",
+              "id": "u"
+             },
+             "exponente": {
+              "tipo": "numero",
+              "valor": 3
+             }
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "supuestos": [
+     "escalas constantes",
+     "coordenadas cartesianas"
+    ],
+    "objetosAfectados": [
+     "e"
+    ]
+   },
+   {
+    "id": "P12",
+    "operacion": "agrupacion",
+    "regla": "agrupacion de coeficientes por nucleo",
+    "justificacion": "ecuacion 'e'",
+    "antes": {
+     "tipo": "igualdad",
+     "igualdad": {
+      "id": "e",
+      "izquierda": {
+       "tipo": "producto",
+       "argumentos": [
+        {
+         "tipo": "potencia",
+         "base": {
+          "tipo": "simbolo",
+          "id": "t_ref"
+         },
+         "exponente": {
+          "tipo": "numero",
+          "valor": -1
+         }
+        },
+        {
+         "tipo": "derivada",
+         "expresion": {
+          "tipo": "simbolo",
+          "id": "u"
+         },
+         "respecto": "t_ad",
+         "orden": 1
+        }
+       ]
+      },
+      "derecha": {
+       "tipo": "suma",
+       "argumentos": [
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "simbolo",
+           "id": "k"
+          },
+          {
+           "tipo": "simbolo",
+           "id": "p"
+          }
+         ]
+        },
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "simbolo",
+           "id": "k"
+          },
+          {
+           "tipo": "simbolo",
+           "id": "u"
+          }
+         ]
+        },
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "numero",
+           "valor": -1
+          },
+          {
+           "tipo": "producto",
+           "argumentos": [
+            {
+             "tipo": "simbolo",
+             "id": "k"
+            },
+            {
+             "tipo": "potencia",
+             "base": {
+              "tipo": "simbolo",
+              "id": "u"
+             },
+             "exponente": {
+              "tipo": "numero",
+              "valor": 3
+             }
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "despues": {
+     "tipo": "igualdad",
+     "igualdad": {
+      "id": "e",
+      "izquierda": {
+       "tipo": "producto",
+       "argumentos": [
+        {
+         "tipo": "cociente",
+         "numerador": {
+          "tipo": "numero",
+          "valor": 1
+         },
+         "denominador": {
+          "tipo": "simbolo",
+          "id": "t_ref"
+         }
+        },
+        {
+         "tipo": "derivada",
+         "expresion": {
+          "tipo": "simbolo",
+          "id": "u"
+         },
+         "respecto": "t_ad",
+         "orden": 1
+        }
+       ]
+      },
+      "derecha": {
+       "tipo": "suma",
+       "argumentos": [
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "simbolo",
+           "id": "k"
+          },
+          {
+           "tipo": "simbolo",
+           "id": "p"
+          }
+         ]
+        },
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "simbolo",
+           "id": "k"
+          },
+          {
+           "tipo": "simbolo",
+           "id": "u"
+          }
+         ]
+        },
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "numero",
+           "valor": -1
+          },
+          {
+           "tipo": "simbolo",
+           "id": "k"
+          },
+          {
+           "tipo": "potencia",
+           "base": {
+            "tipo": "simbolo",
+            "id": "u"
+           },
+           "exponente": {
+            "tipo": "numero",
+            "valor": 3
+           }
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "supuestos": [
+     "linealidad de derivadas y operadores",
+     "funciones declaradas sin desarrollar"
+    ],
+    "objetosAfectados": [
+     "e"
+    ]
+   },
+   {
+    "id": "P13",
+    "operacion": "normalizacion",
+    "regla": "division por el factor global",
+    "justificacion": "ecuacion 'e'",
+    "antes": {
+     "tipo": "igualdad",
+     "igualdad": {
+      "id": "e",
+      "izquierda": {
+       "tipo": "producto",
+       "argumentos": [
+        {
+         "tipo": "cociente",
+         "numerador": {
+          "tipo": "numero",
+          "valor": 1
+         },
+         "denominador": {
+          "tipo": "simbolo",
+          "id": "t_ref"
+         }
+        },
+        {
+         "tipo": "derivada",
+         "expresion": {
+          "tipo": "simbolo",
+          "id": "u"
+         },
+         "respecto": "t_ad",
+         "orden": 1
+        }
+       ]
+      },
+      "derecha": {
+       "tipo": "suma",
+       "argumentos": [
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "simbolo",
+           "id": "k"
+          },
+          {
+           "tipo": "simbolo",
+           "id": "p"
+          }
+         ]
+        },
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "simbolo",
+           "id": "k"
+          },
+          {
+           "tipo": "simbolo",
+           "id": "u"
+          }
+         ]
+        },
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "numero",
+           "valor": -1
+          },
+          {
+           "tipo": "simbolo",
+           "id": "k"
+          },
+          {
+           "tipo": "potencia",
+           "base": {
+            "tipo": "simbolo",
+            "id": "u"
+           },
+           "exponente": {
+            "tipo": "numero",
+            "valor": 3
+           }
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "despues": {
+     "tipo": "igualdad",
+     "igualdad": {
+      "id": "e",
+      "izquierda": {
+       "tipo": "derivada",
+       "expresion": {
+        "tipo": "simbolo",
+        "id": "u"
+       },
+       "respecto": "t_ad",
+       "orden": 1
+      },
+      "derecha": {
+       "tipo": "suma",
+       "argumentos": [
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "simbolo",
+           "id": "k"
+          },
+          {
+           "tipo": "simbolo",
+           "id": "p"
+          },
+          {
+           "tipo": "simbolo",
+           "id": "t_ref"
+          }
+         ]
+        },
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "simbolo",
+           "id": "k"
+          },
+          {
+           "tipo": "simbolo",
+           "id": "t_ref"
+          },
+          {
+           "tipo": "simbolo",
+           "id": "u"
+          }
+         ]
+        },
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "numero",
+           "valor": -1
+          },
+          {
+           "tipo": "simbolo",
+           "id": "k"
+          },
+          {
+           "tipo": "simbolo",
+           "id": "t_ref"
+          },
+          {
+           "tipo": "potencia",
+           "base": {
+            "tipo": "simbolo",
+            "id": "u"
+           },
+           "exponente": {
+            "tipo": "numero",
+            "valor": 3
+           }
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "supuestos": [
+     "factor global 1/t_ref distinto de cero",
+     "R1: positivo t_ref"
+    ],
+    "objetosAfectados": [
+     "e"
+    ]
+   },
+   {
+    "id": "P14",
+    "operacion": "normalizacion",
+    "regla": "objetivo: |coeficiente efectivo| = 1 con signo",
+    "justificacion": "base:k: satisfecho; determina o relaciona escalas",
+    "antes": {
+     "tipo": "igualdad",
+     "igualdad": {
+      "id": "base:k",
+      "izquierda": {
+       "tipo": "producto",
+       "argumentos": [
+        {
+         "tipo": "simbolo",
+         "id": "k"
+        },
+        {
+         "tipo": "simbolo",
+         "id": "t_ref"
+        }
+       ]
+      },
+      "derecha": {
+       "tipo": "numero",
+       "valor": 1
+      }
+     }
+    },
+    "despues": {
+     "tipo": "igualdad",
+     "igualdad": {
+      "id": "base:k",
+      "izquierda": {
+       "tipo": "producto",
+       "argumentos": [
+        {
+         "tipo": "simbolo",
+         "id": "k"
+        },
+        {
+         "tipo": "cociente",
+         "numerador": {
+          "tipo": "numero",
+          "valor": 1
+         },
+         "denominador": {
+          "tipo": "simbolo",
+          "id": "k"
+         }
+        }
+       ]
+      },
+      "derecha": {
+       "tipo": "numero",
+       "valor": 1
+      }
+     }
+    },
+    "supuestos": [
+     "t_ref > 0",
+     "k con signo declarado"
+    ],
+    "objetosAfectados": [
+     "base:k",
+     "e:ecuaciones[0].derecha.argumentos[1]"
+    ]
+   },
+   {
+    "id": "P15",
+    "operacion": "normalizacion",
+    "regla": "resolucion exacta por rango",
+    "justificacion": "rango 1; se despeja t_ref; raiz positiva por ser escalas positivas",
+    "antes": {
+     "tipo": "igualdad",
+     "igualdad": {
+      "id": "fila:t_ref",
+      "izquierda": {
+       "tipo": "simbolo",
+       "id": "t_ref"
+      },
+      "derecha": {
+       "tipo": "cociente",
+       "numerador": {
+        "tipo": "numero",
+        "valor": 1
+       },
+       "denominador": {
+        "tipo": "simbolo",
+        "id": "k"
+       }
+      }
+     }
+    },
+    "despues": {
+     "tipo": "igualdad",
+     "igualdad": {
+      "id": "escala:t_ref",
+      "izquierda": {
+       "tipo": "simbolo",
+       "id": "t_ref"
+      },
+      "derecha": {
+       "tipo": "cociente",
+       "numerador": {
+        "tipo": "numero",
+        "valor": 1
+       },
+       "denominador": {
+        "tipo": "simbolo",
+        "id": "k"
+       }
+      }
+     }
+    },
+    "supuestos": [
+     "t_ref > 0"
+    ],
+    "objetosAfectados": [
+     "t_ref"
+    ]
+   },
+   {
+    "id": "P16",
+    "operacion": "sustitucion",
+    "regla": "sustitucion de escalas determinadas",
+    "justificacion": "ecuacion 'e'",
+    "antes": {
+     "tipo": "igualdad",
+     "igualdad": {
+      "id": "e",
+      "izquierda": {
+       "tipo": "derivada",
+       "expresion": {
+        "tipo": "simbolo",
+        "id": "u"
+       },
+       "respecto": "t_ad",
+       "orden": 1
+      },
+      "derecha": {
+       "tipo": "suma",
+       "argumentos": [
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "simbolo",
+           "id": "k"
+          },
+          {
+           "tipo": "simbolo",
+           "id": "p"
+          },
+          {
+           "tipo": "simbolo",
+           "id": "t_ref"
+          }
+         ]
+        },
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "simbolo",
+           "id": "k"
+          },
+          {
+           "tipo": "simbolo",
+           "id": "t_ref"
+          },
+          {
+           "tipo": "simbolo",
+           "id": "u"
+          }
+         ]
+        },
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "numero",
+           "valor": -1
+          },
+          {
+           "tipo": "simbolo",
+           "id": "k"
+          },
+          {
+           "tipo": "simbolo",
+           "id": "t_ref"
+          },
+          {
+           "tipo": "potencia",
+           "base": {
+            "tipo": "simbolo",
+            "id": "u"
+           },
+           "exponente": {
+            "tipo": "numero",
+            "valor": 3
+           }
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "despues": {
+     "tipo": "igualdad",
+     "igualdad": {
+      "id": "e",
+      "izquierda": {
+       "tipo": "derivada",
+       "expresion": {
+        "tipo": "simbolo",
+        "id": "u"
+       },
+       "respecto": "t_ad",
+       "orden": 1
+      },
+      "derecha": {
+       "tipo": "suma",
+       "argumentos": [
+        {
+         "tipo": "simbolo",
+         "id": "p"
+        },
+        {
+         "tipo": "simbolo",
+         "id": "u"
+        },
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "numero",
+           "valor": -1
+          },
+          {
+           "tipo": "potencia",
+           "base": {
+            "tipo": "simbolo",
+            "id": "u"
+           },
+           "exponente": {
+            "tipo": "numero",
+            "valor": 3
+           }
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "supuestos": [
+     "solucion exacta de los objetivos"
+    ],
+    "objetosAfectados": [
+     "e",
+     "t_ref"
+    ]
+   },
+   {
+    "id": "P17",
+    "operacion": "agrupacion",
+    "regla": "definicion de grupo adimensional",
+    "justificacion": "G1 = p; dimension 1; usos: e:ecuaciones[0].derecha.argumentos[0]",
+    "antes": {
+     "tipo": "expresion",
+     "expresion": {
+      "tipo": "simbolo",
+      "id": "p"
+     }
+    },
+    "despues": {
+     "tipo": "expresion",
+     "expresion": {
+      "tipo": "simbolo",
+      "id": "p"
+     }
+    },
+    "supuestos": [],
+    "objetosAfectados": [
+     "G1",
+     "e:ecuaciones[0].derecha.argumentos[0]"
+    ]
+   },
+   {
+    "id": "P18",
+    "operacion": "verificacion_inversa",
+    "regla": "sustitucion inversa y comparacion canonica",
+    "justificacion": "F * h(publicada) frente al original de 'e': demostrada",
+    "antes": {
+     "tipo": "igualdad",
+     "igualdad": {
+      "id": "e",
+      "izquierda": {
+       "tipo": "derivada",
+       "expresion": {
+        "tipo": "simbolo",
+        "id": "u"
+       },
+       "respecto": "t_ad",
+       "orden": 1
+      },
+      "derecha": {
+       "tipo": "suma",
+       "argumentos": [
+        {
+         "tipo": "simbolo",
+         "id": "p"
+        },
+        {
+         "tipo": "simbolo",
+         "id": "u"
+        },
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "numero",
+           "valor": -1
+          },
+          {
+           "tipo": "potencia",
+           "base": {
+            "tipo": "simbolo",
+            "id": "u"
+           },
+           "exponente": {
+            "tipo": "numero",
+            "valor": 3
+           }
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "despues": {
+     "tipo": "igualdad",
+     "igualdad": {
+      "id": "e",
+      "izquierda": {
+       "tipo": "derivada",
+       "expresion": {
+        "tipo": "simbolo",
+        "id": "u"
+       },
+       "respecto": "t",
+       "orden": 1
+      },
+      "derecha": {
+       "tipo": "suma",
+       "argumentos": [
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "simbolo",
+           "id": "k"
+          },
+          {
+           "tipo": "simbolo",
+           "id": "p"
+          }
+         ]
+        },
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "simbolo",
+           "id": "k"
+          },
+          {
+           "tipo": "simbolo",
+           "id": "u"
+          }
+         ]
+        },
+        {
+         "tipo": "producto",
+         "argumentos": [
+          {
+           "tipo": "numero",
+           "valor": -1
+          },
+          {
+           "tipo": "simbolo",
+           "id": "k"
+          },
+          {
+           "tipo": "potencia",
+           "base": {
+            "tipo": "simbolo",
+            "id": "u"
+           },
+           "exponente": {
+            "tipo": "numero",
+            "valor": 3
+           }
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "supuestos": [
+     "R1: positivo t_ref",
+     "R3: signo k"
+    ],
+    "objetosAfectados": [
+     "e"
+    ]
+   }
+  ],
+  "desarrolloEstado": {
+   "estado": "completo",
+   "nota": "cada operacion realizada por el nucleo, en su orden; sin hipotesis fisicas"
+  },
+  "simbolos": [
+   {
+    "id": "t_ref",
+    "nombre": "t_ref",
+    "rol": "escala",
+    "papel": "escala",
+    "variableId": "t",
+    "dimension": {
+     "T": {
+      "n": 1,
+      "d": 1
+     }
+    },
+    "estado": "determinada",
+    "valor": {
+     "tipo": "cociente",
+     "numerador": {
+      "tipo": "numero",
+      "valor": 1
+     },
+     "denominador": {
+      "tipo": "simbolo",
+      "id": "k"
+     }
+    }
+   },
+   {
+    "id": "t_ad",
+    "nombre": "t_ad",
+    "rol": "variable_adimensional",
+    "rolOrigen": "tiempo",
+    "variableId": "t",
+    "dimension": {},
+    "dependeDe": [],
+    "signo": "desconocido"
+   }
+  ],
+  "escalas": [
+   {
+    "simboloId": "t",
+    "escalaId": "t_ref",
+    "papel": "escala",
+    "estado": "determinada",
+    "valor": {
+     "tipo": "cociente",
+     "numerador": {
+      "tipo": "numero",
+      "valor": 1
+     },
+     "denominador": {
+      "tipo": "simbolo",
+      "id": "k"
+     }
+    }
+   }
+  ],
+  "transformaciones": [
+   {
+    "variableId": "t",
+    "nuevoId": "t_ad",
+    "familia": "multiplicativa",
+    "directa": {
+     "tipo": "producto",
+     "argumentos": [
+      {
+       "tipo": "cociente",
+       "numerador": {
+        "tipo": "numero",
+        "valor": 1
+       },
+       "denominador": {
+        "tipo": "simbolo",
+        "id": "k"
+       }
+      },
+      {
+       "tipo": "simbolo",
+       "id": "t_ad"
+      }
+     ]
+    },
+    "inversa": {
+     "tipo": "cociente",
+     "numerador": {
+      "tipo": "simbolo",
+      "id": "t"
+     },
+     "denominador": {
+      "tipo": "cociente",
+      "numerador": {
+       "tipo": "numero",
+       "valor": 1
+      },
+      "denominador": {
+       "tipo": "simbolo",
+       "id": "k"
+      }
+     }
+    },
+    "dominio": {
+     "original": null,
+     "nuevo": null
+    },
+    "constantes": [
+     "t_ref"
+    ]
+   }
+  ],
+  "libres": [],
+  "rangoObjetivos": 1,
+  "normalizacion": {
+   "estado": "parcial",
+   "motivos": [
+    {
+     "codigo": "variables_sin_transformar",
+     "simbolos": [
+      "u"
+     ],
+     "mensaje": "variables dimensionales que se conservan: u"
+    }
+   ]
+  },
+  "ecuaciones": [
+   {
+    "igualdad": {
+     "id": "e",
+     "izquierda": {
+      "tipo": "derivada",
+      "expresion": {
+       "tipo": "simbolo",
+       "id": "u"
+      },
+      "respecto": "t_ad",
+      "orden": 1
+     },
+     "derecha": {
+      "tipo": "suma",
+      "argumentos": [
+       {
+        "tipo": "simbolo",
+        "id": "p"
+       },
+       {
+        "tipo": "simbolo",
+        "id": "u"
+       },
+       {
+        "tipo": "producto",
+        "argumentos": [
+         {
+          "tipo": "numero",
+          "valor": -1
+         },
+         {
+          "tipo": "potencia",
+          "base": {
+           "tipo": "simbolo",
+           "id": "u"
+          },
+          "exponente": {
+           "tipo": "numero",
+           "valor": 3
+          }
+         }
+        ]
+       }
+      ]
+     }
+    },
+    "factorGlobal": {
+     "tipo": "simbolo",
+     "id": "k"
+    },
+    "terminos": [
+     {
+      "id": "e:ecuaciones[0].izquierda",
+      "lado": "izquierda",
+      "ruta": "ecuaciones[0].izquierda",
+      "original": {
+       "tipo": "derivada",
+       "expresion": {
+        "tipo": "simbolo",
+        "id": "u"
+       },
+       "respecto": "t",
+       "orden": 1
+      },
+      "coeficiente": {
+       "tipo": "numero",
+       "valor": 1
+      },
+      "grupoId": null,
+      "nucleo": {
+       "tipo": "derivada",
+       "expresion": {
+        "tipo": "simbolo",
+        "id": "u"
+       },
+       "respecto": "t_ad",
+       "orden": 1
+      },
+      "dimensionNucleo": {}
+     },
+     {
+      "id": "e:ecuaciones[0].derecha.argumentos[0]",
+      "lado": "derecha",
+      "ruta": "ecuaciones[0].derecha.argumentos[0]",
+      "original": {
+       "tipo": "producto",
+       "argumentos": [
+        {
+         "tipo": "simbolo",
+         "id": "k"
+        },
+        {
+         "tipo": "simbolo",
+         "id": "p"
+        }
+       ]
+      },
+      "coeficiente": {
+       "tipo": "simbolo",
+       "id": "p"
+      },
+      "grupoId": "G1",
+      "nucleo": {
+       "tipo": "numero",
+       "valor": 1
+      },
+      "dimensionNucleo": {}
+     },
+     {
+      "id": "e:ecuaciones[0].derecha.argumentos[1]",
+      "lado": "derecha",
+      "ruta": "ecuaciones[0].derecha.argumentos[1]",
+      "original": {
+       "tipo": "producto",
+       "argumentos": [
+        {
+         "tipo": "simbolo",
+         "id": "k"
+        },
+        {
+         "tipo": "simbolo",
+         "id": "u"
+        }
+       ]
+      },
+      "coeficiente": {
+       "tipo": "numero",
+       "valor": 1
+      },
+      "grupoId": null,
+      "nucleo": {
+       "tipo": "simbolo",
+       "id": "u"
+      },
+      "dimensionNucleo": {}
+     },
+     {
+      "id": "e:ecuaciones[0].derecha.argumentos[2]",
+      "lado": "derecha",
+      "ruta": "ecuaciones[0].derecha.argumentos[2]",
+      "original": {
+       "tipo": "producto",
+       "argumentos": [
+        {
+         "tipo": "numero",
+         "valor": -1
+        },
+        {
+         "tipo": "simbolo",
+         "id": "k"
+        },
+        {
+         "tipo": "potencia",
+         "base": {
+          "tipo": "simbolo",
+          "id": "u"
+         },
+         "exponente": {
+          "tipo": "numero",
+          "valor": 3
+         }
+        }
+       ]
+      },
+      "coeficiente": {
+       "tipo": "numero",
+       "valor": -1
+      },
+      "grupoId": null,
+      "nucleo": {
+       "tipo": "potencia",
+       "base": {
+        "tipo": "simbolo",
+        "id": "u"
+       },
+       "exponente": {
+        "tipo": "numero",
+        "valor": 3
+       }
+      },
+      "dimensionNucleo": {}
+     }
+    ]
+   }
+  ],
+  "dominios": [],
+  "condiciones": [],
+  "directa": [
+   {
+    "simboloId": "t",
+    "expresion": {
+     "tipo": "producto",
+     "argumentos": [
+      {
+       "tipo": "cociente",
+       "numerador": {
+        "tipo": "numero",
+        "valor": 1
+       },
+       "denominador": {
+        "tipo": "simbolo",
+        "id": "k"
+       }
+      },
+      {
+       "tipo": "simbolo",
+       "id": "t_ad"
+      }
+     ]
+    }
+   }
+  ],
+  "inversa": [
+   {
+    "simboloId": "t_ad",
+    "expresion": {
+     "tipo": "cociente",
+     "numerador": {
+      "tipo": "simbolo",
+      "id": "t"
+     },
+     "denominador": {
+      "tipo": "cociente",
+      "numerador": {
+       "tipo": "numero",
+       "valor": 1
+      },
+      "denominador": {
+       "tipo": "simbolo",
+       "id": "k"
+      }
+     }
+    }
+   }
+  ],
+  "grupos": [
+   {
+    "id": "G1",
+    "definicion": {
+     "tipo": "simbolo",
+     "id": "p"
+    },
+    "dimension": {},
+    "adimensional": true,
+    "contieneEscalasLibres": false,
+    "usos": [
+     "e:ecuaciones[0].derecha.argumentos[0]"
+    ],
+    "interno": false,
+    "inversoDe": null
+   }
+  ],
+  "objetivos": [
+   {
+    "id": "base:k",
+    "terminoId": "e:ecuaciones[0].derecha.argumentos[1]",
+    "valorObjetivo": 1,
+    "estado": "satisfecho",
+    "motivo": "determina o relaciona escalas",
+    "coeficienteFinal": {
+     "tipo": "numero",
+     "valor": 1
+    },
+    "comprobado": true
+   }
+  ],
+  "restricciones": [
+   {
+    "id": "R1",
+    "tipo": "positivo",
+    "expresion": {
+     "tipo": "simbolo",
+     "id": "t_ref"
+    },
+    "motivo": "escala de t"
+   },
+   {
+    "id": "R2",
+    "tipo": "igualdad",
+    "expresion": {
+     "tipo": "simbolo",
+     "id": "t_ref"
+    },
+    "motivo": "escala determinada",
+    "valor": {
+     "tipo": "cociente",
+     "numerador": {
+      "tipo": "numero",
+      "valor": 1
+     },
+     "denominador": {
+      "tipo": "simbolo",
+      "id": "k"
+     }
+    }
+   },
+   {
+    "id": "R3",
+    "tipo": "signo",
+    "expresion": {
+     "tipo": "simbolo",
+     "id": "k"
+    },
+    "motivo": "signo declarado usado al normalizar",
+    "signo": "positivo"
+   }
+  ],
+  "pasos": [
+   {
+    "ambito": "e",
+    "regla": "sustitucion_de_variables",
+    "antes": {
+     "izquierda": {
+      "tipo": "derivada",
+      "expresion": {
+       "tipo": "simbolo",
+       "id": "u"
+      },
+      "respecto": "t",
+      "orden": 1
+     },
+     "derecha": {
+      "tipo": "suma",
+      "argumentos": [
+       {
+        "tipo": "producto",
+        "argumentos": [
+         {
+          "tipo": "simbolo",
+          "id": "k"
+         },
+         {
+          "tipo": "simbolo",
+          "id": "p"
+         }
+        ]
+       },
+       {
+        "tipo": "producto",
+        "argumentos": [
+         {
+          "tipo": "simbolo",
+          "id": "k"
+         },
+         {
+          "tipo": "simbolo",
+          "id": "u"
+         }
+        ]
+       },
+       {
+        "tipo": "producto",
+        "argumentos": [
+         {
+          "tipo": "numero",
+          "valor": -1
+         },
+         {
+          "tipo": "producto",
+          "argumentos": [
+           {
+            "tipo": "simbolo",
+            "id": "k"
+           },
+           {
+            "tipo": "potencia",
+            "base": {
+             "tipo": "simbolo",
+             "id": "u"
+            },
+            "exponente": {
+             "tipo": "numero",
+             "valor": 3
+            }
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    },
+    "despues": {
+     "izquierda": {
+      "tipo": "derivada",
+      "expresion": {
+       "tipo": "simbolo",
+       "id": "u"
+      },
+      "respecto": "t",
+      "orden": 1
+     },
+     "derecha": {
+      "tipo": "suma",
+      "argumentos": [
+       {
+        "tipo": "producto",
+        "argumentos": [
+         {
+          "tipo": "simbolo",
+          "id": "k"
+         },
+         {
+          "tipo": "simbolo",
+          "id": "p"
+         }
+        ]
+       },
+       {
+        "tipo": "producto",
+        "argumentos": [
+         {
+          "tipo": "simbolo",
+          "id": "k"
+         },
+         {
+          "tipo": "simbolo",
+          "id": "u"
+         }
+        ]
+       },
+       {
+        "tipo": "producto",
+        "argumentos": [
+         {
+          "tipo": "numero",
+          "valor": -1
+         },
+         {
+          "tipo": "producto",
+          "argumentos": [
+           {
+            "tipo": "simbolo",
+            "id": "k"
+           },
+           {
+            "tipo": "potencia",
+            "base": {
+             "tipo": "simbolo",
+             "id": "u"
+            },
+            "exponente": {
+             "tipo": "numero",
+             "valor": 3
+            }
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    },
+    "supuestos": [
+     "t = t_ref*t_ad",
+     "t_ref > 0"
+    ]
+   },
+   {
+    "ambito": "e",
+    "regla": "regla_de_la_cadena",
+    "antes": {
+     "izquierda": {
+      "tipo": "derivada",
+      "expresion": {
+       "tipo": "simbolo",
+       "id": "u"
+      },
+      "respecto": "t",
+      "orden": 1
+     },
+     "derecha": {
+      "tipo": "suma",
+      "argumentos": [
+       {
+        "tipo": "producto",
+        "argumentos": [
+         {
+          "tipo": "simbolo",
+          "id": "k"
+         },
+         {
+          "tipo": "simbolo",
+          "id": "p"
+         }
+        ]
+       },
+       {
+        "tipo": "producto",
+        "argumentos": [
+         {
+          "tipo": "simbolo",
+          "id": "k"
+         },
+         {
+          "tipo": "simbolo",
+          "id": "u"
+         }
+        ]
+       },
+       {
+        "tipo": "producto",
+        "argumentos": [
+         {
+          "tipo": "numero",
+          "valor": -1
+         },
+         {
+          "tipo": "producto",
+          "argumentos": [
+           {
+            "tipo": "simbolo",
+            "id": "k"
+           },
+           {
+            "tipo": "potencia",
+            "base": {
+             "tipo": "simbolo",
+             "id": "u"
+            },
+            "exponente": {
+             "tipo": "numero",
+             "valor": 3
+            }
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    },
+    "despues": {
+     "izquierda": {
+      "tipo": "producto",
+      "argumentos": [
+       {
+        "tipo": "potencia",
+        "base": {
+         "tipo": "simbolo",
+         "id": "t_ref"
+        },
+        "exponente": {
+         "tipo": "numero",
+         "valor": -1
+        }
+       },
+       {
+        "tipo": "derivada",
+        "expresion": {
+         "tipo": "simbolo",
+         "id": "u"
+        },
+        "respecto": "t_ad",
+        "orden": 1
+       }
+      ]
+     },
+     "derecha": {
+      "tipo": "suma",
+      "argumentos": [
+       {
+        "tipo": "producto",
+        "argumentos": [
+         {
+          "tipo": "simbolo",
+          "id": "k"
+         },
+         {
+          "tipo": "simbolo",
+          "id": "p"
+         }
+        ]
+       },
+       {
+        "tipo": "producto",
+        "argumentos": [
+         {
+          "tipo": "simbolo",
+          "id": "k"
+         },
+         {
+          "tipo": "simbolo",
+          "id": "u"
+         }
+        ]
+       },
+       {
+        "tipo": "producto",
+        "argumentos": [
+         {
+          "tipo": "numero",
+          "valor": -1
+         },
+         {
+          "tipo": "producto",
+          "argumentos": [
+           {
+            "tipo": "simbolo",
+            "id": "k"
+           },
+           {
+            "tipo": "potencia",
+            "base": {
+             "tipo": "simbolo",
+             "id": "u"
+            },
+            "exponente": {
+             "tipo": "numero",
+             "valor": 3
+            }
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    },
+    "supuestos": [
+     "escalas constantes",
+     "coordenadas cartesianas"
+    ]
+   },
+   {
+    "ambito": "e",
+    "regla": "linealidad_y_agrupacion",
+    "antes": {
+     "izquierda": {
+      "tipo": "producto",
+      "argumentos": [
+       {
+        "tipo": "potencia",
+        "base": {
+         "tipo": "simbolo",
+         "id": "t_ref"
+        },
+        "exponente": {
+         "tipo": "numero",
+         "valor": -1
+        }
+       },
+       {
+        "tipo": "derivada",
+        "expresion": {
+         "tipo": "simbolo",
+         "id": "u"
+        },
+        "respecto": "t_ad",
+        "orden": 1
+       }
+      ]
+     },
+     "derecha": {
+      "tipo": "suma",
+      "argumentos": [
+       {
+        "tipo": "producto",
+        "argumentos": [
+         {
+          "tipo": "simbolo",
+          "id": "k"
+         },
+         {
+          "tipo": "simbolo",
+          "id": "p"
+         }
+        ]
+       },
+       {
+        "tipo": "producto",
+        "argumentos": [
+         {
+          "tipo": "simbolo",
+          "id": "k"
+         },
+         {
+          "tipo": "simbolo",
+          "id": "u"
+         }
+        ]
+       },
+       {
+        "tipo": "producto",
+        "argumentos": [
+         {
+          "tipo": "numero",
+          "valor": -1
+         },
+         {
+          "tipo": "producto",
+          "argumentos": [
+           {
+            "tipo": "simbolo",
+            "id": "k"
+           },
+           {
+            "tipo": "potencia",
+            "base": {
+             "tipo": "simbolo",
+             "id": "u"
+            },
+            "exponente": {
+             "tipo": "numero",
+             "valor": 3
+            }
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    },
+    "despues": {
+     "izquierda": {
+      "tipo": "producto",
+      "argumentos": [
+       {
+        "tipo": "cociente",
+        "numerador": {
+         "tipo": "numero",
+         "valor": 1
+        },
+        "denominador": {
+         "tipo": "simbolo",
+         "id": "t_ref"
+        }
+       },
+       {
+        "tipo": "derivada",
+        "expresion": {
+         "tipo": "simbolo",
+         "id": "u"
+        },
+        "respecto": "t_ad",
+        "orden": 1
+       }
+      ]
+     },
+     "derecha": {
+      "tipo": "suma",
+      "argumentos": [
+       {
+        "tipo": "producto",
+        "argumentos": [
+         {
+          "tipo": "simbolo",
+          "id": "k"
+         },
+         {
+          "tipo": "simbolo",
+          "id": "p"
+         }
+        ]
+       },
+       {
+        "tipo": "producto",
+        "argumentos": [
+         {
+          "tipo": "simbolo",
+          "id": "k"
+         },
+         {
+          "tipo": "simbolo",
+          "id": "u"
+         }
+        ]
+       },
+       {
+        "tipo": "producto",
+        "argumentos": [
+         {
+          "tipo": "numero",
+          "valor": -1
+         },
+         {
+          "tipo": "simbolo",
+          "id": "k"
+         },
+         {
+          "tipo": "potencia",
+          "base": {
+           "tipo": "simbolo",
+           "id": "u"
+          },
+          "exponente": {
+           "tipo": "numero",
+           "valor": 3
+          }
+         }
+        ]
+       }
+      ]
+     }
+    },
+    "supuestos": [
+     "linealidad de derivadas y operadores",
+     "funciones declaradas sin desarrollar"
+    ]
+   },
+   {
+    "ambito": "e",
+    "regla": "division_por_factor_global",
+    "antes": {
+     "izquierda": {
+      "tipo": "producto",
+      "argumentos": [
+       {
+        "tipo": "cociente",
+        "numerador": {
+         "tipo": "numero",
+         "valor": 1
+        },
+        "denominador": {
+         "tipo": "simbolo",
+         "id": "t_ref"
+        }
+       },
+       {
+        "tipo": "derivada",
+        "expresion": {
+         "tipo": "simbolo",
+         "id": "u"
+        },
+        "respecto": "t_ad",
+        "orden": 1
+       }
+      ]
+     },
+     "derecha": {
+      "tipo": "suma",
+      "argumentos": [
+       {
+        "tipo": "producto",
+        "argumentos": [
+         {
+          "tipo": "simbolo",
+          "id": "k"
+         },
+         {
+          "tipo": "simbolo",
+          "id": "p"
+         }
+        ]
+       },
+       {
+        "tipo": "producto",
+        "argumentos": [
+         {
+          "tipo": "simbolo",
+          "id": "k"
+         },
+         {
+          "tipo": "simbolo",
+          "id": "u"
+         }
+        ]
+       },
+       {
+        "tipo": "producto",
+        "argumentos": [
+         {
+          "tipo": "numero",
+          "valor": -1
+         },
+         {
+          "tipo": "simbolo",
+          "id": "k"
+         },
+         {
+          "tipo": "potencia",
+          "base": {
+           "tipo": "simbolo",
+           "id": "u"
+          },
+          "exponente": {
+           "tipo": "numero",
+           "valor": 3
+          }
+         }
+        ]
+       }
+      ]
+     }
+    },
+    "despues": {
+     "izquierda": {
+      "tipo": "derivada",
+      "expresion": {
+       "tipo": "simbolo",
+       "id": "u"
+      },
+      "respecto": "t_ad",
+      "orden": 1
+     },
+     "derecha": {
+      "tipo": "suma",
+      "argumentos": [
+       {
+        "tipo": "producto",
+        "argumentos": [
+         {
+          "tipo": "simbolo",
+          "id": "k"
+         },
+         {
+          "tipo": "simbolo",
+          "id": "p"
+         },
+         {
+          "tipo": "simbolo",
+          "id": "t_ref"
+         }
+        ]
+       },
+       {
+        "tipo": "producto",
+        "argumentos": [
+         {
+          "tipo": "simbolo",
+          "id": "k"
+         },
+         {
+          "tipo": "simbolo",
+          "id": "t_ref"
+         },
+         {
+          "tipo": "simbolo",
+          "id": "u"
+         }
+        ]
+       },
+       {
+        "tipo": "producto",
+        "argumentos": [
+         {
+          "tipo": "numero",
+          "valor": -1
+         },
+         {
+          "tipo": "simbolo",
+          "id": "k"
+         },
+         {
+          "tipo": "simbolo",
+          "id": "t_ref"
+         },
+         {
+          "tipo": "potencia",
+          "base": {
+           "tipo": "simbolo",
+           "id": "u"
+          },
+          "exponente": {
+           "tipo": "numero",
+           "valor": 3
+          }
+         }
+        ]
+       }
+      ]
+     }
+    },
+    "supuestos": [
+     "factor global 1/t_ref distinto de cero"
+    ]
+   },
+   {
+    "ambito": "e",
+    "regla": "sustitucion_de_escalas_determinadas",
+    "antes": {
+     "izquierda": {
+      "tipo": "derivada",
+      "expresion": {
+       "tipo": "simbolo",
+       "id": "u"
+      },
+      "respecto": "t_ad",
+      "orden": 1
+     },
+     "derecha": {
+      "tipo": "suma",
+      "argumentos": [
+       {
+        "tipo": "producto",
+        "argumentos": [
+         {
+          "tipo": "simbolo",
+          "id": "k"
+         },
+         {
+          "tipo": "simbolo",
+          "id": "p"
+         },
+         {
+          "tipo": "simbolo",
+          "id": "t_ref"
+         }
+        ]
+       },
+       {
+        "tipo": "producto",
+        "argumentos": [
+         {
+          "tipo": "simbolo",
+          "id": "k"
+         },
+         {
+          "tipo": "simbolo",
+          "id": "t_ref"
+         },
+         {
+          "tipo": "simbolo",
+          "id": "u"
+         }
+        ]
+       },
+       {
+        "tipo": "producto",
+        "argumentos": [
+         {
+          "tipo": "numero",
+          "valor": -1
+         },
+         {
+          "tipo": "simbolo",
+          "id": "k"
+         },
+         {
+          "tipo": "simbolo",
+          "id": "t_ref"
+         },
+         {
+          "tipo": "potencia",
+          "base": {
+           "tipo": "simbolo",
+           "id": "u"
+          },
+          "exponente": {
+           "tipo": "numero",
+           "valor": 3
+          }
+         }
+        ]
+       }
+      ]
+     }
+    },
+    "despues": {
+     "izquierda": {
+      "tipo": "derivada",
+      "expresion": {
+       "tipo": "simbolo",
+       "id": "u"
+      },
+      "respecto": "t_ad",
+      "orden": 1
+     },
+     "derecha": {
+      "tipo": "suma",
+      "argumentos": [
+       {
+        "tipo": "simbolo",
+        "id": "p"
+       },
+       {
+        "tipo": "simbolo",
+        "id": "u"
+       },
+       {
+        "tipo": "producto",
+        "argumentos": [
+         {
+          "tipo": "numero",
+          "valor": -1
+         },
+         {
+          "tipo": "potencia",
+          "base": {
+           "tipo": "simbolo",
+           "id": "u"
+          },
+          "exponente": {
+           "tipo": "numero",
+           "valor": 3
+          }
+         }
+        ]
+       }
+      ]
+     }
+    },
+    "supuestos": [
+     "solucion exacta de los objetivos monomiales con escalas positivas"
+    ]
+   }
+  ],
+  "equivalencia": {
+   "estado": "demostrada",
+   "alcance": "Igualdad de formas canonicas tras la sustitucion inversa de lo publicado: suma y producto conmutativos y distributivos, a^p a^q = a^(p+q), (ab)^q = a^q b^q solo con q entero o factores positivos, derivadas cartesianas desarrolladas con las reglas del producto, de la potencia y de la cadena (exp, log, sin, cos, tan, sinh, cosh, tanh, atan, potencias), d^m(d^n f) = d^(m+n) f, log(exp y) = y y exp(log y) = y solo con y > 0 por los signos y dominios declarados. Las derivadas de funciones declaradas, erf, abs, min y max no se desarrollan; no se usan otras identidades de exp/log/trig/hiperbolicas ni el intercambio de derivadas mixtas. La nulidad de la diferencia se decide multiplicando por las sumas que aparecen como denominador (no nulas porque el original divide por ellas). Coordenadas cartesianas. Si las formas no coinciden el estado es 'no_demostrada'; no se muestrean numeros.",
+   "restricciones": [
+    "R1",
+    "R2",
+    "R3"
+   ],
+   "comprobaciones": [
+    {
+     "ambito": "e",
+     "tipo": "sustitucion_inversa",
+     "estado": "demostrada"
+    },
+    {
+     "ambito": "e",
+     "tipo": "dimensiones",
+     "estado": "demostrada",
+     "dimension": {}
+    },
+    {
+     "ambito": "base:k",
+     "tipo": "objetivo",
+     "estado": "demostrada"
+    }
+   ]
+  }
+ },
+ "estudio": {
+  "estabilidad": {
+   "estado": "calculado",
+   "motivo": "estados homogeneos por busqueda finita en la caja; jacobiano y coeficientes de derivada por paso complejo; sigma(k) = autovalores de J + sum (i k)^n C_n",
+   "campos": [
+    "u"
+   ],
+   "caja": [
+    [
+     -3,
+     3
+    ]
+   ],
+   "estados": [
+    {
+     "u": {
+      "u": -1.0
+     },
+     "jacobiano": [
+      [
+       -2.0
+      ]
+     ],
+     "autovalores": [
+      {
+       "re": -2.0,
+       "im": 0.0
+      }
+     ],
+     "homogeneo": "estable",
+     "espacial": []
+    },
+    {
+     "u": {
+      "u": 0.0
+     },
+     "jacobiano": [
+      [
+       1.0
+      ]
+     ],
+     "autovalores": [
+      {
+       "re": 1.0,
+       "im": 0.0
+      }
+     ],
+     "homogeneo": "inestable",
+     "espacial": []
+    },
+    {
+     "u": {
+      "u": 1.0
+     },
+     "jacobiano": [
+      [
+       -2.0
+      ]
+     ],
+     "autovalores": [
+      {
+       "re": -2.0,
+       "im": 0.0
+      }
+     ],
+     "homogeneo": "estable",
+     "espacial": []
+    }
+   ]
+  },
+  "continuacion": {
+   "estado": "calculado",
+   "motivo": "continuacion por longitud de arco de F(u; p) = 0 desde los estados homogeneos en el valor dado; pliegues por cambio de signo de dp/ds; Hopf por cruce de un par complejo",
+   "parametroId": "p",
+   "intervaloSI": [
+    -1,
+    1
+   ],
+   "campos": [
+    "u"
+   ],
+   "ramas": [
+    {
+     "inicio": {
+      "u": -1.0
+     },
+     "puntos": [
+      {
+       "p": 0.9108543981573767,
+       "u": {
+        "u": 1.3033929879273858
+       },
+       "estable": true,
+       "maxRe": -4.096499842934835
+      },
+      {
+       "p": 0.8213648698377534,
+       "u": {
+        "u": 1.2810748957540943
+       },
+       "estable": true,
+       "maxRe": -3.92345866559409
+      },
+      {
+       "p": 0.7326934262438007,
+       "u": {
+        "u": 1.2579540800807254
+       },
+       "estable": true,
+       "maxRe": -3.7473454027752324
+      },
+      {
+       "p": 0.6449501614001829,
+       "u": {
+        "u": 1.2339633582538816
+       },
+       "estable": true,
+       "maxRe": -3.567996708539592
+      },
+      {
+       "p": 0.558265843431424,
+       "u": {
+        "u": 1.2090276249558722
+       },
+       "estable": true,
+       "maxRe": -3.3852433937193123
+      },
+      {
+       "p": 0.47279673657704335,
+       "u": {
+        "u": 1.1830629162433886
+       },
+       "estable": true,
+       "maxRe": -3.1989135913709337
+      },
+      {
+       "p": 0.3887306817157661,
+       "u": {
+        "u": 1.1559754947920473
+       },
+       "estable": true,
+       "maxRe": -3.008838033679156
+      },
+      {
+       "p": 0.3062947424114071,
+       "u": {
+        "u": 1.127661076766104
+       },
+       "estable": true,
+       "maxRe": -2.8148585121598666
+      },
+      {
+       "p": 0.22576474465198126,
+       "u": {
+        "u": 1.098004414756498
+       },
+       "estable": true,
+       "maxRe": -2.616841084474279
+      },
+      {
+       "p": 0.147476991505622,
+       "u": {
+        "u": 1.0668796017939977
+       },
+       "estable": true,
+       "maxRe": -2.4146962541723562
+      },
+      {
+       "p": 0.07184223026495884,
+       "u": {
+        "u": 1.0341516918402274
+       },
+       "estable": true,
+       "maxRe": -2.208409165208014
+      },
+      {
+       "p": -0.0006385742566592523,
+       "u": {
+        "u": 0.9996805598249303
+       },
+       "estable": true,
+       "maxRe": -1.998083665075658
+      },
+      {
+       "p": -0.06935822111691725,
+       "u": {
+        "u": 0.9633283306841224
+       },
+       "estable": true,
+       "maxRe": -1.7840044180959735
+      },
+      {
+       "p": -0.13359064161708112,
+       "u": {
+        "u": 0.9249720661939307
+       },
+       "estable": true,
+       "maxRe": -1.5667199697172076
+      },
+      {
+       "p": -0.1924885968972051,
+       "u": {
+        "u": 0.8845233482158722
+       },
+       "estable": true,
+       "maxRe": -1.3471446606170514
+      },
+      {
+       "p": -0.24510279259691825,
+       "u": {
+        "u": 0.8419551991967348
+       },
+       "estable": true,
+       "maxRe": -1.12666567236324
+      },
+      {
+       "p": -0.2904361858922683,
+       "u": {
+        "u": 0.7973334432704885
+       },
+       "estable": true,
+       "maxRe": -0.9072218592727201
+      },
+      {
+       "p": -0.32754323561410703,
+       "u": {
+        "u": 0.7508438712985125
+       },
+       "estable": true,
+       "maxRe": -0.6912995571996117
+      },
+      {
+       "p": -0.35566702894229174,
+       "u": {
+        "u": 0.7028010068911669
+       },
+       "estable": true,
+       "maxRe": -0.48178776586171396
+      },
+      {
+       "p": -0.3743795621909741,
+       "u": {
+        "u": 0.6536252785295921
+       },
+       "estable": true,
+       "maxRe": -0.28167801419866045
+      },
+      {
+       "p": -0.3836710713467202,
+       "u": {
+        "u": 0.6037880661857614
+       },
+       "estable": true,
+       "maxRe": -0.09368008660502435
+      },
+      {
+       "p": -0.3839480126514724,
+       "u": {
+        "u": 0.553742427914506
+       },
+       "estable": false,
+       "maxRe": 0.08010797058204419
+      },
+      {
+       "p": -0.37594391571710084,
+       "u": {
+        "u": 0.5038655487128456
+       },
+       "estable": false,
+       "maxRe": 0.238358526460909
+      },
+      {
+       "p": -0.36058702513890606,
+       "u": {
+        "u": 0.45442955501613425
+       },
+       "estable": false,
+       "maxRe": 0.3804813385835147
+      },
+      {
+       "p": -0.3388744275706863,
+       "u": {
+        "u": 0.405600464368755
+       },
+       "estable": false,
+       "maxRe": 0.5064647899115509
+      },
+      {
+       "p": -0.3117812345803348,
+       "u": {
+        "u": 0.35745454154911577
+       },
+       "estable": false,
+       "maxRe": 0.6166787521777345
+      },
+      {
+       "p": -0.2802094018042923,
+       "u": {
+        "u": 0.3100005645701683
+       },
+       "estable": false,
+       "maxRe": 0.7116989498985308
+      },
+      {
+       "p": -0.2449675651262443,
+       "u": {
+        "u": 0.263200688096758
+       },
+       "estable": false,
+       "maxRe": 0.7921761933561794
+      },
+      {
+       "p": -0.20677044832625147,
+       "u": {
+        "u": 0.21698691262330919
+       },
+       "estable": false,
+       "maxRe": 0.8587500392506132
+      },
+      {
+       "p": -0.16624863458431016,
+       "u": {
+        "u": 0.17127281602679814
+       },
+       "estable": false,
+       "maxRe": 0.9119968674707517
+      },
+      {
+       "p": -0.12396279495499585,
+       "u": {
+        "u": 0.12596132973270455
+       },
+       "estable": false,
+       "maxRe": 0.9524012302359066
+      },
+      {
+       "p": -0.08041914596376809,
+       "u": {
+        "u": 0.08094959546861874
+       },
+       "estable": false,
+       "maxRe": 0.9803414889804009
+      },
+      {
+       "p": -0.03608465779213055,
+       "u": {
+        "u": 0.03613182821943606
+       },
+       "estable": false,
+       "maxRe": 0.9960834729685635
+      },
+      {
+       "p": 0.008598455211739742,
+       "u": {
+        "u": -0.008599091066086873
+       },
+       "estable": false,
+       "maxRe": 0.9997781668985115
+      },
+      {
+       "p": 0.05319889635890451,
+       "u": {
+        "u": -0.05335074872246148
+       },
+       "estable": false,
+       "maxRe": 0.9914610928322583
+      },
+      {
+       "p": 0.09728278036244409,
+       "u": {
+        "u": -0.09823063301136147
+       },
+       "estable": false,
+       "maxRe": 0.9710522282145617
+      },
+      {
+       "p": 0.14040004537724027,
+       "u": {
+        "u": -0.14334549895223161
+       },
+       "estable": false,
+       "maxRe": 0.9383562037904074
+      },
+      {
+       "p": 0.18207039045755335,
+       "u": {
+        "u": -0.18880027940851615
+       },
+       "estable": false,
+       "maxRe": 0.8930633634857986
+      },
+      {
+       "p": 0.2217684913135063,
+       "u": {
+        "u": -0.2346960793512182
+       },
+       "estable": false,
+       "maxRe": 0.8347532510115
+      },
+      {
+       "p": 0.2589085906593205,
+       "u": {
+        "u": -0.2811266453011216
+       },
+       "estable": false,
+       "maxRe": 0.7629034279052122
+      },
+      {
+       "p": 0.2928292476767582,
+       "u": {
+        "u": -0.3281725054394967
+       },
+       "estable": false,
+       "maxRe": 0.6769084200206905
+      },
+      {
+       "p": 0.322780293666475,
+       "u": {
+        "u": -0.3758917864981638
+       },
+       "estable": false,
+       "maxRe": 0.5761160945296565
+      },
+      {
+       "p": 0.34791614239132995,
+       "u": {
+        "u": -0.4243066955822617
+       },
+       "estable": false,
+       "maxRe": 0.4598914842521857
+      },
+      {
+       "p": 0.36730262068809316,
+       "u": {
+        "u": -0.4733851680443287
+       },
+       "estable": false,
+       "maxRe": 0.32771944802692815
+      },
+      {
+       "p": 0.3799477103930686,
+       "u": {
+        "u": -0.5230188277842907
+       },
+       "estable": false,
+       "maxRe": 0.1793539173494395
+      },
+      {
+       "p": 0.38486750968147243,
+       "u": {
+        "u": -0.573001777586374
+       },
+       "estable": false,
+       "maxRe": 0.01500688864856664
+      },
+      {
+       "p": 0.38119243724910534,
+       "u": {
+        "u": -0.6230194361162926
+       },
+       "estable": true,
+       "maxRe": -0.16445965333598964
+      },
+      {
+       "p": 0.36830066585220655,
+       "u": {
+        "u": -0.672659640110879
+       },
+       "estable": true,
+       "maxRe": -0.35741297430229174
+      },
+      {
+       "p": 0.34594021427882304,
+       "u": {
+        "u": -0.7214539204909965
+       },
+       "estable": true,
+       "maxRe": -0.5614872781754875
+      },
+      {
+       "p": 0.31428780174402515,
+       "u": {
+        "u": -0.7689426181171138
+       },
+       "estable": true,
+       "maxRe": -0.7738182498704046
+      },
+      {
+       "p": 0.27391296307419255,
+       "u": {
+        "u": -0.8147416059602304
+       },
+       "estable": true,
+       "maxRe": -0.9914116534479658
+      },
+      {
+       "p": 0.22566255710976013,
+       "u": {
+        "u": -0.8585857280050923
+       },
+       "estable": true,
+       "maxRe": -1.2115083570021026
+      },
+      {
+       "p": 0.17051607331825513,
+       "u": {
+        "u": -0.9003381942863988
+       },
+       "estable": true,
+       "maxRe": -1.4318265922726798
+      },
+      {
+       "p": 0.1094608851820118,
+       "u": {
+        "u": -0.9399728087793834
+       },
+       "estable": true,
+       "maxRe": -1.6506466437338099
+      },
+      {
+       "p": 0.06538865751346434,
+       "u": {
+        "u": -0.9655454477669317
+       },
+       "estable": true,
+       "maxRe": -1.796834035110334
+      },
+      {
+       "p": 0.03487366762923405,
+       "u": {
+        "u": -0.982084598866614
+       },
+       "estable": true,
+       "maxRe": -1.8934704779929947
+      },
+      {
+       "p": 0.01406651098647771,
+       "u": {
+        "u": -0.9928911198695078
+       },
+       "estable": true,
+       "maxRe": -1.957498327747176
+      },
+      {
+       "p": 0.0,
+       "u": {
+        "u": -1.0
+       },
+       "estable": true,
+       "maxRe": -2.0
+      },
+      {
+       "p": -0.014216522706437806,
+       "u": {
+        "u": -1.007033874270512
+       },
+       "estable": true,
+       "maxRe": -2.0423516717848322
+      },
+      {
+       "p": -0.03581170331350614,
+       "u": {
+        "u": -1.0174466196123018
+       },
+       "estable": true,
+       "maxRe": -2.1055928712815
+      },
+      {
+       "p": -0.06878040749334613,
+       "u": {
+        "u": -1.032762543920575
+       },
+       "estable": true,
+       "maxRe": -2.1997954163758924
+      },
+      {
+       "p": -0.1194275997475941,
+       "u": {
+        "u": -1.055079606122103
+       },
+       "estable": true,
+       "maxRe": -2.3395789257643163
+      },
+      {
+       "p": -0.19679523741187976,
+       "u": {
+        "u": -1.0867758368884224
+       },
+       "estable": true,
+       "maxRe": -2.5432451589335923
+      },
+      {
+       "p": -0.2765461957777482,
+       "u": {
+        "u": -1.1169553697022723
+       },
+       "estable": true,
+       "maxRe": -2.7427678937202193
+      },
+      {
+       "p": -0.358318625516557,
+       "u": {
+        "u": -1.145747706659193
+       },
+       "estable": true,
+       "maxRe": -2.9382134219444005
+      },
+      {
+       "p": -0.44181601901297407,
+       "u": {
+        "u": -1.173272090608999
+       },
+       "estable": true,
+       "maxRe": -3.129702195806034
+      },
+      {
+       "p": -0.5267946607125626,
+       "u": {
+        "u": -1.1996368029749964
+       },
+       "estable": true,
+       "maxRe": -3.317385377156211
+      },
+      {
+       "p": -0.6130533168842256,
+       "u": {
+        "u": -1.2249393691593176
+       },
+       "estable": true,
+       "maxRe": -3.501429374349281
+      },
+      {
+       "p": -0.7004249333466408,
+       "u": {
+        "u": -1.2492672325924945
+       },
+       "estable": true,
+       "maxRe": -3.682005855287929
+      },
+      {
+       "p": -0.7887700188283323,
+       "u": {
+        "u": -1.272698635564115
+       },
+       "estable": true,
+       "maxRe": -3.859285450900279
+      },
+      {
+       "p": -0.877971394764255,
+       "u": {
+        "u": -1.2953035571765212
+       },
+       "estable": true,
+       "maxRe": -4.033433915702449
+      },
+      {
+       "p": -0.9679300319134946,
+       "u": {
+        "u": -1.3171446273438405
+       },
+       "estable": true,
+       "maxRe": -4.204609908022234
+      }
+     ]
+    }
+   ],
+   "especiales": [
+    {
+     "tipo": "pliegue",
+     "p": -0.3838203357242045,
+     "u": {
+      "u": 0.5768147295466285
+     }
+    },
+    {
+     "tipo": "pliegue",
+     "p": 0.3849001794597504,
+     "u": {
+      "u": -0.5773502691896257
+     }
+    }
+   ]
+  }
+ }
+}

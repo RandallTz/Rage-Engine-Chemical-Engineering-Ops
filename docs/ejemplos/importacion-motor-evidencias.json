@@ -1,0 +1,93 @@
+[
+  {
+    "hoja": "01 · Tanque que se llena",
+    "ecuaciones": "d(m,t) = Fe1 - Fs2",
+    "grupos": 2,
+    "libres": [
+      "m_ref"
+    ],
+    "diferenciaMotor": 9.74458609042424e-16,
+    "diferenciaAnalitica": 1.624097681737373e-16,
+    "avisos": []
+  },
+  {
+    "hoja": "02 · Tanque que se vacía",
+    "ecuaciones": "d(m,t) = Fe1 - Fs2",
+    "grupos": 2,
+    "libres": [
+      "m_ref"
+    ],
+    "diferenciaMotor": 3.481659405224491e-15,
+    "diferenciaAnalitica": 1.4210854715202004e-16,
+    "avisos": []
+  },
+  {
+    "hoja": "03 · Llenado en litros",
+    "ecuaciones": "d(V,t) = Qe1 - Qs2",
+    "grupos": 2,
+    "libres": [
+      "V_ref"
+    ],
+    "diferenciaMotor": 3.1720657846433045e-16,
+    "diferenciaAnalitica": 3.1720657846433045e-16,
+    "avisos": []
+  },
+  {
+    "hoja": "04 · Entradas y salidas iguales",
+    "ecuaciones": "d(m,t) = Fe1 - Fs2",
+    "grupos": 2,
+    "libres": [
+      "m_ref"
+    ],
+    "diferenciaMotor": 1.4210854715202004e-16,
+    "diferenciaAnalitica": 1.4210854715202004e-16,
+    "avisos": []
+  },
+  {
+    "hoja": "05 · Vaciado hasta agotarse",
+    "ecuaciones": "d(m,t) = -Fs2",
+    "grupos": 1,
+    "libres": [
+      "m_ref"
+    ],
+    "diferenciaMotor": 1.219024881038422e-15,
+    "diferenciaAnalitica": 2.842170943040401e-16,
+    "avisos": []
+  },
+  {
+    "hoja": "06 · Conversión de A en B",
+    "ecuaciones": "d(m_A,t) = -k_A*m_A\nd(m_B,t) = g_B*m_A",
+    "grupos": 1,
+    "libres": [
+      "m_B_ref"
+    ],
+    "diferenciaMotor": 6.054568544855421e-7,
+    "diferenciaAnalitica": 6.054465794824715e-7,
+    "avisos": []
+  },
+  {
+    "hoja": "07 · Transporte por convección · 1D",
+    "ecuaciones": "d(rho,t) = -v*d(rho,x)",
+    "grupos": 3,
+    "libres": [
+      "rho_ref",
+      "x_ref"
+    ],
+    "diferenciaMotor": 0.00777115627965245,
+    "diferenciaAnalitica": 0.00009172444377517694,
+    "avisos": []
+  },
+  {
+    "hoja": "08 · Difusión de dos componentes · 1D",
+    "ecuaciones": "d(rho_A,t) = D_A*lap(rho_A,x)\nd(rho_B,t) = D_B*lap(rho_B,x)",
+    "grupos": 7,
+    "libres": [
+      "rho_A_ref",
+      "rho_B_ref",
+      "x_ref"
+    ],
+    "diferenciaMotor": 0.000047854269358368997,
+    "diferenciaAnalitica": 0.00004784230839708098,
+    "avisos": []
+  }
+]

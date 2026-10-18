@@ -10,6 +10,7 @@ Documentacion automatica interactiva en /docs una vez corriendo.
 """
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from backend.api_adimensionalizacion import router as router_adimensionalizacion
 from backend.api_unidades import router as router_unidades
 from backend.api_modelo import router as router_modelo
 
@@ -72,6 +73,7 @@ app = FastAPI(
     description="Frontera HTTP sobre el nucleo de simulacion (McCabe-Thiele, Ponchon-Savarit, FUG).",
     version="0.1.0",
 )
+app.include_router(router_adimensionalizacion)
 app.include_router(router_unidades)
 app.include_router(router_modelo)
 

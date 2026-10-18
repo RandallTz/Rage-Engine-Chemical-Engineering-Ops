@@ -1,0 +1,208 @@
+{
+ "formato": "adimensionalizacion.solicitud",
+ "version": 1,
+ "operacion": "transformar",
+ "documento": {
+  "formato": "adimensionalizacion",
+  "version": 2,
+  "id": "doc-prueba",
+  "nombre": "Prueba",
+  "modelo": {
+   "id": "modelo-prueba",
+   "revision": 1,
+   "simbolos": [
+    {
+     "id": "t",
+     "nombre": "t",
+     "rol": "tiempo",
+     "dimension": {
+      "T": {
+       "n": 1,
+       "d": 1
+      }
+     },
+     "unidad": null,
+     "constante": false,
+     "dependeDe": [],
+     "signo": "desconocido"
+    },
+    {
+     "id": "x",
+     "nombre": "x",
+     "rol": "coordenada",
+     "dimension": {
+      "L": {
+       "n": 1,
+       "d": 1
+      }
+     },
+     "unidad": null,
+     "constante": false,
+     "dependeDe": [],
+     "signo": "desconocido"
+    },
+    {
+     "id": "c",
+     "nombre": "c",
+     "rol": "campo",
+     "dimension": {
+      "N": {
+       "n": 1,
+       "d": 1
+      },
+      "L": {
+       "n": -3,
+       "d": 1
+      }
+     },
+     "unidad": null,
+     "constante": false,
+     "dependeDe": [
+      "t",
+      "x"
+     ],
+     "signo": "desconocido"
+    },
+    {
+     "id": "Dstar",
+     "nombre": "Dstar",
+     "rol": "parametro",
+     "dimension": null,
+     "unidad": null,
+     "constante": true,
+     "dependeDe": [],
+     "signo": "positivo"
+    }
+   ],
+   "funciones": [
+    {
+     "id": "Dc",
+     "nombre": "D",
+     "entradas": [
+      {
+       "N": {
+        "n": 1,
+        "d": 1
+       },
+       "L": {
+        "n": -3,
+        "d": 1
+       }
+      }
+     ],
+     "salida": {
+      "L": {
+       "n": 2,
+       "d": 1
+      },
+      "T": {
+       "n": -1,
+       "d": 1
+      }
+     },
+     "dependeDe": [],
+     "escala": {
+      "simboloId": "Dstar",
+      "funcionAdimensional": "Dh"
+     }
+    }
+   ],
+   "ecuaciones": [
+    {
+     "id": "balance",
+     "izquierda": {
+      "tipo": "derivada",
+      "expresion": {
+       "tipo": "simbolo",
+       "id": "c"
+      },
+      "respecto": "t",
+      "orden": 1
+     },
+     "derecha": {
+      "tipo": "divergencia",
+      "expresion": {
+       "tipo": "producto",
+       "argumentos": [
+        {
+         "tipo": "llamada",
+         "funcionId": "Dc",
+         "argumentos": [
+          {
+           "tipo": "simbolo",
+           "id": "c"
+          }
+         ]
+        },
+        {
+         "tipo": "gradiente",
+         "expresion": {
+          "tipo": "simbolo",
+          "id": "c"
+         },
+         "coordenadas": [
+          "x"
+         ]
+        }
+       ]
+      },
+      "coordenadas": [
+       "x"
+      ]
+     }
+    }
+   ],
+   "dominios": [],
+   "condiciones": []
+  },
+  "formas": [
+   {
+    "id": "forma-1",
+    "nombre": "Forma 1",
+    "padreId": null,
+    "modeloRevision": 1,
+    "escalas": [
+     {
+      "simboloId": "t",
+      "transformar": true,
+      "nuevoNombre": "t_ad",
+      "dimension": null,
+      "valor": {
+       "tipo": "libre"
+      }
+     },
+     {
+      "simboloId": "c",
+      "transformar": true,
+      "nuevoNombre": "c_ad",
+      "dimension": null,
+      "valor": {
+       "tipo": "libre"
+      }
+     },
+     {
+      "simboloId": "x",
+      "transformar": true,
+      "nuevoNombre": "x_ad",
+      "dimension": null,
+      "valor": {
+       "tipo": "libre"
+      }
+     }
+    ],
+    "objetivos": [
+     {
+      "id": "difusion",
+      "ecuacionId": "balance",
+      "terminoId": "balance:ecuaciones[0].derecha",
+      "valor": 1,
+      "accion": "normalizar"
+     }
+    ],
+    "presentacion": "factorizada"
+   }
+  ],
+  "activaId": "forma-1"
+ },
+ "formaId": "forma-1"
+}

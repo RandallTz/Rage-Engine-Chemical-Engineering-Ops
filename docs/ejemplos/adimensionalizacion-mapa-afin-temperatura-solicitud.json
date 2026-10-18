@@ -1,0 +1,239 @@
+{
+ "formato": "adimensionalizacion.solicitud",
+ "version": 1,
+ "operacion": "transformar",
+ "documento": {
+  "formato": "adimensionalizacion",
+  "version": 1,
+  "id": "doc-prueba",
+  "nombre": "Prueba",
+  "modelo": {
+   "id": "modelo-prueba",
+   "revision": 1,
+   "simbolos": [
+    {
+     "id": "t",
+     "nombre": "t",
+     "rol": "tiempo",
+     "dimension": {
+      "T": {
+       "n": 1,
+       "d": 1
+      }
+     },
+     "unidad": null,
+     "constante": false,
+     "dependeDe": [],
+     "signo": "desconocido"
+    },
+    {
+     "id": "T",
+     "nombre": "T",
+     "rol": "campo",
+     "dimension": null,
+     "unidad": "degC",
+     "constante": false,
+     "dependeDe": [
+      "t"
+     ],
+     "signo": "desconocido"
+    },
+    {
+     "id": "k",
+     "nombre": "k",
+     "rol": "parametro",
+     "dimension": {
+      "T": {
+       "n": -1,
+       "d": 1
+      }
+     },
+     "unidad": null,
+     "constante": true,
+     "dependeDe": [],
+     "signo": "positivo"
+    },
+    {
+     "id": "Ta",
+     "nombre": "Ta",
+     "rol": "parametro",
+     "dimension": {
+      "Theta": {
+       "n": 1,
+       "d": 1
+      }
+     },
+     "unidad": null,
+     "constante": true,
+     "dependeDe": [],
+     "signo": "positivo"
+    }
+   ],
+   "funciones": [],
+   "ecuaciones": [
+    {
+     "id": "enfriamiento",
+     "izquierda": {
+      "tipo": "derivada",
+      "expresion": {
+       "tipo": "simbolo",
+       "id": "T"
+      },
+      "respecto": "t",
+      "orden": 1
+     },
+     "derecha": {
+      "tipo": "producto",
+      "argumentos": [
+       {
+        "tipo": "numero",
+        "valor": -1
+       },
+       {
+        "tipo": "producto",
+        "argumentos": [
+         {
+          "tipo": "simbolo",
+          "id": "k"
+         },
+         {
+          "tipo": "suma",
+          "argumentos": [
+           {
+            "tipo": "simbolo",
+            "id": "T"
+           },
+           {
+            "tipo": "producto",
+            "argumentos": [
+             {
+              "tipo": "numero",
+              "valor": -1
+             },
+             {
+              "tipo": "simbolo",
+              "id": "Ta"
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ],
+   "dominios": [],
+   "condiciones": []
+  },
+  "formas": [
+   {
+    "id": "forma-1",
+    "nombre": "Forma 1",
+    "padreId": null,
+    "modeloRevision": 1,
+    "escalas": [
+     {
+      "simboloId": "t",
+      "transformar": true,
+      "nuevoNombre": "t_ad",
+      "dimension": null,
+      "valor": {
+       "tipo": "libre"
+      }
+     }
+    ],
+    "objetivos": [],
+    "presentacion": "factorizada"
+   }
+  ],
+  "activaId": "forma-1"
+ },
+ "formaId": "forma-1",
+ "transformaciones": [
+  {
+   "variableId": "T",
+   "nuevoId": "theta",
+   "directa": {
+    "tipo": "suma",
+    "argumentos": [
+     {
+      "tipo": "simbolo",
+      "id": "Tr"
+     },
+     {
+      "tipo": "producto",
+      "argumentos": [
+       {
+        "tipo": "simbolo",
+        "id": "dT"
+       },
+       {
+        "tipo": "simbolo",
+        "id": "theta"
+       }
+      ]
+     }
+    ]
+   },
+   "inversa": {
+    "tipo": "cociente",
+    "numerador": {
+     "tipo": "suma",
+     "argumentos": [
+      {
+       "tipo": "simbolo",
+       "id": "T"
+      },
+      {
+       "tipo": "producto",
+       "argumentos": [
+        {
+         "tipo": "numero",
+         "valor": -1
+        },
+        {
+         "tipo": "simbolo",
+         "id": "Tr"
+        }
+       ]
+      }
+     ]
+    },
+    "denominador": {
+     "tipo": "simbolo",
+     "id": "dT"
+    }
+   },
+   "constantes": [
+    {
+     "id": "Tr",
+     "nombre": "Tr",
+     "papel": "referencia",
+     "dimension": null,
+     "valor": {
+      "tipo": "cantidad",
+      "valor": 25,
+      "unidad": "degC"
+     }
+    },
+    {
+     "id": "dT",
+     "nombre": "dT",
+     "papel": "escala",
+     "dimension": null,
+     "valor": {
+      "tipo": "cantidad",
+      "valor": 10,
+      "unidad": "K"
+     }
+    }
+   ],
+   "dominio": {
+    "original": null,
+    "nuevo": null
+   }
+  }
+ ]
+}

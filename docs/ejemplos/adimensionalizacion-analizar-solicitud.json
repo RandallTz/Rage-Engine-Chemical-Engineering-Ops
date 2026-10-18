@@ -1,0 +1,272 @@
+{
+ "formato": "adimensionalizacion.solicitud",
+ "version": 1,
+ "operacion": "analizar",
+ "documento": {
+  "formato": "adimensionalizacion",
+  "version": 1,
+  "id": "doc-prueba",
+  "nombre": "Prueba",
+  "modelo": {
+   "id": "modelo-prueba",
+   "revision": 1,
+   "simbolos": [
+    {
+     "id": "t",
+     "nombre": "t",
+     "rol": "tiempo",
+     "dimension": {
+      "T": {
+       "n": 1,
+       "d": 1
+      }
+     },
+     "unidad": null,
+     "constante": false,
+     "dependeDe": [],
+     "signo": "desconocido"
+    },
+    {
+     "id": "x",
+     "nombre": "x",
+     "rol": "coordenada",
+     "dimension": {
+      "L": {
+       "n": 1,
+       "d": 1
+      }
+     },
+     "unidad": null,
+     "constante": false,
+     "dependeDe": [],
+     "signo": "desconocido"
+    },
+    {
+     "id": "c",
+     "nombre": "c",
+     "rol": "campo",
+     "dimension": {
+      "N": {
+       "n": 1,
+       "d": 1
+      },
+      "L": {
+       "n": -3,
+       "d": 1
+      }
+     },
+     "unidad": null,
+     "constante": false,
+     "dependeDe": [
+      "t",
+      "x"
+     ],
+     "signo": "desconocido"
+    },
+    {
+     "id": "D",
+     "nombre": "D",
+     "rol": "parametro",
+     "dimension": {
+      "L": {
+       "n": 2,
+       "d": 1
+      },
+      "T": {
+       "n": -1,
+       "d": 1
+      }
+     },
+     "unidad": null,
+     "constante": true,
+     "dependeDe": [],
+     "signo": "positivo"
+    },
+    {
+     "id": "k",
+     "nombre": "k",
+     "rol": "parametro",
+     "dimension": {
+      "T": {
+       "n": -1,
+       "d": 1
+      }
+     },
+     "unidad": null,
+     "constante": true,
+     "dependeDe": [],
+     "signo": "positivo"
+    },
+    {
+     "id": "a",
+     "nombre": "a",
+     "rol": "parametro",
+     "dimension": {
+      "N": {
+       "n": -1,
+       "d": 1
+      },
+      "L": {
+       "n": 3,
+       "d": 1
+      },
+      "T": {
+       "n": -1,
+       "d": 1
+      }
+     },
+     "unidad": null,
+     "constante": true,
+     "dependeDe": [],
+     "signo": "positivo"
+    },
+    {
+     "id": "ell",
+     "nombre": "ell",
+     "rol": "parametro",
+     "dimension": {
+      "L": {
+       "n": 1,
+       "d": 1
+      }
+     },
+     "unidad": null,
+     "constante": true,
+     "dependeDe": [],
+     "signo": "positivo"
+    }
+   ],
+   "funciones": [],
+   "ecuaciones": [
+    {
+     "id": "balance",
+     "izquierda": {
+      "tipo": "derivada",
+      "expresion": {
+       "tipo": "simbolo",
+       "id": "c"
+      },
+      "respecto": "t",
+      "orden": 1
+     },
+     "derecha": {
+      "tipo": "suma",
+      "argumentos": [
+       {
+        "tipo": "producto",
+        "argumentos": [
+         {
+          "tipo": "simbolo",
+          "id": "D"
+         },
+         {
+          "tipo": "laplaciano",
+          "expresion": {
+           "tipo": "simbolo",
+           "id": "c"
+          },
+          "coordenadas": [
+           "x"
+          ]
+         }
+        ]
+       },
+       {
+        "tipo": "producto",
+        "argumentos": [
+         {
+          "tipo": "simbolo",
+          "id": "k"
+         },
+         {
+          "tipo": "simbolo",
+          "id": "c"
+         }
+        ]
+       },
+       {
+        "tipo": "producto",
+        "argumentos": [
+         {
+          "tipo": "numero",
+          "valor": -1
+         },
+         {
+          "tipo": "simbolo",
+          "id": "a"
+         },
+         {
+          "tipo": "potencia",
+          "base": {
+           "tipo": "simbolo",
+           "id": "c"
+          },
+          "exponente": {
+           "tipo": "numero",
+           "valor": 2
+          }
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ],
+   "dominios": [
+    {
+     "id": "intervalo-x",
+     "variableId": "x",
+     "desde": {
+      "tipo": "numero",
+      "valor": 0
+     },
+     "hasta": {
+      "tipo": "simbolo",
+      "id": "ell"
+     }
+    }
+   ],
+   "condiciones": []
+  },
+  "formas": [
+   {
+    "id": "forma-1",
+    "nombre": "Forma 1",
+    "padreId": null,
+    "modeloRevision": 1,
+    "escalas": [
+     {
+      "simboloId": "t",
+      "transformar": true,
+      "nuevoNombre": "t_ad",
+      "dimension": null,
+      "valor": {
+       "tipo": "libre"
+      }
+     },
+     {
+      "simboloId": "c",
+      "transformar": true,
+      "nuevoNombre": "c_ad",
+      "dimension": null,
+      "valor": {
+       "tipo": "libre"
+      }
+     },
+     {
+      "simboloId": "x",
+      "transformar": true,
+      "nuevoNombre": "x_ad",
+      "dimension": null,
+      "valor": {
+       "tipo": "libre"
+      }
+     }
+    ],
+    "objetivos": [],
+    "presentacion": "factorizada"
+   }
+  ],
+  "activaId": "forma-1"
+ }
+}

@@ -1,0 +1,168 @@
+{
+ "formato": "adimensionalizacion.resultado",
+ "version": 1,
+ "operacion": "transformar",
+ "estado": "rechazado",
+ "nucleo": "1.0.0",
+ "vinculo": {
+  "documentoId": "doc-prueba",
+  "modeloId": "modelo-prueba",
+  "modeloRevision": 2,
+  "formaId": "forma-1",
+  "eleccion": {
+   "escalas": [
+    {
+     "simboloId": "t",
+     "transformar": true,
+     "nuevoNombre": "t_ad",
+     "dimension": null,
+     "valor": {
+      "tipo": "libre"
+     }
+    },
+    {
+     "simboloId": "c",
+     "transformar": true,
+     "nuevoNombre": "c_ad",
+     "dimension": null,
+     "valor": {
+      "tipo": "libre"
+     }
+    },
+    {
+     "simboloId": "x",
+     "transformar": true,
+     "nuevoNombre": "x_ad",
+     "dimension": null,
+     "valor": {
+      "tipo": "libre"
+     }
+    }
+   ],
+   "objetivos": [
+    {
+     "id": "lineal",
+     "ecuacionId": "balance",
+     "termino": {
+      "tipo": "producto",
+      "argumentos": [
+       {
+        "tipo": "simbolo",
+        "id": "k"
+       },
+       {
+        "tipo": "simbolo",
+        "id": "c"
+       }
+      ]
+     },
+     "valor": 1,
+     "accion": "normalizar"
+    }
+   ],
+   "presentacion": "factorizada"
+  },
+  "firma": "sha256:c4b0f2265aa87c85661dca1afc7c8f29ad2005a4e7e769ce6305785e4b79a3ae"
+ },
+ "diagnosticos": [
+  {
+   "ruta": "forma.modeloRevision",
+   "codigo": "forma_desactualizada",
+   "severidad": "error",
+   "mensaje": "la forma se definio para otra revision del modelo; revisela antes de transformar"
+  }
+ ],
+ "dimensional": {
+  "estado": "compatible",
+  "simbolos": [
+   {
+    "id": "t",
+    "dimension": {
+     "T": {
+      "n": 1,
+      "d": 1
+     }
+    },
+    "origen": "declarada"
+   },
+   {
+    "id": "x",
+    "dimension": {
+     "L": {
+      "n": 1,
+      "d": 1
+     }
+    },
+    "origen": "declarada"
+   },
+   {
+    "id": "c",
+    "dimension": {
+     "L": {
+      "n": -3,
+      "d": 1
+     },
+     "N": {
+      "n": 1,
+      "d": 1
+     }
+    },
+    "origen": "declarada"
+   },
+   {
+    "id": "D",
+    "dimension": {
+     "L": {
+      "n": 2,
+      "d": 1
+     },
+     "T": {
+      "n": -1,
+      "d": 1
+     }
+    },
+    "origen": "declarada"
+   },
+   {
+    "id": "k",
+    "dimension": {
+     "T": {
+      "n": -1,
+      "d": 1
+     }
+    },
+    "origen": "declarada"
+   },
+   {
+    "id": "a",
+    "dimension": {
+     "L": {
+      "n": 3,
+      "d": 1
+     },
+     "N": {
+      "n": -1,
+      "d": 1
+     },
+     "T": {
+      "n": -1,
+      "d": 1
+     }
+    },
+    "origen": "declarada"
+   },
+   {
+    "id": "ell",
+    "dimension": {
+     "L": {
+      "n": 1,
+      "d": 1
+     }
+    },
+    "origen": "declarada"
+   }
+  ],
+  "funciones": [],
+  "faltantes": []
+ }
+}
