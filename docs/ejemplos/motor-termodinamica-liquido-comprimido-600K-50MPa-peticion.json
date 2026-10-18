@@ -1,0 +1,46 @@
+{
+  "revision": 1,
+  "solicitudId": "ejemplo-liquido-comprimido-600K-50MPa",
+  "propietarioId": "volumen:deposito",
+  "componentes": [
+    {
+      "id": 1,
+      "nombre": "Agua",
+      "simbolo": "A",
+      "identidadQuimica": {
+        "cas": "7732-18-5"
+      }
+    }
+  ],
+  "declaracion": {
+    "modelo": {
+      "id": "agua-iapws95",
+      "version": "1"
+    },
+    "especificacion": {
+      "tipo": "TP",
+      "T": {
+        "valor": 600,
+        "unidad": "K"
+      },
+      "P": {
+        "valor": 500,
+        "unidad": "bar"
+      },
+      "composicion": {
+        "base": "molar",
+        "fracciones": {
+          "1": 1
+        }
+      }
+    },
+    "politica": {
+      "cantidad": "monofasico",
+      "cambioInterno": "permitido",
+      "evaluacion": "equilibrio_estable",
+      "tiposPermitidos": [
+        "liquido"
+      ]
+    }
+  }
+}

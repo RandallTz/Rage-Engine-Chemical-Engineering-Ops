@@ -1,0 +1,139 @@
+{
+ "revision": 1,
+ "solicitudId": "l2",
+ "modelo": {
+  "id": "unifac-original-lle-public",
+  "version": "1"
+ },
+ "estado": "evaluado",
+ "evaluacion": {
+  "T": 298.15,
+  "P": 101325.0,
+  "composicionMolar": {
+   "1": 0.75,
+   "2": 0.25
+  },
+  "componentes": [
+   {
+    "id": 1,
+    "cas": "7732-18-5",
+    "masaMolarKgMol": 0.01801528,
+    "fuente": "thermo (IUPAC), agua"
+   },
+   {
+    "id": 2,
+    "cas": "71-36-3",
+    "masaMolarKgMol": 0.0741216,
+    "fuente": "thermo (IUPAC), 1-butanol"
+   }
+  ],
+  "fases": [
+   {
+    "id": "liquido-1",
+    "tipo": "liquido",
+    "regimen": "ordinario",
+    "fraccionMolar": 0.48309243803091556,
+    "fraccionMasica": 0.2873029040443395,
+    "fraccionVolumen": 0.2566531650658891,
+    "composicionMolar": {
+     "1": 0.9814542540827538,
+     "2": 0.01854574591724615
+    },
+    "propiedades": {
+     "u": -2317041.559261406,
+     "h": -2316938.176441263,
+     "v": 0.0010203091057751589,
+     "s": -6244.403013005133
+    }
+   },
+   {
+    "id": "liquido-2",
+    "tipo": "liquido",
+    "regimen": "ordinario",
+    "fraccionMolar": 0.5169075619690845,
+    "fraccionMasica": 0.7126970959556604,
+    "fraccionVolumen": 0.7433468349341109,
+    "composicionMolar": {
+     "1": 0.5336870494377639,
+     "2": 0.46631295056223604
+    },
+    "propiedades": {
+     "u": -1095910.4126903496,
+     "h": -1095789.706852803,
+     "v": 0.0011912739950301781,
+     "s": -2864.7879191027237
+    }
+   }
+  ],
+  "mezcla": {
+   "u": -1446744.9373192082,
+   "h": -1446629.2084348686,
+   "v": 0.001142155285857592,
+   "s": -3835.7611501329693
+  },
+  "referencia": {
+   "id": "gas-ideal-298.15K-1bar-h0-s0",
+   "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+  },
+  "estabilidad": {
+   "estado": "estable",
+   "alcance": [
+    "liquido",
+    "vapor"
+   ],
+   "metodo": "Vapor ideal + líquido UNIFAC con la tabla dedicada a ELL (Magnussen et al. 1981; 10-40 °C). Mínimo de G a (T, P, n): fase única de menor G, prueba de distancia al plano tangente frente a vapor (mínimo analítico) y líquido (malla en el simplex de hasta 3 componentes y refinamiento local), adición de la fase inestable, minimización de G y pulido de Newton de la igualdad de potenciales; certificación final con la prueba completa. Hasta 3 fases (LLV). Especies ausentes excluidas sin evaluar log(0). Parámetros: UNIFAC lle: thermo 0.6.1: 'UNIFAC LLE interaction parameters.tsv' (parametros publicados por DDBST, tal como los distribuye thermo); thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC) traducida a LLEUFSG por nombre de subgrupo con R y Q identicos."
+  },
+  "verificaciones": [
+   {
+    "id": "estabilidad",
+    "estado": "cumple",
+    "residuo": 3.0956712655141447e-15,
+    "tolerancia": 1e-09,
+    "motivo": "-min tm sobre fases de prueba vapor (minimo analitico) y liquido (malla en el simplex y refinamiento local). Fases candidatas: liquido, vapor; 15 pruebas de fase; min tm = -3.1e-15."
+   },
+   {
+    "id": "equilibrio",
+    "estado": "cumple",
+    "residuo": 2.2013161767525325e-15,
+    "tolerancia": 1e-10,
+    "motivo": "T y P comunes por construcción; max |mu_i^a - mu_i^b|/(R T) entre fases presentes"
+   },
+   {
+    "id": "reconstruccion_material",
+    "estado": "cumple",
+    "residuo": 0.0,
+    "tolerancia": 1e-12,
+    "motivo": "max |sum_a n^a x_i^a - n_i| / n"
+   },
+   {
+    "id": "identidad_h_u_Pv",
+    "estado": "cumple",
+    "residuo": 7.165742762866317e-16,
+    "tolerancia": 1e-12,
+    "motivo": "max por fase |h - u - Pv|/(RT), molar"
+   },
+   {
+    "id": "identidad_g_h_Ts",
+    "estado": "cumple",
+    "residuo": 1.4675441178350216e-15,
+    "tolerancia": 1e-09,
+    "motivo": "max por fase |g - (h - Ts)|/(RT) con g = sum x_i mu_i: potenciales y entalpía/entropía salen de la misma función de Gibbs"
+   },
+   {
+    "id": "bases_fase",
+    "estado": "cumple",
+    "residuo": 0.0,
+    "tolerancia": 1e-12,
+    "motivo": "max(|Σβ-1|, |Σχ-1|, |Σε-1|); β molar, χ másica (masa molar de cada fase), ε volumétrica"
+   },
+   {
+    "id": "dominio",
+    "estado": "cumple",
+    "residuo": null,
+    "tolerancia": null,
+    "motivo": "T en [283.15, 313.15] K (rangos de Psat y cp de las especies, T < 0.9 Tc) y P en [100, 500000] Pa (vapor ideal)."
+   }
+  ]
+ },
+ "diagnosticos": []
+}

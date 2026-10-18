@@ -1,0 +1,70 @@
+{
+ "revision": 1,
+ "solicitudId": "d4",
+ "propietarioId": "ejemplos",
+ "componentes": [
+  {
+   "id": 1,
+   "nombre": "agua",
+   "simbolo": "ag",
+   "identidadQuimica": {
+    "cas": "7732-18-5"
+   }
+  },
+  {
+   "id": 2,
+   "nombre": "etanol",
+   "simbolo": "et",
+   "identidadQuimica": {
+    "cas": "64-17-5"
+   }
+  },
+  {
+   "id": 3,
+   "nombre": "acetato",
+   "simbolo": "ac",
+   "identidadQuimica": {
+    "cas": "141-78-6"
+   }
+  },
+  {
+   "id": 4,
+   "nombre": "metanol",
+   "simbolo": "me",
+   "identidadQuimica": {
+    "cas": "67-56-1"
+   }
+  }
+ ],
+ "declaracion": {
+  "modelo": {
+   "id": "unifac-dortmund-public",
+   "version": "1"
+  },
+  "politica": {
+   "cantidad": "sin_restriccion",
+   "cambioInterno": "permitido",
+   "evaluacion": "equilibrio_estable"
+  },
+  "especificacion": {
+   "tipo": "TP",
+   "T": {
+    "valor": 346,
+    "unidad": "K"
+   },
+   "P": {
+    "valor": 101325,
+    "unidad": "Pa"
+   },
+   "composicion": {
+    "base": "molar",
+    "fracciones": {
+     "1": 0.25,
+     "2": 0.25,
+     "3": 0.25,
+     "4": 0.25
+    }
+   }
+  }
+ }
+}

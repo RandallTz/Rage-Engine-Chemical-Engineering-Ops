@@ -1,0 +1,3713 @@
+{
+ "revision": 2,
+ "validacion": {
+  "revision": 2,
+  "solicitudId": "n5-red",
+  "modeloId": "ens2-e92ce7fdf42f0cf08eaa206094e122af",
+  "recuento": {
+   "estado": "listo",
+   "analisis": "estructural",
+   "variables": 30,
+   "ecuacionesIndependientes": 26,
+   "datosDefinidos": 17,
+   "datosFaltantes": 0,
+   "inicialesFaltantes": 0,
+   "gradosLibertad": 0,
+   "motivo": "Emparejamiento máximo entre ecuaciones (balances por componente y energía de cada volumen, transferencias, cierres y equilibrio de cada paquete) e incógnitas (derivadas de los estados, algebraicas y datos pendientes). Las verificaciones globales no se cuentan como ecuaciones."
+  },
+  "variables": [
+   {
+    "id": "volumen.A.n.1",
+    "propietarioId": "volumen:A",
+    "magnitud": "cantidad",
+    "unidadSI": "mol",
+    "papel": "diferencial",
+    "componenteId": 1
+   },
+   {
+    "id": "volumen.A.n.2",
+    "propietarioId": "volumen:A",
+    "magnitud": "cantidad",
+    "unidadSI": "mol",
+    "papel": "diferencial",
+    "componenteId": 2
+   },
+   {
+    "id": "volumen.A.n.3",
+    "propietarioId": "volumen:A",
+    "magnitud": "cantidad",
+    "unidadSI": "mol",
+    "papel": "diferencial",
+    "componenteId": 3
+   },
+   {
+    "id": "volumen.A.n.4",
+    "propietarioId": "volumen:A",
+    "magnitud": "cantidad",
+    "unidadSI": "mol",
+    "papel": "diferencial",
+    "componenteId": 4
+   },
+   {
+    "id": "volumen.A.n.5",
+    "propietarioId": "volumen:A",
+    "magnitud": "cantidad",
+    "unidadSI": "mol",
+    "papel": "diferencial",
+    "componenteId": 5
+   },
+   {
+    "id": "volumen.A.H",
+    "propietarioId": "volumen:A",
+    "magnitud": "energia",
+    "unidadSI": "J",
+    "papel": "diferencial"
+   },
+   {
+    "id": "volumen.A.T",
+    "propietarioId": "volumen:A",
+    "magnitud": "temperatura",
+    "unidadSI": "K",
+    "papel": "algebraica"
+   },
+   {
+    "id": "volumen.A.U",
+    "propietarioId": "volumen:A",
+    "magnitud": "energia",
+    "unidadSI": "J",
+    "papel": "algebraica"
+   },
+   {
+    "id": "volumen.A.V",
+    "propietarioId": "volumen:A",
+    "magnitud": "volumen",
+    "unidadSI": "m3",
+    "papel": "algebraica"
+   },
+   {
+    "id": "volumen.A.W",
+    "propietarioId": "volumen:A",
+    "magnitud": "energia",
+    "unidadSI": "J",
+    "papel": "algebraica"
+   },
+   {
+    "id": "volumen.A.P",
+    "propietarioId": "volumen:A",
+    "magnitud": "presion",
+    "unidadSI": "Pa",
+    "papel": "dato",
+    "datoId": "volumen.A.P"
+   },
+   {
+    "id": "volumen.A.fases",
+    "propietarioId": "volumen:A",
+    "magnitud": "reparto_de_fases",
+    "unidadSI": "mol",
+    "papel": "algebraica"
+   },
+   {
+    "id": "volumen.B.n.1",
+    "propietarioId": "volumen:B",
+    "magnitud": "cantidad",
+    "unidadSI": "mol",
+    "papel": "diferencial",
+    "componenteId": 1
+   },
+   {
+    "id": "volumen.B.n.2",
+    "propietarioId": "volumen:B",
+    "magnitud": "cantidad",
+    "unidadSI": "mol",
+    "papel": "diferencial",
+    "componenteId": 2
+   },
+   {
+    "id": "volumen.B.n.3",
+    "propietarioId": "volumen:B",
+    "magnitud": "cantidad",
+    "unidadSI": "mol",
+    "papel": "diferencial",
+    "componenteId": 3
+   },
+   {
+    "id": "volumen.B.n.4",
+    "propietarioId": "volumen:B",
+    "magnitud": "cantidad",
+    "unidadSI": "mol",
+    "papel": "diferencial",
+    "componenteId": 4
+   },
+   {
+    "id": "volumen.B.n.5",
+    "propietarioId": "volumen:B",
+    "magnitud": "cantidad",
+    "unidadSI": "mol",
+    "papel": "diferencial",
+    "componenteId": 5
+   },
+   {
+    "id": "volumen.B.H",
+    "propietarioId": "volumen:B",
+    "magnitud": "energia",
+    "unidadSI": "J",
+    "papel": "diferencial"
+   },
+   {
+    "id": "volumen.B.T",
+    "propietarioId": "volumen:B",
+    "magnitud": "temperatura",
+    "unidadSI": "K",
+    "papel": "algebraica"
+   },
+   {
+    "id": "volumen.B.U",
+    "propietarioId": "volumen:B",
+    "magnitud": "energia",
+    "unidadSI": "J",
+    "papel": "algebraica"
+   },
+   {
+    "id": "volumen.B.V",
+    "propietarioId": "volumen:B",
+    "magnitud": "volumen",
+    "unidadSI": "m3",
+    "papel": "algebraica"
+   },
+   {
+    "id": "volumen.B.W",
+    "propietarioId": "volumen:B",
+    "magnitud": "energia",
+    "unidadSI": "J",
+    "papel": "algebraica"
+   },
+   {
+    "id": "volumen.B.P",
+    "propietarioId": "volumen:B",
+    "magnitud": "presion",
+    "unidadSI": "Pa",
+    "papel": "dato",
+    "datoId": "volumen.B.P"
+   },
+   {
+    "id": "volumen.B.fases",
+    "propietarioId": "volumen:B",
+    "magnitud": "reparto_de_fases",
+    "unidadSI": "mol",
+    "papel": "algebraica"
+   },
+   {
+    "id": "corriente.s.F",
+    "propietarioId": "corriente:s",
+    "magnitud": "caudal_molar",
+    "unidadSI": "mol/s",
+    "papel": "dato",
+    "datoId": "corriente.s.F"
+   },
+   {
+    "id": "corriente.s.ndot",
+    "propietarioId": "corriente:s",
+    "magnitud": "caudal_molar",
+    "unidadSI": "mol/s",
+    "papel": "algebraica"
+   },
+   {
+    "id": "corriente.s.h",
+    "propietarioId": "corriente:s",
+    "magnitud": "entalpia_molar",
+    "unidadSI": "J/mol",
+    "papel": "algebraica"
+   },
+   {
+    "id": "corriente.s.x",
+    "propietarioId": "corriente:s",
+    "magnitud": "composicion",
+    "unidadSI": "1",
+    "papel": "algebraica"
+   },
+   {
+    "id": "calor.c.Q",
+    "propietarioId": "calor:c",
+    "magnitud": "potencia",
+    "unidadSI": "W",
+    "papel": "algebraica"
+   },
+   {
+    "id": "calor.c.G",
+    "propietarioId": "calor:c",
+    "magnitud": "conductancia",
+    "unidadSI": "W/K",
+    "papel": "parametro",
+    "datoId": "calor.c.G"
+   }
+  ],
+  "ecuaciones": [
+   {
+    "id": "estado.A.energia",
+    "propietarioId": "volumen:A",
+    "familia": "estado",
+    "variableIds": [
+     "volumen.A.H",
+     "volumen.A.T"
+    ],
+    "incognitas": [
+     "volumen.A.T",
+     "volumen.A.V",
+     "volumen.A.fases"
+    ],
+    "dimension": "energia",
+    "latex": "H=\\sum_\\alpha n^\\alpha\\bar h^\\alpha(T,P,x^\\alpha)",
+    "unidadResiduo": "J",
+    "procedencia": {
+     "tipo": "constitutiva",
+     "relacion": "cierre PH del paquete",
+     "paquete": {
+      "id": "mezcla-ideal",
+      "version": "1"
+     }
+    }
+   },
+   {
+    "id": "estado.A.volumen",
+    "propietarioId": "volumen:A",
+    "familia": "estado",
+    "variableIds": [
+     "volumen.A.V"
+    ],
+    "incognitas": [
+     "volumen.A.T",
+     "volumen.A.V",
+     "volumen.A.fases"
+    ],
+    "dimension": "volumen",
+    "latex": "V=\\sum_\\alpha n^\\alpha\\bar v^\\alpha(T,P,x^\\alpha)",
+    "unidadResiduo": "m3",
+    "procedencia": {
+     "tipo": "constitutiva",
+     "relacion": "cierre PH del paquete",
+     "paquete": {
+      "id": "mezcla-ideal",
+      "version": "1"
+     }
+    }
+   },
+   {
+    "id": "equilibrio.A",
+    "propietarioId": "volumen:A",
+    "familia": "equilibrio",
+    "variableIds": [
+     "volumen.A.fases",
+     "volumen.A.T"
+    ],
+    "incognitas": [
+     "volumen.A.T",
+     "volumen.A.V",
+     "volumen.A.fases"
+    ],
+    "dimension": "potencial quimico",
+    "latex": "\\mu_i^\\alpha=\\mu_i^\\beta,\\ \\sum_\\alpha n_i^\\alpha=n_i,\\ \\mathrm{tm}\\ge0\\ (\\text{estabilidad})",
+    "unidadResiduo": "J/mol",
+    "procedencia": {
+     "tipo": "constitutiva",
+     "relacion": "reparto de equilibrio: estable en G a la (T, P) obtenida",
+     "paquete": {
+      "id": "mezcla-ideal",
+      "version": "1"
+     }
+    }
+   },
+   {
+    "id": "estado.A.U",
+    "propietarioId": "volumen:A",
+    "familia": "estado",
+    "variableIds": [
+     "volumen.A.U",
+     "volumen.A.H",
+     "volumen.A.P",
+     "volumen.A.V"
+    ],
+    "incognitas": [
+     "volumen.A.U"
+    ],
+    "dimension": "energia",
+    "latex": "U=H-PV",
+    "unidadResiduo": "J",
+    "procedencia": {
+     "tipo": "constitutiva",
+     "relacion": "transformación H = U + PV"
+    }
+   },
+   {
+    "id": "mecanica.A.trabajo",
+    "propietarioId": "volumen:A",
+    "familia": "mecanica",
+    "variableIds": [
+     "volumen.A.W"
+    ],
+    "incognitas": [
+     "volumen.A.W"
+    ],
+    "dimension": "potencia",
+    "latex": "\\dot W=P\\,\\frac{dV}{dt}\\ \\text{(derivada total de }V(H,P,n))",
+    "unidadResiduo": "W",
+    "procedencia": {
+     "tipo": "verificacion",
+     "relacion": "comprobación de la forma en U"
+    }
+   },
+   {
+    "id": "estado.B.energia",
+    "propietarioId": "volumen:B",
+    "familia": "estado",
+    "variableIds": [
+     "volumen.B.H",
+     "volumen.B.T"
+    ],
+    "incognitas": [
+     "volumen.B.T",
+     "volumen.B.V",
+     "volumen.B.fases"
+    ],
+    "dimension": "energia",
+    "latex": "H=\\sum_\\alpha n^\\alpha\\bar h^\\alpha(T,P,x^\\alpha)",
+    "unidadResiduo": "J",
+    "procedencia": {
+     "tipo": "constitutiva",
+     "relacion": "cierre PH del paquete",
+     "paquete": {
+      "id": "mezcla-ideal",
+      "version": "1"
+     }
+    }
+   },
+   {
+    "id": "estado.B.volumen",
+    "propietarioId": "volumen:B",
+    "familia": "estado",
+    "variableIds": [
+     "volumen.B.V"
+    ],
+    "incognitas": [
+     "volumen.B.T",
+     "volumen.B.V",
+     "volumen.B.fases"
+    ],
+    "dimension": "volumen",
+    "latex": "V=\\sum_\\alpha n^\\alpha\\bar v^\\alpha(T,P,x^\\alpha)",
+    "unidadResiduo": "m3",
+    "procedencia": {
+     "tipo": "constitutiva",
+     "relacion": "cierre PH del paquete",
+     "paquete": {
+      "id": "mezcla-ideal",
+      "version": "1"
+     }
+    }
+   },
+   {
+    "id": "equilibrio.B",
+    "propietarioId": "volumen:B",
+    "familia": "equilibrio",
+    "variableIds": [
+     "volumen.B.fases",
+     "volumen.B.T"
+    ],
+    "incognitas": [
+     "volumen.B.T",
+     "volumen.B.V",
+     "volumen.B.fases"
+    ],
+    "dimension": "potencial quimico",
+    "latex": "\\mu_i^\\alpha=\\mu_i^\\beta,\\ \\sum_\\alpha n_i^\\alpha=n_i,\\ \\mathrm{tm}\\ge0\\ (\\text{estabilidad})",
+    "unidadResiduo": "J/mol",
+    "procedencia": {
+     "tipo": "constitutiva",
+     "relacion": "reparto de equilibrio: estable en G a la (T, P) obtenida",
+     "paquete": {
+      "id": "mezcla-ideal",
+      "version": "1"
+     }
+    }
+   },
+   {
+    "id": "estado.B.U",
+    "propietarioId": "volumen:B",
+    "familia": "estado",
+    "variableIds": [
+     "volumen.B.U",
+     "volumen.B.H",
+     "volumen.B.P",
+     "volumen.B.V"
+    ],
+    "incognitas": [
+     "volumen.B.U"
+    ],
+    "dimension": "energia",
+    "latex": "U=H-PV",
+    "unidadResiduo": "J",
+    "procedencia": {
+     "tipo": "constitutiva",
+     "relacion": "transformación H = U + PV"
+    }
+   },
+   {
+    "id": "mecanica.B.trabajo",
+    "propietarioId": "volumen:B",
+    "familia": "mecanica",
+    "variableIds": [
+     "volumen.B.W"
+    ],
+    "incognitas": [
+     "volumen.B.W"
+    ],
+    "dimension": "potencia",
+    "latex": "\\dot W=P\\,\\frac{dV}{dt}\\ \\text{(derivada total de }V(H,P,n))",
+    "unidadResiduo": "W",
+    "procedencia": {
+     "tipo": "verificacion",
+     "relacion": "comprobación de la forma en U"
+    }
+   },
+   {
+    "id": "transferencia.s.composicion",
+    "propietarioId": "corriente:s",
+    "familia": "transferencia",
+    "variableIds": [
+     "corriente.s.x",
+     "volumen.A.fases",
+     "volumen.B.fases"
+    ],
+    "incognitas": [
+     "corriente.s.x"
+    ],
+    "dimension": "composicion",
+    "latex": "x_s=\\begin{cases}x\\ \\text{de la fase o mezcla extraída del volumen de origen}\\\\ x_{ext}\\ \\text{declarada (exterior)}\\end{cases}",
+    "unidadResiduo": "1",
+    "procedencia": {
+     "tipo": "constitutiva",
+     "relacion": "donante según el signo actual del caudal"
+    }
+   },
+   {
+    "id": "transferencia.s.entalpia",
+    "propietarioId": "corriente:s",
+    "familia": "transferencia",
+    "variableIds": [
+     "corriente.s.h",
+     "volumen.A.fases",
+     "volumen.B.fases"
+    ],
+    "incognitas": [
+     "corriente.s.h"
+    ],
+    "dimension": "entalpia molar",
+    "latex": "\\bar h_s=\\begin{cases}\\bar h\\ \\text{de lo extraído}\\\\ \\bar h_{eq}(T_{ext},P_{donante},x_{ext})\\end{cases}",
+    "unidadResiduo": "J/mol",
+    "procedencia": {
+     "tipo": "constitutiva",
+     "relacion": "donante según el signo actual del caudal"
+    }
+   },
+   {
+    "id": "transferencia.s.caudal",
+    "propietarioId": "corriente:s",
+    "familia": "transferencia",
+    "variableIds": [
+     "corriente.s.ndot",
+     "corriente.s.F"
+    ],
+    "incognitas": [
+     "corriente.s.ndot"
+    ],
+    "dimension": "caudal molar",
+    "latex": "\\dot n_s=|F_s|",
+    "unidadResiduo": "mol/s",
+    "procedencia": {
+     "tipo": "transferencia",
+     "relacion": "conversión de base con las masas molares del paquete"
+    }
+   },
+   {
+    "id": "transferencia.calor.c",
+    "propietarioId": "calor:c",
+    "familia": "transferencia",
+    "variableIds": [
+     "calor.c.Q",
+     "calor.c.G"
+    ],
+    "incognitas": [
+     "calor.c.Q"
+    ],
+    "dimension": "potencia",
+    "latex": "\\dot Q=G\\,(T_{\\mathrm{desde}}-T_{\\mathrm{hasta}})",
+    "unidadResiduo": "W",
+    "procedencia": {
+     "tipo": "transferencia",
+     "relacion": "ley de conductancia declarada",
+     "transferenciaId": "calor:c"
+    }
+   },
+   {
+    "id": "materia.A.1",
+    "propietarioId": "volumen:A",
+    "familia": "materia",
+    "variableIds": [
+     "volumen.A.n.1"
+    ],
+    "incognitas": [
+     "corriente.s.ndot",
+     "d/dt volumen.A.n.1"
+    ],
+    "dimension": "cantidad/tiempo",
+    "latex": "\\frac{dn_{1}}{dt}=-\\dot n_{s}x_{s,1}",
+    "unidadResiduo": "mol/s",
+    "procedencia": {
+     "tipo": "balance",
+     "relacion": "conservación por componente sin reacción"
+    }
+   },
+   {
+    "id": "materia.A.2",
+    "propietarioId": "volumen:A",
+    "familia": "materia",
+    "variableIds": [
+     "volumen.A.n.2"
+    ],
+    "incognitas": [
+     "corriente.s.ndot",
+     "d/dt volumen.A.n.2"
+    ],
+    "dimension": "cantidad/tiempo",
+    "latex": "\\frac{dn_{2}}{dt}=-\\dot n_{s}x_{s,2}",
+    "unidadResiduo": "mol/s",
+    "procedencia": {
+     "tipo": "balance",
+     "relacion": "conservación por componente sin reacción"
+    }
+   },
+   {
+    "id": "materia.A.3",
+    "propietarioId": "volumen:A",
+    "familia": "materia",
+    "variableIds": [
+     "volumen.A.n.3"
+    ],
+    "incognitas": [
+     "corriente.s.ndot",
+     "d/dt volumen.A.n.3"
+    ],
+    "dimension": "cantidad/tiempo",
+    "latex": "\\frac{dn_{3}}{dt}=-\\dot n_{s}x_{s,3}",
+    "unidadResiduo": "mol/s",
+    "procedencia": {
+     "tipo": "balance",
+     "relacion": "conservación por componente sin reacción"
+    }
+   },
+   {
+    "id": "materia.A.4",
+    "propietarioId": "volumen:A",
+    "familia": "materia",
+    "variableIds": [
+     "volumen.A.n.4"
+    ],
+    "incognitas": [
+     "corriente.s.ndot",
+     "d/dt volumen.A.n.4"
+    ],
+    "dimension": "cantidad/tiempo",
+    "latex": "\\frac{dn_{4}}{dt}=-\\dot n_{s}x_{s,4}",
+    "unidadResiduo": "mol/s",
+    "procedencia": {
+     "tipo": "balance",
+     "relacion": "conservación por componente sin reacción"
+    }
+   },
+   {
+    "id": "materia.A.5",
+    "propietarioId": "volumen:A",
+    "familia": "materia",
+    "variableIds": [
+     "volumen.A.n.5"
+    ],
+    "incognitas": [
+     "corriente.s.ndot",
+     "d/dt volumen.A.n.5"
+    ],
+    "dimension": "cantidad/tiempo",
+    "latex": "\\frac{dn_{5}}{dt}=-\\dot n_{s}x_{s,5}",
+    "unidadResiduo": "mol/s",
+    "procedencia": {
+     "tipo": "balance",
+     "relacion": "conservación por componente sin reacción"
+    }
+   },
+   {
+    "id": "energia.A",
+    "propietarioId": "volumen:A",
+    "familia": "energia",
+    "variableIds": [
+     "volumen.A.H"
+    ],
+    "incognitas": [
+     "calor.c.Q",
+     "corriente.s.h",
+     "corriente.s.ndot",
+     "d/dt volumen.A.H",
+     "volumen.A.V"
+    ],
+    "dimension": "potencia",
+    "latex": "\\frac{dH}{dt}=-\\dot n_{s}\\bar h_{s} -\\dot Q_{c}+V\\frac{dP}{dt}",
+    "unidadResiduo": "W",
+    "procedencia": {
+     "tipo": "balance",
+     "relacion": "primera ley con H = U + PV a presión prescrita"
+    }
+   },
+   {
+    "id": "materia.B.1",
+    "propietarioId": "volumen:B",
+    "familia": "materia",
+    "variableIds": [
+     "volumen.B.n.1"
+    ],
+    "incognitas": [
+     "corriente.s.ndot",
+     "d/dt volumen.B.n.1"
+    ],
+    "dimension": "cantidad/tiempo",
+    "latex": "\\frac{dn_{1}}{dt}=+\\dot n_{s}x_{s,1}",
+    "unidadResiduo": "mol/s",
+    "procedencia": {
+     "tipo": "balance",
+     "relacion": "conservación por componente sin reacción"
+    }
+   },
+   {
+    "id": "materia.B.2",
+    "propietarioId": "volumen:B",
+    "familia": "materia",
+    "variableIds": [
+     "volumen.B.n.2"
+    ],
+    "incognitas": [
+     "corriente.s.ndot",
+     "d/dt volumen.B.n.2"
+    ],
+    "dimension": "cantidad/tiempo",
+    "latex": "\\frac{dn_{2}}{dt}=+\\dot n_{s}x_{s,2}",
+    "unidadResiduo": "mol/s",
+    "procedencia": {
+     "tipo": "balance",
+     "relacion": "conservación por componente sin reacción"
+    }
+   },
+   {
+    "id": "materia.B.3",
+    "propietarioId": "volumen:B",
+    "familia": "materia",
+    "variableIds": [
+     "volumen.B.n.3"
+    ],
+    "incognitas": [
+     "corriente.s.ndot",
+     "d/dt volumen.B.n.3"
+    ],
+    "dimension": "cantidad/tiempo",
+    "latex": "\\frac{dn_{3}}{dt}=+\\dot n_{s}x_{s,3}",
+    "unidadResiduo": "mol/s",
+    "procedencia": {
+     "tipo": "balance",
+     "relacion": "conservación por componente sin reacción"
+    }
+   },
+   {
+    "id": "materia.B.4",
+    "propietarioId": "volumen:B",
+    "familia": "materia",
+    "variableIds": [
+     "volumen.B.n.4"
+    ],
+    "incognitas": [
+     "corriente.s.ndot",
+     "d/dt volumen.B.n.4"
+    ],
+    "dimension": "cantidad/tiempo",
+    "latex": "\\frac{dn_{4}}{dt}=+\\dot n_{s}x_{s,4}",
+    "unidadResiduo": "mol/s",
+    "procedencia": {
+     "tipo": "balance",
+     "relacion": "conservación por componente sin reacción"
+    }
+   },
+   {
+    "id": "materia.B.5",
+    "propietarioId": "volumen:B",
+    "familia": "materia",
+    "variableIds": [
+     "volumen.B.n.5"
+    ],
+    "incognitas": [
+     "corriente.s.ndot",
+     "d/dt volumen.B.n.5"
+    ],
+    "dimension": "cantidad/tiempo",
+    "latex": "\\frac{dn_{5}}{dt}=+\\dot n_{s}x_{s,5}",
+    "unidadResiduo": "mol/s",
+    "procedencia": {
+     "tipo": "balance",
+     "relacion": "conservación por componente sin reacción"
+    }
+   },
+   {
+    "id": "energia.B",
+    "propietarioId": "volumen:B",
+    "familia": "energia",
+    "variableIds": [
+     "volumen.B.H"
+    ],
+    "incognitas": [
+     "calor.c.Q",
+     "corriente.s.h",
+     "corriente.s.ndot",
+     "d/dt volumen.B.H",
+     "volumen.B.V"
+    ],
+    "dimension": "potencia",
+    "latex": "\\frac{dH}{dt}=+\\dot n_{s}\\bar h_{s} +\\dot Q_{c}+V\\frac{dP}{dt}",
+    "unidadResiduo": "W",
+    "procedencia": {
+     "tipo": "balance",
+     "relacion": "primera ley con H = U + PV a presión prescrita"
+    }
+   },
+   {
+    "id": "global.materia.1",
+    "propietarioId": "red",
+    "familia": "verificacion",
+    "variableIds": [
+     "volumen.A.n.1",
+     "volumen.B.n.1"
+    ],
+    "incognitas": [],
+    "dimension": "cantidad",
+    "latex": "\\sum_v n_{v,1}-n^0_{1}=\\int\\dot n^{ext}_{1}\\,dt",
+    "unidadResiduo": "mol",
+    "procedencia": {
+     "tipo": "verificacion",
+     "relacion": "cancelación de transferencias internas por identidad"
+    }
+   },
+   {
+    "id": "global.materia.2",
+    "propietarioId": "red",
+    "familia": "verificacion",
+    "variableIds": [
+     "volumen.A.n.2",
+     "volumen.B.n.2"
+    ],
+    "incognitas": [],
+    "dimension": "cantidad",
+    "latex": "\\sum_v n_{v,2}-n^0_{2}=\\int\\dot n^{ext}_{2}\\,dt",
+    "unidadResiduo": "mol",
+    "procedencia": {
+     "tipo": "verificacion",
+     "relacion": "cancelación de transferencias internas por identidad"
+    }
+   },
+   {
+    "id": "global.materia.3",
+    "propietarioId": "red",
+    "familia": "verificacion",
+    "variableIds": [
+     "volumen.A.n.3",
+     "volumen.B.n.3"
+    ],
+    "incognitas": [],
+    "dimension": "cantidad",
+    "latex": "\\sum_v n_{v,3}-n^0_{3}=\\int\\dot n^{ext}_{3}\\,dt",
+    "unidadResiduo": "mol",
+    "procedencia": {
+     "tipo": "verificacion",
+     "relacion": "cancelación de transferencias internas por identidad"
+    }
+   },
+   {
+    "id": "global.materia.4",
+    "propietarioId": "red",
+    "familia": "verificacion",
+    "variableIds": [
+     "volumen.A.n.4",
+     "volumen.B.n.4"
+    ],
+    "incognitas": [],
+    "dimension": "cantidad",
+    "latex": "\\sum_v n_{v,4}-n^0_{4}=\\int\\dot n^{ext}_{4}\\,dt",
+    "unidadResiduo": "mol",
+    "procedencia": {
+     "tipo": "verificacion",
+     "relacion": "cancelación de transferencias internas por identidad"
+    }
+   },
+   {
+    "id": "global.materia.5",
+    "propietarioId": "red",
+    "familia": "verificacion",
+    "variableIds": [
+     "volumen.A.n.5",
+     "volumen.B.n.5"
+    ],
+    "incognitas": [],
+    "dimension": "cantidad",
+    "latex": "\\sum_v n_{v,5}-n^0_{5}=\\int\\dot n^{ext}_{5}\\,dt",
+    "unidadResiduo": "mol",
+    "procedencia": {
+     "tipo": "verificacion",
+     "relacion": "cancelación de transferencias internas por identidad"
+    }
+   },
+   {
+    "id": "global.energia",
+    "propietarioId": "red",
+    "familia": "verificacion",
+    "variableIds": [
+     "volumen.A.U",
+     "volumen.B.U"
+    ],
+    "incognitas": [],
+    "dimension": "energia",
+    "latex": "\\sum_v U_v-U^0=\\int(\\dot E^{ext}+\\dot Q^{ext})\\,dt-\\sum_v W_v",
+    "unidadResiduo": "J",
+    "procedencia": {
+     "tipo": "verificacion",
+     "relacion": "conservación global de energía"
+    }
+   }
+  ],
+  "diagnosticos": [],
+  "inicializacion": {
+   "estado": "compatible",
+   "volumenes": {
+    "A": {
+     "estado": "compatible",
+     "variables": {
+      "volumen.A.n.1": 0.3,
+      "volumen.A.n.2": 0.3,
+      "volumen.A.n.3": 0.2,
+      "volumen.A.n.4": 0.2,
+      "volumen.A.n.5": 0.0,
+      "volumen.A.U": -32763.023651937106,
+      "volumen.A.T": 340.0,
+      "volumen.A.P": 101325.0,
+      "volumen.A.V": 7.875780488102053e-05,
+      "volumen.A.H": -32755.04351735754
+     },
+     "estadoTermodinamico": {
+      "volumenId": "A",
+      "evaluacion": {
+       "T": 340.0,
+       "P": 101325.0,
+       "composicionMolar": {
+        "1": 0.3,
+        "2": 0.3,
+        "3": 0.2,
+        "4": 0.2,
+        "5": 0.0
+       },
+       "componentes": [
+        {
+         "id": 1,
+         "cas": "71-43-2",
+         "masaMolarKgMol": 0.07811184,
+         "fuente": "thermo (IUPAC), benceno"
+        },
+        {
+         "id": 2,
+         "cas": "108-88-3",
+         "masaMolarKgMol": 0.09213842,
+         "fuente": "thermo (IUPAC), tolueno"
+        },
+        {
+         "id": 3,
+         "cas": "64-17-5",
+         "masaMolarKgMol": 0.04606844,
+         "fuente": "thermo (IUPAC), etanol"
+        },
+        {
+         "id": 4,
+         "cas": "67-56-1",
+         "masaMolarKgMol": 0.03204186,
+         "fuente": "thermo (IUPAC), metanol"
+        },
+        {
+         "id": 5,
+         "cas": "7732-18-5",
+         "masaMolarKgMol": 0.01801528,
+         "fuente": "thermo (IUPAC), agua"
+        }
+       ],
+       "fases": [
+        {
+         "id": "liquido-1",
+         "tipo": "liquido",
+         "regimen": "ordinario",
+         "fraccionMolar": 1.0,
+         "fraccionMasica": 1.0,
+         "fraccionVolumen": 1.0,
+         "composicionMolar": {
+          "1": 0.3,
+          "2": 0.3,
+          "3": 0.2,
+          "4": 0.2,
+          "5": 0.0
+         },
+         "propiedades": {
+          "u": -491220.8324731582,
+          "h": -491101.18514167046,
+          "v": 0.0011808273524573205,
+          "s": -1186.8828470419987
+         }
+        }
+       ],
+       "mezcla": {
+        "u": -491220.8324731582,
+        "h": -491101.18514167046,
+        "v": 0.0011808273524573205,
+        "s": -1186.8828470419987
+       },
+       "referencia": {
+        "id": "gas-ideal-298.15K-1bar-h0-s0",
+        "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+       },
+       "estabilidad": {
+        "estado": "estable",
+        "alcance": [
+         "liquido",
+         "vapor"
+        ],
+        "metodo": "Vapor ideal + solución líquida ideal (Raoult con Poynting). Mínimo de G a (T, P, n): fase única de menor G, prueba de distancia al plano tangente frente a vapor (mínimo analítico) y líquido (malla en el simplex de hasta 3 componentes y refinamiento local), adición de la fase inestable, minimización de G y pulido de Newton de la igualdad de potenciales; certificación final con la prueba completa. Hasta 3 fases (LLV). Especies ausentes excluidas sin evaluar log(0). Parámetros: sin parámetros binarios (g^E = 0)."
+       },
+       "verificaciones": [
+        {
+         "id": "estabilidad",
+         "estado": "cumple",
+         "residuo": 0.0,
+         "tolerancia": 1e-09,
+         "motivo": "-min tm sobre fases de prueba vapor (minimo analitico) y liquido (malla en el simplex y refinamiento local). Fases candidatas: liquido, vapor; 4 pruebas de fase; min tm = 1.33e-16."
+        },
+        {
+         "id": "reconstruccion_material",
+         "estado": "cumple",
+         "residuo": 0.0,
+         "tolerancia": 1e-12,
+         "motivo": "max |sum_a n^a x_i^a - n_i| / n"
+        },
+        {
+         "id": "identidad_h_u_Pv",
+         "estado": "cumple",
+         "residuo": 6.120347304191556e-16,
+         "tolerancia": 1e-12,
+         "motivo": "max por fase |h - u - Pv|/(RT), molar"
+        },
+        {
+         "id": "identidad_g_h_Ts",
+         "estado": "cumple",
+         "residuo": 6.434533510772231e-16,
+         "tolerancia": 1e-09,
+         "motivo": "max por fase |g - (h - Ts)|/(RT) con g = sum x_i mu_i: potenciales y entalpía/entropía salen de la misma función de Gibbs"
+        },
+        {
+         "id": "bases_fase",
+         "estado": "cumple",
+         "residuo": 0.0,
+         "tolerancia": 1e-12,
+         "motivo": "max(|Σβ-1|, |Σχ-1|, |Σε-1|); β molar, χ másica (masa molar de cada fase), ε volumétrica"
+        },
+        {
+         "id": "dominio",
+         "estado": "cumple",
+         "residuo": null,
+         "tolerancia": null,
+         "motivo": "T en [278.68, 461.376] K (rangos de Psat y cp de las especies, T < 0.9 Tc) y P en [100, 500000] Pa (vapor ideal)."
+        }
+       ]
+      },
+      "potenciales": {
+       "base": "molar",
+       "unidad": "J/mol",
+       "unidades": {
+        "mu": "J/mol",
+        "G": "J",
+        "A": "J",
+        "S": "J/K"
+       },
+       "referencia": {
+        "id": "gas-ideal-298.15K-1bar-h0-s0",
+        "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+       },
+       "estadoEstandar": "gas ideal puro de cada especie a T y P0 = 1e5 Pa, con h = s = 0 a 298.15 K",
+       "T": 340.0,
+       "P": 101325.0,
+       "G": -5840.069244099892,
+       "A": -5848.049378679461,
+       "S": -79.16168903899307,
+       "fases": [
+        {
+         "faseId": "liquido-1",
+         "mu": {
+          "1": -4810.588558437343,
+          "2": -7714.765185345197,
+          "3": -6028.035570079874,
+          "4": -4384.280034745772,
+          "5": null
+         }
+        }
+       ],
+       "residuoIgualdadMu": 0.0,
+       "candidatasExploradas": [
+        "liquido",
+        "vapor"
+       ],
+       "tmMinimo": 1.3322676295501878e-16,
+       "metodo": "mínimo de G con prueba de distancia al plano tangente frente a vapor y líquido"
+      }
+     }
+    },
+    "B": {
+     "estado": "compatible",
+     "variables": {
+      "volumen.B.n.1": 0.1,
+      "volumen.B.n.2": 0.4,
+      "volumen.B.n.3": 0.1,
+      "volumen.B.n.4": 0.1,
+      "volumen.B.n.5": 0.3,
+      "volumen.B.U": -37509.12995749907,
+      "volumen.B.T": 320.0,
+      "volumen.B.P": 101325.0,
+      "volumen.B.V": 6.704127910197907e-05,
+      "volumen.B.H": -37502.33699989406
+     },
+     "estadoTermodinamico": {
+      "volumenId": "B",
+      "evaluacion": {
+       "T": 320.0,
+       "P": 101325.0,
+       "composicionMolar": {
+        "1": 0.1,
+        "2": 0.4,
+        "3": 0.1,
+        "4": 0.1,
+        "5": 0.3
+       },
+       "componentes": [
+        {
+         "id": 1,
+         "cas": "71-43-2",
+         "masaMolarKgMol": 0.07811184,
+         "fuente": "thermo (IUPAC), benceno"
+        },
+        {
+         "id": 2,
+         "cas": "108-88-3",
+         "masaMolarKgMol": 0.09213842,
+         "fuente": "thermo (IUPAC), tolueno"
+        },
+        {
+         "id": 3,
+         "cas": "64-17-5",
+         "masaMolarKgMol": 0.04606844,
+         "fuente": "thermo (IUPAC), etanol"
+        },
+        {
+         "id": 4,
+         "cas": "67-56-1",
+         "masaMolarKgMol": 0.03204186,
+         "fuente": "thermo (IUPAC), metanol"
+        },
+        {
+         "id": 5,
+         "cas": "7732-18-5",
+         "masaMolarKgMol": 0.01801528,
+         "fuente": "thermo (IUPAC), agua"
+        }
+       ],
+       "fases": [
+        {
+         "id": "liquido-1",
+         "tipo": "liquido",
+         "regimen": "ordinario",
+         "fraccionMolar": 1.0,
+         "fraccionMasica": 1.0,
+         "fraccionVolumen": 1.0,
+         "composicionMolar": {
+          "1": 0.1,
+          "2": 0.4,
+          "3": 0.1,
+          "4": 0.1,
+          "5": 0.3
+         },
+         "propiedades": {
+          "u": -648025.679576315,
+          "h": -647908.3211898819,
+          "v": 0.001158237221149932,
+          "s": -1546.4398087999914
+         }
+        }
+       ],
+       "mezcla": {
+        "u": -648025.679576315,
+        "h": -647908.3211898819,
+        "v": 0.001158237221149932,
+        "s": -1546.4398087999914
+       },
+       "referencia": {
+        "id": "gas-ideal-298.15K-1bar-h0-s0",
+        "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+       },
+       "estabilidad": {
+        "estado": "estable",
+        "alcance": [
+         "liquido",
+         "vapor"
+        ],
+        "metodo": "Vapor ideal + solución líquida ideal (Raoult con Poynting). Mínimo de G a (T, P, n): fase única de menor G, prueba de distancia al plano tangente frente a vapor (mínimo analítico) y líquido (malla en el simplex de hasta 3 componentes y refinamiento local), adición de la fase inestable, minimización de G y pulido de Newton de la igualdad de potenciales; certificación final con la prueba completa. Hasta 3 fases (LLV). Especies ausentes excluidas sin evaluar log(0). Parámetros: sin parámetros binarios (g^E = 0)."
+       },
+       "verificaciones": [
+        {
+         "id": "estabilidad",
+         "estado": "cumple",
+         "residuo": 2.2204460492503123e-16,
+         "tolerancia": 1e-09,
+         "motivo": "-min tm sobre fases de prueba vapor (minimo analitico) y liquido (malla en el simplex y refinamiento local). Fases candidatas: liquido, vapor; 4 pruebas de fase; min tm = -2.22e-16."
+        },
+        {
+         "id": "reconstruccion_material",
+         "estado": "cumple",
+         "residuo": 0.0,
+         "tolerancia": 1e-12,
+         "motivo": "max |sum_a n^a x_i^a - n_i| / n"
+        },
+        {
+         "id": "identidad_h_u_Pv",
+         "estado": "cumple",
+         "residuo": 8.979834516833927e-17,
+         "tolerancia": 1e-12,
+         "motivo": "max por fase |h - u - Pv|/(RT), molar"
+        },
+        {
+         "id": "identidad_g_h_Ts",
+         "estado": "cumple",
+         "residuo": 0.0,
+         "tolerancia": 1e-09,
+         "motivo": "max por fase |g - (h - Ts)|/(RT) con g = sum x_i mu_i: potenciales y entalpía/entropía salen de la misma función de Gibbs"
+        },
+        {
+         "id": "bases_fase",
+         "estado": "cumple",
+         "residuo": 0.0,
+         "tolerancia": 1e-12,
+         "motivo": "max(|Σβ-1|, |Σχ-1|, |Σε-1|); β molar, χ másica (masa molar de cada fase), ε volumétrica"
+        },
+        {
+         "id": "dominio",
+         "estado": "cumple",
+         "residuo": null,
+         "tolerancia": null,
+         "motivo": "T en [278.68, 461.376] K (rangos de Psat y cp de las especies, T < 0.9 Tc) y P en [100, 500000] Pa (vapor ideal)."
+        }
+       ]
+      },
+      "potenciales": {
+       "base": "molar",
+       "unidad": "J/mol",
+       "unidades": {
+        "mu": "J/mol",
+        "G": "J",
+        "A": "J",
+        "S": "J/K"
+       },
+       "referencia": {
+        "id": "gas-ideal-298.15K-1bar-h0-s0",
+        "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+       },
+       "estadoEstandar": "gas ideal puro de cada especie a T y P0 = 1e5 Pa, con h = s = 0 a 298.15 K",
+       "T": 320.0,
+       "P": 101325.0,
+       "G": -8858.725568863869,
+       "A": -8865.518526468877,
+       "S": -89.51128572196936,
+       "fases": [
+        {
+         "faseId": "liquido-1",
+         "mu": {
+          "1": -9212.920394255772,
+          "2": -8451.421956764201,
+          "3": -9830.374825383224,
+          "4": -8090.491938180881,
+          "5": -9215.926901253997
+         }
+        }
+       ],
+       "residuoIgualdadMu": 0.0,
+       "candidatasExploradas": [
+        "liquido",
+        "vapor"
+       ],
+       "tmMinimo": -2.2204460492503123e-16,
+       "metodo": "mínimo de G con prueba de distancia al plano tangente frente a vapor y líquido"
+      }
+     }
+    }
+   }
+  }
+ },
+ "estado": "resuelto",
+ "resultados": {
+  "metodo": "RK45 Dormand-Prince 5(4) (scipy 1.16.2), rtol 1e-08, atol cantidad 1e-10 mol, atol energía 1e-06 J; 8 pasos, 0 reintentos. Estados por volumen: n_i y U (rígido) o H (presión prescrita). Etapas con flashes con semilla; muestras certificadas con prueba de estabilidad completa. Eventos de fase vigilados en 3 puntos interiores y el extremo de cada paso aceptado (vigilancia puntual, no continua).",
+  "tiempos": [
+   0.0,
+   50.0,
+   100.0,
+   150.0,
+   200.0
+  ],
+  "series": [
+   {
+    "variableId": "volumen.A.n.1",
+    "unidadSI": "mol",
+    "valores": [
+     0.3,
+     0.30499999999999994,
+     0.30999999999999994,
+     0.31499999999999995,
+     0.31999999999999995
+    ]
+   },
+   {
+    "variableId": "volumen.A.n.2",
+    "unidadSI": "mol",
+    "valores": [
+     0.3,
+     0.32,
+     0.34,
+     0.36000000000000004,
+     0.38000000000000006
+    ]
+   },
+   {
+    "variableId": "volumen.A.n.3",
+    "unidadSI": "mol",
+    "valores": [
+     0.2,
+     0.20500000000000002,
+     0.21,
+     0.21500000000000002,
+     0.22000000000000003
+    ]
+   },
+   {
+    "variableId": "volumen.A.n.4",
+    "unidadSI": "mol",
+    "valores": [
+     0.2,
+     0.20500000000000002,
+     0.21,
+     0.21500000000000002,
+     0.22000000000000003
+    ]
+   },
+   {
+    "variableId": "volumen.A.n.5",
+    "unidadSI": "mol",
+    "valores": [
+     0.0,
+     0.014999999999999998,
+     0.03,
+     0.045,
+     0.060000000000000005
+    ]
+   },
+   {
+    "variableId": "volumen.A.U",
+    "unidadSI": "J",
+    "valores": [
+     -32763.023651937106,
+     -35028.43613020215,
+     -37129.15291562377,
+     -39124.905742294824,
+     -41053.69923017995
+    ]
+   },
+   {
+    "variableId": "volumen.A.H",
+    "unidadSI": "J",
+    "valores": [
+     -32755.04351735754,
+     -35020.11634774233,
+     -37120.49348528369,
+     -39115.90666407451,
+     -41044.360504079385
+    ]
+   },
+   {
+    "variableId": "volumen.A.W",
+    "unidadSI": "J",
+    "valores": [
+     0.0,
+     0.3396478802730958,
+     0.6792957605910278,
+     1.0189436410135102,
+     1.3585915211629158
+    ]
+   },
+   {
+    "variableId": "volumen.A.T",
+    "unidadSI": "K",
+    "valores": [
+     340.0,
+     336.1503839665048,
+     333.8207161616686,
+     332.41342634265027,
+     331.56641950323575
+    ]
+   },
+   {
+    "variableId": "volumen.A.P",
+    "unidadSI": "Pa",
+    "valores": [
+     101325.0,
+     101325.0,
+     101325.0,
+     101325.0,
+     101325.0
+    ]
+   },
+   {
+    "variableId": "volumen.A.V",
+    "unidadSI": "m3",
+    "valores": [
+     7.875780488102053e-05,
+     8.210986883611947e-05,
+     8.546193279121843e-05,
+     8.881399674631739e-05,
+     9.216606070141636e-05
+    ]
+   },
+   {
+    "variableId": "volumen.A.masa",
+    "unidadSI": "kg",
+    "valores": [
+     0.06669713799999999,
+     0.06959124629999999,
+     0.0724853546,
+     0.0753794629,
+     0.0782735712
+    ]
+   },
+   {
+    "variableId": "volumen.A.S",
+    "unidadSI": "J/K",
+    "valores": [
+     -79.16168903899307,
+     -84.33586091751928,
+     -89.19778986850066,
+     -93.80853777530325,
+     -98.25569448789923
+    ]
+   },
+   {
+    "variableId": "volumen.B.n.1",
+    "unidadSI": "mol",
+    "valores": [
+     0.1,
+     0.095,
+     0.09,
+     0.08499999999999999,
+     0.07999999999999999
+    ]
+   },
+   {
+    "variableId": "volumen.B.n.2",
+    "unidadSI": "mol",
+    "valores": [
+     0.4,
+     0.38,
+     0.36,
+     0.33999999999999997,
+     0.31999999999999995
+    ]
+   },
+   {
+    "variableId": "volumen.B.n.3",
+    "unidadSI": "mol",
+    "valores": [
+     0.1,
+     0.095,
+     0.09,
+     0.08499999999999999,
+     0.07999999999999999
+    ]
+   },
+   {
+    "variableId": "volumen.B.n.4",
+    "unidadSI": "mol",
+    "valores": [
+     0.1,
+     0.095,
+     0.09,
+     0.08499999999999999,
+     0.07999999999999999
+    ]
+   },
+   {
+    "variableId": "volumen.B.n.5",
+    "unidadSI": "mol",
+    "valores": [
+     0.3,
+     0.28500000000000003,
+     0.27,
+     0.25500000000000006,
+     0.24000000000000007
+    ]
+   },
+   {
+    "variableId": "volumen.B.U",
+    "unidadSI": "J",
+    "valores": [
+     -37509.12995749907,
+     -35243.71747923402,
+     -33143.000693812435,
+     -31147.247867141352,
+     -29218.45437925623
+    ]
+   },
+   {
+    "variableId": "volumen.B.H",
+    "unidadSI": "J",
+    "valores": [
+     -37502.33699989406,
+     -35237.26416950927,
+     -33136.88703196791,
+     -31141.4738531771,
+     -29213.020013172223
+    ]
+   },
+   {
+    "variableId": "volumen.B.W",
+    "unidadSI": "J",
+    "valores": [
+     0.0,
+     -0.3396478802157306,
+     -0.6792957604650278,
+     -1.0189436407094838,
+     -1.3585915209539632
+    ]
+   },
+   {
+    "variableId": "volumen.B.T",
+    "unidadSI": "K",
+    "valores": [
+     320.0,
+     323.5173113748509,
+     325.8549603766309,
+     327.4095137665343,
+     328.44195030373487
+    ]
+   },
+   {
+    "variableId": "volumen.B.P",
+    "unidadSI": "Pa",
+    "valores": [
+     101325.0,
+     101325.0,
+     101325.0,
+     101325.0,
+     101325.0
+    ]
+   },
+   {
+    "variableId": "volumen.B.V",
+    "unidadSI": "m3",
+    "valores": [
+     6.704127910197907e-05,
+     6.368921514688012e-05,
+     6.033715119178116e-05,
+     5.6985087236682204e-05,
+     5.3633023281583245e-05
+    ]
+   },
+   {
+    "variableId": "volumen.B.masa",
+    "unidadSI": "kg",
+    "valores": [
+     0.057882166,
+     0.054988057699999995,
+     0.05209394939999999,
+     0.04919984109999999,
+     0.04630573279999999
+    ]
+   },
+   {
+    "variableId": "volumen.B.S",
+    "unidadSI": "J/K",
+    "valores": [
+     -89.51128572196936,
+     -83.82375894637315,
+     -78.65498887177085,
+     -73.81233394900713,
+     -69.17584541043914
+    ]
+   },
+   {
+    "variableId": "corriente.s.ndot",
+    "unidadSI": "mol/s",
+    "valores": [
+     -0.001,
+     -0.001,
+     -0.001,
+     -0.001,
+     -0.001
+    ]
+   },
+   {
+    "variableId": "calor.c.Q",
+    "unidadSI": "W",
+    "valores": [
+     10.0,
+     6.31653629582695,
+     3.982877892518843,
+     2.5019562880579826,
+     1.5622345997504397
+    ]
+   },
+   {
+    "variableId": "red.Sgen",
+    "unidadSI": "J/K",
+    "valores": [
+     0.0,
+     0.5133548970700019,
+     0.8201960206909291,
+     1.0521030366520563,
+     1.241434862624061
+    ]
+   }
+  ],
+  "estados": {
+   "A": [
+    {
+     "volumenId": "A",
+     "evaluacion": {
+      "T": 340.0,
+      "P": 101325.0,
+      "composicionMolar": {
+       "1": 0.3,
+       "2": 0.3,
+       "3": 0.2,
+       "4": 0.2,
+       "5": 0.0
+      },
+      "componentes": [
+       {
+        "id": 1,
+        "cas": "71-43-2",
+        "masaMolarKgMol": 0.07811184,
+        "fuente": "thermo (IUPAC), benceno"
+       },
+       {
+        "id": 2,
+        "cas": "108-88-3",
+        "masaMolarKgMol": 0.09213842,
+        "fuente": "thermo (IUPAC), tolueno"
+       },
+       {
+        "id": 3,
+        "cas": "64-17-5",
+        "masaMolarKgMol": 0.04606844,
+        "fuente": "thermo (IUPAC), etanol"
+       },
+       {
+        "id": 4,
+        "cas": "67-56-1",
+        "masaMolarKgMol": 0.03204186,
+        "fuente": "thermo (IUPAC), metanol"
+       },
+       {
+        "id": 5,
+        "cas": "7732-18-5",
+        "masaMolarKgMol": 0.01801528,
+        "fuente": "thermo (IUPAC), agua"
+       }
+      ],
+      "fases": [
+       {
+        "id": "liquido-1",
+        "tipo": "liquido",
+        "regimen": "ordinario",
+        "fraccionMolar": 1.0,
+        "fraccionMasica": 1.0,
+        "fraccionVolumen": 1.0,
+        "composicionMolar": {
+         "1": 0.3,
+         "2": 0.3,
+         "3": 0.2,
+         "4": 0.2,
+         "5": 0.0
+        },
+        "propiedades": {
+         "u": -491220.8324731582,
+         "h": -491101.18514167046,
+         "v": 0.0011808273524573205,
+         "s": -1186.8828470419987
+        }
+       }
+      ],
+      "mezcla": {
+       "u": -491220.8324731582,
+       "h": -491101.18514167046,
+       "v": 0.0011808273524573205,
+       "s": -1186.8828470419987
+      },
+      "referencia": {
+       "id": "gas-ideal-298.15K-1bar-h0-s0",
+       "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+      },
+      "estabilidad": {
+       "estado": "estable",
+       "alcance": [
+        "liquido",
+        "vapor"
+       ],
+       "metodo": "Vapor ideal + solución líquida ideal (Raoult con Poynting). Mínimo de G a (T, P, n): fase única de menor G, prueba de distancia al plano tangente frente a vapor (mínimo analítico) y líquido (malla en el simplex de hasta 3 componentes y refinamiento local), adición de la fase inestable, minimización de G y pulido de Newton de la igualdad de potenciales; certificación final con la prueba completa. Hasta 3 fases (LLV). Especies ausentes excluidas sin evaluar log(0). Parámetros: sin parámetros binarios (g^E = 0)."
+      },
+      "verificaciones": [
+       {
+        "id": "estabilidad",
+        "estado": "cumple",
+        "residuo": 0.0,
+        "tolerancia": 1e-09,
+        "motivo": "-min tm sobre fases de prueba vapor (minimo analitico) y liquido (malla en el simplex y refinamiento local). Fases candidatas: liquido, vapor; 2 pruebas de fase; min tm = 1.33e-16."
+       },
+       {
+        "id": "reconstruccion_material",
+        "estado": "cumple",
+        "residuo": 0.0,
+        "tolerancia": 1e-12,
+        "motivo": "max |sum_a n^a x_i^a - n_i| / n"
+       },
+       {
+        "id": "identidad_h_u_Pv",
+        "estado": "cumple",
+        "residuo": 6.120347304191556e-16,
+        "tolerancia": 1e-12,
+        "motivo": "max por fase |h - u - Pv|/(RT), molar"
+       },
+       {
+        "id": "identidad_g_h_Ts",
+        "estado": "cumple",
+        "residuo": 6.434533510772231e-16,
+        "tolerancia": 1e-09,
+        "motivo": "max por fase |g - (h - Ts)|/(RT) con g = sum x_i mu_i: potenciales y entalpía/entropía salen de la misma función de Gibbs"
+       },
+       {
+        "id": "bases_fase",
+        "estado": "cumple",
+        "residuo": 0.0,
+        "tolerancia": 1e-12,
+        "motivo": "max(|Σβ-1|, |Σχ-1|, |Σε-1|); β molar, χ másica (masa molar de cada fase), ε volumétrica"
+       },
+       {
+        "id": "dominio",
+        "estado": "cumple",
+        "residuo": null,
+        "tolerancia": null,
+        "motivo": "T en [278.68, 461.376] K (rangos de Psat y cp de las especies, T < 0.9 Tc) y P en [100, 500000] Pa (vapor ideal)."
+       }
+      ]
+     },
+     "potenciales": {
+      "base": "molar",
+      "unidad": "J/mol",
+      "unidades": {
+       "mu": "J/mol",
+       "G": "J",
+       "A": "J",
+       "S": "J/K"
+      },
+      "referencia": {
+       "id": "gas-ideal-298.15K-1bar-h0-s0",
+       "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+      },
+      "estadoEstandar": "gas ideal puro de cada especie a T y P0 = 1e5 Pa, con h = s = 0 a 298.15 K",
+      "T": 340.0,
+      "P": 101325.0,
+      "G": -5840.069244099892,
+      "A": -5848.049378679461,
+      "S": -79.16168903899307,
+      "fases": [
+       {
+        "faseId": "liquido-1",
+        "mu": {
+         "1": -4810.588558437343,
+         "2": -7714.765185345197,
+         "3": -6028.035570079874,
+         "4": -4384.280034745772,
+         "5": null
+        }
+       }
+      ],
+      "residuoIgualdadMu": 0.0,
+      "candidatasExploradas": [
+       "liquido",
+       "vapor"
+      ],
+      "tmMinimo": 1.3322676295501878e-16,
+      "metodo": "mínimo de G con prueba de distancia al plano tangente frente a vapor y líquido"
+     }
+    },
+    {
+     "volumenId": "A",
+     "evaluacion": {
+      "T": 336.1503839665048,
+      "P": 101325.0,
+      "composicionMolar": {
+       "1": 0.2904761904761904,
+       "2": 0.30476190476190473,
+       "3": 0.19523809523809524,
+       "4": 0.19523809523809524,
+       "5": 0.014285714285714284
+      },
+      "componentes": [
+       {
+        "id": 1,
+        "cas": "71-43-2",
+        "masaMolarKgMol": 0.07811184,
+        "fuente": "thermo (IUPAC), benceno"
+       },
+       {
+        "id": 2,
+        "cas": "108-88-3",
+        "masaMolarKgMol": 0.09213842,
+        "fuente": "thermo (IUPAC), tolueno"
+       },
+       {
+        "id": 3,
+        "cas": "64-17-5",
+        "masaMolarKgMol": 0.04606844,
+        "fuente": "thermo (IUPAC), etanol"
+       },
+       {
+        "id": 4,
+        "cas": "67-56-1",
+        "masaMolarKgMol": 0.03204186,
+        "fuente": "thermo (IUPAC), metanol"
+       },
+       {
+        "id": 5,
+        "cas": "7732-18-5",
+        "masaMolarKgMol": 0.01801528,
+        "fuente": "thermo (IUPAC), agua"
+       }
+      ],
+      "fases": [
+       {
+        "id": "liquido-1",
+        "tipo": "liquido",
+        "regimen": "ordinario",
+        "fraccionMolar": 1.0,
+        "fraccionMasica": 1.0,
+        "fraccionVolumen": 1.0,
+        "composicionMolar": {
+         "1": 0.2904761904761904,
+         "2": 0.30476190476190473,
+         "3": 0.19523809523809524,
+         "4": 0.19523809523809524,
+         "5": 0.014285714285714284
+        },
+        "propiedades": {
+         "u": -503345.43484389584,
+         "h": -503225.8827033299,
+         "v": 0.0011798878911027562,
+         "s": -1211.874558963306
+        }
+       }
+      ],
+      "mezcla": {
+       "u": -503345.43484389567,
+       "h": -503225.8827033297,
+       "v": 0.001179887891102756,
+       "s": -1211.8745589633056
+      },
+      "referencia": {
+       "id": "gas-ideal-298.15K-1bar-h0-s0",
+       "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+      },
+      "estabilidad": {
+       "estado": "estable",
+       "alcance": [
+        "liquido",
+        "vapor"
+       ],
+       "metodo": "Vapor ideal + solución líquida ideal (Raoult con Poynting). Mínimo de G a (T, P, n): fase única de menor G, prueba de distancia al plano tangente frente a vapor (mínimo analítico) y líquido (malla en el simplex de hasta 3 componentes y refinamiento local), adición de la fase inestable, minimización de G y pulido de Newton de la igualdad de potenciales; certificación final con la prueba completa. Hasta 3 fases (LLV). Especies ausentes excluidas sin evaluar log(0). Parámetros: sin parámetros binarios (g^E = 0)."
+      },
+      "verificaciones": [
+       {
+        "id": "estabilidad",
+        "estado": "cumple",
+        "residuo": 0.0,
+        "tolerancia": 1e-09,
+        "motivo": "-min tm sobre fases de prueba vapor (minimo analitico) y liquido (malla en el simplex y refinamiento local). Fases candidatas: liquido, vapor; 2 pruebas de fase; min tm = 2.87e-16."
+       },
+       {
+        "id": "reconstruccion_material",
+        "estado": "cumple",
+        "residuo": 0.0,
+        "tolerancia": 1e-12,
+        "motivo": "max |sum_a n^a x_i^a - n_i| / n"
+       },
+       {
+        "id": "identidad_h_u_Pv",
+        "estado": "cumple",
+        "residuo": 3.495627161707518e-17,
+        "tolerancia": 1e-12,
+        "motivo": "max por fase |h - u - Pv|/(RT), molar"
+       },
+       {
+        "id": "identidad_g_h_Ts",
+        "estado": "cumple",
+        "residuo": 2.6032888826098173e-15,
+        "tolerancia": 1e-09,
+        "motivo": "max por fase |g - (h - Ts)|/(RT) con g = sum x_i mu_i: potenciales y entalpía/entropía salen de la misma función de Gibbs"
+       },
+       {
+        "id": "bases_fase",
+        "estado": "cumple",
+        "residuo": 0.0,
+        "tolerancia": 1e-12,
+        "motivo": "max(|Σβ-1|, |Σχ-1|, |Σε-1|); β molar, χ másica (masa molar de cada fase), ε volumétrica"
+       },
+       {
+        "id": "dominio",
+        "estado": "cumple",
+        "residuo": null,
+        "tolerancia": null,
+        "motivo": "T en [278.68, 461.376] K (rangos de Psat y cp de las especies, T < 0.9 Tc) y P en [100, 500000] Pa (vapor ideal)."
+       }
+      ]
+     },
+     "potenciales": {
+      "base": "molar",
+      "unidad": "J/mol",
+      "unidades": {
+       "mu": "J/mol",
+       "G": "J",
+       "A": "J",
+       "S": "J/K"
+      },
+      "referencia": {
+       "id": "gas-ideal-298.15K-1bar-h0-s0",
+       "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+      },
+      "estadoEstandar": "gas ideal puro de cada especie a T y P0 = 1e5 Pa, con h = s = 0 a 298.15 K",
+      "T": 336.1503839665048,
+      "P": 101325.0,
+      "G": -6670.584318172485,
+      "A": -6678.904100632305,
+      "S": -84.33586091751928,
+      "fases": [
+       {
+        "faseId": "liquido-1",
+        "mu": {
+         "1": -5173.181702405967,
+         "2": -7944.931687591776,
+         "3": -6461.537172606809,
+         "4": -4803.047978081748,
+         "5": -16076.386867876185
+        }
+       }
+      ],
+      "residuoIgualdadMu": 0.0,
+      "candidatasExploradas": [
+       "liquido",
+       "vapor"
+      ],
+      "tmMinimo": 2.865432758794452e-16,
+      "metodo": "mínimo de G con prueba de distancia al plano tangente frente a vapor y líquido"
+     }
+    },
+    {
+     "volumenId": "A",
+     "evaluacion": {
+      "T": 333.8207161616686,
+      "P": 101325.0,
+      "composicionMolar": {
+       "1": 0.2818181818181818,
+       "2": 0.30909090909090914,
+       "3": 0.19090909090909092,
+       "4": 0.19090909090909092,
+       "5": 0.027272727272727275
+      },
+      "componentes": [
+       {
+        "id": 1,
+        "cas": "71-43-2",
+        "masaMolarKgMol": 0.07811184,
+        "fuente": "thermo (IUPAC), benceno"
+       },
+       {
+        "id": 2,
+        "cas": "108-88-3",
+        "masaMolarKgMol": 0.09213842,
+        "fuente": "thermo (IUPAC), tolueno"
+       },
+       {
+        "id": 3,
+        "cas": "64-17-5",
+        "masaMolarKgMol": 0.04606844,
+        "fuente": "thermo (IUPAC), etanol"
+       },
+       {
+        "id": 4,
+        "cas": "67-56-1",
+        "masaMolarKgMol": 0.03204186,
+        "fuente": "thermo (IUPAC), metanol"
+       },
+       {
+        "id": 5,
+        "cas": "7732-18-5",
+        "masaMolarKgMol": 0.01801528,
+        "fuente": "thermo (IUPAC), agua"
+       }
+      ],
+      "fases": [
+       {
+        "id": "liquido-1",
+        "tipo": "liquido",
+        "regimen": "ordinario",
+        "fraccionMolar": 1.0,
+        "fraccionMasica": 1.0,
+        "fraccionVolumen": 1.0,
+        "composicionMolar": {
+         "1": 0.2818181818181818,
+         "2": 0.30909090909090914,
+         "3": 0.19090909090909092,
+         "4": 0.19090909090909092,
+         "5": 0.027272727272727275
+        },
+        "propiedades": {
+         "u": -512229.72034165595,
+         "h": -512110.25579067384,
+         "v": 0.001179023449120554,
+         "s": -1230.5629235136646
+        }
+       }
+      ],
+      "mezcla": {
+       "u": -512229.720341656,
+       "h": -512110.25579067384,
+       "v": 0.0011790234491205543,
+       "s": -1230.5629235136648
+      },
+      "referencia": {
+       "id": "gas-ideal-298.15K-1bar-h0-s0",
+       "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+      },
+      "estabilidad": {
+       "estado": "estable",
+       "alcance": [
+        "liquido",
+        "vapor"
+       ],
+       "metodo": "Vapor ideal + solución líquida ideal (Raoult con Poynting). Mínimo de G a (T, P, n): fase única de menor G, prueba de distancia al plano tangente frente a vapor (mínimo analítico) y líquido (malla en el simplex de hasta 3 componentes y refinamiento local), adición de la fase inestable, minimización de G y pulido de Newton de la igualdad de potenciales; certificación final con la prueba completa. Hasta 3 fases (LLV). Especies ausentes excluidas sin evaluar log(0). Parámetros: sin parámetros binarios (g^E = 0)."
+      },
+      "verificaciones": [
+       {
+        "id": "estabilidad",
+        "estado": "cumple",
+        "residuo": 1.8167285857502558e-16,
+        "tolerancia": 1e-09,
+        "motivo": "-min tm sobre fases de prueba vapor (minimo analitico) y liquido (malla en el simplex y refinamiento local). Fases candidatas: liquido, vapor; 2 pruebas de fase; min tm = -1.82e-16."
+       },
+       {
+        "id": "reconstruccion_material",
+        "estado": "cumple",
+        "residuo": 0.0,
+        "tolerancia": 1e-12,
+        "motivo": "max |sum_a n^a x_i^a - n_i| / n"
+       },
+       {
+        "id": "identidad_h_u_Pv",
+        "estado": "cumple",
+        "residuo": 5.587235622136286e-16,
+        "tolerancia": 1e-12,
+        "motivo": "max por fase |h - u - Pv|/(RT), molar"
+       },
+       {
+        "id": "identidad_g_h_Ts",
+        "estado": "cumple",
+        "residuo": 2.6214567134330158e-15,
+        "tolerancia": 1e-09,
+        "motivo": "max por fase |g - (h - Ts)|/(RT) con g = sum x_i mu_i: potenciales y entalpía/entropía salen de la misma función de Gibbs"
+       },
+       {
+        "id": "bases_fase",
+        "estado": "cumple",
+        "residuo": 0.0,
+        "tolerancia": 1e-12,
+        "motivo": "max(|Σβ-1|, |Σχ-1|, |Σε-1|); β molar, χ másica (masa molar de cada fase), ε volumétrica"
+       },
+       {
+        "id": "dominio",
+        "estado": "cumple",
+        "residuo": null,
+        "tolerancia": null,
+        "motivo": "T en [278.68, 461.376] K (rangos de Psat y cp de las especies, T < 0.9 Tc) y P en [100, 500000] Pa (vapor ideal)."
+       }
+      ]
+     },
+     "potenciales": {
+      "base": "molar",
+      "unidad": "J/mol",
+      "unidades": {
+       "mu": "J/mol",
+       "G": "J",
+       "A": "J",
+       "S": "J/K"
+      },
+      "referencia": {
+       "id": "gas-ideal-298.15K-1bar-h0-s0",
+       "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+      },
+      "estadoEstandar": "gas ideal puro de cada especie a T y P0 = 1e5 Pa, con h = s = 0 a 298.15 K",
+      "T": 333.8207161616686,
+      "P": 101325.0,
+      "G": -7344.423391342768,
+      "A": -7353.082821682838,
+      "S": -89.19778986850066,
+      "fases": [
+       {
+        "faseId": "liquido-1",
+        "mu": {
+         "1": -5424.225233092631,
+         "2": -8075.436294496292,
+         "3": -6747.370198891389,
+         "4": -5079.078158146086,
+         "5": -14457.035799248102
+        }
+       }
+      ],
+      "residuoIgualdadMu": 0.0,
+      "candidatasExploradas": [
+       "liquido",
+       "vapor"
+      ],
+      "tmMinimo": -1.8167285857502558e-16,
+      "metodo": "mínimo de G con prueba de distancia al plano tangente frente a vapor y líquido"
+     }
+    },
+    {
+     "volumenId": "A",
+     "evaluacion": {
+      "T": 332.41342634265027,
+      "P": 101325.0,
+      "composicionMolar": {
+       "1": 0.2739130434782608,
+       "2": 0.3130434782608696,
+       "3": 0.18695652173913044,
+       "4": 0.18695652173913044,
+       "5": 0.03913043478260869
+      },
+      "componentes": [
+       {
+        "id": 1,
+        "cas": "71-43-2",
+        "masaMolarKgMol": 0.07811184,
+        "fuente": "thermo (IUPAC), benceno"
+       },
+       {
+        "id": 2,
+        "cas": "108-88-3",
+        "masaMolarKgMol": 0.09213842,
+        "fuente": "thermo (IUPAC), tolueno"
+       },
+       {
+        "id": 3,
+        "cas": "64-17-5",
+        "masaMolarKgMol": 0.04606844,
+        "fuente": "thermo (IUPAC), etanol"
+       },
+       {
+        "id": 4,
+        "cas": "67-56-1",
+        "masaMolarKgMol": 0.03204186,
+        "fuente": "thermo (IUPAC), metanol"
+       },
+       {
+        "id": 5,
+        "cas": "7732-18-5",
+        "masaMolarKgMol": 0.01801528,
+        "fuente": "thermo (IUPAC), agua"
+       }
+      ],
+      "fases": [
+       {
+        "id": "liquido-1",
+        "tipo": "liquido",
+        "regimen": "ordinario",
+        "fraccionMolar": 1.0,
+        "fraccionMasica": 1.0,
+        "fraccionVolumen": 1.0,
+        "composicionMolar": {
+         "1": 0.2739130434782608,
+         "2": 0.3130434782608696,
+         "3": 0.18695652173913044,
+         "4": 0.18695652173913044,
+         "5": 0.03913043478260869
+        },
+        "propiedades": {
+         "u": -519039.32765080535,
+         "h": -518919.9439636032,
+         "v": 0.0011782253856616083,
+         "s": -1244.4840300832557
+        }
+       }
+      ],
+      "mezcla": {
+       "u": -519039.32765080535,
+       "h": -518919.9439636031,
+       "v": 0.0011782253856616083,
+       "s": -1244.4840300832557
+      },
+      "referencia": {
+       "id": "gas-ideal-298.15K-1bar-h0-s0",
+       "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+      },
+      "estabilidad": {
+       "estado": "estable",
+       "alcance": [
+        "liquido",
+        "vapor"
+       ],
+       "metodo": "Vapor ideal + solución líquida ideal (Raoult con Poynting). Mínimo de G a (T, P, n): fase única de menor G, prueba de distancia al plano tangente frente a vapor (mínimo analítico) y líquido (malla en el simplex de hasta 3 componentes y refinamiento local), adición de la fase inestable, minimización de G y pulido de Newton de la igualdad de potenciales; certificación final con la prueba completa. Hasta 3 fases (LLV). Especies ausentes excluidas sin evaluar log(0). Parámetros: sin parámetros binarios (g^E = 0)."
+      },
+      "verificaciones": [
+       {
+        "id": "estabilidad",
+        "estado": "cumple",
+        "residuo": 8.302537401544648e-17,
+        "tolerancia": 1e-09,
+        "motivo": "-min tm sobre fases de prueba vapor (minimo analitico) y liquido (malla en el simplex y refinamiento local). Fases candidatas: liquido, vapor; 2 pruebas de fase; min tm = -8.3e-17."
+       },
+       {
+        "id": "reconstruccion_material",
+        "estado": "cumple",
+        "residuo": 4.8270566288050277e-17,
+        "tolerancia": 1e-12,
+        "motivo": "max |sum_a n^a x_i^a - n_i| / n"
+       },
+       {
+        "id": "identidad_h_u_Pv",
+        "estado": "cumple",
+        "residuo": 4.1840653507709475e-16,
+        "tolerancia": 1e-12,
+        "motivo": "max por fase |h - u - Pv|/(RT), molar"
+       },
+       {
+        "id": "identidad_g_h_Ts",
+        "estado": "cumple",
+        "residuo": 9.872080458961867e-16,
+        "tolerancia": 1e-09,
+        "motivo": "max por fase |g - (h - Ts)|/(RT) con g = sum x_i mu_i: potenciales y entalpía/entropía salen de la misma función de Gibbs"
+       },
+       {
+        "id": "bases_fase",
+        "estado": "cumple",
+        "residuo": 0.0,
+        "tolerancia": 1e-12,
+        "motivo": "max(|Σβ-1|, |Σχ-1|, |Σε-1|); β molar, χ másica (masa molar de cada fase), ε volumétrica"
+       },
+       {
+        "id": "dominio",
+        "estado": "cumple",
+        "residuo": null,
+        "tolerancia": null,
+        "motivo": "T en [278.68, 461.376] K (rangos de Psat y cp de las especies, T < 0.9 Tc) y P en [100, 500000] Pa (vapor ideal)."
+       }
+      ]
+     },
+     "potenciales": {
+      "base": "molar",
+      "unidad": "J/mol",
+      "unidades": {
+       "mu": "J/mol",
+       "G": "J",
+       "A": "J",
+       "S": "J/K"
+      },
+      "referencia": {
+       "id": "gas-ideal-298.15K-1bar-h0-s0",
+       "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+      },
+      "estadoEstandar": "gas ideal puro de cada especie a T y P0 = 1e5 Pa, con h = s = 0 a 298.15 K",
+      "T": 332.41342634265027,
+      "P": 101325.0,
+      "G": -7932.689201992007,
+      "A": -7941.688280212327,
+      "S": -93.80853777530325,
+      "fases": [
+       {
+        "faseId": "liquido-1",
+        "mu": {
+         "1": -5604.457032699179,
+         "2": -8144.221921094315,
+         "3": -6940.9090263457965,
+         "4": -5266.37411775175,
+         "5": -13573.321535929783
+        }
+       }
+      ],
+      "residuoIgualdadMu": 0.0,
+      "candidatasExploradas": [
+       "liquido",
+       "vapor"
+      ],
+      "tmMinimo": -8.302537401544648e-17,
+      "metodo": "mínimo de G con prueba de distancia al plano tangente frente a vapor y líquido"
+     }
+    },
+    {
+     "volumenId": "A",
+     "evaluacion": {
+      "T": 331.56641950323575,
+      "P": 101325.0,
+      "composicionMolar": {
+       "1": 0.26666666666666666,
+       "2": 0.3166666666666667,
+       "3": 0.18333333333333338,
+       "4": 0.18333333333333338,
+       "5": 0.05
+      },
+      "componentes": [
+       {
+        "id": 1,
+        "cas": "71-43-2",
+        "masaMolarKgMol": 0.07811184,
+        "fuente": "thermo (IUPAC), benceno"
+       },
+       {
+        "id": 2,
+        "cas": "108-88-3",
+        "masaMolarKgMol": 0.09213842,
+        "fuente": "thermo (IUPAC), tolueno"
+       },
+       {
+        "id": 3,
+        "cas": "64-17-5",
+        "masaMolarKgMol": 0.04606844,
+        "fuente": "thermo (IUPAC), etanol"
+       },
+       {
+        "id": 4,
+        "cas": "67-56-1",
+        "masaMolarKgMol": 0.03204186,
+        "fuente": "thermo (IUPAC), metanol"
+       },
+       {
+        "id": 5,
+        "cas": "7732-18-5",
+        "masaMolarKgMol": 0.01801528,
+        "fuente": "thermo (IUPAC), agua"
+       }
+      ],
+      "fases": [
+       {
+        "id": "liquido-1",
+        "tipo": "liquido",
+        "regimen": "ordinario",
+        "fraccionMolar": 1.0,
+        "fraccionMasica": 1.0,
+        "fraccionVolumen": 1.0,
+        "composicionMolar": {
+         "1": 0.26666666666666666,
+         "2": 0.3166666666666667,
+         "3": 0.18333333333333338,
+         "4": 0.18333333333333338,
+         "5": 0.05
+        },
+        "propiedades": {
+         "u": -524489.9217039932,
+         "h": -524370.6129008123,
+         "v": 0.001177486337833227,
+         "s": -1255.2856983724696
+        }
+       }
+      ],
+      "mezcla": {
+       "u": -524489.9217039933,
+       "h": -524370.6129008124,
+       "v": 0.001177486337833227,
+       "s": -1255.2856983724696
+      },
+      "referencia": {
+       "id": "gas-ideal-298.15K-1bar-h0-s0",
+       "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+      },
+      "estabilidad": {
+       "estado": "estable",
+       "alcance": [
+        "liquido",
+        "vapor"
+       ],
+       "metodo": "Vapor ideal + solución líquida ideal (Raoult con Poynting). Mínimo de G a (T, P, n): fase única de menor G, prueba de distancia al plano tangente frente a vapor (mínimo analítico) y líquido (malla en el simplex de hasta 3 componentes y refinamiento local), adición de la fase inestable, minimización de G y pulido de Newton de la igualdad de potenciales; certificación final con la prueba completa. Hasta 3 fases (LLV). Especies ausentes excluidas sin evaluar log(0). Parámetros: sin parámetros binarios (g^E = 0)."
+      },
+      "verificaciones": [
+       {
+        "id": "estabilidad",
+        "estado": "cumple",
+        "residuo": 8.881784197001249e-17,
+        "tolerancia": 1e-09,
+        "motivo": "-min tm sobre fases de prueba vapor (minimo analitico) y liquido (malla en el simplex y refinamiento local). Fases candidatas: liquido, vapor; 2 pruebas de fase; min tm = -8.88e-17."
+       },
+       {
+        "id": "reconstruccion_material",
+        "estado": "cumple",
+        "residuo": 4.625929269271486e-17,
+        "tolerancia": 1e-12,
+        "motivo": "max |sum_a n^a x_i^a - n_i| / n"
+       },
+       {
+        "id": "identidad_h_u_Pv",
+        "estado": "cumple",
+        "residuo": 2.889934071928513e-16,
+        "tolerancia": 1e-12,
+        "motivo": "max por fase |h - u - Pv|/(RT), molar"
+       },
+       {
+        "id": "identidad_g_h_Ts",
+        "estado": "cumple",
+        "residuo": 2.3093698358510124e-15,
+        "tolerancia": 1e-09,
+        "motivo": "max por fase |g - (h - Ts)|/(RT) con g = sum x_i mu_i: potenciales y entalpía/entropía salen de la misma función de Gibbs"
+       },
+       {
+        "id": "bases_fase",
+        "estado": "cumple",
+        "residuo": 0.0,
+        "tolerancia": 1e-12,
+        "motivo": "max(|Σβ-1|, |Σχ-1|, |Σε-1|); β molar, χ másica (masa molar de cada fase), ε volumétrica"
+       },
+       {
+        "id": "dominio",
+        "estado": "cumple",
+        "residuo": null,
+        "tolerancia": null,
+        "motivo": "T en [278.68, 461.376] K (rangos de Psat y cp de las especies, T < 0.9 Tc) y P en [100, 500000] Pa (vapor ideal)."
+       }
+      ]
+     },
+     "potenciales": {
+      "base": "molar",
+      "unidad": "J/mol",
+      "unidades": {
+       "mu": "J/mol",
+       "G": "J",
+       "A": "J",
+       "S": "J/K"
+      },
+      "referencia": {
+       "id": "gas-ideal-298.15K-1bar-h0-s0",
+       "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+      },
+      "estadoEstandar": "gas ideal puro de cada especie a T y P0 = 1e5 Pa, con h = s = 0 a 298.15 K",
+      "T": 331.56641950323575,
+      "P": 101325.0,
+      "G": -8466.071686922816,
+      "A": -8475.410413023388,
+      "S": -98.25569448789923,
+      "fases": [
+       {
+        "faseId": "liquido-1",
+        "mu": {
+         "1": -5739.6955546425725,
+         "2": -8175.582635862675,
+         "3": -7076.725972582781,
+         "4": -5398.317628802142,
+         "5": -12968.968591744888
+        }
+       }
+      ],
+      "residuoIgualdadMu": 0.0,
+      "candidatasExploradas": [
+       "liquido",
+       "vapor"
+      ],
+      "tmMinimo": -8.881784197001249e-17,
+      "metodo": "mínimo de G con prueba de distancia al plano tangente frente a vapor y líquido"
+     }
+    }
+   ],
+   "B": [
+    {
+     "volumenId": "B",
+     "evaluacion": {
+      "T": 320.0,
+      "P": 101325.0,
+      "composicionMolar": {
+       "1": 0.1,
+       "2": 0.4,
+       "3": 0.1,
+       "4": 0.1,
+       "5": 0.3
+      },
+      "componentes": [
+       {
+        "id": 1,
+        "cas": "71-43-2",
+        "masaMolarKgMol": 0.07811184,
+        "fuente": "thermo (IUPAC), benceno"
+       },
+       {
+        "id": 2,
+        "cas": "108-88-3",
+        "masaMolarKgMol": 0.09213842,
+        "fuente": "thermo (IUPAC), tolueno"
+       },
+       {
+        "id": 3,
+        "cas": "64-17-5",
+        "masaMolarKgMol": 0.04606844,
+        "fuente": "thermo (IUPAC), etanol"
+       },
+       {
+        "id": 4,
+        "cas": "67-56-1",
+        "masaMolarKgMol": 0.03204186,
+        "fuente": "thermo (IUPAC), metanol"
+       },
+       {
+        "id": 5,
+        "cas": "7732-18-5",
+        "masaMolarKgMol": 0.01801528,
+        "fuente": "thermo (IUPAC), agua"
+       }
+      ],
+      "fases": [
+       {
+        "id": "liquido-1",
+        "tipo": "liquido",
+        "regimen": "ordinario",
+        "fraccionMolar": 1.0,
+        "fraccionMasica": 1.0,
+        "fraccionVolumen": 1.0,
+        "composicionMolar": {
+         "1": 0.1,
+         "2": 0.4,
+         "3": 0.1,
+         "4": 0.1,
+         "5": 0.3
+        },
+        "propiedades": {
+         "u": -648025.679576315,
+         "h": -647908.3211898819,
+         "v": 0.001158237221149932,
+         "s": -1546.4398087999914
+        }
+       }
+      ],
+      "mezcla": {
+       "u": -648025.679576315,
+       "h": -647908.3211898819,
+       "v": 0.001158237221149932,
+       "s": -1546.4398087999914
+      },
+      "referencia": {
+       "id": "gas-ideal-298.15K-1bar-h0-s0",
+       "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+      },
+      "estabilidad": {
+       "estado": "estable",
+       "alcance": [
+        "liquido",
+        "vapor"
+       ],
+       "metodo": "Vapor ideal + solución líquida ideal (Raoult con Poynting). Mínimo de G a (T, P, n): fase única de menor G, prueba de distancia al plano tangente frente a vapor (mínimo analítico) y líquido (malla en el simplex de hasta 3 componentes y refinamiento local), adición de la fase inestable, minimización de G y pulido de Newton de la igualdad de potenciales; certificación final con la prueba completa. Hasta 3 fases (LLV). Especies ausentes excluidas sin evaluar log(0). Parámetros: sin parámetros binarios (g^E = 0)."
+      },
+      "verificaciones": [
+       {
+        "id": "estabilidad",
+        "estado": "cumple",
+        "residuo": 2.2204460492503123e-16,
+        "tolerancia": 1e-09,
+        "motivo": "-min tm sobre fases de prueba vapor (minimo analitico) y liquido (malla en el simplex y refinamiento local). Fases candidatas: liquido, vapor; 2 pruebas de fase; min tm = -2.22e-16."
+       },
+       {
+        "id": "reconstruccion_material",
+        "estado": "cumple",
+        "residuo": 0.0,
+        "tolerancia": 1e-12,
+        "motivo": "max |sum_a n^a x_i^a - n_i| / n"
+       },
+       {
+        "id": "identidad_h_u_Pv",
+        "estado": "cumple",
+        "residuo": 8.979834516833927e-17,
+        "tolerancia": 1e-12,
+        "motivo": "max por fase |h - u - Pv|/(RT), molar"
+       },
+       {
+        "id": "identidad_g_h_Ts",
+        "estado": "cumple",
+        "residuo": 0.0,
+        "tolerancia": 1e-09,
+        "motivo": "max por fase |g - (h - Ts)|/(RT) con g = sum x_i mu_i: potenciales y entalpía/entropía salen de la misma función de Gibbs"
+       },
+       {
+        "id": "bases_fase",
+        "estado": "cumple",
+        "residuo": 0.0,
+        "tolerancia": 1e-12,
+        "motivo": "max(|Σβ-1|, |Σχ-1|, |Σε-1|); β molar, χ másica (masa molar de cada fase), ε volumétrica"
+       },
+       {
+        "id": "dominio",
+        "estado": "cumple",
+        "residuo": null,
+        "tolerancia": null,
+        "motivo": "T en [278.68, 461.376] K (rangos de Psat y cp de las especies, T < 0.9 Tc) y P en [100, 500000] Pa (vapor ideal)."
+       }
+      ]
+     },
+     "potenciales": {
+      "base": "molar",
+      "unidad": "J/mol",
+      "unidades": {
+       "mu": "J/mol",
+       "G": "J",
+       "A": "J",
+       "S": "J/K"
+      },
+      "referencia": {
+       "id": "gas-ideal-298.15K-1bar-h0-s0",
+       "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+      },
+      "estadoEstandar": "gas ideal puro de cada especie a T y P0 = 1e5 Pa, con h = s = 0 a 298.15 K",
+      "T": 320.0,
+      "P": 101325.0,
+      "G": -8858.725568863869,
+      "A": -8865.518526468877,
+      "S": -89.51128572196936,
+      "fases": [
+       {
+        "faseId": "liquido-1",
+        "mu": {
+         "1": -9212.920394255772,
+         "2": -8451.421956764201,
+         "3": -9830.374825383224,
+         "4": -8090.491938180881,
+         "5": -9215.926901253997
+        }
+       }
+      ],
+      "residuoIgualdadMu": 0.0,
+      "candidatasExploradas": [
+       "liquido",
+       "vapor"
+      ],
+      "tmMinimo": -2.2204460492503123e-16,
+      "metodo": "mínimo de G con prueba de distancia al plano tangente frente a vapor y líquido"
+     }
+    },
+    {
+     "volumenId": "B",
+     "evaluacion": {
+      "T": 323.5173113748509,
+      "P": 101325.0,
+      "composicionMolar": {
+       "1": 0.1,
+       "2": 0.4,
+       "3": 0.1,
+       "4": 0.1,
+       "5": 0.30000000000000004
+      },
+      "componentes": [
+       {
+        "id": 1,
+        "cas": "71-43-2",
+        "masaMolarKgMol": 0.07811184,
+        "fuente": "thermo (IUPAC), benceno"
+       },
+       {
+        "id": 2,
+        "cas": "108-88-3",
+        "masaMolarKgMol": 0.09213842,
+        "fuente": "thermo (IUPAC), tolueno"
+       },
+       {
+        "id": 3,
+        "cas": "64-17-5",
+        "masaMolarKgMol": 0.04606844,
+        "fuente": "thermo (IUPAC), etanol"
+       },
+       {
+        "id": 4,
+        "cas": "67-56-1",
+        "masaMolarKgMol": 0.03204186,
+        "fuente": "thermo (IUPAC), metanol"
+       },
+       {
+        "id": 5,
+        "cas": "7732-18-5",
+        "masaMolarKgMol": 0.01801528,
+        "fuente": "thermo (IUPAC), agua"
+       }
+      ],
+      "fases": [
+       {
+        "id": "liquido-1",
+        "tipo": "liquido",
+        "regimen": "ordinario",
+        "fraccionMolar": 1.0,
+        "fraccionMasica": 1.0,
+        "fraccionVolumen": 1.0,
+        "composicionMolar": {
+         "1": 0.1,
+         "2": 0.4,
+         "3": 0.1,
+         "4": 0.1,
+         "5": 0.30000000000000004
+        },
+        "propiedades": {
+         "u": -640934.0310129563,
+         "h": -640816.6726265233,
+         "v": 0.001158237221149932,
+         "s": -1524.399341465977
+        }
+       }
+      ],
+      "mezcla": {
+       "u": -640934.0310129562,
+       "h": -640816.6726265233,
+       "v": 0.001158237221149932,
+       "s": -1524.3993414659772
+      },
+      "referencia": {
+       "id": "gas-ideal-298.15K-1bar-h0-s0",
+       "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+      },
+      "estabilidad": {
+       "estado": "estable",
+       "alcance": [
+        "liquido",
+        "vapor"
+       ],
+       "metodo": "Vapor ideal + solución líquida ideal (Raoult con Poynting). Mínimo de G a (T, P, n): fase única de menor G, prueba de distancia al plano tangente frente a vapor (mínimo analítico) y líquido (malla en el simplex de hasta 3 componentes y refinamiento local), adición de la fase inestable, minimización de G y pulido de Newton de la igualdad de potenciales; certificación final con la prueba completa. Hasta 3 fases (LLV). Especies ausentes excluidas sin evaluar log(0). Parámetros: sin parámetros binarios (g^E = 0)."
+      },
+      "verificaciones": [
+       {
+        "id": "estabilidad",
+        "estado": "cumple",
+        "residuo": 0.0,
+        "tolerancia": 1e-09,
+        "motivo": "-min tm sobre fases de prueba vapor (minimo analitico) y liquido (malla en el simplex y refinamiento local). Fases candidatas: liquido, vapor; 2 pruebas de fase; min tm = 8.88e-17."
+       },
+       {
+        "id": "reconstruccion_material",
+        "estado": "cumple",
+        "residuo": 0.0,
+        "tolerancia": 1e-12,
+        "motivo": "max |sum_a n^a x_i^a - n_i| / n"
+       },
+       {
+        "id": "identidad_h_u_Pv",
+        "estado": "cumple",
+        "residuo": 8.882204890907226e-17,
+        "tolerancia": 1e-12,
+        "motivo": "max por fase |h - u - Pv|/(RT), molar"
+       },
+       {
+        "id": "identidad_g_h_Ts",
+        "estado": "cumple",
+        "residuo": 2.028708804822825e-15,
+        "tolerancia": 1e-09,
+        "motivo": "max por fase |g - (h - Ts)|/(RT) con g = sum x_i mu_i: potenciales y entalpía/entropía salen de la misma función de Gibbs"
+       },
+       {
+        "id": "bases_fase",
+        "estado": "cumple",
+        "residuo": 0.0,
+        "tolerancia": 1e-12,
+        "motivo": "max(|Σβ-1|, |Σχ-1|, |Σε-1|); β molar, χ másica (masa molar de cada fase), ε volumétrica"
+       },
+       {
+        "id": "dominio",
+        "estado": "cumple",
+        "residuo": null,
+        "tolerancia": null,
+        "motivo": "T en [278.68, 461.376] K (rangos de Psat y cp de las especies, T < 0.9 Tc) y P en [100, 500000] Pa (vapor ideal)."
+       }
+      ]
+     },
+     "potenciales": {
+      "base": "molar",
+      "unidad": "J/mol",
+      "unidades": {
+       "mu": "J/mol",
+       "G": "J",
+       "A": "J",
+       "S": "J/K"
+      },
+      "referencia": {
+       "id": "gas-ideal-298.15K-1bar-h0-s0",
+       "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+      },
+      "estadoEstandar": "gas ideal puro de cada especie a T y P0 = 1e5 Pa, con h = s = 0 a 298.15 K",
+      "T": 323.5173113748509,
+      "P": 101325.0,
+      "G": -8118.827045845029,
+      "A": -8125.2803555697865,
+      "S": -83.82375894637315,
+      "fases": [
+       {
+        "faseId": "liquido-1",
+        "mu": {
+         "1": -8973.272257088378,
+         "2": -8164.775383307943,
+         "3": -9496.22506883354,
+         "4": -7776.709082280359,
+         "5": -8852.00979441682
+        }
+       }
+      ],
+      "residuoIgualdadMu": 0.0,
+      "candidatasExploradas": [
+       "liquido",
+       "vapor"
+      ],
+      "tmMinimo": 8.881784197001254e-17,
+      "metodo": "mínimo de G con prueba de distancia al plano tangente frente a vapor y líquido"
+     }
+    },
+    {
+     "volumenId": "B",
+     "evaluacion": {
+      "T": 325.8549603766309,
+      "P": 101325.0,
+      "composicionMolar": {
+       "1": 0.1,
+       "2": 0.4,
+       "3": 0.1,
+       "4": 0.1,
+       "5": 0.30000000000000004
+      },
+      "componentes": [
+       {
+        "id": 1,
+        "cas": "71-43-2",
+        "masaMolarKgMol": 0.07811184,
+        "fuente": "thermo (IUPAC), benceno"
+       },
+       {
+        "id": 2,
+        "cas": "108-88-3",
+        "masaMolarKgMol": 0.09213842,
+        "fuente": "thermo (IUPAC), tolueno"
+       },
+       {
+        "id": 3,
+        "cas": "64-17-5",
+        "masaMolarKgMol": 0.04606844,
+        "fuente": "thermo (IUPAC), etanol"
+       },
+       {
+        "id": 4,
+        "cas": "67-56-1",
+        "masaMolarKgMol": 0.03204186,
+        "fuente": "thermo (IUPAC), metanol"
+       },
+       {
+        "id": 5,
+        "cas": "7732-18-5",
+        "masaMolarKgMol": 0.01801528,
+        "fuente": "thermo (IUPAC), agua"
+       }
+      ],
+      "fases": [
+       {
+        "id": "liquido-1",
+        "tipo": "liquido",
+        "regimen": "ordinario",
+        "fraccionMolar": 1.0,
+        "fraccionMasica": 1.0,
+        "fraccionVolumen": 1.0,
+        "composicionMolar": {
+         "1": 0.1,
+         "2": 0.4,
+         "3": 0.1,
+         "4": 0.1,
+         "5": 0.30000000000000004
+        },
+        "propiedades": {
+         "u": -636215.9343943394,
+         "h": -636098.5760079065,
+         "v": 0.001158237221149932,
+         "s": -1509.8680322319901
+        }
+       }
+      ],
+      "mezcla": {
+       "u": -636215.9343943394,
+       "h": -636098.5760079065,
+       "v": 0.001158237221149932,
+       "s": -1509.8680322319901
+      },
+      "referencia": {
+       "id": "gas-ideal-298.15K-1bar-h0-s0",
+       "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+      },
+      "estabilidad": {
+       "estado": "estable",
+       "alcance": [
+        "liquido",
+        "vapor"
+       ],
+       "metodo": "Vapor ideal + solución líquida ideal (Raoult con Poynting). Mínimo de G a (T, P, n): fase única de menor G, prueba de distancia al plano tangente frente a vapor (mínimo analítico) y líquido (malla en el simplex de hasta 3 componentes y refinamiento local), adición de la fase inestable, minimización de G y pulido de Newton de la igualdad de potenciales; certificación final con la prueba completa. Hasta 3 fases (LLV). Especies ausentes excluidas sin evaluar log(0). Parámetros: sin parámetros binarios (g^E = 0)."
+      },
+      "verificaciones": [
+       {
+        "id": "estabilidad",
+        "estado": "cumple",
+        "residuo": 2.8865798640254066e-16,
+        "tolerancia": 1e-09,
+        "motivo": "-min tm sobre fases de prueba vapor (minimo analitico) y liquido (malla en el simplex y refinamiento local). Fases candidatas: liquido, vapor; 2 pruebas de fase; min tm = -2.89e-16."
+       },
+       {
+        "id": "reconstruccion_material",
+        "estado": "cumple",
+        "residuo": 0.0,
+        "tolerancia": 1e-12,
+        "motivo": "max |sum_a n^a x_i^a - n_i| / n"
+       },
+       {
+        "id": "identidad_h_u_Pv",
+        "estado": "cumple",
+        "residuo": 8.818484892989023e-17,
+        "tolerancia": 1e-12,
+        "motivo": "max por fase |h - u - Pv|/(RT), molar"
+       },
+       {
+        "id": "identidad_g_h_Ts",
+        "estado": "cumple",
+        "residuo": 0.0,
+        "tolerancia": 1e-09,
+        "motivo": "max por fase |g - (h - Ts)|/(RT) con g = sum x_i mu_i: potenciales y entalpía/entropía salen de la misma función de Gibbs"
+       },
+       {
+        "id": "bases_fase",
+        "estado": "cumple",
+        "residuo": 0.0,
+        "tolerancia": 1e-12,
+        "motivo": "max(|Σβ-1|, |Σχ-1|, |Σε-1|); β molar, χ másica (masa molar de cada fase), ε volumétrica"
+       },
+       {
+        "id": "dominio",
+        "estado": "cumple",
+        "residuo": null,
+        "tolerancia": null,
+        "motivo": "T en [278.68, 461.376] K (rangos de Psat y cp de las especies, T < 0.9 Tc) y P en [100, 500000] Pa (vapor ideal)."
+       }
+      ]
+     },
+     "potenciales": {
+      "base": "molar",
+      "unidad": "J/mol",
+      "unidades": {
+       "mu": "J/mol",
+       "G": "J",
+       "A": "J",
+       "S": "J/K"
+      },
+      "referencia": {
+       "id": "gas-ideal-298.15K-1bar-h0-s0",
+       "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+      },
+      "estadoEstandar": "gas ideal puro de cada especie a T y P0 = 1e5 Pa, con h = s = 0 a 298.15 K",
+      "T": 325.8549603766309,
+      "P": 101325.0,
+      "G": -7506.768749732693,
+      "A": -7512.8824115772,
+      "S": -78.65498887177085,
+      "fases": [
+       {
+        "faseId": "liquido-1",
+        "mu": {
+         "1": -8816.775284575317,
+         "2": -7977.626358935557,
+         "3": -9276.525071951133,
+         "4": -7569.7426512301945,
+         "5": -8611.66440673257
+        }
+       }
+      ],
+      "residuoIgualdadMu": 0.0,
+      "candidatasExploradas": [
+       "liquido",
+       "vapor"
+      ],
+      "tmMinimo": -2.8865798640254066e-16,
+      "metodo": "mínimo de G con prueba de distancia al plano tangente frente a vapor y líquido"
+     }
+    },
+    {
+     "volumenId": "B",
+     "evaluacion": {
+      "T": 327.4095137665343,
+      "P": 101325.0,
+      "composicionMolar": {
+       "1": 0.1,
+       "2": 0.4,
+       "3": 0.1,
+       "4": 0.1,
+       "5": 0.3000000000000001
+      },
+      "componentes": [
+       {
+        "id": 1,
+        "cas": "71-43-2",
+        "masaMolarKgMol": 0.07811184,
+        "fuente": "thermo (IUPAC), benceno"
+       },
+       {
+        "id": 2,
+        "cas": "108-88-3",
+        "masaMolarKgMol": 0.09213842,
+        "fuente": "thermo (IUPAC), tolueno"
+       },
+       {
+        "id": 3,
+        "cas": "64-17-5",
+        "masaMolarKgMol": 0.04606844,
+        "fuente": "thermo (IUPAC), etanol"
+       },
+       {
+        "id": 4,
+        "cas": "67-56-1",
+        "masaMolarKgMol": 0.03204186,
+        "fuente": "thermo (IUPAC), metanol"
+       },
+       {
+        "id": 5,
+        "cas": "7732-18-5",
+        "masaMolarKgMol": 0.01801528,
+        "fuente": "thermo (IUPAC), agua"
+       }
+      ],
+      "fases": [
+       {
+        "id": "liquido-1",
+        "tipo": "liquido",
+        "regimen": "ordinario",
+        "fraccionMolar": 1.0,
+        "fraccionMasica": 1.0,
+        "fraccionVolumen": 1.0,
+        "composicionMolar": {
+         "1": 0.1,
+         "2": 0.4,
+         "3": 0.1,
+         "4": 0.1,
+         "5": 0.3000000000000001
+        },
+        "propiedades": {
+         "u": -633076.1882712942,
+         "h": -632958.8298848611,
+         "v": 0.001158237221149932,
+         "s": -1500.2555353579617
+        }
+       }
+      ],
+      "mezcla": {
+       "u": -633076.188271294,
+       "h": -632958.829884861,
+       "v": 0.0011582372211499318,
+       "s": -1500.2555353579612
+      },
+      "referencia": {
+       "id": "gas-ideal-298.15K-1bar-h0-s0",
+       "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+      },
+      "estabilidad": {
+       "estado": "estable",
+       "alcance": [
+        "liquido",
+        "vapor"
+       ],
+       "metodo": "Vapor ideal + solución líquida ideal (Raoult con Poynting). Mínimo de G a (T, P, n): fase única de menor G, prueba de distancia al plano tangente frente a vapor (mínimo analítico) y líquido (malla en el simplex de hasta 3 componentes y refinamiento local), adición de la fase inestable, minimización de G y pulido de Newton de la igualdad de potenciales; certificación final con la prueba completa. Hasta 3 fases (LLV). Especies ausentes excluidas sin evaluar log(0). Parámetros: sin parámetros binarios (g^E = 0)."
+      },
+      "verificaciones": [
+       {
+        "id": "estabilidad",
+        "estado": "cumple",
+        "residuo": 0.0,
+        "tolerancia": 1e-09,
+        "motivo": "-min tm sobre fases de prueba vapor (minimo analitico) y liquido (malla en el simplex y refinamiento local). Fases candidatas: liquido, vapor; 2 pruebas de fase; min tm = 2.22e-17."
+       },
+       {
+        "id": "reconstruccion_material",
+        "estado": "cumple",
+        "residuo": 0.0,
+        "tolerancia": 1e-12,
+        "motivo": "max |sum_a n^a x_i^a - n_i| / n"
+       },
+       {
+        "id": "identidad_h_u_Pv",
+        "estado": "cumple",
+        "residuo": 8.776614376074285e-17,
+        "tolerancia": 1e-12,
+        "motivo": "max por fase |h - u - Pv|/(RT), molar"
+       },
+       {
+        "id": "identidad_g_h_Ts",
+        "estado": "cumple",
+        "residuo": 1.336394516148709e-15,
+        "tolerancia": 1e-09,
+        "motivo": "max por fase |g - (h - Ts)|/(RT) con g = sum x_i mu_i: potenciales y entalpía/entropía salen de la misma función de Gibbs"
+       },
+       {
+        "id": "bases_fase",
+        "estado": "cumple",
+        "residuo": 0.0,
+        "tolerancia": 1e-12,
+        "motivo": "max(|Σβ-1|, |Σχ-1|, |Σε-1|); β molar, χ másica (masa molar de cada fase), ε volumétrica"
+       },
+       {
+        "id": "dominio",
+        "estado": "cumple",
+        "residuo": null,
+        "tolerancia": null,
+        "motivo": "T en [278.68, 461.376] K (rangos de Psat y cp de las especies, T < 0.9 Tc) y P en [100, 500000] Pa (vapor ideal)."
+       }
+      ]
+     },
+     "potenciales": {
+      "base": "molar",
+      "unidad": "J/mol",
+      "unidades": {
+       "mu": "J/mol",
+       "G": "J",
+       "A": "J",
+       "S": "J/K"
+      },
+      "referencia": {
+       "id": "gas-ideal-298.15K-1bar-h0-s0",
+       "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+      },
+      "estadoEstandar": "gas ideal puro de cada especie a T y P0 = 1e5 Pa, con h = s = 0 a 298.15 K",
+      "T": 327.4095137665343,
+      "P": 101325.0,
+      "G": -6974.613484959621,
+      "A": -6980.3874989238775,
+      "S": -73.81233394900713,
+      "fases": [
+       {
+        "faseId": "liquido-1",
+        "mu": {
+         "1": -8713.922736930275,
+         "2": -7854.647232070114,
+         "3": -9131.473633587995,
+         "4": -7432.800778925158,
+         "5": -8452.496738639573
+        }
+       }
+      ],
+      "residuoIgualdadMu": 0.0,
+      "candidatasExploradas": [
+       "liquido",
+       "vapor"
+      ],
+      "tmMinimo": 2.220446049250315e-17,
+      "metodo": "mínimo de G con prueba de distancia al plano tangente frente a vapor y líquido"
+     }
+    },
+    {
+     "volumenId": "B",
+     "evaluacion": {
+      "T": 328.44195030373487,
+      "P": 101325.0,
+      "composicionMolar": {
+       "1": 0.09999999999999999,
+       "2": 0.39999999999999997,
+       "3": 0.09999999999999999,
+       "4": 0.09999999999999999,
+       "5": 0.3000000000000001
+      },
+      "componentes": [
+       {
+        "id": 1,
+        "cas": "71-43-2",
+        "masaMolarKgMol": 0.07811184,
+        "fuente": "thermo (IUPAC), benceno"
+       },
+       {
+        "id": 2,
+        "cas": "108-88-3",
+        "masaMolarKgMol": 0.09213842,
+        "fuente": "thermo (IUPAC), tolueno"
+       },
+       {
+        "id": 3,
+        "cas": "64-17-5",
+        "masaMolarKgMol": 0.04606844,
+        "fuente": "thermo (IUPAC), etanol"
+       },
+       {
+        "id": 4,
+        "cas": "67-56-1",
+        "masaMolarKgMol": 0.03204186,
+        "fuente": "thermo (IUPAC), metanol"
+       },
+       {
+        "id": 5,
+        "cas": "7732-18-5",
+        "masaMolarKgMol": 0.01801528,
+        "fuente": "thermo (IUPAC), agua"
+       }
+      ],
+      "fases": [
+       {
+        "id": "liquido-1",
+        "tipo": "liquido",
+        "regimen": "ordinario",
+        "fraccionMolar": 1.0,
+        "fraccionMasica": 1.0,
+        "fraccionVolumen": 1.0,
+        "composicionMolar": {
+         "1": 0.09999999999999999,
+         "2": 0.39999999999999997,
+         "3": 0.09999999999999999,
+         "4": 0.09999999999999999,
+         "5": 0.3000000000000001
+        },
+        "propiedades": {
+         "u": -630990.0008591643,
+         "h": -630872.6424727313,
+         "v": 0.0011582372211499318,
+         "s": -1493.8937627705386
+        }
+       }
+      ],
+      "mezcla": {
+       "u": -630990.0008591644,
+       "h": -630872.6424727314,
+       "v": 0.001158237221149932,
+       "s": -1493.8937627705388
+      },
+      "referencia": {
+       "id": "gas-ideal-298.15K-1bar-h0-s0",
+       "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+      },
+      "estabilidad": {
+       "estado": "estable",
+       "alcance": [
+        "liquido",
+        "vapor"
+       ],
+       "metodo": "Vapor ideal + solución líquida ideal (Raoult con Poynting). Mínimo de G a (T, P, n): fase única de menor G, prueba de distancia al plano tangente frente a vapor (mínimo analítico) y líquido (malla en el simplex de hasta 3 componentes y refinamiento local), adición de la fase inestable, minimización de G y pulido de Newton de la igualdad de potenciales; certificación final con la prueba completa. Hasta 3 fases (LLV). Especies ausentes excluidas sin evaluar log(0). Parámetros: sin parámetros binarios (g^E = 0)."
+      },
+      "verificaciones": [
+       {
+        "id": "estabilidad",
+        "estado": "cumple",
+        "residuo": 3.7747582837255316e-16,
+        "tolerancia": 1e-09,
+        "motivo": "-min tm sobre fases de prueba vapor (minimo analitico) y liquido (malla en el simplex y refinamiento local). Fases candidatas: liquido, vapor; 2 pruebas de fase; min tm = -3.77e-16."
+       },
+       {
+        "id": "reconstruccion_material",
+        "estado": "cumple",
+        "residuo": 3.469446951953614e-17,
+        "tolerancia": 1e-12,
+        "motivo": "max |sum_a n^a x_i^a - n_i| / n"
+       },
+       {
+        "id": "identidad_h_u_Pv",
+        "estado": "cumple",
+        "residuo": 8.8140741606156e-17,
+        "tolerancia": 1e-12,
+        "motivo": "max por fase |h - u - Pv|/(RT), molar"
+       },
+       {
+        "id": "identidad_g_h_Ts",
+        "estado": "cumple",
+        "residuo": 2.3313388776122738e-15,
+        "tolerancia": 1e-09,
+        "motivo": "max por fase |g - (h - Ts)|/(RT) con g = sum x_i mu_i: potenciales y entalpía/entropía salen de la misma función de Gibbs"
+       },
+       {
+        "id": "bases_fase",
+        "estado": "cumple",
+        "residuo": 0.0,
+        "tolerancia": 1e-12,
+        "motivo": "max(|Σβ-1|, |Σχ-1|, |Σε-1|); β molar, χ másica (masa molar de cada fase), ε volumétrica"
+       },
+       {
+        "id": "dominio",
+        "estado": "cumple",
+        "residuo": null,
+        "tolerancia": null,
+        "motivo": "T en [278.68, 461.376] K (rangos de Psat y cp de las especies, T < 0.9 Tc) y P en [100, 500000] Pa (vapor ideal)."
+       }
+      ]
+     },
+     "potenciales": {
+      "base": "molar",
+      "unidad": "J/mol",
+      "unidades": {
+       "mu": "J/mol",
+       "G": "J",
+       "A": "J",
+       "S": "J/K"
+      },
+      "referencia": {
+       "id": "gas-ideal-298.15K-1bar-h0-s0",
+       "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+      },
+      "estadoEstandar": "gas ideal puro de cada especie a T y P0 = 1e5 Pa, con h = s = 0 a 298.15 K",
+      "T": 328.44195030373487,
+      "P": 101325.0,
+      "G": -6492.7704326579205,
+      "A": -6498.204798741927,
+      "S": -69.17584541043914,
+      "fases": [
+       {
+        "faseId": "liquido-1",
+        "mu": {
+         "1": -8646.150303394641,
+         "2": -7773.621318772626,
+         "3": -9035.602911029915,
+         "4": -7342.15672490432,
+         "5": -8347.078397934878
+        }
+       }
+      ],
+      "residuoIgualdadMu": 0.0,
+      "candidatasExploradas": [
+       "liquido",
+       "vapor"
+      ],
+      "tmMinimo": -3.7747582837255316e-16,
+      "metodo": "mínimo de G con prueba de distancia al plano tangente frente a vapor y líquido"
+     }
+    }
+   ]
+  },
+  "eventos": [],
+  "residuos": [
+   {
+    "ecuacionId": "global.materia.1",
+    "maximoEscalado": 5.523497634951027e-09,
+    "tolerancia": 10.0,
+    "definicion": "max_t |sum_v n_v,i - n_i(0) - int ndot_ext,i dt| / (atol + rtol max_t sum_v,i n); las transferencias internas se suman y restan como el mismo número"
+   },
+   {
+    "ecuacionId": "global.materia.2",
+    "maximoEscalado": 0.0,
+    "tolerancia": 10.0,
+    "definicion": "max_t |sum_v n_v,i - n_i(0) - int ndot_ext,i dt| / (atol + rtol max_t sum_v,i n); las transferencias internas se suman y restan como el mismo número"
+   },
+   {
+    "ecuacionId": "global.materia.3",
+    "maximoEscalado": 2.7617488174755134e-09,
+    "tolerancia": 10.0,
+    "definicion": "max_t |sum_v n_v,i - n_i(0) - int ndot_ext,i dt| / (atol + rtol max_t sum_v,i n); las transferencias internas se suman y restan como el mismo número"
+   },
+   {
+    "ecuacionId": "global.materia.4",
+    "maximoEscalado": 2.7617488174755134e-09,
+    "tolerancia": 10.0,
+    "definicion": "max_t |sum_v n_v,i - n_i(0) - int ndot_ext,i dt| / (atol + rtol max_t sum_v,i n); las transferencias internas se suman y restan como el mismo número"
+   },
+   {
+    "ecuacionId": "global.materia.5",
+    "maximoEscalado": 5.523497634951027e-09,
+    "tolerancia": 10.0,
+    "definicion": "max_t |sum_v n_v,i - n_i(0) - int ndot_ext,i dt| / (atol + rtol max_t sum_v,i n); las transferencias internas se suman y restan como el mismo número"
+   },
+   {
+    "ecuacionId": "global.energia",
+    "maximoEscalado": 4.1359551073438134e-08,
+    "tolerancia": 10.0,
+    "definicion": "max_t |sum U_v - U(0) - (int E_ext dt - sum W_v)| / (atol + rtol max_t(|sum U|, |int E_ext|, |sum W|)), con W_v = [P V] - int V dP/dt dt: U de los estados certificados frente a la contabilidad de transferencias exteriores y trabajo"
+   },
+   {
+    "ecuacionId": "mecanica.A.trabajo",
+    "maximoEscalado": 1.7983449291964876e-05,
+    "tolerancia": 1.0,
+    "definicion": "max_t |int P dV/dt dt (dV/dt total de V(H, P, n) por diferencia centrada) - ([P V] - int V dP)| / (atol + 1e-5 max|W|): verifica la derivada total de V (diferencia centrada, integrada a traves de las aristas de cambio de fase; acuerdo medido ~2e-6 relativo, tolerancia 1e-5 declarada)"
+   },
+   {
+    "ecuacionId": "mecanica.B.trabajo",
+    "maximoEscalado": 3.2664768910254276e-06,
+    "tolerancia": 1.0,
+    "definicion": "max_t |int P dV/dt dt (dV/dt total de V(H, P, n) por diferencia centrada) - ([P V] - int V dP)| / (atol + 1e-5 max|W|): verifica la derivada total de V (diferencia centrada, integrada a traves de las aristas de cambio de fase; acuerdo medido ~2e-6 relativo, tolerancia 1e-5 declarada)"
+   },
+   {
+    "ecuacionId": "estado.A.energia",
+    "maximoEscalado": 1.0339256710210716e-08,
+    "tolerancia": 1.0,
+    "definicion": "max |E del estado certificado - E integrada| / escala de energia"
+   },
+   {
+    "ecuacionId": "estado.B.energia",
+    "maximoEscalado": 2.067851342042143e-08,
+    "tolerancia": 1.0,
+    "definicion": "max |E del estado certificado - E integrada| / escala de energia"
+   }
+  ],
+  "segundaLey": {
+   "estado": "cumple",
+   "motivo": "S_gen(t) = sum_v S_v(t) - S(0) - int (sum ndot s + Q/T_frontera)_ext dt evaluada en las muestras certificadas: debe ser >= 0 y no decreciente. Contactos internos y mezcla de corrientes generan entropía dentro del conjunto; no se exige que cada volumen abierto la aumente.",
+   "generacionMinima": 0.0,
+   "tolerancia": 1.6870630809429576e-05,
+   "unidad": "J/K"
+  },
+  "catalogoSeries": [
+   {
+    "variableId": "volumen.A.n.1",
+    "propietarioId": "volumen:A",
+    "unidadSI": "mol",
+    "magnitud": "cantidad",
+    "papel": "estado_integrado",
+    "variableEnsamblajeId": "volumen.A.n.1",
+    "procedencia": "estado diferencial: balance de materia del componente 1 en A"
+   },
+   {
+    "variableId": "volumen.A.n.2",
+    "propietarioId": "volumen:A",
+    "unidadSI": "mol",
+    "magnitud": "cantidad",
+    "papel": "estado_integrado",
+    "variableEnsamblajeId": "volumen.A.n.2",
+    "procedencia": "estado diferencial: balance de materia del componente 2 en A"
+   },
+   {
+    "variableId": "volumen.A.n.3",
+    "propietarioId": "volumen:A",
+    "unidadSI": "mol",
+    "magnitud": "cantidad",
+    "papel": "estado_integrado",
+    "variableEnsamblajeId": "volumen.A.n.3",
+    "procedencia": "estado diferencial: balance de materia del componente 3 en A"
+   },
+   {
+    "variableId": "volumen.A.n.4",
+    "propietarioId": "volumen:A",
+    "unidadSI": "mol",
+    "magnitud": "cantidad",
+    "papel": "estado_integrado",
+    "variableEnsamblajeId": "volumen.A.n.4",
+    "procedencia": "estado diferencial: balance de materia del componente 4 en A"
+   },
+   {
+    "variableId": "volumen.A.n.5",
+    "propietarioId": "volumen:A",
+    "unidadSI": "mol",
+    "magnitud": "cantidad",
+    "papel": "estado_integrado",
+    "variableEnsamblajeId": "volumen.A.n.5",
+    "procedencia": "estado diferencial: balance de materia del componente 5 en A"
+   },
+   {
+    "variableId": "volumen.A.U",
+    "propietarioId": "volumen:A",
+    "unidadSI": "J",
+    "magnitud": "energia",
+    "papel": "algebraica",
+    "variableEnsamblajeId": "volumen.A.U",
+    "procedencia": "U = H - P V del estado certificado"
+   },
+   {
+    "variableId": "volumen.A.H",
+    "propietarioId": "volumen:A",
+    "unidadSI": "J",
+    "magnitud": "energia",
+    "papel": "estado_integrado",
+    "variableEnsamblajeId": "volumen.A.H",
+    "procedencia": "estado diferencial (presion prescrita): dH/dt = J_E + V dP/dt"
+   },
+   {
+    "variableId": "volumen.A.W",
+    "propietarioId": "volumen:A",
+    "unidadSI": "J",
+    "magnitud": "energia",
+    "papel": "integral_auxiliar",
+    "variableEnsamblajeId": "volumen.A.W",
+    "procedencia": "trabajo de frontera acumulado int P dV/dt dt (no es un estado del sistema fisico)"
+   },
+   {
+    "variableId": "volumen.A.T",
+    "propietarioId": "volumen:A",
+    "unidadSI": "K",
+    "magnitud": "temperatura",
+    "papel": "algebraica",
+    "variableEnsamblajeId": "volumen.A.T",
+    "procedencia": "cierre de equilibrio del paquete (estado certificado)"
+   },
+   {
+    "variableId": "volumen.A.P",
+    "propietarioId": "volumen:A",
+    "unidadSI": "Pa",
+    "magnitud": "presion",
+    "papel": "dato",
+    "variableEnsamblajeId": "volumen.A.P",
+    "procedencia": "presion prescrita (dato)"
+   },
+   {
+    "variableId": "volumen.A.V",
+    "propietarioId": "volumen:A",
+    "unidadSI": "m3",
+    "magnitud": "volumen",
+    "papel": "algebraica",
+    "variableEnsamblajeId": "volumen.A.V",
+    "procedencia": "cierre de equilibrio del paquete"
+   },
+   {
+    "variableId": "volumen.A.masa",
+    "propietarioId": "volumen:A",
+    "unidadSI": "kg",
+    "magnitud": "masa",
+    "papel": "derivada",
+    "variableEnsamblajeId": null,
+    "procedencia": "sum_i n_i M_i con las masas molares del paquete; presentacion, sin ecuacion propia"
+   },
+   {
+    "variableId": "volumen.A.S",
+    "propietarioId": "volumen:A",
+    "unidadSI": "J/K",
+    "magnitud": "entropia",
+    "papel": "derivada",
+    "variableEnsamblajeId": null,
+    "procedencia": "entropia del estado certificado (referencia del paquete); presentacion, sin ecuacion propia"
+   },
+   {
+    "variableId": "volumen.B.n.1",
+    "propietarioId": "volumen:B",
+    "unidadSI": "mol",
+    "magnitud": "cantidad",
+    "papel": "estado_integrado",
+    "variableEnsamblajeId": "volumen.B.n.1",
+    "procedencia": "estado diferencial: balance de materia del componente 1 en B"
+   },
+   {
+    "variableId": "volumen.B.n.2",
+    "propietarioId": "volumen:B",
+    "unidadSI": "mol",
+    "magnitud": "cantidad",
+    "papel": "estado_integrado",
+    "variableEnsamblajeId": "volumen.B.n.2",
+    "procedencia": "estado diferencial: balance de materia del componente 2 en B"
+   },
+   {
+    "variableId": "volumen.B.n.3",
+    "propietarioId": "volumen:B",
+    "unidadSI": "mol",
+    "magnitud": "cantidad",
+    "papel": "estado_integrado",
+    "variableEnsamblajeId": "volumen.B.n.3",
+    "procedencia": "estado diferencial: balance de materia del componente 3 en B"
+   },
+   {
+    "variableId": "volumen.B.n.4",
+    "propietarioId": "volumen:B",
+    "unidadSI": "mol",
+    "magnitud": "cantidad",
+    "papel": "estado_integrado",
+    "variableEnsamblajeId": "volumen.B.n.4",
+    "procedencia": "estado diferencial: balance de materia del componente 4 en B"
+   },
+   {
+    "variableId": "volumen.B.n.5",
+    "propietarioId": "volumen:B",
+    "unidadSI": "mol",
+    "magnitud": "cantidad",
+    "papel": "estado_integrado",
+    "variableEnsamblajeId": "volumen.B.n.5",
+    "procedencia": "estado diferencial: balance de materia del componente 5 en B"
+   },
+   {
+    "variableId": "volumen.B.U",
+    "propietarioId": "volumen:B",
+    "unidadSI": "J",
+    "magnitud": "energia",
+    "papel": "algebraica",
+    "variableEnsamblajeId": "volumen.B.U",
+    "procedencia": "U = H - P V del estado certificado"
+   },
+   {
+    "variableId": "volumen.B.H",
+    "propietarioId": "volumen:B",
+    "unidadSI": "J",
+    "magnitud": "energia",
+    "papel": "estado_integrado",
+    "variableEnsamblajeId": "volumen.B.H",
+    "procedencia": "estado diferencial (presion prescrita): dH/dt = J_E + V dP/dt"
+   },
+   {
+    "variableId": "volumen.B.W",
+    "propietarioId": "volumen:B",
+    "unidadSI": "J",
+    "magnitud": "energia",
+    "papel": "integral_auxiliar",
+    "variableEnsamblajeId": "volumen.B.W",
+    "procedencia": "trabajo de frontera acumulado int P dV/dt dt (no es un estado del sistema fisico)"
+   },
+   {
+    "variableId": "volumen.B.T",
+    "propietarioId": "volumen:B",
+    "unidadSI": "K",
+    "magnitud": "temperatura",
+    "papel": "algebraica",
+    "variableEnsamblajeId": "volumen.B.T",
+    "procedencia": "cierre de equilibrio del paquete (estado certificado)"
+   },
+   {
+    "variableId": "volumen.B.P",
+    "propietarioId": "volumen:B",
+    "unidadSI": "Pa",
+    "magnitud": "presion",
+    "papel": "dato",
+    "variableEnsamblajeId": "volumen.B.P",
+    "procedencia": "presion prescrita (dato)"
+   },
+   {
+    "variableId": "volumen.B.V",
+    "propietarioId": "volumen:B",
+    "unidadSI": "m3",
+    "magnitud": "volumen",
+    "papel": "algebraica",
+    "variableEnsamblajeId": "volumen.B.V",
+    "procedencia": "cierre de equilibrio del paquete"
+   },
+   {
+    "variableId": "volumen.B.masa",
+    "propietarioId": "volumen:B",
+    "unidadSI": "kg",
+    "magnitud": "masa",
+    "papel": "derivada",
+    "variableEnsamblajeId": null,
+    "procedencia": "sum_i n_i M_i con las masas molares del paquete; presentacion, sin ecuacion propia"
+   },
+   {
+    "variableId": "volumen.B.S",
+    "propietarioId": "volumen:B",
+    "unidadSI": "J/K",
+    "magnitud": "entropia",
+    "papel": "derivada",
+    "variableEnsamblajeId": null,
+    "procedencia": "entropia del estado certificado (referencia del paquete); presentacion, sin ecuacion propia"
+   },
+   {
+    "variableId": "corriente.s.ndot",
+    "propietarioId": "corriente:s",
+    "unidadSI": "mol/s",
+    "magnitud": "caudal_molar",
+    "papel": "algebraica",
+    "variableEnsamblajeId": "corriente.s.ndot",
+    "procedencia": "caudal molar total en el sentido declarado desde -> hasta (negativo: invertido)"
+   },
+   {
+    "variableId": "calor.c.Q",
+    "propietarioId": "calor:c",
+    "unidadSI": "W",
+    "magnitud": "potencia",
+    "papel": "algebraica",
+    "variableEnsamblajeId": "calor.c.Q",
+    "procedencia": "Q = G (T_desde - T_hasta)"
+   },
+   {
+    "variableId": "red.Sgen",
+    "propietarioId": "red",
+    "unidadSI": "J/K",
+    "magnitud": "entropia",
+    "papel": "derivada",
+    "variableEnsamblajeId": null,
+    "procedencia": "S_gen(t) de la segunda ley (ver segundaLey); presentacion, sin ecuacion propia"
+   }
+  ],
+  "certificacion": {
+   "estado": "cumple",
+   "motivo": "conservación, cierre constitutivo, estados y segunda ley comprobados en todas las muestras",
+   "aspectos": [
+    {
+     "id": "estados_termodinamicos",
+     "estado": "cumple",
+     "motivo": "10 estados por volumen publicados, cada uno con sus verificaciones cumplidas (una muestra que no se certifica detiene la publicación y queda en diagnósticos)",
+     "referencias": [
+      "estados"
+     ],
+     "primeraMuestraNoCumple": null
+    },
+    {
+     "id": "conservacion",
+     "estado": "cumple",
+     "motivo": "materia por componente y energía global dentro de tolerancia",
+     "referencias": [
+      "global.materia.1",
+      "global.materia.2",
+      "global.materia.3",
+      "global.materia.4",
+      "global.materia.5",
+      "global.energia"
+     ],
+     "primeraMuestraNoCumple": null
+    },
+    {
+     "id": "cierre_constitutivo",
+     "estado": "cumple",
+     "motivo": "energía y volumen del estado certificado frente a los integrados, y trabajo de frontera",
+     "referencias": [
+      "mecanica.A.trabajo",
+      "mecanica.B.trabajo",
+      "estado.A.energia",
+      "estado.B.energia"
+     ],
+     "primeraMuestraNoCumple": null
+    },
+    {
+     "id": "segunda_ley",
+     "estado": "cumple",
+     "motivo": "S_gen >= 0 y no decreciente",
+     "referencias": [
+      "segundaLey",
+      "red.Sgen"
+     ],
+     "primeraMuestraNoCumple": null
+    }
+   ],
+   "alcance": {
+    "tInicial": 0.0,
+    "tFinal": 200.0,
+    "muestras": 5,
+    "completa": true
+   },
+   "ultimaMuestraCertificada": 4
+  },
+  "procedenciaModelo": [
+   {
+    "volumenIds": [
+     "A",
+     "B"
+    ],
+    "modelo": {
+     "id": "mezcla-ideal",
+     "version": "1"
+    },
+    "componentesCAS": [
+     "71-43-2",
+     "108-88-3",
+     "64-17-5",
+     "67-56-1",
+     "7732-18-5"
+    ],
+    "huella": "sha256:da60e4c0305808010bda5f535c621842707c09890acdf8aa9c986cc59932a45d"
+   }
+  ]
+ }
+}

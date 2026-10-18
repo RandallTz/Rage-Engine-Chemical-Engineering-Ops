@@ -1,0 +1,3188 @@
+{
+ "validacion": {
+  "revision": 1,
+  "solicitudId": "presion-suave",
+  "modeloId": "ens-6e8a69d1eb65c5b35a6b1130de33e861",
+  "recuento": {
+   "estado": "listo",
+   "analisis": "estructural",
+   "variables": 8,
+   "ecuacionesIndependientes": 7,
+   "datosDefinidos": 4,
+   "datosFaltantes": 0,
+   "inicialesFaltantes": 0,
+   "gradosLibertad": 0,
+   "motivo": "Análisis estructural: emparejamiento máximo entre ecuaciones e incógnitas (derivadas de los estados, variables algebraicas y datos pendientes). La regla de fases no se resta aparte: el reparto entre fases lo fija el cierre de equilibrio."
+  },
+  "variables": [
+   {
+    "id": "volumen.dominio.m.1",
+    "propietarioId": "volumen:dominio",
+    "magnitud": "masa",
+    "unidadSI": "kg",
+    "papel": "diferencial",
+    "componenteId": 1
+   },
+   {
+    "id": "volumen.dominio.H",
+    "propietarioId": "volumen:dominio",
+    "magnitud": "energia",
+    "unidadSI": "J",
+    "papel": "diferencial"
+   },
+   {
+    "id": "volumen.dominio.U",
+    "propietarioId": "volumen:dominio",
+    "magnitud": "energia",
+    "unidadSI": "J",
+    "papel": "algebraica"
+   },
+   {
+    "id": "volumen.dominio.V",
+    "propietarioId": "volumen:dominio",
+    "magnitud": "volumen",
+    "unidadSI": "m3",
+    "papel": "algebraica"
+   },
+   {
+    "id": "volumen.dominio.P",
+    "propietarioId": "volumen:dominio",
+    "magnitud": "presion",
+    "unidadSI": "Pa",
+    "papel": "dato",
+    "datoId": "volumen.dominio.Pext"
+   },
+   {
+    "id": "volumen.dominio.T",
+    "propietarioId": "volumen:dominio",
+    "magnitud": "temperatura",
+    "unidadSI": "K",
+    "papel": "algebraica"
+   },
+   {
+    "id": "volumen.dominio.q",
+    "propietarioId": "volumen:dominio",
+    "magnitud": "fraccion_masica_vapor",
+    "unidadSI": "1",
+    "papel": "algebraica"
+   },
+   {
+    "id": "volumen.dominio.W",
+    "propietarioId": "volumen:dominio",
+    "magnitud": "energia",
+    "unidadSI": "J",
+    "papel": "algebraica"
+   }
+  ],
+  "ecuaciones": [
+   {
+    "id": "materia.1",
+    "propietarioId": "volumen:dominio",
+    "familia": "materia",
+    "variableIds": [
+     "volumen.dominio.m.1"
+    ],
+    "latex": "\\frac{dm_{1}}{dt}=0",
+    "unidadResiduo": "kg/s"
+   },
+   {
+    "id": "energia",
+    "propietarioId": "volumen:dominio",
+    "familia": "energia",
+    "variableIds": [
+     "volumen.dominio.H",
+     "volumen.dominio.V",
+     "volumen.dominio.P"
+    ],
+    "latex": "\\frac{dH}{dt}=J_E+V\\frac{dP}{dt},\\quad J_E=0,\\quad H=U+PV",
+    "unidadResiduo": "W"
+   },
+   {
+    "id": "estado.h",
+    "propietarioId": "volumen:dominio",
+    "familia": "estado",
+    "variableIds": [
+     "volumen.dominio.H",
+     "volumen.dominio.m.1",
+     "volumen.dominio.T",
+     "volumen.dominio.P",
+     "volumen.dominio.q"
+    ],
+    "latex": "H=m\\,h(T,P,q)",
+    "unidadResiduo": "J"
+   },
+   {
+    "id": "estado.v",
+    "propietarioId": "volumen:dominio",
+    "familia": "estado",
+    "variableIds": [
+     "volumen.dominio.V",
+     "volumen.dominio.m.1",
+     "volumen.dominio.T",
+     "volumen.dominio.P",
+     "volumen.dominio.q"
+    ],
+    "latex": "V=m\\,v(T,P,q)",
+    "unidadResiduo": "m3"
+   },
+   {
+    "id": "estado.reparto",
+    "propietarioId": "volumen:dominio",
+    "familia": "estado",
+    "variableIds": [
+     "volumen.dominio.T",
+     "volumen.dominio.P",
+     "volumen.dominio.q"
+    ],
+    "latex": "q:\\ \\max S\\ \\text{a}\\ (H,P,m)\\ \\text{(IAPWS-95, cierre PH)}",
+    "unidadResiduo": "1"
+   },
+   {
+    "id": "estado.U",
+    "propietarioId": "volumen:dominio",
+    "familia": "estado",
+    "variableIds": [
+     "volumen.dominio.U",
+     "volumen.dominio.H",
+     "volumen.dominio.P",
+     "volumen.dominio.V"
+    ],
+    "latex": "U=H-PV",
+    "unidadResiduo": "J"
+   },
+   {
+    "id": "mecanica.trabajo",
+    "propietarioId": "volumen:dominio",
+    "familia": "mecanica",
+    "variableIds": [
+     "volumen.dominio.W",
+     "volumen.dominio.P",
+     "volumen.dominio.V"
+    ],
+    "latex": "\\frac{dW}{dt}=P\\frac{dV}{dt},\\ \\frac{dV}{dt}=v\\frac{dm}{dt}+m\\Big[\\Big(\\frac{\\partial v}{\\partial h}\\Big)_P\\frac{dh}{dt}+\\Big(\\frac{\\partial v}{\\partial P}\\Big)_h\\frac{dP}{dt}\\Big]\\ \\text{(comprobación de la forma en }U\\text{)}",
+    "unidadResiduo": "W"
+   }
+  ],
+  "diagnosticos": [],
+  "inicializacion": {
+   "estado": "compatible",
+   "variables": {
+    "volumen.dominio.m.1": 1.0,
+    "volumen.dominio.U": 2692900.094007423,
+    "volumen.dominio.T": 500.0,
+    "volumen.dominio.P": 300000.0,
+    "volumen.dominio.V": 0.759582249641728,
+    "volumen.dominio.q": 1.0,
+    "volumen.dominio.H": 2920774.7688999414
+   },
+   "estadoTermodinamico": {
+    "T": 500.0,
+    "P": 300000.0,
+    "composicionMolar": {
+     "1": 1.0
+    },
+    "componentes": [
+     {
+      "id": 1,
+      "cas": "7732-18-5",
+      "masaMolarKgMol": 0.018015268,
+      "fuente": "IAPWS-95 (R6-95(2018)): M = 18.015268 g/mol"
+     }
+    ],
+    "fases": [
+     {
+      "id": "vapor-1",
+      "tipo": "vapor",
+      "regimen": "ordinario",
+      "fraccionMolar": 1.0,
+      "fraccionMasica": 1.0,
+      "fraccionVolumen": 1.0,
+      "composicionMolar": {
+       "1": 1.0
+      },
+      "propiedades": {
+       "u": 2692900.094007423,
+       "h": 2920774.7688999414,
+       "v": 0.759582249641728,
+       "s": 7425.954877860046,
+       "cp": 2037.0314458999571,
+       "cv": 1538.9463618703471
+      }
+     }
+    ],
+    "mezcla": {
+     "u": 2692900.094007423,
+     "h": 2920774.7688999414,
+     "v": 0.759582249641728,
+     "s": 7425.954877860046,
+     "cp": 2037.0314458999571,
+     "cv": 1538.9463618703471
+    },
+    "referencia": {
+     "id": "iapws95-u0-s0-liquido-saturado-punto-triple",
+     "descripcion": "IAPWS-95: u = 0 y s = 0 del líquido saturado en el punto triple (273.16 K, 611.655 Pa). Propiedades específicas por kg."
+    },
+    "estabilidad": {
+     "estado": "estable",
+     "alcance": [
+      "liquido",
+      "vapor",
+      "fluido"
+     ],
+     "metodo": "Distancia al plano tangente de sustancia pura a T fija sobre las ramas monofásicas de IAPWS-95 (vapor y líquido separados por la curva de saturación por debajo de T_c; una rama por encima), malla de 400 puntos por rama hasta ρ(1 GPa) y refinamiento acotado de cada mínimo local. Tolerancia -min TPD/P ≤ 1e-9."
+    },
+    "verificaciones": [
+     {
+      "id": "estabilidad",
+      "estado": "cumple",
+      "residuo": 5.820766091346741e-16,
+      "tolerancia": 1e-09,
+      "motivo": "Residuo = max(0, -min TPD)/P, con TPD(ρ) = ρ[f(T,ρ) - g*] + P* (distancia al plano tangente de sustancia pura a T fija). Búsqueda: 833 evaluaciones en vapor [4.334e-10, 13.2] kg/m3; liquido [831.3, 1151] kg/m3; menor TPD/P en otro mínimo local: 1.31e+03 (a 831.313 kg/m3). (∂P/∂ρ)_T = 224966 Pa·m3/kg > 0. Alcance: fases fluidas de IAPWS-95; el sólido lo excluye el dominio, no esta búsqueda."
+     },
+     {
+      "id": "dominio",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null,
+      "motivo": "T en [273.16, 1073.15] K, P en [100, 1e+08] Pa, fuera de la banda crítica T en [643.861, 650.331] K × P en [2.09608e+07, 2.31672e+07] Pa. Sin hielo estable: T ≥ 273.16 K y P ≤ 100 MPa (curvas de fusión IAPWS R14-08). Comprobación de pertenencia, sin residuo."
+     },
+     {
+      "id": "ecuacion_estado",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12,
+      "motivo": "Residuo = |P(T,ρ) - P| / max(P, ρ(∂P/∂ρ)_T): error de presión relativo a la presión o al módulo de compresibilidad isoterma, el mayor."
+     },
+     {
+      "id": "identidad_h_u_Pv",
+      "estado": "cumple",
+      "residuo": 8.828552347936811e-16,
+      "tolerancia": 1e-09,
+      "motivo": "Residuo = |h - u - P v|/(R T) con la P especificada; incluye el error de resolver ρ."
+     },
+     {
+      "id": "derivadas",
+      "estado": "cumple",
+      "residuo": 6.127464109673859e-11,
+      "tolerancia": 1e-06,
+      "motivo": "Residuo = max(|cp - (∂h/∂T)_P|/cp, |cv - (∂u/∂T)_ρ|/cv), derivadas analíticas de la EOS frente a diferencias centradas de paso 1e-5·T re-resolviendo ρ en la misma rama."
+     },
+     {
+      "id": "saturacion",
+      "estado": "cumple",
+      "residuo": 2.3710969163030292e-14,
+      "tolerancia": 1e-09,
+      "motivo": "Curva que separa las ramas: Psat = 2639195.87 Pa, ρ' = 831.31345, ρ'' = 13.1989065 kg/m3. Residuo de Maxwell = max(|g'-g''|/(R T), |P(ρ'')-Psat|/Psat, |P(ρ')-Psat|/(ρ'(∂P/∂ρ)_T')). |P/Psat - 1| = 0.886 (banda de indeterminación 1e-06)."
+     },
+     {
+      "id": "reconstruccion_material",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12,
+      "motivo": "Una fase con la composición global: Σβ = 1 y z = x exactamente."
+     }
+    ]
+   }
+  }
+ },
+ "estado": "resuelto",
+ "resultados": {
+  "metodo": "RK45 Dormand-Prince 5(4) (scipy 1.16.2), rtol 1e-10, atol masa 1e-11 kg, atol energía 1e-06 J, paso máximo = intervalo de muestreo (5 s). Estados: m y H = U + PV (cierre PH; U reconstruida). Eventos de fase vigilados en 3 puntos interiores y el extremo de cada paso aceptado, localizados por bisección (tolerancia 1e-9·tf) con re-integración y reinicio. 60 pasos, 0 reintentos por fallo de flash. Cada muestra certificada con el servicio puntual (barrido global y estabilidad).",
+  "tiempos": [
+   0.0,
+   5.0,
+   10.0,
+   15.0,
+   20.0,
+   25.0,
+   30.0,
+   35.0,
+   40.0,
+   45.0,
+   50.0,
+   55.0,
+   60.0,
+   65.0,
+   70.0,
+   75.0,
+   80.0,
+   85.0,
+   90.0,
+   95.0,
+   100.0
+  ],
+  "series": [
+   {
+    "variableId": "volumen.dominio.m.1",
+    "unidadSI": "kg",
+    "valores": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ]
+   },
+   {
+    "variableId": "volumen.dominio.U",
+    "unidadSI": "J",
+    "valores": [
+     2692900.0940074227,
+     2720024.9650516915,
+     2742938.333393236,
+     2761304.05995876,
+     2774928.6226747613,
+     2783701.80770691,
+     2787564.9521817565,
+     2786494.9089822555,
+     2780497.9342493857,
+     2769611.325882212,
+     2753913.395523229,
+     2733545.32589519,
+     2708752.9439830803,
+     2679964.046178481,
+     2647929.6428143163,
+     2613973.933283334,
+     2580395.606241539,
+     2550943.0499767615,
+     2530828.448027769,
+     2525126.9919440956,
+     2535561.971633887
+    ]
+   },
+   {
+    "variableId": "volumen.dominio.H",
+    "unidadSI": "J",
+    "valores": [
+     2920774.7688999414,
+     2956193.3556124438,
+     2986070.041205127,
+     3009988.578568879,
+     3027716.041690999,
+     3039123.7673468157,
+     3044145.151531507,
+     3042754.403013487,
+     3034958.4611636363,
+     3020799.16134779,
+     3000366.429962506,
+     2973827.2809364754,
+     2941481.4050835343,
+     2903864.3645231836,
+     2861936.4698882466,
+     2817417.2907205313,
+     2773322.1377326227,
+     2734595.3295808686,
+     2708126.102314366,
+     2700621.2550759143,
+     2714356.2335686567
+    ]
+   },
+   {
+    "variableId": "volumen.dominio.W",
+    "unidadSI": "J",
+    "valores": [
+     0.0,
+     -27124.871044348205,
+     -50038.239385970955,
+     -68403.96595425834,
+     -82028.5286651229,
+     -90801.71370110748,
+     -94664.85817414308,
+     -93594.81497264591,
+     -87597.84023672463,
+     -76711.23187785935,
+     -61013.30151762783,
+     -40645.23188768522,
+     -15852.84997604663,
+     12936.047828856485,
+     44970.4511927342,
+     78926.16072361739,
+     112504.48776562275,
+     141957.0440319865,
+     162071.6459794289,
+     167773.1020630176,
+     157338.1223732876
+    ]
+   },
+   {
+    "variableId": "volumen.dominio.T",
+    "unidadSI": "K",
+    "valores": [
+     500.00000000000034,
+     518.2582071846526,
+     533.6019642397916,
+     545.8465057266303,
+     554.8986713880838,
+     560.713317288055,
+     563.2701565820876,
+     562.5621617079034,
+     558.5911692486632,
+     551.3690564057167,
+     540.9249260815673,
+     527.3209707501106,
+     510.6830446175052,
+     491.2576422617756,
+     469.51627806113146,
+     446.33958992023526,
+     423.3091787678285,
+     403.0431115037013,
+     389.18513072426913,
+     385.2571971277062,
+     392.446573752018
+    ]
+   },
+   {
+    "variableId": "volumen.dominio.P",
+    "unidadSI": "Pa",
+    "valores": [
+     300000.0,
+     349480.7918509046,
+     395885.1077208406,
+     436327.75200466684,
+     468294.19696157926,
+     489796.92387111724,
+     499498.9973208109,
+     496797.1893747874,
+     481859.48536513635,
+     455614.6393775842,
+     419694.4288207913,
+     376332.1984104663,
+     328224.00161197345,
+     278360.9730939783,
+     229843.35446207604,
+     185687.73625153126,
+     148639.50093841436,
+     121002.12835428331,
+     104493.97646698059,
+     100141.44220492442,
+     108215.1450673723
+    ]
+   },
+   {
+    "variableId": "volumen.dominio.V",
+    "unidadSI": "m3",
+    "valores": [
+     0.7595822496417285,
+     0.6757693013969884,
+     0.6141471428708947,
+     0.5699488915558575,
+     0.5398047224509545,
+     0.5214854303721927,
+     0.5136751039060798,
+     0.5158231558309142,
+     0.5280803525563667,
+     0.5513164278670383,
+     0.5872201714274164,
+     0.6384836483728391,
+     0.7090537558419807,
+     0.8043524056409689,
+     0.9310986065913907,
+     1.0956208608284945,
+     1.2979492683510745,
+     1.5177607377813227,
+     1.6967260724604738,
+     1.7524639077265953,
+     1.6522110821313998
+    ]
+   },
+   {
+    "variableId": "volumen.dominio.q",
+    "unidadSI": "1",
+    "valores": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ]
+   }
+  ],
+  "estadosTermodinamicos": [
+   {
+    "T": 500.00000000000034,
+    "P": 300000.0,
+    "composicionMolar": {
+     "1": 1.0
+    },
+    "componentes": [
+     {
+      "id": 1,
+      "cas": "7732-18-5",
+      "masaMolarKgMol": 0.018015268,
+      "fuente": "IAPWS-95 (R6-95(2018)): M = 18.015268 g/mol"
+     }
+    ],
+    "fases": [
+     {
+      "id": "vapor-1",
+      "tipo": "vapor",
+      "regimen": "ordinario",
+      "fraccionMolar": 1.0,
+      "fraccionMasica": 1.0,
+      "fraccionVolumen": 1.0,
+      "composicionMolar": {
+       "1": 1.0
+      },
+      "propiedades": {
+       "u": 2692900.094007423,
+       "h": 2920774.768899942,
+       "v": 0.7595822496417285,
+       "s": 7425.954877860047,
+       "cp": 2037.031445899957,
+       "cv": 1538.9463618703471
+      }
+     }
+    ],
+    "mezcla": {
+     "u": 2692900.094007423,
+     "h": 2920774.768899942,
+     "v": 0.7595822496417285,
+     "s": 7425.954877860047,
+     "cp": 2037.031445899957,
+     "cv": 1538.9463618703471
+    },
+    "referencia": {
+     "id": "iapws95-u0-s0-liquido-saturado-punto-triple",
+     "descripcion": "IAPWS-95: u = 0 y s = 0 del líquido saturado en el punto triple (273.16 K, 611.655 Pa). Propiedades específicas por kg."
+    },
+    "estabilidad": {
+     "estado": "estable",
+     "alcance": [
+      "liquido",
+      "vapor",
+      "fluido"
+     ],
+     "metodo": "Criterio PH: máximo de S a (H, P, n), equivalente al estado estable en G a su (T, P) con h dada. Estado de una fase: distancia al plano tangente a la T y P resultantes sobre las ramas monofásicas de IAPWS-95, como en TP."
+    },
+    "verificaciones": [
+     {
+      "id": "estabilidad",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "dominio",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     },
+     {
+      "id": "ecuacion_estado",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "energia",
+      "estado": "cumple",
+      "residuo": 2.017954822385555e-15,
+      "tolerancia": 1e-10
+     },
+     {
+      "id": "identidad_h_u_Pv",
+      "estado": "cumple",
+      "residuo": 5.044887055963888e-16,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "identidad_g_h_Ts",
+      "estado": "cumple",
+      "residuo": 2.017954822385555e-15,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "derivadas",
+      "estado": "cumple",
+      "residuo": 6.127408299618521e-11,
+      "tolerancia": 1e-06
+     },
+     {
+      "id": "saturacion",
+      "estado": "cumple",
+      "residuo": 2.850361186619597e-14,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "reconstruccion_material",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "bases_fase",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "unicidad",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     }
+    ]
+   },
+   {
+    "T": 518.2582071846526,
+    "P": 349480.7918509046,
+    "composicionMolar": {
+     "1": 1.0
+    },
+    "componentes": [
+     {
+      "id": 1,
+      "cas": "7732-18-5",
+      "masaMolarKgMol": 0.018015268,
+      "fuente": "IAPWS-95 (R6-95(2018)): M = 18.015268 g/mol"
+     }
+    ],
+    "fases": [
+     {
+      "id": "vapor-1",
+      "tipo": "vapor",
+      "regimen": "ordinario",
+      "fraccionMolar": 1.0,
+      "fraccionMasica": 1.0,
+      "fraccionVolumen": 1.0,
+      "composicionMolar": {
+       "1": 1.0
+      },
+      "propiedades": {
+       "u": 2720024.9650516915,
+       "h": 2956193.3556124438,
+       "v": 0.6757693013969884,
+       "s": 7425.954877850514,
+       "cp": 2044.6142260386484,
+       "cv": 1546.8909832906493
+      }
+     }
+    ],
+    "mezcla": {
+     "u": 2720024.9650516915,
+     "h": 2956193.3556124438,
+     "v": 0.6757693013969884,
+     "s": 7425.954877850514,
+     "cp": 2044.6142260386484,
+     "cv": 1546.8909832906493
+    },
+    "referencia": {
+     "id": "iapws95-u0-s0-liquido-saturado-punto-triple",
+     "descripcion": "IAPWS-95: u = 0 y s = 0 del líquido saturado en el punto triple (273.16 K, 611.655 Pa). Propiedades específicas por kg."
+    },
+    "estabilidad": {
+     "estado": "estable",
+     "alcance": [
+      "liquido",
+      "vapor",
+      "fluido"
+     ],
+     "metodo": "Criterio PH: máximo de S a (H, P, n), equivalente al estado estable en G a su (T, P) con h dada. Estado de una fase: distancia al plano tangente a la T y P resultantes sobre las ramas monofásicas de IAPWS-95, como en TP."
+    },
+    "verificaciones": [
+     {
+      "id": "estabilidad",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "dominio",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     },
+     {
+      "id": "ecuacion_estado",
+      "estado": "cumple",
+      "residuo": 1.665546784565486e-16,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "energia",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-10
+     },
+     {
+      "id": "identidad_h_u_Pv",
+      "estado": "cumple",
+      "residuo": 4.867155971701211e-16,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "identidad_g_h_Ts",
+      "estado": "cumple",
+      "residuo": 2.4335779858506058e-15,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "derivadas",
+      "estado": "cumple",
+      "residuo": 9.280160215391206e-11,
+      "tolerancia": 1e-06
+     },
+     {
+      "id": "saturacion",
+      "estado": "cumple",
+      "residuo": 2.092877067831521e-14,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "reconstruccion_material",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "bases_fase",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "unicidad",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     }
+    ]
+   },
+   {
+    "T": 533.6019642397916,
+    "P": 395885.1077208406,
+    "composicionMolar": {
+     "1": 1.0
+    },
+    "componentes": [
+     {
+      "id": 1,
+      "cas": "7732-18-5",
+      "masaMolarKgMol": 0.018015268,
+      "fuente": "IAPWS-95 (R6-95(2018)): M = 18.015268 g/mol"
+     }
+    ],
+    "fases": [
+     {
+      "id": "vapor-1",
+      "tipo": "vapor",
+      "regimen": "ordinario",
+      "fraccionMolar": 1.0,
+      "fraccionMasica": 1.0,
+      "fraccionVolumen": 1.0,
+      "composicionMolar": {
+       "1": 1.0
+      },
+      "propiedades": {
+       "u": 2742938.333393235,
+       "h": 2986070.041205126,
+       "v": 0.6141471428708947,
+       "s": 7425.95487784016,
+       "cp": 2051.739893349709,
+       "cv": 1554.1581028611536
+      }
+     }
+    ],
+    "mezcla": {
+     "u": 2742938.333393235,
+     "h": 2986070.041205126,
+     "v": 0.6141471428708947,
+     "s": 7425.95487784016,
+     "cp": 2051.739893349709,
+     "cv": 1554.1581028611536
+    },
+    "referencia": {
+     "id": "iapws95-u0-s0-liquido-saturado-punto-triple",
+     "descripcion": "IAPWS-95: u = 0 y s = 0 del líquido saturado en el punto triple (273.16 K, 611.655 Pa). Propiedades específicas por kg."
+    },
+    "estabilidad": {
+     "estado": "estable",
+     "alcance": [
+      "liquido",
+      "vapor",
+      "fluido"
+     ],
+     "metodo": "Criterio PH: máximo de S a (H, P, n), equivalente al estado estable en G a su (T, P) con h dada. Estado de una fase: distancia al plano tangente a la T y P resultantes sobre las ramas monofásicas de IAPWS-95, como en TP."
+    },
+    "verificaciones": [
+     {
+      "id": "estabilidad",
+      "estado": "cumple",
+      "residuo": 2.0584438184100056e-15,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "dominio",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     },
+     {
+      "id": "ecuacion_estado",
+      "estado": "cumple",
+      "residuo": 1.4703170131500042e-16,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "energia",
+      "estado": "cumple",
+      "residuo": 3.781760483697774e-15,
+      "tolerancia": 1e-10
+     },
+     {
+      "id": "identidad_h_u_Pv",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "identidad_g_h_Ts",
+      "estado": "cumple",
+      "residuo": 3.781760483697774e-15,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "derivadas",
+      "estado": "cumple",
+      "residuo": 6.66413604151025e-11,
+      "tolerancia": 1e-06
+     },
+     {
+      "id": "saturacion",
+      "estado": "cumple",
+      "residuo": 3.388919789796019e-14,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "reconstruccion_material",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "bases_fase",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "unicidad",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     }
+    ]
+   },
+   {
+    "T": 545.8465057266303,
+    "P": 436327.75200466684,
+    "composicionMolar": {
+     "1": 1.0
+    },
+    "componentes": [
+     {
+      "id": 1,
+      "cas": "7732-18-5",
+      "masaMolarKgMol": 0.018015268,
+      "fuente": "IAPWS-95 (R6-95(2018)): M = 18.015268 g/mol"
+     }
+    ],
+    "fases": [
+     {
+      "id": "vapor-1",
+      "tipo": "vapor",
+      "regimen": "ordinario",
+      "fraccionMolar": 1.0,
+      "fraccionMasica": 1.0,
+      "fraccionVolumen": 1.0,
+      "composicionMolar": {
+       "1": 1.0
+      },
+      "propiedades": {
+       "u": 2761304.05995876,
+       "h": 3009988.578568879,
+       "v": 0.5699488915558575,
+       "s": 7425.954877495005,
+       "cp": 2057.8427553549423,
+       "cv": 1560.2828669838855
+      }
+     }
+    ],
+    "mezcla": {
+     "u": 2761304.05995876,
+     "h": 3009988.578568879,
+     "v": 0.5699488915558575,
+     "s": 7425.954877495005,
+     "cp": 2057.8427553549423,
+     "cv": 1560.2828669838855
+    },
+    "referencia": {
+     "id": "iapws95-u0-s0-liquido-saturado-punto-triple",
+     "descripcion": "IAPWS-95: u = 0 y s = 0 del líquido saturado en el punto triple (273.16 K, 611.655 Pa). Propiedades específicas por kg."
+    },
+    "estabilidad": {
+     "estado": "estable",
+     "alcance": [
+      "liquido",
+      "vapor",
+      "fluido"
+     ],
+     "metodo": "Criterio PH: máximo de S a (H, P, n), equivalente al estado estable en G a su (T, P) con h dada. Estado de una fase: distancia al plano tangente a la T y P resultantes sobre las ramas monofásicas de IAPWS-95, como en TP."
+    },
+    "verificaciones": [
+     {
+      "id": "estabilidad",
+      "estado": "cumple",
+      "residuo": 6.670176334881037e-16,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "dominio",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     },
+     {
+      "id": "ecuacion_estado",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "energia",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-10
+     },
+     {
+      "id": "identidad_h_u_Pv",
+      "estado": "cumple",
+      "residuo": 2.310579532449394e-16,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "identidad_g_h_Ts",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "derivadas",
+      "estado": "cumple",
+      "residuo": 2.114847252604094e-11,
+      "tolerancia": 1e-06
+     },
+     {
+      "id": "saturacion",
+      "estado": "cumple",
+      "residuo": 3.6351548000725175e-14,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "reconstruccion_material",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "bases_fase",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "unicidad",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     }
+    ]
+   },
+   {
+    "T": 554.8986713880838,
+    "P": 468294.19696157926,
+    "composicionMolar": {
+     "1": 1.0
+    },
+    "componentes": [
+     {
+      "id": 1,
+      "cas": "7732-18-5",
+      "masaMolarKgMol": 0.018015268,
+      "fuente": "IAPWS-95 (R6-95(2018)): M = 18.015268 g/mol"
+     }
+    ],
+    "fases": [
+     {
+      "id": "vapor-1",
+      "tipo": "vapor",
+      "regimen": "ordinario",
+      "fraccionMolar": 1.0,
+      "fraccionMasica": 1.0,
+      "fraccionVolumen": 1.0,
+      "composicionMolar": {
+       "1": 1.0
+      },
+      "propiedades": {
+       "u": 2774928.622674762,
+       "h": 3027716.0416909996,
+       "v": 0.5398047224509545,
+       "s": 7425.954878137392,
+       "cp": 2062.563607959548,
+       "cv": 1564.9737443804079
+      }
+     }
+    ],
+    "mezcla": {
+     "u": 2774928.622674762,
+     "h": 3027716.0416909996,
+     "v": 0.5398047224509545,
+     "s": 7425.954878137392,
+     "cp": 2062.563607959548,
+     "cv": 1564.9737443804079
+    },
+    "referencia": {
+     "id": "iapws95-u0-s0-liquido-saturado-punto-triple",
+     "descripcion": "IAPWS-95: u = 0 y s = 0 del líquido saturado en el punto triple (273.16 K, 611.655 Pa). Propiedades específicas por kg."
+    },
+    "estabilidad": {
+     "estado": "estable",
+     "alcance": [
+      "liquido",
+      "vapor",
+      "fluido"
+     ],
+     "metodo": "Criterio PH: máximo de S a (H, P, n), equivalente al estado estable en G a su (T, P) con h dada. Estado de una fase: distancia al plano tangente a la T y P resultantes sobre las ramas monofásicas de IAPWS-95, como en TP."
+    },
+    "verificaciones": [
+     {
+      "id": "estabilidad",
+      "estado": "cumple",
+      "residuo": 2.4859441475523136e-16,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "dominio",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     },
+     {
+      "id": "ecuacion_estado",
+      "estado": "cumple",
+      "residuo": 1.2429720737761565e-16,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "energia",
+      "estado": "cumple",
+      "residuo": 1.818309293602763e-15,
+      "tolerancia": 1e-10
+     },
+     {
+      "id": "identidad_h_u_Pv",
+      "estado": "cumple",
+      "residuo": 2.272886617003454e-16,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "identidad_g_h_Ts",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "derivadas",
+      "estado": "cumple",
+      "residuo": 7.20839962506707e-11,
+      "tolerancia": 1e-06
+     },
+     {
+      "id": "saturacion",
+      "estado": "cumple",
+      "residuo": 3.322340211709902e-14,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "reconstruccion_material",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "bases_fase",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "unicidad",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     }
+    ]
+   },
+   {
+    "T": 560.713317288055,
+    "P": 489796.92387111724,
+    "composicionMolar": {
+     "1": 1.0
+    },
+    "componentes": [
+     {
+      "id": 1,
+      "cas": "7732-18-5",
+      "masaMolarKgMol": 0.018015268,
+      "fuente": "IAPWS-95 (R6-95(2018)): M = 18.015268 g/mol"
+     }
+    ],
+    "fases": [
+     {
+      "id": "vapor-1",
+      "tipo": "vapor",
+      "regimen": "ordinario",
+      "fraccionMolar": 1.0,
+      "fraccionMasica": 1.0,
+      "fraccionVolumen": 1.0,
+      "composicionMolar": {
+       "1": 1.0
+      },
+      "propiedades": {
+       "u": 2783701.80770691,
+       "h": 3039123.7673468157,
+       "v": 0.5214854303721927,
+       "s": 7425.954877609179,
+       "cp": 2065.681728222013,
+       "cv": 1568.053535082271
+      }
+     }
+    ],
+    "mezcla": {
+     "u": 2783701.80770691,
+     "h": 3039123.7673468157,
+     "v": 0.5214854303721927,
+     "s": 7425.954877609179,
+     "cp": 2065.681728222013,
+     "cv": 1568.053535082271
+    },
+    "referencia": {
+     "id": "iapws95-u0-s0-liquido-saturado-punto-triple",
+     "descripcion": "IAPWS-95: u = 0 y s = 0 del líquido saturado en el punto triple (273.16 K, 611.655 Pa). Propiedades específicas por kg."
+    },
+    "estabilidad": {
+     "estado": "estable",
+     "alcance": [
+      "liquido",
+      "vapor",
+      "fluido"
+     ],
+     "metodo": "Criterio PH: máximo de S a (H, P, n), equivalente al estado estable en G a su (T, P) con h dada. Estado de una fase: distancia al plano tangente a la T y P resultantes sobre las ramas monofásicas de IAPWS-95, como en TP."
+    },
+    "verificaciones": [
+     {
+      "id": "estabilidad",
+      "estado": "cumple",
+      "residuo": 1.1884039706379187e-16,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "dominio",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     },
+     {
+      "id": "ecuacion_estado",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "energia",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-10
+     },
+     {
+      "id": "identidad_h_u_Pv",
+      "estado": "cumple",
+      "residuo": 7.872608047403771e-16,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "identidad_g_h_Ts",
+      "estado": "cumple",
+      "residuo": 2.699179901967007e-15,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "derivadas",
+      "estado": "cumple",
+      "residuo": 2.1560458923869522e-11,
+      "tolerancia": 1e-06
+     },
+     {
+      "id": "saturacion",
+      "estado": "cumple",
+      "residuo": 8.948546411047336e-15,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "reconstruccion_material",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "bases_fase",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "unicidad",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     }
+    ]
+   },
+   {
+    "T": 563.2701565820876,
+    "P": 499498.9973208109,
+    "composicionMolar": {
+     "1": 1.0
+    },
+    "componentes": [
+     {
+      "id": 1,
+      "cas": "7732-18-5",
+      "masaMolarKgMol": 0.018015268,
+      "fuente": "IAPWS-95 (R6-95(2018)): M = 18.015268 g/mol"
+     }
+    ],
+    "fases": [
+     {
+      "id": "vapor-1",
+      "tipo": "vapor",
+      "regimen": "ordinario",
+      "fraccionMolar": 1.0,
+      "fraccionMasica": 1.0,
+      "fraccionVolumen": 1.0,
+      "composicionMolar": {
+       "1": 1.0
+      },
+      "propiedades": {
+       "u": 2787564.9521817565,
+       "h": 3044145.151531507,
+       "v": 0.5136751039060798,
+       "s": 7425.954877877411,
+       "cp": 2067.072904957753,
+       "cv": 1569.4233661970177
+      }
+     }
+    ],
+    "mezcla": {
+     "u": 2787564.9521817565,
+     "h": 3044145.151531507,
+     "v": 0.5136751039060798,
+     "s": 7425.954877877411,
+     "cp": 2067.072904957753,
+     "cv": 1569.4233661970177
+    },
+    "referencia": {
+     "id": "iapws95-u0-s0-liquido-saturado-punto-triple",
+     "descripcion": "IAPWS-95: u = 0 y s = 0 del líquido saturado en el punto triple (273.16 K, 611.655 Pa). Propiedades específicas por kg."
+    },
+    "estabilidad": {
+     "estado": "estable",
+     "alcance": [
+      "liquido",
+      "vapor",
+      "fluido"
+     ],
+     "metodo": "Criterio PH: máximo de S a (H, P, n), equivalente al estado estable en G a su (T, P) con h dada. Estado de una fase: distancia al plano tangente a la T y P resultantes sobre las ramas monofásicas de IAPWS-95, como en TP."
+    },
+    "verificaciones": [
+     {
+      "id": "estabilidad",
+      "estado": "cumple",
+      "residuo": 5.826604380156808e-16,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "dominio",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     },
+     {
+      "id": "ecuacion_estado",
+      "estado": "cumple",
+      "residuo": 1.1653208760313615e-16,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "energia",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-10
+     },
+     {
+      "id": "identidad_h_u_Pv",
+      "estado": "cumple",
+      "residuo": 2.239106313822913e-16,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "identidad_g_h_Ts",
+      "estado": "cumple",
+      "residuo": 8.956425255291652e-16,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "derivadas",
+      "estado": "cumple",
+      "residuo": 7.485414168195419e-11,
+      "tolerancia": 1e-06
+     },
+     {
+      "id": "saturacion",
+      "estado": "cumple",
+      "residuo": 2.898353693981204e-14,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "reconstruccion_material",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "bases_fase",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "unicidad",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     }
+    ]
+   },
+   {
+    "T": 562.5621617079034,
+    "P": 496797.1893747874,
+    "composicionMolar": {
+     "1": 1.0
+    },
+    "componentes": [
+     {
+      "id": 1,
+      "cas": "7732-18-5",
+      "masaMolarKgMol": 0.018015268,
+      "fuente": "IAPWS-95 (R6-95(2018)): M = 18.015268 g/mol"
+     }
+    ],
+    "fases": [
+     {
+      "id": "vapor-1",
+      "tipo": "vapor",
+      "regimen": "ordinario",
+      "fraccionMolar": 1.0,
+      "fraccionMasica": 1.0,
+      "fraccionVolumen": 1.0,
+      "composicionMolar": {
+       "1": 1.0
+      },
+      "propiedades": {
+       "u": 2786494.908982256,
+       "h": 3042754.4030134873,
+       "v": 0.5158231558309142,
+       "s": 7425.954878161628,
+       "cp": 2066.6864868690623,
+       "cv": 1569.0431275824833
+      }
+     }
+    ],
+    "mezcla": {
+     "u": 2786494.908982256,
+     "h": 3042754.4030134873,
+     "v": 0.5158231558309142,
+     "s": 7425.954878161628,
+     "cp": 2066.6864868690623,
+     "cv": 1569.0431275824833
+    },
+    "referencia": {
+     "id": "iapws95-u0-s0-liquido-saturado-punto-triple",
+     "descripcion": "IAPWS-95: u = 0 y s = 0 del líquido saturado en el punto triple (273.16 K, 611.655 Pa). Propiedades específicas por kg."
+    },
+    "estabilidad": {
+     "estado": "estable",
+     "alcance": [
+      "liquido",
+      "vapor",
+      "fluido"
+     ],
+     "metodo": "Criterio PH: máximo de S a (H, P, n), equivalente al estado estable en G a su (T, P) con h dada. Estado de una fase: distancia al plano tangente a la T y P resultantes sobre las ramas monofásicas de IAPWS-95, como en TP."
+    },
+    "verificaciones": [
+     {
+      "id": "estabilidad",
+      "estado": "cumple",
+      "residuo": 7.029950509992333e-16,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "dominio",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     },
+     {
+      "id": "ecuacion_estado",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "energia",
+      "estado": "cumple",
+      "residuo": 1.793539416390157e-15,
+      "tolerancia": 1e-10
+     },
+     {
+      "id": "identidad_h_u_Pv",
+      "estado": "cumple",
+      "residuo": 8.967697081950786e-16,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "identidad_g_h_Ts",
+      "estado": "cumple",
+      "residuo": 2.6903091245852358e-15,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "derivadas",
+      "estado": "cumple",
+      "residuo": 7.57503054074232e-11,
+      "tolerancia": 1e-06
+     },
+     {
+      "id": "saturacion",
+      "estado": "cumple",
+      "residuo": 2.4613912379727636e-14,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "reconstruccion_material",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "bases_fase",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "unicidad",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     }
+    ]
+   },
+   {
+    "T": 558.5911692486632,
+    "P": 481859.48536513635,
+    "composicionMolar": {
+     "1": 1.0
+    },
+    "componentes": [
+     {
+      "id": 1,
+      "cas": "7732-18-5",
+      "masaMolarKgMol": 0.018015268,
+      "fuente": "IAPWS-95 (R6-95(2018)): M = 18.015268 g/mol"
+     }
+    ],
+    "fases": [
+     {
+      "id": "vapor-1",
+      "tipo": "vapor",
+      "regimen": "ordinario",
+      "fraccionMolar": 1.0,
+      "fraccionMasica": 1.0,
+      "fraccionVolumen": 1.0,
+      "composicionMolar": {
+       "1": 1.0
+      },
+      "propiedades": {
+       "u": 2780497.9342493857,
+       "h": 3034958.4611636363,
+       "v": 0.5280803525563667,
+       "s": 7425.954878443146,
+       "cp": 2064.536266735113,
+       "cv": 1566.923728582656
+      }
+     }
+    ],
+    "mezcla": {
+     "u": 2780497.9342493857,
+     "h": 3034958.4611636363,
+     "v": 0.5280803525563667,
+     "s": 7425.954878443146,
+     "cp": 2064.536266735113,
+     "cv": 1566.923728582656
+    },
+    "referencia": {
+     "id": "iapws95-u0-s0-liquido-saturado-punto-triple",
+     "descripcion": "IAPWS-95: u = 0 y s = 0 del líquido saturado en el punto triple (273.16 K, 611.655 Pa). Propiedades específicas por kg."
+    },
+    "estabilidad": {
+     "estado": "estable",
+     "alcance": [
+      "liquido",
+      "vapor",
+      "fluido"
+     ],
+     "metodo": "Criterio PH: máximo de S a (H, P, n), equivalente al estado estable en G a su (T, P) con h dada. Estado de una fase: distancia al plano tangente a la T y P resultantes sobre las ramas monofásicas de IAPWS-95, como en TP."
+    },
+    "verificaciones": [
+     {
+      "id": "estabilidad",
+      "estado": "cumple",
+      "residuo": 2.415959950206632e-16,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "dominio",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     },
+     {
+      "id": "ecuacion_estado",
+      "estado": "cumple",
+      "residuo": 1.207979975103316e-16,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "energia",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-10
+     },
+     {
+      "id": "identidad_h_u_Pv",
+      "estado": "cumple",
+      "residuo": 1.128930990519764e-16,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "identidad_g_h_Ts",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "derivadas",
+      "estado": "cumple",
+      "residuo": 5.03714523667357e-12,
+      "tolerancia": 1e-06
+     },
+     {
+      "id": "saturacion",
+      "estado": "cumple",
+      "residuo": 1.3113473403202616e-14,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "reconstruccion_material",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "bases_fase",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "unicidad",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     }
+    ]
+   },
+   {
+    "T": 551.3690564057167,
+    "P": 455614.6393775842,
+    "composicionMolar": {
+     "1": 1.0
+    },
+    "componentes": [
+     {
+      "id": 1,
+      "cas": "7732-18-5",
+      "masaMolarKgMol": 0.018015268,
+      "fuente": "IAPWS-95 (R6-95(2018)): M = 18.015268 g/mol"
+     }
+    ],
+    "fases": [
+     {
+      "id": "vapor-1",
+      "tipo": "vapor",
+      "regimen": "ordinario",
+      "fraccionMolar": 1.0,
+      "fraccionMasica": 1.0,
+      "fraccionVolumen": 1.0,
+      "composicionMolar": {
+       "1": 1.0
+      },
+      "propiedades": {
+       "u": 2769611.325882212,
+       "h": 3020799.16134779,
+       "v": 0.5513164278670383,
+       "s": 7425.954877407798,
+       "cp": 2060.702946933803,
+       "cv": 1563.1291906643196
+      }
+     }
+    ],
+    "mezcla": {
+     "u": 2769611.325882212,
+     "h": 3020799.16134779,
+     "v": 0.5513164278670383,
+     "s": 7425.954877407798,
+     "cp": 2060.702946933803,
+     "cv": 1563.1291906643196
+    },
+    "referencia": {
+     "id": "iapws95-u0-s0-liquido-saturado-punto-triple",
+     "descripcion": "IAPWS-95: u = 0 y s = 0 del líquido saturado en el punto triple (273.16 K, 611.655 Pa). Propiedades específicas por kg."
+    },
+    "estabilidad": {
+     "estado": "estable",
+     "alcance": [
+      "liquido",
+      "vapor",
+      "fluido"
+     ],
+     "metodo": "Criterio PH: máximo de S a (H, P, n), equivalente al estado estable en G a su (T, P) con h dada. Estado de una fase: distancia al plano tangente a la T y P resultantes sobre las ramas monofásicas de IAPWS-95, como en TP."
+    },
+    "verificaciones": [
+     {
+      "id": "estabilidad",
+      "estado": "cumple",
+      "residuo": 3.8326903406561944e-16,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "dominio",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     },
+     {
+      "id": "ecuacion_estado",
+      "estado": "cumple",
+      "residuo": 1.277563446885398e-16,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "energia",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-10
+     },
+     {
+      "id": "identidad_h_u_Pv",
+      "estado": "cumple",
+      "residuo": 8.006028127048584e-16,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "identidad_g_h_Ts",
+      "estado": "cumple",
+      "residuo": 1.8299492861825335e-15,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "derivadas",
+      "estado": "cumple",
+      "residuo": 1.0333184896361092e-10,
+      "tolerancia": 1e-06
+     },
+     {
+      "id": "saturacion",
+      "estado": "cumple",
+      "residuo": 1.6240799914869984e-14,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "reconstruccion_material",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "bases_fase",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "unicidad",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     }
+    ]
+   },
+   {
+    "T": 540.9249260815673,
+    "P": 419694.4288207913,
+    "composicionMolar": {
+     "1": 1.0
+    },
+    "componentes": [
+     {
+      "id": 1,
+      "cas": "7732-18-5",
+      "masaMolarKgMol": 0.018015268,
+      "fuente": "IAPWS-95 (R6-95(2018)): M = 18.015268 g/mol"
+     }
+    ],
+    "fases": [
+     {
+      "id": "vapor-1",
+      "tipo": "vapor",
+      "regimen": "ordinario",
+      "fraccionMolar": 1.0,
+      "fraccionMasica": 1.0,
+      "fraccionVolumen": 1.0,
+      "composicionMolar": {
+       "1": 1.0
+      },
+      "propiedades": {
+       "u": 2753913.3955232287,
+       "h": 3000366.4299625056,
+       "v": 0.5872201714274164,
+       "s": 7425.954877607555,
+       "cp": 2055.348805347258,
+       "cv": 1557.7891203133486
+      }
+     }
+    ],
+    "mezcla": {
+     "u": 2753913.3955232287,
+     "h": 3000366.4299625056,
+     "v": 0.5872201714274164,
+     "s": 7425.954877607555,
+     "cp": 2055.348805347258,
+     "cv": 1557.7891203133486
+    },
+    "referencia": {
+     "id": "iapws95-u0-s0-liquido-saturado-punto-triple",
+     "descripcion": "IAPWS-95: u = 0 y s = 0 del líquido saturado en el punto triple (273.16 K, 611.655 Pa). Propiedades específicas por kg."
+    },
+    "estabilidad": {
+     "estado": "estable",
+     "alcance": [
+      "liquido",
+      "vapor",
+      "fluido"
+     ],
+     "metodo": "Criterio PH: máximo de S a (H, P, n), equivalente al estado estable en G a su (T, P) con h dada. Estado de una fase: distancia al plano tangente a la T y P resultantes sobre las ramas monofásicas de IAPWS-95, como en TP."
+    },
+    "verificaciones": [
+     {
+      "id": "estabilidad",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "dominio",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     },
+     {
+      "id": "ecuacion_estado",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "energia",
+      "estado": "cumple",
+      "residuo": 1.8652817841132958e-15,
+      "tolerancia": 1e-10
+     },
+     {
+      "id": "identidad_h_u_Pv",
+      "estado": "cumple",
+      "residuo": 8.160607805495669e-16,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "identidad_g_h_Ts",
+      "estado": "cumple",
+      "residuo": 9.326408920566479e-16,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "derivadas",
+      "estado": "cumple",
+      "residuo": 2.8255926210976262e-11,
+      "tolerancia": 1e-06
+     },
+     {
+      "id": "saturacion",
+      "estado": "cumple",
+      "residuo": 1.7020696280033824e-14,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "reconstruccion_material",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "bases_fase",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "unicidad",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     }
+    ]
+   },
+   {
+    "T": 527.3209707501106,
+    "P": 376332.1984104663,
+    "composicionMolar": {
+     "1": 1.0
+    },
+    "componentes": [
+     {
+      "id": 1,
+      "cas": "7732-18-5",
+      "masaMolarKgMol": 0.018015268,
+      "fuente": "IAPWS-95 (R6-95(2018)): M = 18.015268 g/mol"
+     }
+    ],
+    "fases": [
+     {
+      "id": "vapor-1",
+      "tipo": "vapor",
+      "regimen": "ordinario",
+      "fraccionMolar": 1.0,
+      "fraccionMasica": 1.0,
+      "fraccionVolumen": 1.0,
+      "composicionMolar": {
+       "1": 1.0
+      },
+      "propiedades": {
+       "u": 2733545.32589519,
+       "h": 2973827.2809364754,
+       "v": 0.6384836483728391,
+       "s": 7425.9548778274575,
+       "cp": 2048.748094785978,
+       "cv": 1551.1246820683884
+      }
+     }
+    ],
+    "mezcla": {
+     "u": 2733545.32589519,
+     "h": 2973827.2809364754,
+     "v": 0.6384836483728391,
+     "s": 7425.9548778274575,
+     "cp": 2048.748094785978,
+     "cv": 1551.1246820683884
+    },
+    "referencia": {
+     "id": "iapws95-u0-s0-liquido-saturado-punto-triple",
+     "descripcion": "IAPWS-95: u = 0 y s = 0 del líquido saturado en el punto triple (273.16 K, 611.655 Pa). Propiedades específicas por kg."
+    },
+    "estabilidad": {
+     "estado": "estable",
+     "alcance": [
+      "liquido",
+      "vapor",
+      "fluido"
+     ],
+     "metodo": "Criterio PH: máximo de S a (H, P, n), equivalente al estado estable en G a su (T, P) con h dada. Estado de una fase: distancia al plano tangente a la T y P resultantes sobre las ramas monofásicas de IAPWS-95, como en TP."
+    },
+    "verificaciones": [
+     {
+      "id": "estabilidad",
+      "estado": "cumple",
+      "residuo": 1.2373676482495431e-15,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "dominio",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     },
+     {
+      "id": "ecuacion_estado",
+      "estado": "cumple",
+      "residuo": 1.5467095603119292e-16,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "energia",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-10
+     },
+     {
+      "id": "identidad_h_u_Pv",
+      "estado": "cumple",
+      "residuo": 3.587630211814523e-16,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "identidad_g_h_Ts",
+      "estado": "cumple",
+      "residuo": 1.4350520847258092e-15,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "derivadas",
+      "estado": "cumple",
+      "residuo": 1.0024159631562387e-10,
+      "tolerancia": 1e-06
+     },
+     {
+      "id": "saturacion",
+      "estado": "cumple",
+      "residuo": 2.5992283998623192e-14,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "reconstruccion_material",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "bases_fase",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "unicidad",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     }
+    ]
+   },
+   {
+    "T": 510.6830446175052,
+    "P": 328224.00161197345,
+    "composicionMolar": {
+     "1": 1.0
+    },
+    "componentes": [
+     {
+      "id": 1,
+      "cas": "7732-18-5",
+      "masaMolarKgMol": 0.018015268,
+      "fuente": "IAPWS-95 (R6-95(2018)): M = 18.015268 g/mol"
+     }
+    ],
+    "fases": [
+     {
+      "id": "vapor-1",
+      "tipo": "vapor",
+      "regimen": "ordinario",
+      "fraccionMolar": 1.0,
+      "fraccionMasica": 1.0,
+      "fraccionVolumen": 1.0,
+      "composicionMolar": {
+       "1": 1.0
+      },
+      "propiedades": {
+       "u": 2708752.9439830803,
+       "h": 2941481.4050835343,
+       "v": 0.7090537558419807,
+       "s": 7425.954877774868,
+       "cp": 2041.3394605704866,
+       "cv": 1543.4937483672247
+      }
+     }
+    ],
+    "mezcla": {
+     "u": 2708752.9439830803,
+     "h": 2941481.4050835343,
+     "v": 0.7090537558419807,
+     "s": 7425.954877774868,
+     "cp": 2041.3394605704866,
+     "cv": 1543.4937483672247
+    },
+    "referencia": {
+     "id": "iapws95-u0-s0-liquido-saturado-punto-triple",
+     "descripcion": "IAPWS-95: u = 0 y s = 0 del líquido saturado en el punto triple (273.16 K, 611.655 Pa). Propiedades específicas por kg."
+    },
+    "estabilidad": {
+     "estado": "estable",
+     "alcance": [
+      "liquido",
+      "vapor",
+      "fluido"
+     ],
+     "metodo": "Criterio PH: máximo de S a (H, P, n), equivalente al estado estable en G a su (T, P) con h dada. Estado de una fase: distancia al plano tangente a la T y P resultantes sobre las ramas monofásicas de IAPWS-95, como en TP."
+    },
+    "verificaciones": [
+     {
+      "id": "estabilidad",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "dominio",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     },
+     {
+      "id": "ecuacion_estado",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "energia",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-10
+     },
+     {
+      "id": "identidad_h_u_Pv",
+      "estado": "cumple",
+      "residuo": 4.939352411575017e-16,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "identidad_g_h_Ts",
+      "estado": "cumple",
+      "residuo": 2.4696762057875082e-15,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "derivadas",
+      "estado": "cumple",
+      "residuo": 4.513691776794837e-11,
+      "tolerancia": 1e-06
+     },
+     {
+      "id": "saturacion",
+      "estado": "cumple",
+      "residuo": 1.7040765819933805e-14,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "reconstruccion_material",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "bases_fase",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "unicidad",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     }
+    ]
+   },
+   {
+    "T": 491.2576422617756,
+    "P": 278360.9730939783,
+    "composicionMolar": {
+     "1": 1.0
+    },
+    "componentes": [
+     {
+      "id": 1,
+      "cas": "7732-18-5",
+      "masaMolarKgMol": 0.018015268,
+      "fuente": "IAPWS-95 (R6-95(2018)): M = 18.015268 g/mol"
+     }
+    ],
+    "fases": [
+     {
+      "id": "vapor-1",
+      "tipo": "vapor",
+      "regimen": "ordinario",
+      "fraccionMolar": 1.0,
+      "fraccionMasica": 1.0,
+      "fraccionVolumen": 1.0,
+      "composicionMolar": {
+       "1": 1.0
+      },
+      "propiedades": {
+       "u": 2679964.046178481,
+       "h": 2903864.3645231836,
+       "v": 0.8043524056409689,
+       "s": 7425.954877810373,
+       "cp": 2033.8066867961074,
+       "cv": 1535.4614712436994
+      }
+     }
+    ],
+    "mezcla": {
+     "u": 2679964.046178481,
+     "h": 2903864.3645231836,
+     "v": 0.8043524056409689,
+     "s": 7425.954877810373,
+     "cp": 2033.8066867961074,
+     "cv": 1535.4614712436994
+    },
+    "referencia": {
+     "id": "iapws95-u0-s0-liquido-saturado-punto-triple",
+     "descripcion": "IAPWS-95: u = 0 y s = 0 del líquido saturado en el punto triple (273.16 K, 611.655 Pa). Propiedades específicas por kg."
+    },
+    "estabilidad": {
+     "estado": "estable",
+     "alcance": [
+      "liquido",
+      "vapor",
+      "fluido"
+     ],
+     "metodo": "Criterio PH: máximo de S a (H, P, n), equivalente al estado estable en G a su (T, P) con h dada. Estado de una fase: distancia al plano tangente a la T y P resultantes sobre las ramas monofásicas de IAPWS-95, como en TP."
+    },
+    "verificaciones": [
+     {
+      "id": "estabilidad",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "dominio",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     },
+     {
+      "id": "ecuacion_estado",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "energia",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-10
+     },
+     {
+      "id": "identidad_h_u_Pv",
+      "estado": "cumple",
+      "residuo": 1.283666304084597e-16,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "identidad_g_h_Ts",
+      "estado": "cumple",
+      "residuo": 3.5942656514368714e-15,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "derivadas",
+      "estado": "cumple",
+      "residuo": 4.4679820041162556e-11,
+      "tolerancia": 1e-06
+     },
+     {
+      "id": "saturacion",
+      "estado": "cumple",
+      "residuo": 4.364465433887629e-15,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "reconstruccion_material",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "bases_fase",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "unicidad",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     }
+    ]
+   },
+   {
+    "T": 469.51627806113146,
+    "P": 229843.35446207604,
+    "composicionMolar": {
+     "1": 1.0
+    },
+    "componentes": [
+     {
+      "id": 1,
+      "cas": "7732-18-5",
+      "masaMolarKgMol": 0.018015268,
+      "fuente": "IAPWS-95 (R6-95(2018)): M = 18.015268 g/mol"
+     }
+    ],
+    "fases": [
+     {
+      "id": "vapor-1",
+      "tipo": "vapor",
+      "regimen": "ordinario",
+      "fraccionMolar": 1.0,
+      "fraccionMasica": 1.0,
+      "fraccionVolumen": 1.0,
+      "composicionMolar": {
+       "1": 1.0
+      },
+      "propiedades": {
+       "u": 2647929.6428143163,
+       "h": 2861936.4698882466,
+       "v": 0.9310986065913907,
+       "s": 7425.954877780923,
+       "cp": 2027.1804836756387,
+       "cv": 1527.8924835468376
+      }
+     }
+    ],
+    "mezcla": {
+     "u": 2647929.6428143163,
+     "h": 2861936.4698882466,
+     "v": 0.9310986065913907,
+     "s": 7425.954877780923,
+     "cp": 2027.1804836756387,
+     "cv": 1527.8924835468376
+    },
+    "referencia": {
+     "id": "iapws95-u0-s0-liquido-saturado-punto-triple",
+     "descripcion": "IAPWS-95: u = 0 y s = 0 del líquido saturado en el punto triple (273.16 K, 611.655 Pa). Propiedades específicas por kg."
+    },
+    "estabilidad": {
+     "estado": "estable",
+     "alcance": [
+      "liquido",
+      "vapor",
+      "fluido"
+     ],
+     "metodo": "Criterio PH: máximo de S a (H, P, n), equivalente al estado estable en G a su (T, P) con h dada. Estado de una fase: distancia al plano tangente a la T y P resultantes sobre las ramas monofásicas de IAPWS-95, como en TP."
+    },
+    "verificaciones": [
+     {
+      "id": "estabilidad",
+      "estado": "cumple",
+      "residuo": 5.064985328785882e-16,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "dominio",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     },
+     {
+      "id": "ecuacion_estado",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "energia",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-10
+     },
+     {
+      "id": "identidad_h_u_Pv",
+      "estado": "cumple",
+      "residuo": 9.401753209062673e-16,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "identidad_g_h_Ts",
+      "estado": "cumple",
+      "residuo": 2.6862152025893355e-15,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "derivadas",
+      "estado": "cumple",
+      "residuo": 3.5882361038645926e-11,
+      "tolerancia": 1e-06
+     },
+     {
+      "id": "saturacion",
+      "estado": "cumple",
+      "residuo": 5.819946605415429e-15,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "reconstruccion_material",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "bases_fase",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "unicidad",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     }
+    ]
+   },
+   {
+    "T": 446.33958992023526,
+    "P": 185687.73625153126,
+    "composicionMolar": {
+     "1": 1.0
+    },
+    "componentes": [
+     {
+      "id": 1,
+      "cas": "7732-18-5",
+      "masaMolarKgMol": 0.018015268,
+      "fuente": "IAPWS-95 (R6-95(2018)): M = 18.015268 g/mol"
+     }
+    ],
+    "fases": [
+     {
+      "id": "vapor-1",
+      "tipo": "vapor",
+      "regimen": "ordinario",
+      "fraccionMolar": 1.0,
+      "fraccionMasica": 1.0,
+      "fraccionVolumen": 1.0,
+      "composicionMolar": {
+       "1": 1.0
+      },
+      "propiedades": {
+       "u": 2613973.9332833337,
+       "h": 2817417.290720531,
+       "v": 1.0956208608284945,
+       "s": 7425.954877746871,
+       "cp": 2022.892728606077,
+       "cv": 1522.0130946578647
+      }
+     }
+    ],
+    "mezcla": {
+     "u": 2613973.9332833337,
+     "h": 2817417.290720531,
+     "v": 1.0956208608284945,
+     "s": 7425.954877746871,
+     "cp": 2022.892728606077,
+     "cv": 1522.0130946578647
+    },
+    "referencia": {
+     "id": "iapws95-u0-s0-liquido-saturado-punto-triple",
+     "descripcion": "IAPWS-95: u = 0 y s = 0 del líquido saturado en el punto triple (273.16 K, 611.655 Pa). Propiedades específicas por kg."
+    },
+    "estabilidad": {
+     "estado": "estable",
+     "alcance": [
+      "liquido",
+      "vapor",
+      "fluido"
+     ],
+     "metodo": "Criterio PH: máximo de S a (H, P, n), equivalente al estado estable en G a su (T, P) con h dada. Estado de una fase: distancia al plano tangente a la T y P resultantes sobre las ramas monofásicas de IAPWS-95, como en TP."
+    },
+    "verificaciones": [
+     {
+      "id": "estabilidad",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "dominio",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     },
+     {
+      "id": "ecuacion_estado",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "energia",
+      "estado": "cumple",
+      "residuo": 2.2605599726725817e-15,
+      "tolerancia": 1e-10
+     },
+     {
+      "id": "identidad_h_u_Pv",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "identidad_g_h_Ts",
+      "estado": "cumple",
+      "residuo": 1.1302799863362908e-15,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "derivadas",
+      "estado": "cumple",
+      "residuo": 7.421415903504795e-11,
+      "tolerancia": 1e-06
+     },
+     {
+      "id": "saturacion",
+      "estado": "cumple",
+      "residuo": 1.1020229866778836e-14,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "reconstruccion_material",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "bases_fase",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "unicidad",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     }
+    ]
+   },
+   {
+    "T": 423.3091787678285,
+    "P": 148639.50093841436,
+    "composicionMolar": {
+     "1": 1.0
+    },
+    "componentes": [
+     {
+      "id": 1,
+      "cas": "7732-18-5",
+      "masaMolarKgMol": 0.018015268,
+      "fuente": "IAPWS-95 (R6-95(2018)): M = 18.015268 g/mol"
+     }
+    ],
+    "fases": [
+     {
+      "id": "vapor-1",
+      "tipo": "vapor",
+      "regimen": "ordinario",
+      "fraccionMolar": 1.0,
+      "fraccionMasica": 1.0,
+      "fraccionVolumen": 1.0,
+      "composicionMolar": {
+       "1": 1.0
+      },
+      "propiedades": {
+       "u": 2580395.606241539,
+       "h": 2773322.1377326227,
+       "v": 1.2979492683510745,
+       "s": 7425.954877785921,
+       "cp": 2022.5377618155705,
+       "cv": 1519.2520582099264
+      }
+     }
+    ],
+    "mezcla": {
+     "u": 2580395.606241539,
+     "h": 2773322.1377326227,
+     "v": 1.2979492683510745,
+     "s": 7425.954877785921,
+     "cp": 2022.5377618155705,
+     "cv": 1519.2520582099264
+    },
+    "referencia": {
+     "id": "iapws95-u0-s0-liquido-saturado-punto-triple",
+     "descripcion": "IAPWS-95: u = 0 y s = 0 del líquido saturado en el punto triple (273.16 K, 611.655 Pa). Propiedades específicas por kg."
+    },
+    "estabilidad": {
+     "estado": "estable",
+     "alcance": [
+      "liquido",
+      "vapor",
+      "fluido"
+     ],
+     "metodo": "Criterio PH: máximo de S a (H, P, n), equivalente al estado estable en G a su (T, P) con h dada. Estado de una fase: distancia al plano tangente a la T y P resultantes sobre las ramas monofásicas de IAPWS-95, como en TP."
+    },
+    "verificaciones": [
+     {
+      "id": "estabilidad",
+      "estado": "cumple",
+      "residuo": 5.874043630325211e-16,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "dominio",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     },
+     {
+      "id": "ecuacion_estado",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "energia",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-10
+     },
+     {
+      "id": "identidad_h_u_Pv",
+      "estado": "cumple",
+      "residuo": 1.0428019035206166e-15,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "identidad_g_h_Ts",
+      "estado": "cumple",
+      "residuo": 5.958868020117809e-16,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "derivadas",
+      "estado": "cumple",
+      "residuo": 5.266584250766925e-11,
+      "tolerancia": 1e-06
+     },
+     {
+      "id": "saturacion",
+      "estado": "cumple",
+      "residuo": 8.982993540327597e-14,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "reconstruccion_material",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "bases_fase",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "unicidad",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     }
+    ]
+   },
+   {
+    "T": 403.0431115037013,
+    "P": 121002.12835428331,
+    "composicionMolar": {
+     "1": 1.0
+    },
+    "componentes": [
+     {
+      "id": 1,
+      "cas": "7732-18-5",
+      "masaMolarKgMol": 0.018015268,
+      "fuente": "IAPWS-95 (R6-95(2018)): M = 18.015268 g/mol"
+     }
+    ],
+    "fases": [
+     {
+      "id": "vapor-1",
+      "tipo": "vapor",
+      "regimen": "ordinario",
+      "fraccionMolar": 1.0,
+      "fraccionMasica": 1.0,
+      "fraccionVolumen": 1.0,
+      "composicionMolar": {
+       "1": 1.0
+      },
+      "propiedades": {
+       "u": 2550943.049976761,
+       "h": 2734595.3295808686,
+       "v": 1.5177607377813227,
+       "s": 7425.954878232929,
+       "cp": 2026.832765747713,
+       "cv": 1520.4583358788088
+      }
+     }
+    ],
+    "mezcla": {
+     "u": 2550943.049976761,
+     "h": 2734595.3295808686,
+     "v": 1.5177607377813227,
+     "s": 7425.954878232929,
+     "cp": 2026.832765747713,
+     "cv": 1520.4583358788088
+    },
+    "referencia": {
+     "id": "iapws95-u0-s0-liquido-saturado-punto-triple",
+     "descripcion": "IAPWS-95: u = 0 y s = 0 del líquido saturado en el punto triple (273.16 K, 611.655 Pa). Propiedades específicas por kg."
+    },
+    "estabilidad": {
+     "estado": "estable",
+     "alcance": [
+      "liquido",
+      "vapor",
+      "fluido"
+     ],
+     "metodo": "Criterio PH: máximo de S a (H, P, n), equivalente al estado estable en G a su (T, P) con h dada. Estado de una fase: distancia al plano tangente a la T y P resultantes sobre las ramas monofásicas de IAPWS-95, como en TP."
+    },
+    "verificaciones": [
+     {
+      "id": "estabilidad",
+      "estado": "cumple",
+      "residuo": 7.215698811062309e-16,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "dominio",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     },
+     {
+      "id": "ecuacion_estado",
+      "estado": "cumple",
+      "residuo": 1.202616468510385e-16,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "energia",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-10
+     },
+     {
+      "id": "identidad_h_u_Pv",
+      "estado": "cumple",
+      "residuo": 1.4081615033153241e-15,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "identidad_g_h_Ts",
+      "estado": "cumple",
+      "residuo": 3.1292477851451647e-15,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "derivadas",
+      "estado": "cumple",
+      "residuo": 6.042098602785899e-11,
+      "tolerancia": 1e-06
+     },
+     {
+      "id": "saturacion",
+      "estado": "cumple",
+      "residuo": 1.1719032955368641e-13,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "reconstruccion_material",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "bases_fase",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "unicidad",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     }
+    ]
+   },
+   {
+    "T": 389.18513072426913,
+    "P": 104493.97646698059,
+    "composicionMolar": {
+     "1": 1.0
+    },
+    "componentes": [
+     {
+      "id": 1,
+      "cas": "7732-18-5",
+      "masaMolarKgMol": 0.018015268,
+      "fuente": "IAPWS-95 (R6-95(2018)): M = 18.015268 g/mol"
+     }
+    ],
+    "fases": [
+     {
+      "id": "vapor-1",
+      "tipo": "vapor",
+      "regimen": "ordinario",
+      "fraccionMolar": 1.0,
+      "fraccionMasica": 1.0,
+      "fraccionVolumen": 1.0,
+      "composicionMolar": {
+       "1": 1.0
+      },
+      "propiedades": {
+       "u": 2530828.448027769,
+       "h": 2708126.102314366,
+       "v": 1.6967260724604738,
+       "s": 7425.954877847293,
+       "cp": 2033.50811441567,
+       "cv": 1524.2484526493013
+      }
+     }
+    ],
+    "mezcla": {
+     "u": 2530828.448027769,
+     "h": 2708126.102314366,
+     "v": 1.6967260724604738,
+     "s": 7425.954877847293,
+     "cp": 2033.50811441567,
+     "cv": 1524.2484526493013
+    },
+    "referencia": {
+     "id": "iapws95-u0-s0-liquido-saturado-punto-triple",
+     "descripcion": "IAPWS-95: u = 0 y s = 0 del líquido saturado en el punto triple (273.16 K, 611.655 Pa). Propiedades específicas por kg."
+    },
+    "estabilidad": {
+     "estado": "estable",
+     "alcance": [
+      "liquido",
+      "vapor",
+      "fluido"
+     ],
+     "metodo": "Criterio PH: máximo de S a (H, P, n), equivalente al estado estable en G a su (T, P) con h dada. Estado de una fase: distancia al plano tangente a la T y P resultantes sobre las ramas monofásicas de IAPWS-95, como en TP."
+    },
+    "verificaciones": [
+     {
+      "id": "estabilidad",
+      "estado": "cumple",
+      "residuo": 1.1140864360130968e-15,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "dominio",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     },
+     {
+      "id": "ecuacion_estado",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "energia",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-10
+     },
+     {
+      "id": "identidad_h_u_Pv",
+      "estado": "cumple",
+      "residuo": 1.2962692193752145e-15,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "identidad_g_h_Ts",
+      "estado": "cumple",
+      "residuo": 3.240673048438036e-16,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "derivadas",
+      "estado": "cumple",
+      "residuo": 1.0702431164833834e-10,
+      "tolerancia": 1e-06
+     },
+     {
+      "id": "saturacion",
+      "estado": "cumple",
+      "residuo": 1.2517099649591915e-13,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "reconstruccion_material",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "bases_fase",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "unicidad",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     }
+    ]
+   },
+   {
+    "T": 385.2571971277062,
+    "P": 100141.44220492442,
+    "composicionMolar": {
+     "1": 1.0
+    },
+    "componentes": [
+     {
+      "id": 1,
+      "cas": "7732-18-5",
+      "masaMolarKgMol": 0.018015268,
+      "fuente": "IAPWS-95 (R6-95(2018)): M = 18.015268 g/mol"
+     }
+    ],
+    "fases": [
+     {
+      "id": "vapor-1",
+      "tipo": "vapor",
+      "regimen": "ordinario",
+      "fraccionMolar": 1.0,
+      "fraccionMasica": 1.0,
+      "fraccionVolumen": 1.0,
+      "composicionMolar": {
+       "1": 1.0
+      },
+      "propiedades": {
+       "u": 2525126.991944096,
+       "h": 2700621.255075915,
+       "v": 1.7524639077265953,
+       "s": 7425.954877866814,
+       "cp": 2036.2165799732925,
+       "cv": 1525.9767881310997
+      }
+     }
+    ],
+    "mezcla": {
+     "u": 2525126.991944096,
+     "h": 2700621.255075915,
+     "v": 1.7524639077265953,
+     "s": 7425.954877866814,
+     "cp": 2036.2165799732925,
+     "cv": 1525.9767881310997
+    },
+    "referencia": {
+     "id": "iapws95-u0-s0-liquido-saturado-punto-triple",
+     "descripcion": "IAPWS-95: u = 0 y s = 0 del líquido saturado en el punto triple (273.16 K, 611.655 Pa). Propiedades específicas por kg."
+    },
+    "estabilidad": {
+     "estado": "estable",
+     "alcance": [
+      "liquido",
+      "vapor",
+      "fluido"
+     ],
+     "metodo": "Criterio PH: máximo de S a (H, P, n), equivalente al estado estable en G a su (T, P) con h dada. Estado de una fase: distancia al plano tangente a la T y P resultantes sobre las ramas monofásicas de IAPWS-95, como en TP."
+    },
+    "verificaciones": [
+     {
+      "id": "estabilidad",
+      "estado": "cumple",
+      "residuo": 4.359408524970674e-16,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "dominio",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     },
+     {
+      "id": "ecuacion_estado",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "energia",
+      "estado": "cumple",
+      "residuo": 2.618970959440167e-15,
+      "tolerancia": 1e-10
+     },
+     {
+      "id": "identidad_h_u_Pv",
+      "estado": "cumple",
+      "residuo": 6.547427398600417e-16,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "identidad_g_h_Ts",
+      "estado": "cumple",
+      "residuo": 9.821141097900628e-16,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "derivadas",
+      "estado": "cumple",
+      "residuo": 2.0419166745942535e-10,
+      "tolerancia": 1e-06
+     },
+     {
+      "id": "saturacion",
+      "estado": "cumple",
+      "residuo": 4.54227775777904e-14,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "reconstruccion_material",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "bases_fase",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "unicidad",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     }
+    ]
+   },
+   {
+    "T": 392.446573752018,
+    "P": 108215.1450673723,
+    "composicionMolar": {
+     "1": 1.0
+    },
+    "componentes": [
+     {
+      "id": 1,
+      "cas": "7732-18-5",
+      "masaMolarKgMol": 0.018015268,
+      "fuente": "IAPWS-95 (R6-95(2018)): M = 18.015268 g/mol"
+     }
+    ],
+    "fases": [
+     {
+      "id": "vapor-1",
+      "tipo": "vapor",
+      "regimen": "ordinario",
+      "fraccionMolar": 1.0,
+      "fraccionMasica": 1.0,
+      "fraccionVolumen": 1.0,
+      "composicionMolar": {
+       "1": 1.0
+      },
+      "propiedades": {
+       "u": 2535561.9716338874,
+       "h": 2714356.233568657,
+       "v": 1.6522110821313998,
+       "s": 7425.954877777192,
+       "cp": 2031.5721584539315,
+       "cv": 1523.0650696160603
+      }
+     }
+    ],
+    "mezcla": {
+     "u": 2535561.9716338874,
+     "h": 2714356.233568657,
+     "v": 1.6522110821313998,
+     "s": 7425.954877777192,
+     "cp": 2031.5721584539315,
+     "cv": 1523.0650696160603
+    },
+    "referencia": {
+     "id": "iapws95-u0-s0-liquido-saturado-punto-triple",
+     "descripcion": "IAPWS-95: u = 0 y s = 0 del líquido saturado en el punto triple (273.16 K, 611.655 Pa). Propiedades específicas por kg."
+    },
+    "estabilidad": {
+     "estado": "estable",
+     "alcance": [
+      "liquido",
+      "vapor",
+      "fluido"
+     ],
+     "metodo": "Criterio PH: máximo de S a (H, P, n), equivalente al estado estable en G a su (T, P) con h dada. Estado de una fase: distancia al plano tangente a la T y P resultantes sobre las ramas monofásicas de IAPWS-95, como en TP."
+    },
+    "verificaciones": [
+     {
+      "id": "estabilidad",
+      "estado": "cumple",
+      "residuo": 5.378883046104927e-16,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "dominio",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     },
+     {
+      "id": "ecuacion_estado",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "energia",
+      "estado": "cumple",
+      "residuo": 2.570993043833626e-15,
+      "tolerancia": 1e-10
+     },
+     {
+      "id": "identidad_h_u_Pv",
+      "estado": "cumple",
+      "residuo": 1.1248094566772113e-15,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "identidad_g_h_Ts",
+      "estado": "cumple",
+      "residuo": 4.820611957188049e-16,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "derivadas",
+      "estado": "cumple",
+      "residuo": 1.1380870979856933e-10,
+      "tolerancia": 1e-06
+     },
+     {
+      "id": "saturacion",
+      "estado": "cumple",
+      "residuo": 1.1354624939127143e-13,
+      "tolerancia": 1e-09
+     },
+     {
+      "id": "reconstruccion_material",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "bases_fase",
+      "estado": "cumple",
+      "residuo": 0.0,
+      "tolerancia": 1e-12
+     },
+     {
+      "id": "unicidad",
+      "estado": "cumple",
+      "residuo": null,
+      "tolerancia": null
+     }
+    ]
+   }
+  ],
+  "eventos": [],
+  "residuos": [
+   {
+    "ecuacionId": "materia.1",
+    "maximoEscalado": 0.0,
+    "tolerancia": 10.0
+   },
+   {
+    "ecuacionId": "energia",
+    "maximoEscalado": 0.0187225614030968,
+    "tolerancia": 10.0
+   },
+   {
+    "ecuacionId": "estado.h",
+    "maximoEscalado": 3.3290471911623046e-06,
+    "tolerancia": 1.0
+   },
+   {
+    "ecuacionId": "estado.v",
+    "maximoEscalado": 0.0,
+    "tolerancia": 1.0
+   },
+   {
+    "ecuacionId": "mecanica.P",
+    "maximoEscalado": 0.0,
+    "tolerancia": 1.0
+   }
+  ]
+ }
+}

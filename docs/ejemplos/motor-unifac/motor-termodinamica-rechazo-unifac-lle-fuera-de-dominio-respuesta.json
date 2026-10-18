@@ -1,0 +1,22 @@
+{
+ "revision": 1,
+ "solicitudId": "lt",
+ "modelo": {
+  "id": "unifac-original-lle-public",
+  "version": "1"
+ },
+ "estado": "no_soportado",
+ "evaluacion": null,
+ "diagnosticos": [
+  {
+   "codigo": "MOTOR_ESTADO_FUERA_DE_DOMINIO",
+   "mensaje": "T = 330 K fuera del dominio del sistema [283.15, 313.15] K (rangos de Psat y cp, T < 0.9 Tc).",
+   "ruta": "declaracion.especificacion",
+   "componenteIds": [
+    1,
+    2
+   ],
+   "propietarioId": "ejemplos"
+  }
+ ]
+}

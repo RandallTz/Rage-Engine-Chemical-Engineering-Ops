@@ -1,0 +1,88 @@
+{
+ "revision": 1,
+ "solicitudId": "l6",
+ "propietarioId": "ejemplos",
+ "componentes": [
+  {
+   "id": 1,
+   "nombre": "agua",
+   "simbolo": "ag",
+   "identidadQuimica": {
+    "cas": "7732-18-5"
+   }
+  },
+  {
+   "id": 2,
+   "nombre": "etanol",
+   "simbolo": "et",
+   "identidadQuimica": {
+    "cas": "64-17-5"
+   }
+  },
+  {
+   "id": 3,
+   "nombre": "benceno",
+   "simbolo": "be",
+   "identidadQuimica": {
+    "cas": "71-43-2"
+   }
+  },
+  {
+   "id": 4,
+   "nombre": "tolueno",
+   "simbolo": "to",
+   "identidadQuimica": {
+    "cas": "108-88-3"
+   }
+  },
+  {
+   "id": 5,
+   "nombre": "butanol",
+   "simbolo": "bu",
+   "identidadQuimica": {
+    "cas": "71-36-3"
+   }
+  },
+  {
+   "id": 6,
+   "nombre": "acetato",
+   "simbolo": "ac",
+   "identidadQuimica": {
+    "cas": "141-78-6"
+   }
+  }
+ ],
+ "declaracion": {
+  "modelo": {
+   "id": "unifac-original-lle-public",
+   "version": "1"
+  },
+  "politica": {
+   "cantidad": "sin_restriccion",
+   "cambioInterno": "permitido",
+   "evaluacion": "equilibrio_estable"
+  },
+  "especificacion": {
+   "tipo": "TP",
+   "T": {
+    "valor": 300,
+    "unidad": "K"
+   },
+   "P": {
+    "valor": 101325,
+    "unidad": "Pa"
+   },
+   "composicion": {
+    "base": "molar",
+    "fracciones": {
+     "1": 0.166666666666667,
+     "2": 0.166666666666667,
+     "3": 0.166666666666667,
+     "4": 0.166666666666667,
+     "5": 0.166666666666667,
+     "6": 0.16666666666666508
+    }
+   }
+  }
+ }
+}

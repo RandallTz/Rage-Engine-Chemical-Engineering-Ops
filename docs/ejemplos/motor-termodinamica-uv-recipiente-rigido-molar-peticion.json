@@ -1,0 +1,46 @@
+{
+  "revision": 1,
+  "solicitudId": "ejemplo-uv-recipiente-rigido-molar",
+  "propietarioId": "volumen:deposito",
+  "componentes": [
+    {
+      "id": 1,
+      "nombre": "Agua",
+      "simbolo": "A",
+      "identidadQuimica": {
+        "cas": "7732-18-5"
+      }
+    }
+  ],
+  "declaracion": {
+    "modelo": {
+      "id": "agua-iapws95",
+      "version": "1"
+    },
+    "especificacion": {
+      "tipo": "UV",
+      "U": {
+        "valor": 15000,
+        "unidad": "kJ"
+      },
+      "V": {
+        "valor": 1000,
+        "unidad": "L"
+      },
+      "cantidades": {
+        "base": "molar",
+        "valores": {
+          "1": {
+            "valor": 0.5550847203605297,
+            "unidad": "kmol"
+          }
+        }
+      }
+    },
+    "politica": {
+      "cantidad": "sin_restriccion",
+      "cambioInterno": "permitido",
+      "evaluacion": "equilibrio_estable"
+    }
+  }
+}

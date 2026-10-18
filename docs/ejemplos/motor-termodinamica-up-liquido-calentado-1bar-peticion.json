@@ -1,0 +1,46 @@
+{
+  "revision": 1,
+  "solicitudId": "ejemplo-up-liquido-calentado-1bar",
+  "propietarioId": "volumen:deposito",
+  "componentes": [
+    {
+      "id": 1,
+      "nombre": "Agua",
+      "simbolo": "A",
+      "identidadQuimica": {
+        "cas": "7732-18-5"
+      }
+    }
+  ],
+  "declaracion": {
+    "modelo": {
+      "id": "agua-iapws95",
+      "version": "1"
+    },
+    "especificacion": {
+      "tipo": "UP",
+      "U": {
+        "valor": 1250,
+        "unidad": "kJ"
+      },
+      "P": {
+        "valor": 1,
+        "unidad": "bar"
+      },
+      "cantidades": {
+        "base": "masica",
+        "valores": {
+          "1": {
+            "valor": 5,
+            "unidad": "kg"
+          }
+        }
+      }
+    },
+    "politica": {
+      "cantidad": "sin_restriccion",
+      "cambioInterno": "permitido",
+      "evaluacion": "equilibrio_estable"
+    }
+  }
+}

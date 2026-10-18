@@ -1,0 +1,21 @@
+{
+  "revision": 1,
+  "solicitudId": "ejemplo-uv-monofasico-incompatible",
+  "modelo": {
+    "id": "agua-iapws95",
+    "version": "1"
+  },
+  "estado": "invalido",
+  "evaluacion": null,
+  "diagnosticos": [
+    {
+      "codigo": "MOTOR_ESTADO_FASE_INCOMPATIBLE",
+      "mensaje": "La política es monofásica, pero el estado estable que cumple la especificación tiene dos fases (vapor q = 0.419307).",
+      "ruta": "declaracion.politica.cantidad",
+      "componenteIds": [
+        1
+      ],
+      "propietarioId": "volumen:deposito"
+    }
+  ]
+}

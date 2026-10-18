@@ -1,0 +1,69 @@
+
+> frontend@0.1.0 test
+> node verificar_historial.mjs && node verificar_estudio.mjs && node verificar_versiones.mjs && node verificar_integridad.mjs && node verificar_ecuaciones.mjs && node verificar_orientacion.mjs && node verificar_mesa.mjs && node verificar_motor_laboratorio.mjs && node verificar_reacciones.mjs && node verificar_recorrido_fundamentos.mjs && node verificar_auditoria_laboratorio.mjs && node verificar_expansion.mjs && node verificar_contenedores.mjs && node verificar_entregas_20_21.mjs && node verificar_estado_modelo.mjs && node verificar_mesa_recorrido.mjs
+
+Historial: duplicados, deshacer/rehacer, ramas, límite y reinicio verificados.
+Estudio: escenarios persistentes, sanitización, conversiones afines, unidades de entrada, precisión y diagnóstico visual verificados.
+Versiones: deduplicación, límite, aislamiento por simulación y fallos de almacenamiento verificados.
+Integridad: importación, topología, identidad de componentes, recetas, unidades y cancelación de respuestas tardías verificadas.
+Ecuaciones: 14 operaciones, tres métodos de columna, modos térmicos, cinética, dimensionado y correspondencia de símbolos con conexiones verificados.
+LaTeX: 340 ecuaciones y todas sus leyendas renderizan sin errores; fracciones, integrales, derivadas e índices verificados.
+Auditoría de biblioteca: 72 fundamentos, unidades/límites, identidades, dependencias y LaTeX estricto.
+Orientación: 14 equipos, métodos activos, signos físicos, destinos sin ambigüedad y referencias analíticas con resultados vigentes verificados.
+Lectura y comparación: unidades afines y másicas, datos inválidos, resultados desactualizados y cambios físicos verificados.
+Motor: estados, diagnósticos por elemento y procedencia conservada en escenarios verificados.
+Primera ley: especificaciones excluyentes, conversión de calor total a molar y límites verificados.
+Laboratorio: referencias, dependencias sin ciclos y LaTeX estricto verificados.
+Constructor: topologías compatibles, bloqueo de formulaciones no soportadas y 32 combinaciones de balances LaTeX verificadas.
+Aportaciones: balances por conexión, corrientes aisladas excluidas, origen por bloque y supuestos verificados.
+Mesa: especificación térmica excluyente reflejada en las relaciones.
+Mesa: importación validada, duplicados, valores inválidos y estado intermedio compartido verificados.
+Estudios: persistencia, compatibilidad antigua, inventario cero, dominios y bloqueo dinámico verificados.
+Adaptador: estudio temporal rechazado antes de construir una petición estacionaria.
+Estudios nuevos: contrato real, respuesta parcial, series consistentes, persistencia y cambio de modo sin mutación verificados.
+Ensayos: snapshots independientes, cambios, unidades/identidad y rechazo de validaciones no calculadas verificados.
+Energía: contrato, U/T por volumen, evento parcial y cambios de modelo preservados.
+Condiciones térmicas: exclusión T/Q, fuente obligatoria, valor explícito y solicitud original intacta verificados.
+Preparación física: omisiones por especie, cierre, dominio e identidad; sin certificar resolución local.
+Entrega B: ocho solicitudes/respuestas reactivas preservadas y válidas para la interfaz.
+Reutilización: identidad y orden de especies, leyes intactas, copia aislada y conflictos rechazados.
+Diferencias: cero, ausencia, igualdad estructural y base cinética global sin reinterpretación.
+Interfaz: cinco contratos reales, tipo termico, conductancia, persistencia y cancelaciones conservados.
+Consulta: origen estructurado por conexión, signos opuestos y ausencia sin inferencias LaTeX verificados.
+Transferencia: seis contratos, objeto opaco intacto, iniciales excluyentes, ramas y preparación temporal verificados.
+Comparación: tiempos propios, cero y huecos conservados sin interpolación.
+Paquetes: montaje, estado transferido y procedencia sobreviven exportación e importación.
+§18: combinación por capacidad, contratos, redondeo declarado y parcial sin muestras verificados.
+Nombres: identidad explícita, especie declarada, IDs desconocidos y prefijos anidados verificados.
+Edición numérica: vacío, cero, exponentes incompletos y desbordamiento; informe seguro con MathML y procedencia.
+§19: siete contratos, cierre volumen fijo y transferencia selectiva conservados en adaptación y persistencia.
+Investigación: plan persistido, límites de importación, informe y separación del modelo físico.
+Contrato: unidades explícitas, sin duplicar datos y exclusión T/Q verificados.
+Informe: MathML autónomo, trazabilidad histórica y escape de contenido verificados.
+Nuevo contrato reactivo: brutas desconocidas frente a equilibrio dinámico y balance total auxiliar verificados.
+Solicitudes: respuesta tardía sustituida y cancelación descartadas.
+Reacciones: agrupaciones, hidratos, carga, balances exactos, ambigüedad y cinética verificados.
+Tabla periódica: 118 elementos y posiciones verificadas; órdenes 0/1/2 y agotamiento comprobados.
+Arrhenius, comparación de reactores y conservación de la red consecutiva verificados.
+Redes: contraste analítico, reversibilidad, rutas paralelas, conservación, positividad y límites verificados.
+Recorrido: cambio de contrato sin perder leyes/inventarios, aislamiento del borrador y referencias del mapa verificados.
+Informe: texto escapado y lectura de series por especie sin confundir cero con ausencia.
+Seis bases: LaTeX estricto, referencias, aplicación y límites verificados.
+Historia continua: signos por especie, corriente compartida, energía sin doble conteo y LaTeX verificados.
+Ayudas: conexiones coherentes, requisitos por física y símbolos con unidades verificados.
+Balances visibles: A/B simultáneos, energía adiabática, tres familias y todas las leyendas renderizan con LaTeX estricto.
+Auditoría: importaciones inválidas, unidades declaradas, series, propiedades, valores visibles enviados y conflictos entre pestañas verificados.
+Expansión: entradas múltiples, salida, calor, trabajo, momento y montaje vacío verificados.
+Contenedor sin solicitud: render válido y preparación sin valores implícitos.
+Componentes: adición a modelos existentes, alineación estequiométrica, alias binarios, iniciales ausentes e integridad de la transferencia verificados.
+Salida ausente: variable pendiente diferenciada de un puerto cerrado; sin caudal implícito.
+Puertos: punto libre proyectado al borde, posiciones fraccionales y límites verificados.
+Componentes: retirada segura de especies sin reacción y balance con índice concreto verificados.
+Identidad visual: nombre, CAS y fórmula persisten sin sustituir el identificador químico.
+Salida: cambio explícito por volumen, sin valores implícitos, conservación de iniciales y fórmulas válidas.
+Mesas: borradores sin componentes o con uno se recuperan; la validación estricta se mantiene.
+Experimentar: valores por bloque, unidades, cero explícito, omisiones, datos transferidos y cambios aislados verificados.
+Contenedores: extremos integrados, corriente compartida, identidad, ausencia de mutación y topologías incompletas verificados.
+§20/21: especie única, migración, herencia, prefijo energético, propiedades explícitas, límites y estados de ejecución verificados.
+Recuento canónico: estados, números, cotas, referencias, compatibilidad y 100 respuestas verificadas.
+Recorrido de mesas: creación aislada, restauración de la ejecución, cambios físicos frente a presentación y muestras del servidor sin interpolación verificados.

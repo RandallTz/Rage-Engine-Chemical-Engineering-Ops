@@ -1,0 +1,52 @@
+{
+ "revision": 1,
+ "solicitudId": "siw",
+ "propietarioId": "ejemplos",
+ "componentes": [
+  {
+   "id": 1,
+   "nombre": "agua",
+   "simbolo": "ag",
+   "identidadQuimica": {
+    "cas": "7732-18-5"
+   }
+  }
+ ],
+ "declaracion": {
+  "modelo": {
+   "id": "agua-iapws95",
+   "version": "1"
+  },
+  "politica": {
+   "cantidad": "sin_restriccion",
+   "cambioInterno": "permitido",
+   "evaluacion": "equilibrio_estable"
+  },
+  "especificacion": {
+   "tipo": "TP",
+   "T": {
+    "valor": 300,
+    "unidad": "K"
+   },
+   "P": {
+    "valor": 101325,
+    "unidad": "Pa"
+   },
+   "composicion": {
+    "base": "molar",
+    "fracciones": {
+     "1": 1.0
+    }
+   }
+  },
+  "datosPuros": {
+   "7732-18-5": {
+    "volumen_liquido": {
+     "valor": 18.0,
+     "unidad": "cm3/mol",
+     "fuente": "ejemplo"
+    }
+   }
+  }
+ }
+}

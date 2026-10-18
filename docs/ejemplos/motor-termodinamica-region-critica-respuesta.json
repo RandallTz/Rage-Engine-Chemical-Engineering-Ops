@@ -1,0 +1,21 @@
+{
+  "revision": 1,
+  "solicitudId": "ejemplo-region-critica",
+  "modelo": {
+    "id": "agua-iapws95",
+    "version": "1"
+  },
+  "estado": "no_soportado",
+  "evaluacion": null,
+  "diagnosticos": [
+    {
+      "codigo": "MOTOR_ESTADO_REGION_CRITICA",
+      "mensaje": "T = 647 K, P = 2.2e+07 Pa esta en la banda critica excluida (T en [643.861, 650.331] K y P en [2.09608e+07, 2.31672e+07] Pa). La región crítica queda fuera del alcance de esta versión.",
+      "ruta": "declaracion.especificacion",
+      "componenteIds": [
+        1
+      ],
+      "propietarioId": "volumen:deposito"
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+ "revision": 1,
+ "solicitudId": "ej-tres",
+ "estado": "no_soportado",
+ "identidad": {
+  "modelo": {
+   "id": "nrtl-chemsep",
+   "version": "1"
+  },
+  "huellaModelo": null,
+  "firmaConsulta": null,
+  "trazador": {
+   "id": "trazador-lv-binario",
+   "version": "1"
+  }
+ },
+ "condicion": null,
+ "ramas": [],
+ "puntos": [],
+ "puntosEspeciales": [],
+ "candidatosDescartados": [],
+ "incidencias": [],
+ "cobertura": null,
+ "metodo": "",
+ "evidencia": null,
+ "diagnosticos": [
+  {
+   "codigo": "MOTOR_DIAG_COMPONENTES_NO_SOPORTADO",
+   "estado": "no_soportado",
+   "ruta": "componentes",
+   "mensaje": "El trazador es binario: se declararon 3 componentes. No se elimina ni renormaliza ninguno; un binario distinto es otra solicitud explicita.",
+   "componenteIds": []
+  }
+ ]
+}

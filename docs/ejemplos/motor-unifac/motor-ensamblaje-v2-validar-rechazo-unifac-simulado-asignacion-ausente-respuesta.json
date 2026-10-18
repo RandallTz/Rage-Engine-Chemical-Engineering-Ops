@@ -1,0 +1,402 @@
+{
+ "revision": 2,
+ "solicitudId": "u4-asig",
+ "modeloId": "ens2-6cf81485bed7b8e8d6633465467f00f7",
+ "recuento": {
+  "estado": "listo",
+  "analisis": "estructural",
+  "variables": 11,
+  "ecuacionesIndependientes": 10,
+  "datosDefinidos": 7,
+  "datosFaltantes": 0,
+  "inicialesFaltantes": 0,
+  "gradosLibertad": 0,
+  "motivo": "Emparejamiento máximo entre ecuaciones (balances por componente y energía de cada volumen, transferencias, cierres y equilibrio de cada paquete) e incógnitas (derivadas de los estados, algebraicas y datos pendientes). Las verificaciones globales no se cuentan como ecuaciones."
+ },
+ "variables": [
+  {
+   "id": "volumen.A.n.1",
+   "propietarioId": "volumen:A",
+   "magnitud": "cantidad",
+   "unidadSI": "mol",
+   "papel": "diferencial",
+   "componenteId": 1
+  },
+  {
+   "id": "volumen.A.n.2",
+   "propietarioId": "volumen:A",
+   "magnitud": "cantidad",
+   "unidadSI": "mol",
+   "papel": "diferencial",
+   "componenteId": 2
+  },
+  {
+   "id": "volumen.A.n.3",
+   "propietarioId": "volumen:A",
+   "magnitud": "cantidad",
+   "unidadSI": "mol",
+   "papel": "diferencial",
+   "componenteId": 3
+  },
+  {
+   "id": "volumen.A.n.4",
+   "propietarioId": "volumen:A",
+   "magnitud": "cantidad",
+   "unidadSI": "mol",
+   "papel": "diferencial",
+   "componenteId": 4
+  },
+  {
+   "id": "volumen.A.H",
+   "propietarioId": "volumen:A",
+   "magnitud": "energia",
+   "unidadSI": "J",
+   "papel": "diferencial"
+  },
+  {
+   "id": "volumen.A.T",
+   "propietarioId": "volumen:A",
+   "magnitud": "temperatura",
+   "unidadSI": "K",
+   "papel": "algebraica"
+  },
+  {
+   "id": "volumen.A.U",
+   "propietarioId": "volumen:A",
+   "magnitud": "energia",
+   "unidadSI": "J",
+   "papel": "algebraica"
+  },
+  {
+   "id": "volumen.A.V",
+   "propietarioId": "volumen:A",
+   "magnitud": "volumen",
+   "unidadSI": "m3",
+   "papel": "algebraica"
+  },
+  {
+   "id": "volumen.A.W",
+   "propietarioId": "volumen:A",
+   "magnitud": "energia",
+   "unidadSI": "J",
+   "papel": "algebraica"
+  },
+  {
+   "id": "volumen.A.P",
+   "propietarioId": "volumen:A",
+   "magnitud": "presion",
+   "unidadSI": "Pa",
+   "papel": "dato",
+   "datoId": "volumen.A.P"
+  },
+  {
+   "id": "volumen.A.fases",
+   "propietarioId": "volumen:A",
+   "magnitud": "reparto_de_fases",
+   "unidadSI": "mol",
+   "papel": "algebraica"
+  }
+ ],
+ "ecuaciones": [
+  {
+   "id": "estado.A.energia",
+   "propietarioId": "volumen:A",
+   "familia": "estado",
+   "variableIds": [
+    "volumen.A.H",
+    "volumen.A.T"
+   ],
+   "incognitas": [
+    "volumen.A.T",
+    "volumen.A.V",
+    "volumen.A.fases"
+   ],
+   "dimension": "energia",
+   "latex": "H=\\sum_\\alpha n^\\alpha\\bar h^\\alpha(T,P,x^\\alpha)",
+   "unidadResiduo": "J",
+   "procedencia": {
+    "tipo": "constitutiva",
+    "relacion": "cierre PH del paquete",
+    "paquete": {
+     "id": "unifac-original-public",
+     "version": "1"
+    }
+   }
+  },
+  {
+   "id": "estado.A.volumen",
+   "propietarioId": "volumen:A",
+   "familia": "estado",
+   "variableIds": [
+    "volumen.A.V"
+   ],
+   "incognitas": [
+    "volumen.A.T",
+    "volumen.A.V",
+    "volumen.A.fases"
+   ],
+   "dimension": "volumen",
+   "latex": "V=\\sum_\\alpha n^\\alpha\\bar v^\\alpha(T,P,x^\\alpha)",
+   "unidadResiduo": "m3",
+   "procedencia": {
+    "tipo": "constitutiva",
+    "relacion": "cierre PH del paquete",
+    "paquete": {
+     "id": "unifac-original-public",
+     "version": "1"
+    }
+   }
+  },
+  {
+   "id": "equilibrio.A",
+   "propietarioId": "volumen:A",
+   "familia": "equilibrio",
+   "variableIds": [
+    "volumen.A.fases",
+    "volumen.A.T"
+   ],
+   "incognitas": [
+    "volumen.A.T",
+    "volumen.A.V",
+    "volumen.A.fases"
+   ],
+   "dimension": "potencial quimico",
+   "latex": "\\mu_i^\\alpha=\\mu_i^\\beta,\\ \\sum_\\alpha n_i^\\alpha=n_i,\\ \\mathrm{tm}\\ge0\\ (\\text{estabilidad})",
+   "unidadResiduo": "J/mol",
+   "procedencia": {
+    "tipo": "constitutiva",
+    "relacion": "reparto de equilibrio: estable en G a la (T, P) obtenida",
+    "paquete": {
+     "id": "unifac-original-public",
+     "version": "1"
+    }
+   }
+  },
+  {
+   "id": "estado.A.U",
+   "propietarioId": "volumen:A",
+   "familia": "estado",
+   "variableIds": [
+    "volumen.A.U",
+    "volumen.A.H",
+    "volumen.A.P",
+    "volumen.A.V"
+   ],
+   "incognitas": [
+    "volumen.A.U"
+   ],
+   "dimension": "energia",
+   "latex": "U=H-PV",
+   "unidadResiduo": "J",
+   "procedencia": {
+    "tipo": "constitutiva",
+    "relacion": "transformación H = U + PV"
+   }
+  },
+  {
+   "id": "mecanica.A.trabajo",
+   "propietarioId": "volumen:A",
+   "familia": "mecanica",
+   "variableIds": [
+    "volumen.A.W"
+   ],
+   "incognitas": [
+    "volumen.A.W"
+   ],
+   "dimension": "potencia",
+   "latex": "\\dot W=P\\,\\frac{dV}{dt}\\ \\text{(derivada total de }V(H,P,n))",
+   "unidadResiduo": "W",
+   "procedencia": {
+    "tipo": "verificacion",
+    "relacion": "comprobación de la forma en U"
+   }
+  },
+  {
+   "id": "materia.A.1",
+   "propietarioId": "volumen:A",
+   "familia": "materia",
+   "variableIds": [
+    "volumen.A.n.1"
+   ],
+   "incognitas": [
+    "d/dt volumen.A.n.1"
+   ],
+   "dimension": "cantidad/tiempo",
+   "latex": "\\frac{dn_{1}}{dt}=0",
+   "unidadResiduo": "mol/s",
+   "procedencia": {
+    "tipo": "balance",
+    "relacion": "conservación por componente sin reacción"
+   }
+  },
+  {
+   "id": "materia.A.2",
+   "propietarioId": "volumen:A",
+   "familia": "materia",
+   "variableIds": [
+    "volumen.A.n.2"
+   ],
+   "incognitas": [
+    "d/dt volumen.A.n.2"
+   ],
+   "dimension": "cantidad/tiempo",
+   "latex": "\\frac{dn_{2}}{dt}=0",
+   "unidadResiduo": "mol/s",
+   "procedencia": {
+    "tipo": "balance",
+    "relacion": "conservación por componente sin reacción"
+   }
+  },
+  {
+   "id": "materia.A.3",
+   "propietarioId": "volumen:A",
+   "familia": "materia",
+   "variableIds": [
+    "volumen.A.n.3"
+   ],
+   "incognitas": [
+    "d/dt volumen.A.n.3"
+   ],
+   "dimension": "cantidad/tiempo",
+   "latex": "\\frac{dn_{3}}{dt}=0",
+   "unidadResiduo": "mol/s",
+   "procedencia": {
+    "tipo": "balance",
+    "relacion": "conservación por componente sin reacción"
+   }
+  },
+  {
+   "id": "materia.A.4",
+   "propietarioId": "volumen:A",
+   "familia": "materia",
+   "variableIds": [
+    "volumen.A.n.4"
+   ],
+   "incognitas": [
+    "d/dt volumen.A.n.4"
+   ],
+   "dimension": "cantidad/tiempo",
+   "latex": "\\frac{dn_{4}}{dt}=0",
+   "unidadResiduo": "mol/s",
+   "procedencia": {
+    "tipo": "balance",
+    "relacion": "conservación por componente sin reacción"
+   }
+  },
+  {
+   "id": "energia.A",
+   "propietarioId": "volumen:A",
+   "familia": "energia",
+   "variableIds": [
+    "volumen.A.H"
+   ],
+   "incognitas": [
+    "d/dt volumen.A.H",
+    "volumen.A.V"
+   ],
+   "dimension": "potencia",
+   "latex": "\\frac{dH}{dt}=0+V\\frac{dP}{dt}",
+   "unidadResiduo": "W",
+   "procedencia": {
+    "tipo": "balance",
+    "relacion": "primera ley con H = U + PV a presión prescrita"
+   }
+  },
+  {
+   "id": "global.materia.1",
+   "propietarioId": "red",
+   "familia": "verificacion",
+   "variableIds": [
+    "volumen.A.n.1"
+   ],
+   "incognitas": [],
+   "dimension": "cantidad",
+   "latex": "\\sum_v n_{v,1}-n^0_{1}=\\int\\dot n^{ext}_{1}\\,dt",
+   "unidadResiduo": "mol",
+   "procedencia": {
+    "tipo": "verificacion",
+    "relacion": "cancelación de transferencias internas por identidad"
+   }
+  },
+  {
+   "id": "global.materia.2",
+   "propietarioId": "red",
+   "familia": "verificacion",
+   "variableIds": [
+    "volumen.A.n.2"
+   ],
+   "incognitas": [],
+   "dimension": "cantidad",
+   "latex": "\\sum_v n_{v,2}-n^0_{2}=\\int\\dot n^{ext}_{2}\\,dt",
+   "unidadResiduo": "mol",
+   "procedencia": {
+    "tipo": "verificacion",
+    "relacion": "cancelación de transferencias internas por identidad"
+   }
+  },
+  {
+   "id": "global.materia.3",
+   "propietarioId": "red",
+   "familia": "verificacion",
+   "variableIds": [
+    "volumen.A.n.3"
+   ],
+   "incognitas": [],
+   "dimension": "cantidad",
+   "latex": "\\sum_v n_{v,3}-n^0_{3}=\\int\\dot n^{ext}_{3}\\,dt",
+   "unidadResiduo": "mol",
+   "procedencia": {
+    "tipo": "verificacion",
+    "relacion": "cancelación de transferencias internas por identidad"
+   }
+  },
+  {
+   "id": "global.materia.4",
+   "propietarioId": "red",
+   "familia": "verificacion",
+   "variableIds": [
+    "volumen.A.n.4"
+   ],
+   "incognitas": [],
+   "dimension": "cantidad",
+   "latex": "\\sum_v n_{v,4}-n^0_{4}=\\int\\dot n^{ext}_{4}\\,dt",
+   "unidadResiduo": "mol",
+   "procedencia": {
+    "tipo": "verificacion",
+    "relacion": "cancelación de transferencias internas por identidad"
+   }
+  },
+  {
+   "id": "global.energia",
+   "propietarioId": "red",
+   "familia": "verificacion",
+   "variableIds": [
+    "volumen.A.U"
+   ],
+   "incognitas": [],
+   "dimension": "energia",
+   "latex": "\\sum_v U_v-U^0=\\int(\\dot E^{ext}+\\dot Q^{ext})\\,dt-\\sum_v W_v",
+   "unidadResiduo": "J",
+   "procedencia": {
+    "tipo": "verificacion",
+    "relacion": "conservación global de energía"
+   }
+  }
+ ],
+ "diagnosticos": [
+  {
+   "codigo": "MOTOR_ENS_UNIFAC_ASIGNACION_AUSENTE",
+   "estado": "no_soportado",
+   "mensaje": "Sin asignacion de grupos UNIFAC (original) para 141-78-6 en la base DDBST (SIMULADO en el generador de ejemplos).",
+   "variableIds": [],
+   "origen": {
+    "propietarioId": "volumen:A",
+    "ruta": "/volumenes/0/paqueteId"
+   }
+  }
+ ],
+ "inicializacion": {
+  "estado": "pendiente",
+  "volumenes": {}
+ }
+}

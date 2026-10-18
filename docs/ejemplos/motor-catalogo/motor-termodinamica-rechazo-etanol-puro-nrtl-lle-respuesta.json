@@ -1,0 +1,21 @@
+{
+ "revision": 1,
+ "solicitudId": "lle1",
+ "modelo": {
+  "id": "nrtl-lle-agua-butanol",
+  "version": "1"
+ },
+ "estado": "no_soportado",
+ "evaluacion": null,
+ "diagnosticos": [
+  {
+   "codigo": "MOTOR_ESTADO_PARAMETRO_AUSENTE",
+   "mensaje": "El paquete nrtl-lle-agua-butanol solo tiene parametros para agua y 1-butanol.",
+   "ruta": "componentes",
+   "componenteIds": [
+    1
+   ],
+   "propietarioId": "ejemplos"
+  }
+ ]
+}

@@ -1,0 +1,24 @@
+{
+ "revision": 1,
+ "solicitudId": "nx",
+ "modelo": {
+  "id": "nrtl-chemsep",
+  "version": "1"
+ },
+ "estado": "no_soportado",
+ "evaluacion": null,
+ "diagnosticos": [
+  {
+   "codigo": "MOTOR_ESTADO_PARAMETRO_AUSENTE",
+   "mensaje": "No hay parámetros NRTL ChemSep para el par 7732-18-5 / 71-43-2; no se completan con cero.",
+   "ruta": "componentes",
+   "componenteIds": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "propietarioId": "ejemplos"
+  }
+ ]
+}

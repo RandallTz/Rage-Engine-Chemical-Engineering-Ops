@@ -1,0 +1,35 @@
+{
+ "revision": 1,
+ "solicitudId": "ej-dom",
+ "estado": "no_soportado",
+ "identidad": {
+  "modelo": {
+   "id": "nrtl-chemsep",
+   "version": "1"
+  },
+  "huellaModelo": "sha256:0f92e2b1637d13ef5c538421cb05417e943140a22f9a9a81e52dfad16c6c0e9d",
+  "firmaConsulta": null,
+  "trazador": {
+   "id": "trazador-lv-binario",
+   "version": "1"
+  }
+ },
+ "condicion": null,
+ "ramas": [],
+ "puntos": [],
+ "puntosEspeciales": [],
+ "candidatosDescartados": [],
+ "incidencias": [],
+ "cobertura": null,
+ "metodo": "",
+ "evidencia": null,
+ "diagnosticos": [
+  {
+   "codigo": "MOTOR_DIAG_FUERA_DE_DOMINIO",
+   "estado": "no_soportado",
+   "ruta": "corte.P",
+   "mensaje": "P = 1e+06 Pa fuera del dominio [100, 500000] Pa del paquete (vapor ideal).",
+   "componenteIds": []
+  }
+ ]
+}

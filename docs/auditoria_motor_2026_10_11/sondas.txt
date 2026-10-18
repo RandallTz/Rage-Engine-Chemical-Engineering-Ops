@@ -1,0 +1,15 @@
+{"id": "fuente_compartida_validar", "http": 200, "estado": "valido", "cumple": false, "medidas": null}
+{"id": "fuente_compartida", "http": 200, "estado": "no_convergente", "cumple": true, "medidas": {"potencia_declarada_W": 5000, "Q_aplicado_por_volumen_W": {"cv1": 5000.0, "cv2": 5000.0}, "Q_aplicado_total_W": 10000.0}}
+{"id": "capacidad_excedida_en_t0", "http": 200, "estado": "resuelto", "cumple": false, "medidas": {"V_inicial_m3": 0.03636363636363636, "capacidad_m3": 0.025}}
+{"id": "contradiccion_oculta_por_escala_inventario", "http": 200, "estado": "resuelto", "cumple": false, "medidas": {"F_entrada_dado_mol_s": 0.0001, "F_salida_dado_mol_s": 0.0002, "solucion": {"in.F": 0.0001, "medio.F": 0.0001, "out.F": 0.0001, "cv1.n0": 1000000.0, "cv2.n0": 2000000.0}, "estado_completitud": "redundante_compatible"}}
+{"id": "salida_negativa_en_t0", "http": 200, "estado": "parcial", "cumple": false, "medidas": {"F_salida_mol_s": [-900.0, -900.0], "tiempos_s": [0.0, 2.4999998908589694e-10], "eventos": [{"tipo": "agotamiento", "bloque_id": "rx", "instante": 2.4999998908589694e-10, "componente": "isobutene", "unidad": "s", "descripcion": "isobutene se agoto en 'Reactor' con una ley que no la frena (no la contiene con orden positivo): seguir la consumiria por debajo de cero.", "nota": "Localizado por un evento del integrador, no mirando las muestras."}]}}
+{"id": "vapor_contactos_opuestos", "http": 200, "estado": "resuelto", "cumple": false, "medidas": {"Q_frio_W": 12616.302013289329, "Q_caliente_W": -11383.697986710671}}
+{"id": "estacionario_balance_general_con_vapor", "http": 200, "estado": "resuelto", "cumple": false, "medidas": {"T_devuelta_K": 300.0, "T_analitica_K": 345.82746826476324, "residuo_mismo_ensamblaje_W": 12616.302013289329}}
+{"id": "pared_algebraica_control", "http": 200, "estado": "resuelto", "cumple": true, "medidas": null}
+{"id": "referencia_energia_298_control", "http": 200, "estado": "resuelto", "cumple": true, "medidas": null}
+{"id": "referencia_energia_310_control", "http": 200, "estado": "resuelto", "cumple": true, "medidas": {"error_T_K": 1.4222223398974165e-10}}
+{"id": "lote_bases_orden_0", "http": 200, "estado": "resuelto", "cumple": false, "medidas": {"diferencia_por_reordenar_mol": 2.172840652460877}}
+{"id": "lote_bases_orden_1", "http": 200, "estado": "resuelto", "cumple": false, "medidas": {"diferencia_por_reordenar_mol": 2.172840652460877}}
+{"id": "cinetica_inversa_base_distinta", "http": 200, "estado": "resuelto", "cumple": false, "medidas": {"tasa_inversa_motor_mol_s": 0.5, "tasa_inversa_segun_ley_declarada_mol_s": 0.5082597615236781}}
+{"id": "cadena_30_bloques_heredada", "http": null, "estado": null, "cumple": false, "medidas": null}
+{"id": "corriente_estados_no_finitos", "http": null, "estado": null, "cumple": false, "medidas": null}

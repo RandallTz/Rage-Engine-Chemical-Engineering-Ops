@@ -1,0 +1,125 @@
+{
+  "revision": 1,
+  "solicitudId": "ejemplo-liquido-comprimido-600K-50MPa",
+  "modelo": {
+    "id": "agua-iapws95",
+    "version": "1"
+  },
+  "estado": "evaluado",
+  "evaluacion": {
+    "T": 600.0,
+    "P": 50000000.0,
+    "composicionMolar": {
+      "1": 1.0
+    },
+    "componentes": [
+      {
+        "id": 1,
+        "cas": "7732-18-5",
+        "masaMolarKgMol": 0.018015268,
+        "fuente": "IAPWS-95 (R6-95(2018)): M = 18.015268 g/mol"
+      }
+    ],
+    "fases": [
+      {
+        "id": "liquido-1",
+        "tipo": "liquido",
+        "regimen": "ordinario",
+        "fraccionMolar": 1.0,
+        "fraccionMasica": 1.0,
+        "fraccionVolumen": 1.0,
+        "composicionMolar": {
+          "1": 1.0
+        },
+        "propiedades": {
+          "u": 1387596.4765464552,
+          "h": 1455665.1783163806,
+          "v": 0.0013613740353984971,
+          "s": 3346.3037701788016,
+          "cp": 5046.009813011601,
+          "cv": 2950.2184543075355
+        }
+      }
+    ],
+    "mezcla": {
+      "u": 1387596.4765464552,
+      "h": 1455665.1783163806,
+      "v": 0.0013613740353984971,
+      "s": 3346.3037701788016,
+      "cp": 5046.009813011601,
+      "cv": 2950.2184543075355
+    },
+    "referencia": {
+      "id": "iapws95-u0-s0-liquido-saturado-punto-triple",
+      "descripcion": "IAPWS-95: u = 0 y s = 0 del líquido saturado en el punto triple (273.16 K, 611.655 Pa). Propiedades específicas por kg."
+    },
+    "estabilidad": {
+      "estado": "estable",
+      "alcance": [
+        "liquido",
+        "vapor",
+        "fluido"
+      ],
+      "metodo": "Distancia al plano tangente de sustancia pura a T fija sobre las ramas monofásicas de IAPWS-95 (vapor y líquido separados por la curva de saturación por debajo de T_c; una rama por encima), malla de 400 puntos por rama hasta ρ(1 GPa) y refinamiento acotado de cada mínimo local. Tolerancia -min TPD/P ≤ 1e-9."
+    },
+    "verificaciones": [
+      {
+        "id": "estabilidad",
+        "estado": "cumple",
+        "residuo": 2.6822090148925594e-14,
+        "tolerancia": 1e-09,
+        "motivo": "Residuo = max(0, -min TPD)/P, con TPD(ρ) = ρ[f(T,ρ) - g*] + P* (distancia al plano tangente de sustancia pura a T fija). Búsqueda: 845 evaluaciones en vapor [3.611e-10, 72.84] kg/m3; liquido [649.4, 1109] kg/m3; menor TPD/P en otro mínimo local: 0.675 (a 72.8423 kg/m3). (∂P/∂ρ)_T = 675822 Pa·m3/kg > 0. Alcance: fases fluidas de IAPWS-95; el sólido lo excluye el dominio, no esta búsqueda."
+      },
+      {
+        "id": "dominio",
+        "estado": "cumple",
+        "residuo": null,
+        "tolerancia": null,
+        "motivo": "T en [273.16, 1073.15] K, P en [100, 1e+08] Pa, fuera de la banda crítica T en [643.861, 650.331] K × P en [2.09608e+07, 2.31672e+07] Pa. Sin hielo estable: T ≥ 273.16 K y P ≤ 100 MPa (curvas de fusión IAPWS R14-08). Comprobación de pertenencia, sin residuo."
+      },
+      {
+        "id": "ecuacion_estado",
+        "estado": "cumple",
+        "residuo": 7.053961986202294e-16,
+        "tolerancia": 1e-12,
+        "motivo": "Residuo = |P(T,ρ) - P| / max(P, ρ(∂P/∂ρ)_T): error de presión relativo a la presión o al módulo de compresibilidad isoterma, el mayor."
+      },
+      {
+        "id": "identidad_h_u_Pv",
+        "estado": "cumple",
+        "residuo": 2.049485366485331e-15,
+        "tolerancia": 1e-09,
+        "motivo": "Residuo = |h - u - P v|/(R T) con la P especificada; incluye el error de resolver ρ."
+      },
+      {
+        "id": "derivadas",
+        "estado": "cumple",
+        "residuo": 1.301236376469859e-10,
+        "tolerancia": 1e-06,
+        "motivo": "Residuo = max(|cp - (∂h/∂T)_P|/cp, |cv - (∂u/∂T)_ρ|/cv), derivadas analíticas de la EOS frente a diferencias centradas de paso 1e-5·T re-resolviendo ρ en la misma rama."
+      },
+      {
+        "id": "saturacion",
+        "estado": "cumple",
+        "residuo": 1.886058779915635e-14,
+        "tolerancia": 1e-09,
+        "motivo": "Curva que separa las ramas: Psat = 12344824.4 Pa, ρ' = 649.411406, ρ'' = 72.8423172 kg/m3. Residuo de Maxwell = max(|g'-g''|/(R T), |P(ρ'')-Psat|/Psat, |P(ρ')-Psat|/(ρ'(∂P/∂ρ)_T')). |P/Psat - 1| = 3.05 (banda de indeterminación 1e-06)."
+      },
+      {
+        "id": "reconstruccion_material",
+        "estado": "cumple",
+        "residuo": 0.0,
+        "tolerancia": 1e-12,
+        "motivo": "Una fase con la composición global: Σβ = 1 y z = x exactamente."
+      },
+      {
+        "id": "politica_fases",
+        "estado": "cumple",
+        "residuo": null,
+        "tolerancia": null,
+        "motivo": "El estado estable tiene una fase (liquido), compatible con la política declarada."
+      }
+    ]
+  },
+  "diagnosticos": []
+}

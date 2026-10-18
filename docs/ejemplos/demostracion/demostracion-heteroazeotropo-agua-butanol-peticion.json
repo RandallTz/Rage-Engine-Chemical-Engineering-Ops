@@ -1,0 +1,226 @@
+{
+ "revision": 2,
+ "solicitudId": "demo-heteroazeotropo",
+ "componentes": [
+  {
+   "id": 1,
+   "nombre": "agua",
+   "simbolo": "ag",
+   "identidadQuimica": {
+    "cas": "7732-18-5"
+   }
+  },
+  {
+   "id": 2,
+   "nombre": "butanol",
+   "simbolo": "bu",
+   "identidadQuimica": {
+    "cas": "71-36-3"
+   }
+  }
+ ],
+ "paquetes": [
+  {
+   "id": "p",
+   "modelo": {
+    "id": "unifac-original-public",
+    "version": "1"
+   }
+  }
+ ],
+ "volumenes": [
+  {
+   "id": "A",
+   "componenteIds": [
+    1,
+    2
+   ],
+   "balances": {
+    "materia": true,
+    "energia": true,
+    "momento": false
+   },
+   "formulacionMateria": {
+    "campo": {
+     "sinReaccion": true,
+     "sinDifusion": false,
+     "sinConveccion": false,
+     "estacionario": false,
+     "difusion": "flujo"
+    },
+    "coordenadas": "cartesianas",
+    "expandida": false,
+    "vista": "cantidad",
+    "uniforme": false,
+    "fija": false,
+    "sinAcumulacion": false,
+    "invariantes": [
+     false,
+     false,
+     false
+    ],
+    "generacionUniforme": false,
+    "consumoUniforme": false,
+    "restoImpermeable": true,
+    "cantidadVolumen": false,
+    "densidadMediaConstante": false,
+    "densidadComunPuertos": false,
+    "expandirProducto": false
+   },
+   "formulacionEnergia": {
+    "forma": "total",
+    "trabajoTotalHeredado": false,
+    "separarPresion": true,
+    "entalpia": true,
+    "sinCinetica": true,
+    "sinTrabajoViscoso": true,
+    "sinFuerzasVolumen": true,
+    "sinFuenteVolumetrica": true,
+    "sinConduccionLocal": false,
+    "adiabatico": false,
+    "estacionario": false,
+    "sinAcumulacionTotal": false,
+    "uniforme": true,
+    "monofasico": false,
+    "sinCambioFase": false,
+    "densidadConstante": false,
+    "presionUniforme": true,
+    "presionPrescrita": true,
+    "modelo": "sin_declarar"
+   },
+   "paqueteId": "p",
+   "politica": {
+    "cantidad": "sin_restriccion",
+    "cambioInterno": "permitido",
+    "evaluacion": "equilibrio_estable"
+   },
+   "frontera": {
+    "tipo": "presion_prescrita",
+    "presionId": "volumen.A.P"
+   },
+   "inicial": {
+    "cantidades": {
+     "base": "molar",
+     "datoIds": {
+      "1": "volumen.A.n0.1",
+      "2": "volumen.A.n0.2"
+     }
+    },
+    "energia": {
+     "tipo": "T",
+     "datoId": "volumen.A.T0"
+    }
+   }
+  }
+ ],
+ "corrientes": [],
+ "intercambiosTermicos": [
+  {
+   "id": "q",
+   "desde": null,
+   "hasta": "A",
+   "ley": {
+    "tipo": "impuesto",
+    "potenciaId": "calor.q.Q"
+   },
+   "temperaturaFronteraId": "calor.q.Tf"
+  }
+ ],
+ "datos": {
+  "estudio.tf": {
+   "magnitud": "tiempo",
+   "funcion": "estudio",
+   "declaracion": {
+    "texto": "520",
+    "unidad": "s"
+   },
+   "origen": {
+    "propietarioId": "estudio",
+    "ruta": "/prueba"
+   }
+  },
+  "volumen.A.n0.1": {
+   "magnitud": "cantidad",
+   "funcion": "inicial",
+   "declaracion": {
+    "texto": "0.75",
+    "unidad": "mol"
+   },
+   "origen": {
+    "propietarioId": "volumen:A",
+    "ruta": "/prueba"
+   }
+  },
+  "volumen.A.n0.2": {
+   "magnitud": "cantidad",
+   "funcion": "inicial",
+   "declaracion": {
+    "texto": "0.25",
+    "unidad": "mol"
+   },
+   "origen": {
+    "propietarioId": "volumen:A",
+    "ruta": "/prueba"
+   }
+  },
+  "volumen.A.T0": {
+   "magnitud": "temperatura",
+   "funcion": "inicial",
+   "declaracion": {
+    "texto": "300",
+    "unidad": "K"
+   },
+   "origen": {
+    "propietarioId": "volumen:A",
+    "ruta": "/prueba"
+   }
+  },
+  "volumen.A.P": {
+   "magnitud": "presion",
+   "funcion": "frontera",
+   "declaracion": {
+    "texto": "101325",
+    "unidad": "Pa"
+   },
+   "origen": {
+    "propietarioId": "volumen:A",
+    "ruta": "/prueba"
+   }
+  },
+  "calor.q.Q": {
+   "magnitud": "potencia",
+   "funcion": "frontera",
+   "declaracion": {
+    "texto": "100",
+    "unidad": "W"
+   },
+   "origen": {
+    "propietarioId": "calor:q",
+    "ruta": "/prueba"
+   }
+  },
+  "calor.q.Tf": {
+   "magnitud": "temperatura",
+   "funcion": "frontera",
+   "declaracion": {
+    "texto": "700",
+    "unidad": "K"
+   },
+   "origen": {
+    "propietarioId": "calor:q",
+    "ruta": "/prueba"
+   }
+  }
+ },
+ "estudio": {
+  "tipo": "temporal",
+  "tiempoId": "estudio.tf",
+  "metodoSolicitado": "rk45",
+  "muestras": 27,
+  "rtol": 1e-08,
+  "atol": {
+   "cantidad": 1e-10,
+   "energia": 1e-06
+  }
+ }
+}

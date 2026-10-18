@@ -1,0 +1,1343 @@
+{
+ "revision": 1,
+ "sustancias": [
+  {
+   "id": "7732-18-5",
+   "cas": "7732-18-5",
+   "nombre": "agua",
+   "masaMolar": {
+    "valor": 0.01801528,
+    "unidad": "kg/mol",
+    "fuente": "thermo (IUPAC)"
+   },
+   "datosPuros": {
+    "estado": "completos",
+    "faltantes": [],
+    "propiedades": [
+     {
+      "id": "presion_vapor",
+      "unidad": "Pa",
+      "forma": "Wagner (WagnerMcGarry)",
+      "fuente": "Wagner, McGarry, Ind. Eng. Chem. Process Des. Dev. 22 (1983) 313",
+      "coeficientes": {
+       "A": -7.76451,
+       "B": 1.45838,
+       "C": -2.7758,
+       "D": -1.23303,
+       "Tc": 647.35,
+       "Pc": 22122300.0
+      },
+      "dominio": {
+       "T": [
+        275.0,
+        647.35
+       ]
+      }
+     },
+     {
+      "id": "cp_gas_ideal",
+      "unidad": "J/(mol K)",
+      "forma": "cp/R = a0 + a1 T + a2 T^2 + a3 T^3 + a4 T^4",
+      "fuente": "Poling, The Properties of Gases and Liquids 5a ed., apendice A (chemicals)",
+      "coeficientes": {
+       "a0": 4.395,
+       "a1": -0.004186,
+       "a2": 1.405e-05,
+       "a3": -1.564e-08,
+       "a4": 6.32e-12
+      },
+      "dominio": {
+       "T": [
+        50.0,
+        1000.0
+       ]
+      }
+     },
+     {
+      "id": "volumen_liquido",
+      "unidad": "m3/mol",
+      "valor": 1.8068323953085667e-05,
+      "condicion": "298.15 K; liquido incompresible",
+      "fuente": "thermo VolumeLiquid HEOS_FIT a 298.15 K"
+     }
+    ],
+    "dominioLiquido": {
+     "T": [
+      275.0,
+      582.615
+     ],
+     "motivo": "interseccion de los rangos de Psat y cp y T <= 0.9 Tc"
+    },
+    "huella": "sha256:eee33fcc4f876260810c7dddb676a52d99d5f690e28bddaee4dc73af4b2cc3d6"
+   }
+  },
+  {
+   "id": "64-17-5",
+   "cas": "64-17-5",
+   "nombre": "etanol",
+   "masaMolar": {
+    "valor": 0.04606844,
+    "unidad": "kg/mol",
+    "fuente": "thermo (IUPAC)"
+   },
+   "datosPuros": {
+    "estado": "completos",
+    "faltantes": [],
+    "propiedades": [
+     {
+      "id": "presion_vapor",
+      "unidad": "Pa",
+      "forma": "Wagner (WagnerPoling)",
+      "fuente": "Wagner, Poling et al., The Properties of Gases and Liquids, 5a ed.",
+      "coeficientes": {
+       "A": -8.68587,
+       "B": 1.17831,
+       "C": -4.8762,
+       "D": 1.588,
+       "Tc": 513.92,
+       "Pc": 6132000.0
+      },
+      "dominio": {
+       "T": [
+        159.05,
+        513.92
+       ]
+      }
+     },
+     {
+      "id": "cp_gas_ideal",
+      "unidad": "J/(mol K)",
+      "forma": "cp/R = a0 + a1 T + a2 T^2 + a3 T^3 + a4 T^4",
+      "fuente": "Poling, The Properties of Gases and Liquids 5a ed., apendice A (chemicals)",
+      "coeficientes": {
+       "a0": 4.396,
+       "a1": 0.000628,
+       "a2": 5.546e-05,
+       "a3": -7.024e-08,
+       "a4": 2.685e-11
+      },
+      "dominio": {
+       "T": [
+        50.0,
+        1000.0
+       ]
+      }
+     },
+     {
+      "id": "volumen_liquido",
+      "unidad": "m3/mol",
+      "valor": 5.8673800832977466e-05,
+      "condicion": "298.15 K; liquido incompresible",
+      "fuente": "thermo VolumeLiquid HEOS_FIT a 298.15 K"
+     }
+    ],
+    "dominioLiquido": {
+     "T": [
+      159.05,
+      462.52799999999996
+     ],
+     "motivo": "interseccion de los rangos de Psat y cp y T <= 0.9 Tc"
+    },
+    "huella": "sha256:e16721812dbdc5fbffb10de77bb074fd1fb25d172fd0ffa8e693e4cb2edddb72"
+   }
+  },
+  {
+   "id": "71-43-2",
+   "cas": "71-43-2",
+   "nombre": "benceno",
+   "masaMolar": {
+    "valor": 0.07811184,
+    "unidad": "kg/mol",
+    "fuente": "thermo (IUPAC)"
+   },
+   "datosPuros": {
+    "estado": "completos",
+    "faltantes": [],
+    "propiedades": [
+     {
+      "id": "presion_vapor",
+      "unidad": "Pa",
+      "forma": "Wagner (WagnerPoling)",
+      "fuente": "Wagner, Poling et al., The Properties of Gases and Liquids, 5a ed.",
+      "coeficientes": {
+       "A": -7.01433,
+       "B": 1.55256,
+       "C": -1.8479,
+       "D": -3.713,
+       "Tc": 562.16,
+       "Pc": 4898000.0
+      },
+      "dominio": {
+       "T": [
+        278.68,
+        562.16
+       ]
+      }
+     },
+     {
+      "id": "cp_gas_ideal",
+      "unidad": "J/(mol K)",
+      "forma": "cp/R = a0 + a1 T + a2 T^2 + a3 T^3 + a4 T^4",
+      "fuente": "Poling, The Properties of Gases and Liquids 5a ed., apendice A (chemicals)",
+      "coeficientes": {
+       "a0": 3.551,
+       "a1": -0.006184,
+       "a2": 0.00014365,
+       "a3": -1.9807e-07,
+       "a4": 8.234e-11
+      },
+      "dominio": {
+       "T": [
+        50.0,
+        1000.0
+       ]
+      }
+     },
+     {
+      "id": "volumen_liquido",
+      "unidad": "m3/mol",
+      "valor": 8.939778918663944e-05,
+      "condicion": "298.15 K; liquido incompresible",
+      "fuente": "thermo VolumeLiquid HEOS_FIT a 298.15 K"
+     }
+    ],
+    "dominioLiquido": {
+     "T": [
+      278.68,
+      505.94399999999996
+     ],
+     "motivo": "interseccion de los rangos de Psat y cp y T <= 0.9 Tc"
+    },
+    "huella": "sha256:27974b23406d218a44114c9957e5ec6e52dbea623133080e4d5782e01fdbe078"
+   }
+  },
+  {
+   "id": "108-88-3",
+   "cas": "108-88-3",
+   "nombre": "tolueno",
+   "masaMolar": {
+    "valor": 0.09213842,
+    "unidad": "kg/mol",
+    "fuente": "thermo (IUPAC)"
+   },
+   "datosPuros": {
+    "estado": "completos",
+    "faltantes": [],
+    "propiedades": [
+     {
+      "id": "presion_vapor",
+      "unidad": "Pa",
+      "forma": "Wagner (WagnerPoling)",
+      "fuente": "Wagner, Poling et al., The Properties of Gases and Liquids, 5a ed.",
+      "coeficientes": {
+       "A": -7.316,
+       "B": 1.59425,
+       "C": -1.93165,
+       "D": -3.7222,
+       "Tc": 591.8,
+       "Pc": 4106000.0
+      },
+      "dominio": {
+       "T": [
+        178.18,
+        591.8
+       ]
+      }
+     },
+     {
+      "id": "cp_gas_ideal",
+      "unidad": "J/(mol K)",
+      "forma": "cp/R = a0 + a1 T + a2 T^2 + a3 T^3 + a4 T^4",
+      "fuente": "Poling, The Properties of Gases and Liquids 5a ed., apendice A (chemicals)",
+      "coeficientes": {
+       "a0": 3.866,
+       "a1": 0.003558,
+       "a2": 0.00013356,
+       "a3": -1.8659e-07,
+       "a4": 7.69e-11
+      },
+      "dominio": {
+       "T": [
+        50.0,
+        1000.0
+       ]
+      }
+     },
+     {
+      "id": "volumen_liquido",
+      "unidad": "m3/mol",
+      "valor": 0.00010684707573950031,
+      "condicion": "298.15 K; liquido incompresible",
+      "fuente": "thermo VolumeLiquid HEOS_FIT a 298.15 K"
+     }
+    ],
+    "dominioLiquido": {
+     "T": [
+      178.18,
+      532.62
+     ],
+     "motivo": "interseccion de los rangos de Psat y cp y T <= 0.9 Tc"
+    },
+    "huella": "sha256:19404b1412d39b3a8d53caac56f2a0d8b782fbd6ca35cfe3470b8b03e9c35487"
+   }
+  },
+  {
+   "id": "71-36-3",
+   "cas": "71-36-3",
+   "nombre": "1-butanol",
+   "masaMolar": {
+    "valor": 0.0741216,
+    "unidad": "kg/mol",
+    "fuente": "thermo (IUPAC)"
+   },
+   "datosPuros": {
+    "estado": "completos",
+    "faltantes": [],
+    "propiedades": [
+     {
+      "id": "presion_vapor",
+      "unidad": "Pa",
+      "forma": "Wagner (WagnerPoling)",
+      "fuente": "Wagner, Poling et al., The Properties of Gases and Liquids, 5a ed.",
+      "coeficientes": {
+       "A": -8.40615,
+       "B": 2.2301,
+       "C": -8.2486,
+       "D": -0.711,
+       "Tc": 563.05,
+       "Pc": 4424000.0
+      },
+      "dominio": {
+       "T": [
+        183.85,
+        563.05
+       ]
+      }
+     },
+     {
+      "id": "cp_gas_ideal",
+      "unidad": "J/(mol K)",
+      "forma": "cp/R = a0 + a1 T + a2 T^2 + a3 T^3 + a4 T^4",
+      "fuente": "Poling, The Properties of Gases and Liquids 5a ed., apendice A (chemicals)",
+      "coeficientes": {
+       "a0": 4.467,
+       "a1": 0.016395,
+       "a2": 6.688e-05,
+       "a3": -9.69e-08,
+       "a4": 3.864e-11
+      },
+      "dominio": {
+       "T": [
+        50.0,
+        1000.0
+       ]
+      }
+     },
+     {
+      "id": "volumen_liquido",
+      "unidad": "m3/mol",
+      "valor": 9.218214721157879e-05,
+      "condicion": "298.15 K; liquido incompresible",
+      "fuente": "thermo VolumeLiquid DIPPR_PERRY_8E a 298.15 K"
+     }
+    ],
+    "dominioLiquido": {
+     "T": [
+      183.85,
+      506.74499999999995
+     ],
+     "motivo": "interseccion de los rangos de Psat y cp y T <= 0.9 Tc"
+    },
+    "huella": "sha256:7e08e2e38ba6ea8accbb0d06be94992a0f8d95de19bda15eb548d559e30197ee"
+   }
+  },
+  {
+   "id": "141-78-6",
+   "cas": "141-78-6",
+   "nombre": "acetato de etilo",
+   "masaMolar": {
+    "valor": 0.08810512,
+    "unidad": "kg/mol",
+    "fuente": "thermo (IUPAC)"
+   },
+   "datosPuros": {
+    "estado": "completos",
+    "faltantes": [],
+    "propiedades": [
+     {
+      "id": "presion_vapor",
+      "unidad": "Pa",
+      "forma": "Wagner (WagnerMcGarry)",
+      "fuente": "Wagner, McGarry, Ind. Eng. Chem. Process Des. Dev. 22 (1983) 313",
+      "coeficientes": {
+       "A": -7.68521,
+       "B": 1.36511,
+       "C": -4.0898,
+       "D": -1.75342,
+       "Tc": 523.2,
+       "Pc": 3830100.0
+      },
+      "dominio": {
+       "T": [
+        289.0,
+        523.2
+       ]
+      }
+     },
+     {
+      "id": "cp_gas_ideal",
+      "unidad": "J/(mol K)",
+      "forma": "cp/R = a0 + a1 T + a2 T^2 + a3 T^3 + a4 T^4",
+      "fuente": "Poling, The Properties of Gases and Liquids 5a ed., apendice A (chemicals)",
+      "coeficientes": {
+       "a0": 10.228,
+       "a1": -0.014948,
+       "a2": 0.00013033,
+       "a3": -1.5736e-07,
+       "a4": 5.999e-11
+      },
+      "dominio": {
+       "T": [
+        298.0,
+        1000.0
+       ]
+      }
+     },
+     {
+      "id": "volumen_liquido",
+      "unidad": "m3/mol",
+      "valor": 9.858272672498358e-05,
+      "condicion": "298.15 K; liquido incompresible",
+      "fuente": "thermo VolumeLiquid DIPPR_PERRY_8E a 298.15 K"
+     }
+    ],
+    "dominioLiquido": {
+     "T": [
+      298.0,
+      470.88000000000005
+     ],
+     "motivo": "interseccion de los rangos de Psat y cp y T <= 0.9 Tc"
+    },
+    "huella": "sha256:30d66435962cfaeebdb82afaef31f1e254f7995bcbe85399f6b106f4d28e692b"
+   }
+  },
+  {
+   "id": "67-56-1",
+   "cas": "67-56-1",
+   "nombre": "metanol",
+   "masaMolar": {
+    "valor": 0.03204186,
+    "unidad": "kg/mol",
+    "fuente": "thermo (IUPAC)"
+   },
+   "datosPuros": {
+    "estado": "completos",
+    "faltantes": [],
+    "propiedades": [
+     {
+      "id": "presion_vapor",
+      "unidad": "Pa",
+      "forma": "Wagner (WagnerPoling)",
+      "fuente": "Wagner, Poling et al., The Properties of Gases and Liquids, 5a ed.",
+      "coeficientes": {
+       "A": -8.63571,
+       "B": 1.17982,
+       "C": -2.479,
+       "D": -1.024,
+       "Tc": 512.64,
+       "Pc": 8092000.0
+      },
+      "dominio": {
+       "T": [
+        175.47,
+        512.64
+       ]
+      }
+     },
+     {
+      "id": "cp_gas_ideal",
+      "unidad": "J/(mol K)",
+      "forma": "cp/R = a0 + a1 T + a2 T^2 + a3 T^3 + a4 T^4",
+      "fuente": "Poling, The Properties of Gases and Liquids 5a ed., apendice A (chemicals)",
+      "coeficientes": {
+       "a0": 4.714,
+       "a1": -0.006986,
+       "a2": 4.211e-05,
+       "a3": -4.443e-08,
+       "a4": 1.535e-11
+      },
+      "dominio": {
+       "T": [
+        50.0,
+        1000.0
+       ]
+      }
+     },
+     {
+      "id": "volumen_liquido",
+      "unidad": "m3/mol",
+      "valor": 4.0747926182915573e-05,
+      "condicion": "298.15 K; liquido incompresible",
+      "fuente": "thermo VolumeLiquid HEOS_FIT a 298.15 K"
+     }
+    ],
+    "dominioLiquido": {
+     "T": [
+      175.47,
+      461.376
+     ],
+     "motivo": "interseccion de los rangos de Psat y cp y T <= 0.9 Tc"
+    },
+    "huella": "sha256:10d85fec4b05910281b577b34faf31c8a2d527108196b69669b17220294026fe"
+   }
+  },
+  {
+   "id": "67-64-1",
+   "cas": "67-64-1",
+   "nombre": "acetona",
+   "masaMolar": {
+    "valor": 0.05807914,
+    "unidad": "kg/mol",
+    "fuente": "thermo (IUPAC)"
+   },
+   "datosPuros": {
+    "estado": "completos",
+    "faltantes": [],
+    "propiedades": [
+     {
+      "id": "presion_vapor",
+      "unidad": "Pa",
+      "forma": "Wagner (WagnerPoling)",
+      "fuente": "Wagner, Poling et al., The Properties of Gases and Liquids, 5a ed.",
+      "coeficientes": {
+       "A": -7.55098,
+       "B": 1.60784,
+       "C": -1.9944,
+       "D": -3.2002,
+       "Tc": 508.1,
+       "Pc": 4702000.0
+      },
+      "dominio": {
+       "T": [
+        178.45,
+        508.1
+       ]
+      }
+     },
+     {
+      "id": "cp_gas_ideal",
+      "unidad": "J/(mol K)",
+      "forma": "cp/R = a0 + a1 T + a2 T^2 + a3 T^3 + a4 T^4",
+      "fuente": "Poling, The Properties of Gases and Liquids 5a ed., apendice A (chemicals)",
+      "coeficientes": {
+       "a0": 5.126,
+       "a1": 0.001511,
+       "a2": 5.731e-05,
+       "a3": -7.177e-08,
+       "a4": 2.728e-11
+      },
+      "dominio": {
+       "T": [
+        200.0,
+        1000.0
+       ]
+      }
+     },
+     {
+      "id": "volumen_liquido",
+      "unidad": "m3/mol",
+      "valor": 7.401429647338668e-05,
+      "condicion": "298.15 K; liquido incompresible",
+      "fuente": "thermo VolumeLiquid HEOS_FIT a 298.15 K"
+     }
+    ],
+    "dominioLiquido": {
+     "T": [
+      200.0,
+      457.29
+     ],
+     "motivo": "interseccion de los rangos de Psat y cp y T <= 0.9 Tc"
+    },
+    "huella": "sha256:401f0859eb8b85dae0dc1a9c7cd3990bba4067af00a11be0d15e9a9b8fc9a657"
+   }
+  }
+ ],
+ "paquetes": [
+  {
+   "modelo": {
+    "id": "agua-iapws95",
+    "version": "1"
+   },
+   "nombre": "Agua pura, IAPWS-95 (estado de equilibrio puntual)",
+   "requisitos": {
+    "porEspecie": [
+     "formulacion_iapws95"
+    ],
+    "porPar": [],
+    "porGrupo": []
+   },
+   "operaciones": {
+    "estado": {
+     "especificaciones": [
+      "TP",
+      "PH",
+      "UP",
+      "UV"
+     ]
+    },
+    "ensamblaje": {
+     "disponible": true
+    },
+    "diagramas": {
+     "disponible": false,
+     "operaciones": []
+    }
+   },
+   "especies": [
+    {
+     "cas": "7732-18-5",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "64-17-5",
+     "admitida": false,
+     "faltantes": [
+      {
+       "dato": "formulacion_iapws95",
+       "codigo": "COMPONENTE_NO_SOPORTADO",
+       "mensaje": "El paquete agua-iapws95 solo describe el agua (7732-18-5)."
+      }
+     ]
+    },
+    {
+     "cas": "71-43-2",
+     "admitida": false,
+     "faltantes": [
+      {
+       "dato": "formulacion_iapws95",
+       "codigo": "COMPONENTE_NO_SOPORTADO",
+       "mensaje": "El paquete agua-iapws95 solo describe el agua (7732-18-5)."
+      }
+     ]
+    },
+    {
+     "cas": "108-88-3",
+     "admitida": false,
+     "faltantes": [
+      {
+       "dato": "formulacion_iapws95",
+       "codigo": "COMPONENTE_NO_SOPORTADO",
+       "mensaje": "El paquete agua-iapws95 solo describe el agua (7732-18-5)."
+      }
+     ]
+    },
+    {
+     "cas": "71-36-3",
+     "admitida": false,
+     "faltantes": [
+      {
+       "dato": "formulacion_iapws95",
+       "codigo": "COMPONENTE_NO_SOPORTADO",
+       "mensaje": "El paquete agua-iapws95 solo describe el agua (7732-18-5)."
+      }
+     ]
+    },
+    {
+     "cas": "141-78-6",
+     "admitida": false,
+     "faltantes": [
+      {
+       "dato": "formulacion_iapws95",
+       "codigo": "COMPONENTE_NO_SOPORTADO",
+       "mensaje": "El paquete agua-iapws95 solo describe el agua (7732-18-5)."
+      }
+     ]
+    },
+    {
+     "cas": "67-56-1",
+     "admitida": false,
+     "faltantes": [
+      {
+       "dato": "formulacion_iapws95",
+       "codigo": "COMPONENTE_NO_SOPORTADO",
+       "mensaje": "El paquete agua-iapws95 solo describe el agua (7732-18-5)."
+      }
+     ]
+    },
+    {
+     "cas": "67-64-1",
+     "admitida": false,
+     "faltantes": [
+      {
+       "dato": "formulacion_iapws95",
+       "codigo": "COMPONENTE_NO_SOPORTADO",
+       "mensaje": "El paquete agua-iapws95 solo describe el agua (7732-18-5)."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "modelo": {
+    "id": "mezcla-ideal",
+    "version": "1"
+   },
+   "nombre": "Vapor ideal + solución líquida ideal (Raoult con Poynting)",
+   "requisitos": {
+    "porEspecie": [
+     "masa_molar",
+     "presion_vapor",
+     "cp_gas_ideal",
+     "volumen_liquido"
+    ],
+    "porPar": [],
+    "porGrupo": []
+   },
+   "operaciones": {
+    "estado": {
+     "especificaciones": [
+      "TP",
+      "PH",
+      "UP",
+      "UV"
+     ]
+    },
+    "ensamblaje": {
+     "disponible": true
+    },
+    "diagramas": {
+     "disponible": true,
+     "operaciones": [
+      "Txy",
+      "Pxy"
+     ]
+    }
+   },
+   "especies": [
+    {
+     "cas": "7732-18-5",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "64-17-5",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "71-43-2",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "108-88-3",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "71-36-3",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "141-78-6",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "67-56-1",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "67-64-1",
+     "admitida": true,
+     "faltantes": []
+    }
+   ]
+  },
+  {
+   "modelo": {
+    "id": "nrtl-chemsep",
+    "version": "1"
+   },
+   "nombre": "Vapor ideal + líquido NRTL con parámetros binarios ChemSep",
+   "requisitos": {
+    "porEspecie": [
+     "masa_molar",
+     "presion_vapor",
+     "cp_gas_ideal",
+     "volumen_liquido"
+    ],
+    "porPar": [
+     "nrtl_bij_alphaij"
+    ],
+    "porGrupo": []
+   },
+   "operaciones": {
+    "estado": {
+     "especificaciones": [
+      "TP",
+      "PH",
+      "UP",
+      "UV"
+     ]
+    },
+    "ensamblaje": {
+     "disponible": true
+    },
+    "diagramas": {
+     "disponible": true,
+     "operaciones": [
+      "Txy",
+      "Pxy"
+     ]
+    }
+   },
+   "especies": [
+    {
+     "cas": "7732-18-5",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "64-17-5",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "71-43-2",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "108-88-3",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "71-36-3",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "141-78-6",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "67-56-1",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "67-64-1",
+     "admitida": true,
+     "faltantes": []
+    }
+   ]
+  },
+  {
+   "modelo": {
+    "id": "nrtl-lle-agua-butanol",
+    "version": "1"
+   },
+   "nombre": "Vapor ideal + líquido NRTL ajustado a la solubilidad mutua agua/1-butanol (IUPAC SDS-15)",
+   "requisitos": {
+    "porEspecie": [
+     "masa_molar",
+     "presion_vapor",
+     "cp_gas_ideal",
+     "volumen_liquido",
+     "parametros_nrtl_lle"
+    ],
+    "porPar": [],
+    "porGrupo": []
+   },
+   "operaciones": {
+    "estado": {
+     "especificaciones": [
+      "TP",
+      "PH",
+      "UP",
+      "UV"
+     ]
+    },
+    "ensamblaje": {
+     "disponible": true
+    },
+    "diagramas": {
+     "disponible": true,
+     "operaciones": [
+      "Txy",
+      "Pxy"
+     ]
+    }
+   },
+   "especies": [
+    {
+     "cas": "7732-18-5",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "64-17-5",
+     "admitida": false,
+     "faltantes": [
+      {
+       "dato": "parametros_nrtl_lle",
+       "codigo": "PARAMETRO_AUSENTE",
+       "mensaje": "El paquete nrtl-lle-agua-butanol solo tiene parametros para agua y 1-butanol."
+      }
+     ]
+    },
+    {
+     "cas": "71-43-2",
+     "admitida": false,
+     "faltantes": [
+      {
+       "dato": "parametros_nrtl_lle",
+       "codigo": "PARAMETRO_AUSENTE",
+       "mensaje": "El paquete nrtl-lle-agua-butanol solo tiene parametros para agua y 1-butanol."
+      }
+     ]
+    },
+    {
+     "cas": "108-88-3",
+     "admitida": false,
+     "faltantes": [
+      {
+       "dato": "parametros_nrtl_lle",
+       "codigo": "PARAMETRO_AUSENTE",
+       "mensaje": "El paquete nrtl-lle-agua-butanol solo tiene parametros para agua y 1-butanol."
+      }
+     ]
+    },
+    {
+     "cas": "71-36-3",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "141-78-6",
+     "admitida": false,
+     "faltantes": [
+      {
+       "dato": "parametros_nrtl_lle",
+       "codigo": "PARAMETRO_AUSENTE",
+       "mensaje": "El paquete nrtl-lle-agua-butanol solo tiene parametros para agua y 1-butanol."
+      }
+     ]
+    },
+    {
+     "cas": "67-56-1",
+     "admitida": false,
+     "faltantes": [
+      {
+       "dato": "parametros_nrtl_lle",
+       "codigo": "PARAMETRO_AUSENTE",
+       "mensaje": "El paquete nrtl-lle-agua-butanol solo tiene parametros para agua y 1-butanol."
+      }
+     ]
+    },
+    {
+     "cas": "67-64-1",
+     "admitida": false,
+     "faltantes": [
+      {
+       "dato": "parametros_nrtl_lle",
+       "codigo": "PARAMETRO_AUSENTE",
+       "mensaje": "El paquete nrtl-lle-agua-butanol solo tiene parametros para agua y 1-butanol."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "modelo": {
+    "id": "unifac-original-public",
+    "version": "1"
+   },
+   "nombre": "Vapor ideal + líquido UNIFAC original (parámetros DDBST publicados, asignaciones DDBST)",
+   "requisitos": {
+    "porEspecie": [
+     "masa_molar",
+     "presion_vapor",
+     "cp_gas_ideal",
+     "volumen_liquido",
+     "asignacion_grupos_original"
+    ],
+    "porPar": [],
+    "porGrupo": [
+     "interaccion_grupos_principales"
+    ]
+   },
+   "operaciones": {
+    "estado": {
+     "especificaciones": [
+      "TP",
+      "PH",
+      "UP",
+      "UV"
+     ]
+    },
+    "ensamblaje": {
+     "disponible": true,
+     "coberturaGrupos": true
+    },
+    "diagramas": {
+     "disponible": true,
+     "operaciones": [
+      "Txy",
+      "Pxy"
+     ]
+    }
+   },
+   "especies": [
+    {
+     "cas": "7732-18-5",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "64-17-5",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "71-43-2",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "108-88-3",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "71-36-3",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "141-78-6",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "67-56-1",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "67-64-1",
+     "admitida": true,
+     "faltantes": []
+    }
+   ]
+  },
+  {
+   "modelo": {
+    "id": "unifac-dortmund-public",
+    "version": "1"
+   },
+   "nombre": "Vapor ideal + líquido UNIFAC modificado (Dortmund; parámetros DDBST publicados 2016, asignaciones DDBST)",
+   "requisitos": {
+    "porEspecie": [
+     "masa_molar",
+     "presion_vapor",
+     "cp_gas_ideal",
+     "volumen_liquido",
+     "asignacion_grupos_dortmund"
+    ],
+    "porPar": [],
+    "porGrupo": [
+     "interaccion_grupos_principales"
+    ]
+   },
+   "operaciones": {
+    "estado": {
+     "especificaciones": [
+      "TP",
+      "PH",
+      "UP",
+      "UV"
+     ]
+    },
+    "ensamblaje": {
+     "disponible": true,
+     "coberturaGrupos": true
+    },
+    "diagramas": {
+     "disponible": true,
+     "operaciones": [
+      "Txy",
+      "Pxy"
+     ]
+    }
+   },
+   "especies": [
+    {
+     "cas": "7732-18-5",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "64-17-5",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "71-43-2",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "108-88-3",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "71-36-3",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "141-78-6",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "67-56-1",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "67-64-1",
+     "admitida": true,
+     "faltantes": []
+    }
+   ]
+  },
+  {
+   "modelo": {
+    "id": "unifac-original-lle-public",
+    "version": "1"
+   },
+   "nombre": "Vapor ideal + líquido UNIFAC con la tabla dedicada a ELL (Magnussen et al. 1981; 10-40 °C)",
+   "requisitos": {
+    "porEspecie": [
+     "masa_molar",
+     "presion_vapor",
+     "cp_gas_ideal",
+     "volumen_liquido",
+     "asignacion_grupos_lle"
+    ],
+    "porPar": [],
+    "porGrupo": [
+     "interaccion_grupos_principales"
+    ]
+   },
+   "operaciones": {
+    "estado": {
+     "especificaciones": [
+      "TP",
+      "PH",
+      "UP",
+      "UV"
+     ]
+    },
+    "ensamblaje": {
+     "disponible": true,
+     "coberturaGrupos": true
+    },
+    "diagramas": {
+     "disponible": true,
+     "operaciones": [
+      "Txy",
+      "Pxy"
+     ]
+    }
+   },
+   "especies": [
+    {
+     "cas": "7732-18-5",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "64-17-5",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "71-43-2",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "108-88-3",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "71-36-3",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "141-78-6",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "67-56-1",
+     "admitida": false,
+     "faltantes": [
+      {
+       "dato": "asignacion_grupos_lle",
+       "codigo": "UNIFAC_ASIGNACION_AUSENTE",
+       "mensaje": "Sin asignacion de grupos UNIFAC (lle) para 67-56-1: el subgrupo original 15 (CH3OH) no existe en la tabla LLE con los mismos R y Q."
+      }
+     ]
+    },
+    {
+     "cas": "67-64-1",
+     "admitida": true,
+     "faltantes": []
+    }
+   ]
+  },
+  {
+   "modelo": {
+    "id": "agua-iapws95-hielo-ih",
+    "version": "1"
+   },
+   "nombre": "Agua pura con hielo Ih: IAPWS-95 (fluido) + IAPWS R10-06 (hielo Ih)",
+   "requisitos": {
+    "porEspecie": [
+     "formulacion_iapws95"
+    ],
+    "porPar": [],
+    "porGrupo": []
+   },
+   "operaciones": {
+    "estado": {
+     "especificaciones": [
+      "TP",
+      "PH",
+      "UP",
+      "UV"
+     ]
+    },
+    "ensamblaje": {
+     "disponible": false
+    },
+    "diagramas": {
+     "disponible": false,
+     "operaciones": []
+    }
+   },
+   "especies": [
+    {
+     "cas": "7732-18-5",
+     "admitida": true,
+     "faltantes": []
+    },
+    {
+     "cas": "64-17-5",
+     "admitida": false,
+     "faltantes": [
+      {
+       "dato": "formulacion_iapws95",
+       "codigo": "COMPONENTE_NO_SOPORTADO",
+       "mensaje": "El paquete agua-iapws95-hielo-ih solo describe el agua (7732-18-5)."
+      }
+     ]
+    },
+    {
+     "cas": "71-43-2",
+     "admitida": false,
+     "faltantes": [
+      {
+       "dato": "formulacion_iapws95",
+       "codigo": "COMPONENTE_NO_SOPORTADO",
+       "mensaje": "El paquete agua-iapws95-hielo-ih solo describe el agua (7732-18-5)."
+      }
+     ]
+    },
+    {
+     "cas": "108-88-3",
+     "admitida": false,
+     "faltantes": [
+      {
+       "dato": "formulacion_iapws95",
+       "codigo": "COMPONENTE_NO_SOPORTADO",
+       "mensaje": "El paquete agua-iapws95-hielo-ih solo describe el agua (7732-18-5)."
+      }
+     ]
+    },
+    {
+     "cas": "71-36-3",
+     "admitida": false,
+     "faltantes": [
+      {
+       "dato": "formulacion_iapws95",
+       "codigo": "COMPONENTE_NO_SOPORTADO",
+       "mensaje": "El paquete agua-iapws95-hielo-ih solo describe el agua (7732-18-5)."
+      }
+     ]
+    },
+    {
+     "cas": "141-78-6",
+     "admitida": false,
+     "faltantes": [
+      {
+       "dato": "formulacion_iapws95",
+       "codigo": "COMPONENTE_NO_SOPORTADO",
+       "mensaje": "El paquete agua-iapws95-hielo-ih solo describe el agua (7732-18-5)."
+      }
+     ]
+    },
+    {
+     "cas": "67-56-1",
+     "admitida": false,
+     "faltantes": [
+      {
+       "dato": "formulacion_iapws95",
+       "codigo": "COMPONENTE_NO_SOPORTADO",
+       "mensaje": "El paquete agua-iapws95-hielo-ih solo describe el agua (7732-18-5)."
+      }
+     ]
+    },
+    {
+     "cas": "67-64-1",
+     "admitida": false,
+     "faltantes": [
+      {
+       "dato": "formulacion_iapws95",
+       "codigo": "COMPONENTE_NO_SOPORTADO",
+       "mensaje": "El paquete agua-iapws95-hielo-ih solo describe el agua (7732-18-5)."
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "regla": "una especie esta admitida en un paquete si no le falta ningun requisito porEspecie; la misma regla vale para la especie pura y para las mezclas. Los requisitos porPar y porGrupo dependen del conjunto y se diagnostican al evaluar (PARAMETRO_AUSENTE, UNIFAC_INTERACCION_AUSENTE).",
+ "noDisponible": [
+  {
+   "elemento": "incorporar sustancias desde la peticion",
+   "motivo": "el registro es del servidor (F2.3)"
+  },
+  {
+   "elemento": "overrides de propiedades",
+   "motivo": "pendiente de F2.4"
+  },
+  {
+   "elemento": "alineacion de referencias entre paquetes",
+   "motivo": "pendiente de F2.5"
+  }
+ ]
+}

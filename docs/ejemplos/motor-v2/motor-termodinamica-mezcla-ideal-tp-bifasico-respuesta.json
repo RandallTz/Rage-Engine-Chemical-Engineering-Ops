@@ -1,0 +1,139 @@
+{
+ "revision": 1,
+ "solicitudId": "ej-ideal",
+ "modelo": {
+  "id": "mezcla-ideal",
+  "version": "1"
+ },
+ "estado": "evaluado",
+ "evaluacion": {
+  "T": 372.0,
+  "P": 101325.0,
+  "composicionMolar": {
+   "1": 0.4,
+   "2": 0.6
+  },
+  "componentes": [
+   {
+    "id": 1,
+    "cas": "71-43-2",
+    "masaMolarKgMol": 0.07811184,
+    "fuente": "thermo (IUPAC), benceno"
+   },
+   {
+    "id": 2,
+    "cas": "108-88-3",
+    "masaMolarKgMol": 0.09213842,
+    "fuente": "thermo (IUPAC), tolueno"
+   }
+  ],
+  "fases": [
+   {
+    "id": "vapor-1",
+    "tipo": "vapor",
+    "regimen": "ordinario",
+    "fraccionMolar": 0.5326096046492372,
+    "fraccionMasica": 0.5242221600446844,
+    "fraccionVolumen": 0.9970820034798713,
+    "composicionMolar": {
+     "1": 0.4971459007497729,
+     "2": 0.5028540992502271
+    },
+    "propiedades": {
+     "u": 54569.91686100915,
+     "h": 90887.34966817201,
+     "v": 0.35842519424784475,
+     "s": 337.5960474293375
+    }
+   },
+   {
+    "id": "liquido-1",
+    "tipo": "liquido",
+    "regimen": "ordinario",
+    "fraccionMolar": 0.4673903953507628,
+    "fraccionMasica": 0.4757778399553157,
+    "fraccionVolumen": 0.002917996520128744,
+    "composicionMolar": {
+     "1": 0.28929845305699836,
+     "2": 0.7107015469430017
+    },
+    "propiedades": {
+     "u": -293393.46572798106,
+     "h": -293276.35944431426,
+     "v": 0.0011557491602941124,
+     "s": -697.1939577009267
+    }
+   }
+  ],
+  "mezcla": {
+   "u": -110983.3496907257,
+   "h": -91889.23004258891,
+   "v": 0.18844430938205564,
+   "s": -154.73410601888958
+  },
+  "referencia": {
+   "id": "gas-ideal-298.15K-1bar-h0-s0",
+   "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+  },
+  "estabilidad": {
+   "estado": "estable",
+   "alcance": [
+    "liquido",
+    "vapor"
+   ],
+   "metodo": "Vapor ideal + solución líquida ideal (Raoult con Poynting). Mínimo de G a (T, P, n): fase única de menor G, prueba de distancia al plano tangente frente a vapor (mínimo analítico) y líquido (malla en el simplex de hasta 3 componentes y refinamiento local), adición de la fase inestable, minimización de G y pulido de Newton de la igualdad de potenciales; certificación final con la prueba completa. Hasta 3 fases (LLV). Especies ausentes excluidas sin evaluar log(0). Parámetros: sin parámetros binarios (g^E = 0)."
+  },
+  "verificaciones": [
+   {
+    "id": "estabilidad",
+    "estado": "cumple",
+    "residuo": 1.1102230246251565e-16,
+    "tolerancia": 1e-09,
+    "motivo": "-min tm sobre fases de prueba vapor (minimo analitico) y liquido (malla en el simplex y refinamiento local). Fases candidatas: liquido, vapor; 4 pruebas de fase; min tm = -1.11e-16."
+   },
+   {
+    "id": "equilibrio",
+    "estado": "cumple",
+    "residuo": 1.4702563129452678e-16,
+    "tolerancia": 1e-10,
+    "motivo": "T y P comunes por construcción; max |mu_i^a - mu_i^b|/(R T) entre fases presentes"
+   },
+   {
+    "id": "reconstruccion_material",
+    "estado": "cumple",
+    "residuo": 0.0,
+    "tolerancia": 1e-12,
+    "motivo": "max |sum_a n^a x_i^a - n_i| / n"
+   },
+   {
+    "id": "identidad_h_u_Pv",
+    "estado": "cumple",
+    "residuo": 2.8486216063314564e-16,
+    "tolerancia": 1e-12,
+    "motivo": "max por fase |h - u - Pv|/(RT), molar"
+   },
+   {
+    "id": "identidad_g_h_Ts",
+    "estado": "cumple",
+    "residuo": 2.9405126258905356e-16,
+    "tolerancia": 1e-09,
+    "motivo": "max por fase |g - (h - Ts)|/(RT) con g = sum x_i mu_i: potenciales y entalpía/entropía salen de la misma función de Gibbs"
+   },
+   {
+    "id": "bases_fase",
+    "estado": "cumple",
+    "residuo": 0.0,
+    "tolerancia": 1e-12,
+    "motivo": "max(|Σβ-1|, |Σχ-1|, |Σε-1|); β molar, χ másica (masa molar de cada fase), ε volumétrica"
+   },
+   {
+    "id": "dominio",
+    "estado": "cumple",
+    "residuo": null,
+    "tolerancia": null,
+    "motivo": "T en [278.68, 505.944] K (rangos de Psat y cp de las especies, T < 0.9 Tc) y P en [100, 500000] Pa (vapor ideal)."
+   }
+  ]
+ },
+ "diagnosticos": []
+}

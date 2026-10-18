@@ -1,0 +1,269 @@
+{
+ "revision": 2,
+ "solicitudId": "borrador-olla-abierta",
+ "componentes": [
+  {
+   "id": 1,
+   "nombre": "Agua",
+   "simbolo": "W",
+   "identidadQuimica": {
+    "cas": "7732-18-5"
+   }
+  },
+  {
+   "id": 2,
+   "nombre": "Nitrogeno",
+   "simbolo": "N2",
+   "identidadQuimica": {
+    "cas": "7727-37-9"
+   }
+  },
+  {
+   "id": 3,
+   "nombre": "Oxigeno",
+   "simbolo": "O2",
+   "identidadQuimica": {
+    "cas": "7782-44-7"
+   }
+  }
+ ],
+ "paquetes": [
+  {
+   "id": "p",
+   "modelo": {
+    "id": "agua-iapws95-aire-virial",
+    "version": "1"
+   }
+  }
+ ],
+ "volumenes": [
+  {
+   "id": "olla",
+   "componenteIds": [
+    1,
+    2,
+    3
+   ],
+   "balances": {
+    "materia": true,
+    "energia": true,
+    "momento": false
+   },
+   "formulacionMateria": {
+    "campo": {
+     "sinReaccion": true,
+     "sinDifusion": false,
+     "sinConveccion": false,
+     "estacionario": false,
+     "difusion": "flujo"
+    },
+    "coordenadas": "cartesianas",
+    "expandida": false,
+    "vista": "cantidad",
+    "uniforme": false,
+    "fija": true,
+    "sinAcumulacion": false,
+    "invariantes": [
+     false,
+     false,
+     false
+    ],
+    "generacionUniforme": false,
+    "consumoUniforme": false,
+    "restoImpermeable": true,
+    "cantidadVolumen": false,
+    "densidadMediaConstante": false,
+    "densidadComunPuertos": false,
+    "expandirProducto": false
+   },
+   "formulacionEnergia": {
+    "forma": "total",
+    "trabajoTotalHeredado": false,
+    "separarPresion": true,
+    "entalpia": true,
+    "sinCinetica": true,
+    "sinTrabajoViscoso": true,
+    "sinFuerzasVolumen": true,
+    "sinFuenteVolumetrica": true,
+    "sinConduccionLocal": false,
+    "adiabatico": false,
+    "estacionario": false,
+    "sinAcumulacionTotal": false,
+    "uniforme": true,
+    "monofasico": false,
+    "sinCambioFase": false,
+    "densidadConstante": false,
+    "presionUniforme": false,
+    "presionPrescrita": false,
+    "modelo": "sin_declarar"
+   },
+   "paqueteId": "p",
+   "politica": {
+    "cantidad": "sin_restriccion",
+    "cambioInterno": "permitido",
+    "evaluacion": "equilibrio_estable"
+   },
+   "frontera": {
+    "tipo": "rigida_con_presion",
+    "datoId": "volumen.olla.V",
+    "presionId": "ambiente.P"
+   },
+   "inicial": {
+    "tipo": "por_presion",
+    "temperaturaId": "volumen.olla.T0",
+    "presionId": "volumen.olla.P0",
+    "cantidades": {
+     "base": "masica",
+     "datoIds": {
+      "1": "volumen.olla.n0.1"
+     }
+    },
+    "calculadas": {
+     "componenteIds": [
+      2,
+      3
+     ],
+     "proporcion": {
+      "base": "molar",
+      "fracciones": {
+       "2": 0.79,
+       "3": 0.21
+      }
+     }
+    }
+   }
+  }
+ ],
+ "corrientes": [
+  {
+   "id": "salida",
+   "desde": "olla",
+   "hasta": null,
+   "componenteIds": [
+    1,
+    2,
+    3
+   ],
+   "mecanismo": "convectivo",
+   "materia": {
+    "modo": "por_restriccion",
+    "volumenId": "olla",
+    "base": "molar"
+   },
+   "extraccion": {
+    "olla": {
+     "tipo": "fase",
+     "fase": "vapor"
+    }
+   }
+  }
+ ],
+ "intercambiosTermicos": [
+  {
+   "id": "q",
+   "desde": null,
+   "hasta": "olla",
+   "ley": {
+    "tipo": "impuesto",
+    "potenciaId": "calor.q.Q"
+   }
+  }
+ ],
+ "datos": {
+  "estudio.tf": {
+   "magnitud": "tiempo",
+   "funcion": "estudio",
+   "declaracion": {
+    "texto": "900",
+    "unidad": "s"
+   },
+   "origen": {
+    "propietarioId": "estudio",
+    "ruta": "/prueba"
+   }
+  },
+  "volumen.olla.n0.1": {
+   "magnitud": "masa",
+   "funcion": "inicial",
+   "declaracion": {
+    "texto": "2",
+    "unidad": "kg"
+   },
+   "origen": {
+    "propietarioId": "volumen:olla",
+    "ruta": "/prueba"
+   }
+  },
+  "volumen.olla.T0": {
+   "magnitud": "temperatura",
+   "funcion": "inicial",
+   "declaracion": {
+    "texto": "10",
+    "unidad": "degC"
+   },
+   "origen": {
+    "propietarioId": "volumen:olla",
+    "ruta": "/prueba"
+   }
+  },
+  "volumen.olla.V": {
+   "magnitud": "volumen",
+   "funcion": "geometria",
+   "declaracion": {
+    "texto": "3",
+    "unidad": "L"
+   },
+   "origen": {
+    "propietarioId": "volumen:olla",
+    "ruta": "/prueba"
+   }
+  },
+  "volumen.olla.P0": {
+   "magnitud": "presion",
+   "funcion": "inicial",
+   "declaracion": {
+    "texto": "1.01325",
+    "unidad": "bar"
+   },
+   "origen": {
+    "propietarioId": "volumen:olla",
+    "ruta": "/prueba"
+   }
+  },
+  "ambiente.P": {
+   "magnitud": "presion",
+   "funcion": "frontera",
+   "declaracion": {
+    "texto": "1.01325",
+    "unidad": "bar"
+   },
+   "origen": {
+    "propietarioId": "ambiente",
+    "ruta": "/prueba"
+   }
+  },
+  "calor.q.Q": {
+   "magnitud": "potencia",
+   "funcion": "frontera",
+   "declaracion": {
+    "texto": "1",
+    "unidad": "kW"
+   },
+   "origen": {
+    "propietarioId": "calor:q",
+    "ruta": "/prueba"
+   }
+  }
+ },
+ "estudio": {
+  "tipo": "temporal",
+  "tiempoId": "estudio.tf",
+  "metodoSolicitado": "rk45",
+  "muestras": 101,
+  "rtol": 1e-08,
+  "atol": {
+   "cantidad": 1e-10,
+   "energia": 1e-06
+  }
+ }
+}

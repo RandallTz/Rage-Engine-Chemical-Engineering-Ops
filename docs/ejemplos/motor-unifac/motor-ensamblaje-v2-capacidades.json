@@ -1,0 +1,1352 @@
+{
+ "revision": 2,
+ "revisionesAdmitidas": [
+  1,
+  2
+ ],
+ "disponible": true,
+ "motivo": null,
+ "paquetes": [
+  {
+   "modelo": {
+    "id": "agua-iapws95",
+    "version": "1"
+   },
+   "operaciones": [
+    "TP",
+    "PH",
+    "UP",
+    "UV",
+    "TV"
+   ],
+   "fases": [
+    "liquido",
+    "vapor",
+    "fluido"
+   ],
+   "combinaciones": [
+    {
+     "id": "una_fase",
+     "nombre": "una fase (liquido, vapor o fluido supercritico)",
+     "publicada": true,
+     "evidencia": "contrastada",
+     "motivo": "H1: IAPWS-95 frente a sus valores publicados e IF97"
+    },
+    {
+     "id": "liquido_vapor",
+     "nombre": "liquido-vapor puro",
+     "publicada": true,
+     "evidencia": "contrastada",
+     "motivo": "H3: coexistencia de Maxwell verificada"
+    },
+    {
+     "id": "solido",
+     "nombre": "solido (hielo Ih) en volumenes dinamicos",
+     "publicada": false,
+     "evidencia": "sin_modelo",
+     "motivo": "el hielo Ih existe solo como modelo estatico agua-iapws95-hielo-ih en /motor/termodinamica (TP, PH, UP, UV, triple); no esta habilitado en volumenes dinamicos"
+    },
+    {
+     "id": "region_critica",
+     "nombre": "region critica",
+     "publicada": false,
+     "evidencia": "excluida",
+     "motivo": "banda critica excluida (H1)"
+    }
+   ],
+   "componentesCAS": [
+    "7732-18-5"
+   ],
+   "dominio": {
+    "T": [
+     273.16,
+     1073.15
+    ],
+    "P": [
+     100.0,
+     100000000.0
+    ]
+   },
+   "limites": [
+    "sin hielo: T >= 273.16 K y P <= 100 MPa",
+    "banda critica excluida",
+    "coexistencia solo con Tsat <= 0.995 Tc"
+   ],
+   "dinamica": true
+  },
+  {
+   "modelo": {
+    "id": "mezcla-ideal",
+    "version": "1"
+   },
+   "operaciones": [
+    "TP",
+    "PH",
+    "UP",
+    "UV",
+    "TV"
+   ],
+   "fases": [
+    "liquido",
+    "vapor"
+   ],
+   "combinaciones": [
+    {
+     "id": "una_fase",
+     "nombre": "una fase liquida o vapor",
+     "publicada": true,
+     "evidencia": "contrastada",
+     "motivo": "M1/M2"
+    },
+    {
+     "id": "liquido_vapor",
+     "nombre": "liquido-vapor",
+     "publicada": true,
+     "evidencia": "contrastada",
+     "motivo": "Raoult con Poynting frente a la expresion analitica (seccion 1)"
+    },
+    {
+     "id": "liquido_liquido",
+     "nombre": "liquido-liquido y liquido-liquido-vapor",
+     "publicada": false,
+     "evidencia": "imposible_en_el_modelo",
+     "motivo": "la solucion ideal (g^E = 0) es siempre estable frente a separacion liquida: no es falta de datos"
+    },
+    {
+     "id": "liquido_rigido_lleno",
+     "nombre": "liquido incompresible llenando un volumen rigido",
+     "publicada": false,
+     "evidencia": "sin_modelo",
+     "motivo": "presion indeterminada con liquido incompresible"
+    },
+    {
+     "id": "solido",
+     "nombre": "solido",
+     "publicada": false,
+     "evidencia": "sin_modelo",
+     "motivo": "sin modelo de solidos en mezclas (solubilidad, SLE, eutecticos)"
+    }
+   ],
+   "componentesCAS": [
+    "7732-18-5",
+    "64-17-5",
+    "71-43-2",
+    "108-88-3",
+    "71-36-3",
+    "141-78-6",
+    "67-56-1",
+    "67-64-1"
+   ],
+   "dominio": {
+    "T": [
+     159.05,
+     582.615
+    ],
+    "P": [
+     100.0,
+     500000.0
+    ]
+   },
+   "limites": [
+    "vapor ideal: P <= 500000 Pa",
+    "liquido incompresible (v_L a 298.15 K)",
+    "T <= 0.9 Tc de cada especie"
+   ],
+   "dinamica": true
+  },
+  {
+   "modelo": {
+    "id": "nrtl-chemsep",
+    "version": "1"
+   },
+   "operaciones": [
+    "TP",
+    "PH",
+    "UP",
+    "UV",
+    "TV"
+   ],
+   "fases": [
+    "liquido",
+    "vapor"
+   ],
+   "combinaciones": [
+    {
+     "id": "una_fase",
+     "nombre": "una fase liquida o vapor",
+     "publicada": true,
+     "evidencia": "contrastada",
+     "motivo": "M1/M2"
+    },
+    {
+     "id": "liquido_vapor",
+     "nombre": "liquido-vapor",
+     "publicada": true,
+     "evidencia": "cualitativa",
+     "motivo": "contrastada solo para etanol-agua (azeotropo a 1 atm); la evidencia de cada par esta en `pares`"
+    },
+    {
+     "id": "liquido_liquido",
+     "nombre": "liquido-liquido y liquido-liquido-vapor",
+     "publicada": true,
+     "evidencia": "cualitativa",
+     "motivo": "mismo algoritmo de estabilidad que el paquete LLE; los parametros ChemSep estan ajustados a VLE: la solubilidad mutua predicha no esta contrastada"
+    },
+    {
+     "id": "liquido_rigido_lleno",
+     "nombre": "liquido incompresible llenando un volumen rigido",
+     "publicada": false,
+     "evidencia": "sin_modelo",
+     "motivo": "presion indeterminada con liquido incompresible"
+    },
+    {
+     "id": "solido",
+     "nombre": "solido",
+     "publicada": false,
+     "evidencia": "sin_modelo",
+     "motivo": "sin modelo de solidos en mezclas (solubilidad, SLE, eutecticos)"
+    }
+   ],
+   "componentesCAS": [
+    "7732-18-5",
+    "64-17-5",
+    "71-43-2",
+    "108-88-3",
+    "71-36-3",
+    "141-78-6",
+    "67-56-1",
+    "67-64-1"
+   ],
+   "dominio": {
+    "T": [
+     159.05,
+     582.615
+    ],
+    "P": [
+     100.0,
+     500000.0
+    ]
+   },
+   "limites": [
+    "vapor ideal: P <= 500000 Pa",
+    "liquido incompresible (v_L a 298.15 K)",
+    "T <= 0.9 Tc de cada especie"
+   ],
+   "dinamica": true,
+   "pares": [
+    {
+     "componentesCAS": [
+      "7732-18-5",
+      "64-17-5"
+     ],
+     "procedencia": "ChemSep NRTL (thermo IPDB)",
+     "evidencia": "contrastada",
+     "motivo": "azeotropo a 1 atm frente a la literatura (tests/validar_motor_ensamblaje_v2.py seccion 2); ln gamma frente a thermo.nrtl"
+    },
+    {
+     "componentesCAS": [
+      "7732-18-5",
+      "71-36-3"
+     ],
+     "procedencia": "ChemSep NRTL (thermo IPDB)",
+     "evidencia": "cualitativa",
+     "motivo": "parametros publicados sin contraste propio en estas pruebas"
+    },
+    {
+     "componentesCAS": [
+      "7732-18-5",
+      "141-78-6"
+     ],
+     "procedencia": "ChemSep NRTL (thermo IPDB)",
+     "evidencia": "cualitativa",
+     "motivo": "parametros publicados sin contraste propio en estas pruebas"
+    },
+    {
+     "componentesCAS": [
+      "7732-18-5",
+      "67-56-1"
+     ],
+     "procedencia": "ChemSep NRTL (thermo IPDB)",
+     "evidencia": "cualitativa",
+     "motivo": "parametros publicados sin contraste propio en estas pruebas"
+    },
+    {
+     "componentesCAS": [
+      "7732-18-5",
+      "67-64-1"
+     ],
+     "procedencia": "ChemSep NRTL (thermo IPDB)",
+     "evidencia": "cualitativa",
+     "motivo": "parametros publicados sin contraste propio en estas pruebas"
+    },
+    {
+     "componentesCAS": [
+      "64-17-5",
+      "71-43-2"
+     ],
+     "procedencia": "ChemSep NRTL (thermo IPDB)",
+     "evidencia": "cualitativa",
+     "motivo": "parametros publicados sin contraste propio en estas pruebas"
+    },
+    {
+     "componentesCAS": [
+      "64-17-5",
+      "108-88-3"
+     ],
+     "procedencia": "ChemSep NRTL (thermo IPDB)",
+     "evidencia": "cualitativa",
+     "motivo": "parametros publicados sin contraste propio en estas pruebas"
+    },
+    {
+     "componentesCAS": [
+      "64-17-5",
+      "141-78-6"
+     ],
+     "procedencia": "ChemSep NRTL (thermo IPDB)",
+     "evidencia": "cualitativa",
+     "motivo": "parametros publicados sin contraste propio en estas pruebas"
+    },
+    {
+     "componentesCAS": [
+      "64-17-5",
+      "67-56-1"
+     ],
+     "procedencia": "ChemSep NRTL (thermo IPDB)",
+     "evidencia": "cualitativa",
+     "motivo": "parametros publicados sin contraste propio en estas pruebas"
+    },
+    {
+     "componentesCAS": [
+      "64-17-5",
+      "67-64-1"
+     ],
+     "procedencia": "ChemSep NRTL (thermo IPDB)",
+     "evidencia": "cualitativa",
+     "motivo": "parametros publicados sin contraste propio en estas pruebas"
+    },
+    {
+     "componentesCAS": [
+      "71-43-2",
+      "108-88-3"
+     ],
+     "procedencia": "ChemSep NRTL (thermo IPDB)",
+     "evidencia": "cualitativa",
+     "motivo": "parametros publicados sin contraste propio en estas pruebas"
+    },
+    {
+     "componentesCAS": [
+      "71-43-2",
+      "67-56-1"
+     ],
+     "procedencia": "ChemSep NRTL (thermo IPDB)",
+     "evidencia": "cualitativa",
+     "motivo": "parametros publicados sin contraste propio en estas pruebas"
+    },
+    {
+     "componentesCAS": [
+      "71-43-2",
+      "67-64-1"
+     ],
+     "procedencia": "ChemSep NRTL (thermo IPDB)",
+     "evidencia": "cualitativa",
+     "motivo": "parametros publicados sin contraste propio en estas pruebas"
+    },
+    {
+     "componentesCAS": [
+      "108-88-3",
+      "67-56-1"
+     ],
+     "procedencia": "ChemSep NRTL (thermo IPDB)",
+     "evidencia": "cualitativa",
+     "motivo": "parametros publicados sin contraste propio en estas pruebas"
+    },
+    {
+     "componentesCAS": [
+      "108-88-3",
+      "67-64-1"
+     ],
+     "procedencia": "ChemSep NRTL (thermo IPDB)",
+     "evidencia": "cualitativa",
+     "motivo": "parametros publicados sin contraste propio en estas pruebas"
+    },
+    {
+     "componentesCAS": [
+      "71-36-3",
+      "67-56-1"
+     ],
+     "procedencia": "ChemSep NRTL (thermo IPDB)",
+     "evidencia": "cualitativa",
+     "motivo": "parametros publicados sin contraste propio en estas pruebas"
+    },
+    {
+     "componentesCAS": [
+      "141-78-6",
+      "67-56-1"
+     ],
+     "procedencia": "ChemSep NRTL (thermo IPDB)",
+     "evidencia": "cualitativa",
+     "motivo": "parametros publicados sin contraste propio en estas pruebas"
+    },
+    {
+     "componentesCAS": [
+      "67-56-1",
+      "67-64-1"
+     ],
+     "procedencia": "ChemSep NRTL (thermo IPDB)",
+     "evidencia": "cualitativa",
+     "motivo": "parametros publicados sin contraste propio en estas pruebas"
+    }
+   ]
+  },
+  {
+   "modelo": {
+    "id": "nrtl-lle-agua-butanol",
+    "version": "1"
+   },
+   "operaciones": [
+    "TP",
+    "PH",
+    "UP",
+    "UV",
+    "TV"
+   ],
+   "fases": [
+    "liquido",
+    "vapor"
+   ],
+   "combinaciones": [
+    {
+     "id": "una_fase",
+     "nombre": "una fase liquida o vapor",
+     "publicada": true,
+     "evidencia": "contrastada",
+     "motivo": "M1/M2"
+    },
+    {
+     "id": "liquido_vapor",
+     "nombre": "liquido-vapor",
+     "publicada": true,
+     "evidencia": "cualitativa",
+     "motivo": "los parametros se ajustaron solo a LLE; heteroazeotropo ~1.1 K sobre la literatura"
+    },
+    {
+     "id": "liquido_liquido",
+     "nombre": "liquido-liquido y liquido-liquido-vapor",
+     "publicada": true,
+     "evidencia": "contrastada",
+     "motivo": "solubilidad mutua frente a IUPAC-NIST SDS vol. 15 en 293-373 K (ajuste y validacion), meseta LLV por PH y UV (M4)"
+    },
+    {
+     "id": "liquido_rigido_lleno",
+     "nombre": "liquido incompresible llenando un volumen rigido",
+     "publicada": false,
+     "evidencia": "sin_modelo",
+     "motivo": "presion indeterminada con liquido incompresible"
+    },
+    {
+     "id": "solido",
+     "nombre": "solido",
+     "publicada": false,
+     "evidencia": "sin_modelo",
+     "motivo": "sin modelo de solidos en mezclas (solubilidad, SLE, eutecticos)"
+    }
+   ],
+   "componentesCAS": [
+    "7732-18-5",
+    "71-36-3"
+   ],
+   "dominio": {
+    "T": [
+     293.0,
+     373.0
+    ],
+    "P": [
+     100.0,
+     500000.0
+    ]
+   },
+   "limites": [
+    "vapor ideal: P <= 500000 Pa",
+    "liquido incompresible (v_L a 298.15 K)",
+    "T <= 0.9 Tc de cada especie"
+   ],
+   "dinamica": true,
+   "pares": [
+    {
+     "componentesCAS": [
+      "7732-18-5",
+      "71-36-3"
+     ],
+     "procedencia": "ajuste propio a IUPAC-NIST SDS vol. 15 (Hefter 1984), valores (R) de solubilidad mutua 293-373 K; tests/ajuste_nrtl_lle_agua_butanol.py",
+     "evidencia": "contrastada",
+     "motivo": "LLE frente a IUPAC (incluidas temperaturas no usadas en el ajuste)"
+    }
+   ]
+  },
+  {
+   "modelo": {
+    "id": "unifac-original-public",
+    "version": "1"
+   },
+   "operaciones": [
+    "TP",
+    "PH",
+    "UP",
+    "UV",
+    "TV"
+   ],
+   "fases": [
+    "liquido",
+    "vapor"
+   ],
+   "combinaciones": [
+    {
+     "id": "una_fase",
+     "nombre": "una fase liquida o vapor",
+     "publicada": true,
+     "evidencia": "contrastada",
+     "motivo": "M1/M2"
+    },
+    {
+     "id": "liquido_vapor",
+     "nombre": "liquido-vapor",
+     "publicada": true,
+     "evidencia": "cualitativa",
+     "motivo": "prediccion por contribucion de grupos; azeotropo etanol-agua a 1 atm 78.04 C, x 0.896 frente a 78.15 C, 0.894 de la literatura (docs/MOTOR_UNIFAC.md)"
+    },
+    {
+     "id": "liquido_liquido",
+     "nombre": "liquido-liquido y liquido-liquido-vapor",
+     "publicada": true,
+     "evidencia": "cualitativa",
+     "motivo": "prediccion con parametros de VLE: agua/1-butanol a 293-298 K dentro de 0.6 g/100 g de IUPAC-NIST SDS-15, con error creciente con T (agua en la fase organica 22.4 frente a 27.5 g/100 g a 353 K)"
+    },
+    {
+     "id": "liquido_rigido_lleno",
+     "nombre": "liquido incompresible llenando un volumen rigido",
+     "publicada": false,
+     "evidencia": "sin_modelo",
+     "motivo": "presion indeterminada con liquido incompresible"
+    },
+    {
+     "id": "solido",
+     "nombre": "solido",
+     "publicada": false,
+     "evidencia": "sin_modelo",
+     "motivo": "sin modelo de solidos en mezclas (solubilidad, SLE, eutecticos)"
+    }
+   ],
+   "componentesCAS": [
+    "7732-18-5",
+    "64-17-5",
+    "71-43-2",
+    "108-88-3",
+    "71-36-3",
+    "141-78-6",
+    "67-56-1",
+    "67-64-1"
+   ],
+   "dominio": {
+    "T": [
+     159.05,
+     582.615
+    ],
+    "P": [
+     100.0,
+     500000.0
+    ]
+   },
+   "limites": [
+    "vapor ideal: P <= 500000 Pa",
+    "liquido incompresible (v_L a 298.15 K)",
+    "T <= 0.9 Tc de cada especie"
+   ],
+   "dinamica": true,
+   "coberturaGrupos": {
+    "tipo": "contribucion_de_grupos",
+    "variante": "original",
+    "datos": {
+     "variante": "original",
+     "fuente_interacciones": "thermo 0.6.1: 'UNIFAC original interaction parameters.tsv' (parametros publicados por DDBST, tal como los distribuye thermo)",
+     "sha256_interacciones": "2599fa3aaf70c47f02bf207eba6f28883403c151d55b39f2e2f55970105af70b",
+     "fuente_asignaciones": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC)",
+     "sha256_asignaciones": "2ce711b99d8295331fde045b417ad6a4e8e8543e3e77bd5c4589c44915d9ece9",
+     "fuente_subgrupos": "thermo 0.6.1: UFSG"
+    },
+    "especies": [
+     {
+      "cas": "7732-18-5",
+      "subgrupos": [
+       {
+        "id": 16,
+        "nombre": "H2O",
+        "grupoPrincipal": 7,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC)"
+     },
+     {
+      "cas": "64-17-5",
+      "subgrupos": [
+       {
+        "id": 1,
+        "nombre": "CH3",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 2,
+        "nombre": "CH2",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 14,
+        "nombre": "OH",
+        "grupoPrincipal": 5,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC)"
+     },
+     {
+      "cas": "71-43-2",
+      "subgrupos": [
+       {
+        "id": 9,
+        "nombre": "ACH",
+        "grupoPrincipal": 3,
+        "cuenta": 6
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC)"
+     },
+     {
+      "cas": "108-88-3",
+      "subgrupos": [
+       {
+        "id": 9,
+        "nombre": "ACH",
+        "grupoPrincipal": 3,
+        "cuenta": 5
+       },
+       {
+        "id": 11,
+        "nombre": "ACCH3",
+        "grupoPrincipal": 4,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC)"
+     },
+     {
+      "cas": "71-36-3",
+      "subgrupos": [
+       {
+        "id": 1,
+        "nombre": "CH3",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 2,
+        "nombre": "CH2",
+        "grupoPrincipal": 1,
+        "cuenta": 3
+       },
+       {
+        "id": 14,
+        "nombre": "OH",
+        "grupoPrincipal": 5,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC)"
+     },
+     {
+      "cas": "141-78-6",
+      "subgrupos": [
+       {
+        "id": 1,
+        "nombre": "CH3",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 2,
+        "nombre": "CH2",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 21,
+        "nombre": "CH3COO",
+        "grupoPrincipal": 11,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC)"
+     },
+     {
+      "cas": "67-56-1",
+      "subgrupos": [
+       {
+        "id": 15,
+        "nombre": "CH3OH",
+        "grupoPrincipal": 6,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC)"
+     },
+     {
+      "cas": "67-64-1",
+      "subgrupos": [
+       {
+        "id": 1,
+        "nombre": "CH3",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 18,
+        "nombre": "CH3CO",
+        "grupoPrincipal": 9,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC)"
+     }
+    ],
+    "especiesSinAsignacion": [],
+    "interaccionesDirigidasFaltantes": [],
+    "nota": "cualquier subconjunto de 'especies' esta cubierto si 'interaccionesDirigidasFaltantes' esta vacia; no se publican pares moleculares porque el modelo no los usa"
+   }
+  },
+  {
+   "modelo": {
+    "id": "unifac-dortmund-public",
+    "version": "1"
+   },
+   "operaciones": [
+    "TP",
+    "PH",
+    "UP",
+    "UV",
+    "TV"
+   ],
+   "fases": [
+    "liquido",
+    "vapor"
+   ],
+   "combinaciones": [
+    {
+     "id": "una_fase",
+     "nombre": "una fase liquida o vapor",
+     "publicada": true,
+     "evidencia": "contrastada",
+     "motivo": "M1/M2"
+    },
+    {
+     "id": "liquido_vapor",
+     "nombre": "liquido-vapor",
+     "publicada": true,
+     "evidencia": "cualitativa",
+     "motivo": "prediccion por contribucion de grupos; azeotropo etanol-agua a 1 atm 78.13 C, x 0.899 frente a 78.15 C, 0.894 de la literatura (docs/MOTOR_UNIFAC.md)"
+    },
+    {
+     "id": "liquido_liquido",
+     "nombre": "liquido-liquido y liquido-liquido-vapor",
+     "publicada": true,
+     "evidencia": "cualitativa",
+     "motivo": "prediccion pobre para agua/1-butanol: solubilidades mutuas 11.2 y 11.7 g/100 g a 293 K frente a 7.8 y 20.0 de IUPAC-NIST SDS-15 (docs/MOTOR_UNIFAC.md)"
+    },
+    {
+     "id": "liquido_rigido_lleno",
+     "nombre": "liquido incompresible llenando un volumen rigido",
+     "publicada": false,
+     "evidencia": "sin_modelo",
+     "motivo": "presion indeterminada con liquido incompresible"
+    },
+    {
+     "id": "solido",
+     "nombre": "solido",
+     "publicada": false,
+     "evidencia": "sin_modelo",
+     "motivo": "sin modelo de solidos en mezclas (solubilidad, SLE, eutecticos)"
+    }
+   ],
+   "componentesCAS": [
+    "7732-18-5",
+    "64-17-5",
+    "71-43-2",
+    "108-88-3",
+    "71-36-3",
+    "141-78-6",
+    "67-56-1",
+    "67-64-1"
+   ],
+   "dominio": {
+    "T": [
+     159.05,
+     582.615
+    ],
+    "P": [
+     100.0,
+     500000.0
+    ]
+   },
+   "limites": [
+    "vapor ideal: P <= 500000 Pa",
+    "liquido incompresible (v_L a 298.15 K)",
+    "T <= 0.9 Tc de cada especie"
+   ],
+   "dinamica": true,
+   "coberturaGrupos": {
+    "tipo": "contribucion_de_grupos",
+    "variante": "dortmund",
+    "datos": {
+     "variante": "dortmund",
+     "fuente_interacciones": "thermo 0.6.1: 'UNIFAC modified Dortmund interaction parameters.tsv' (parametros publicados por DDBST, tal como los distribuye thermo)",
+     "sha256_interacciones": "0826be336f4c7130744172f93bcebd9952a082c144d6de94c57f00b886df1c77",
+     "fuente_asignaciones": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo MODIFIED_UNIFAC)",
+     "sha256_asignaciones": "2ce711b99d8295331fde045b417ad6a4e8e8543e3e77bd5c4589c44915d9ece9",
+     "fuente_subgrupos": "thermo 0.6.1: DOUFSG"
+    },
+    "especies": [
+     {
+      "cas": "7732-18-5",
+      "subgrupos": [
+       {
+        "id": 16,
+        "nombre": "H2O",
+        "grupoPrincipal": 7,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo MODIFIED_UNIFAC)"
+     },
+     {
+      "cas": "64-17-5",
+      "subgrupos": [
+       {
+        "id": 1,
+        "nombre": "CH3",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 2,
+        "nombre": "CH2",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 14,
+        "nombre": "OH(P)",
+        "grupoPrincipal": 5,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo MODIFIED_UNIFAC)"
+     },
+     {
+      "cas": "71-43-2",
+      "subgrupos": [
+       {
+        "id": 9,
+        "nombre": "ACH",
+        "grupoPrincipal": 3,
+        "cuenta": 6
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo MODIFIED_UNIFAC)"
+     },
+     {
+      "cas": "108-88-3",
+      "subgrupos": [
+       {
+        "id": 9,
+        "nombre": "ACH",
+        "grupoPrincipal": 3,
+        "cuenta": 5
+       },
+       {
+        "id": 11,
+        "nombre": "ACCH3",
+        "grupoPrincipal": 4,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo MODIFIED_UNIFAC)"
+     },
+     {
+      "cas": "71-36-3",
+      "subgrupos": [
+       {
+        "id": 1,
+        "nombre": "CH3",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 2,
+        "nombre": "CH2",
+        "grupoPrincipal": 1,
+        "cuenta": 3
+       },
+       {
+        "id": 14,
+        "nombre": "OH(P)",
+        "grupoPrincipal": 5,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo MODIFIED_UNIFAC)"
+     },
+     {
+      "cas": "141-78-6",
+      "subgrupos": [
+       {
+        "id": 1,
+        "nombre": "CH3",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 2,
+        "nombre": "CH2",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 21,
+        "nombre": "CH3COO",
+        "grupoPrincipal": 11,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo MODIFIED_UNIFAC)"
+     },
+     {
+      "cas": "67-56-1",
+      "subgrupos": [
+       {
+        "id": 15,
+        "nombre": "CH3OH",
+        "grupoPrincipal": 6,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo MODIFIED_UNIFAC)"
+     },
+     {
+      "cas": "67-64-1",
+      "subgrupos": [
+       {
+        "id": 1,
+        "nombre": "CH3",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 18,
+        "nombre": "CH3CO",
+        "grupoPrincipal": 9,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo MODIFIED_UNIFAC)"
+     }
+    ],
+    "especiesSinAsignacion": [],
+    "interaccionesDirigidasFaltantes": [],
+    "nota": "cualquier subconjunto de 'especies' esta cubierto si 'interaccionesDirigidasFaltantes' esta vacia; no se publican pares moleculares porque el modelo no los usa"
+   }
+  },
+  {
+   "modelo": {
+    "id": "unifac-original-lle-public",
+    "version": "1"
+   },
+   "operaciones": [
+    "TP",
+    "PH",
+    "UP",
+    "UV",
+    "TV"
+   ],
+   "fases": [
+    "liquido",
+    "vapor"
+   ],
+   "combinaciones": [
+    {
+     "id": "una_fase",
+     "nombre": "una fase liquida o vapor",
+     "publicada": true,
+     "evidencia": "contrastada",
+     "motivo": "M1/M2"
+    },
+    {
+     "id": "liquido_vapor",
+     "nombre": "liquido-vapor",
+     "publicada": true,
+     "evidencia": "cualitativa",
+     "motivo": "sin contraste experimental en su dominio (10-40 C); Pxy etanol-agua a 298.15 K entre 3 y 8 % por debajo de UNIFAC original y sin el azeotropo que predicen la original y NRTL (docs/MOTOR_UNIFAC.md)"
+    },
+    {
+     "id": "liquido_liquido",
+     "nombre": "liquido-liquido y liquido-liquido-vapor",
+     "publicada": true,
+     "evidencia": "cualitativa",
+     "motivo": "tabla ajustada a ELL (Magnussen 1981); agua/1-butanol a 293 K: 6.9 y 21.6 g/100 g frente a 7.8 y 20.0 de IUPAC-NIST SDS-15 (prediccion: el par no se reajusto; docs/MOTOR_UNIFAC.md)"
+    },
+    {
+     "id": "liquido_rigido_lleno",
+     "nombre": "liquido incompresible llenando un volumen rigido",
+     "publicada": false,
+     "evidencia": "sin_modelo",
+     "motivo": "presion indeterminada con liquido incompresible"
+    },
+    {
+     "id": "solido",
+     "nombre": "solido",
+     "publicada": false,
+     "evidencia": "sin_modelo",
+     "motivo": "sin modelo de solidos en mezclas (solubilidad, SLE, eutecticos)"
+    }
+   ],
+   "componentesCAS": [
+    "7732-18-5",
+    "64-17-5",
+    "71-43-2",
+    "108-88-3",
+    "71-36-3",
+    "141-78-6",
+    "67-64-1"
+   ],
+   "dominio": {
+    "T": [
+     283.15,
+     313.15
+    ],
+    "P": [
+     100.0,
+     500000.0
+    ]
+   },
+   "limites": [
+    "vapor ideal: P <= 500000 Pa",
+    "liquido incompresible (v_L a 298.15 K)",
+    "T <= 0.9 Tc de cada especie"
+   ],
+   "dinamica": true,
+   "coberturaGrupos": {
+    "tipo": "contribucion_de_grupos",
+    "variante": "lle",
+    "datos": {
+     "variante": "lle",
+     "fuente_interacciones": "thermo 0.6.1: 'UNIFAC LLE interaction parameters.tsv' (parametros publicados por DDBST, tal como los distribuye thermo)",
+     "sha256_interacciones": "515d115c4e542edf750c21556dae148d2d84865f681a414c9613a7a6e9c3d7f9",
+     "fuente_asignaciones": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC) traducida a LLEUFSG por nombre de subgrupo con R y Q identicos",
+     "sha256_asignaciones": "2ce711b99d8295331fde045b417ad6a4e8e8543e3e77bd5c4589c44915d9ece9",
+     "fuente_subgrupos": "thermo 0.6.1: LLEUFSG",
+     "rango_T_datos": [
+      283.15,
+      313.15
+     ],
+     "fuente_tabla": "Magnussen, Rasmussen y Fredenslund, Ind. Eng. Chem. Process Des. Dev. 20 (1981) 331-339, doi:10.1021/i200013a024 (ELL, 10-40 C)"
+    },
+    "especies": [
+     {
+      "cas": "7732-18-5",
+      "subgrupos": [
+       {
+        "id": 17,
+        "nombre": "H2O",
+        "grupoPrincipal": 8,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC) traducida a LLEUFSG por nombre de subgrupo con R y Q identicos"
+     },
+     {
+      "cas": "64-17-5",
+      "subgrupos": [
+       {
+        "id": 1,
+        "nombre": "CH3",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 2,
+        "nombre": "CH2",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 14,
+        "nombre": "OH",
+        "grupoPrincipal": 5,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC) traducida a LLEUFSG por nombre de subgrupo con R y Q identicos"
+     },
+     {
+      "cas": "71-43-2",
+      "subgrupos": [
+       {
+        "id": 9,
+        "nombre": "ACH",
+        "grupoPrincipal": 3,
+        "cuenta": 6
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC) traducida a LLEUFSG por nombre de subgrupo con R y Q identicos"
+     },
+     {
+      "cas": "108-88-3",
+      "subgrupos": [
+       {
+        "id": 9,
+        "nombre": "ACH",
+        "grupoPrincipal": 3,
+        "cuenta": 5
+       },
+       {
+        "id": 11,
+        "nombre": "ACCH3",
+        "grupoPrincipal": 4,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC) traducida a LLEUFSG por nombre de subgrupo con R y Q identicos"
+     },
+     {
+      "cas": "71-36-3",
+      "subgrupos": [
+       {
+        "id": 1,
+        "nombre": "CH3",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 2,
+        "nombre": "CH2",
+        "grupoPrincipal": 1,
+        "cuenta": 3
+       },
+       {
+        "id": 14,
+        "nombre": "OH",
+        "grupoPrincipal": 5,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC) traducida a LLEUFSG por nombre de subgrupo con R y Q identicos"
+     },
+     {
+      "cas": "141-78-6",
+      "subgrupos": [
+       {
+        "id": 1,
+        "nombre": "CH3",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 2,
+        "nombre": "CH2",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 25,
+        "nombre": "CH3COO",
+        "grupoPrincipal": 14,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC) traducida a LLEUFSG por nombre de subgrupo con R y Q identicos"
+     },
+     {
+      "cas": "67-64-1",
+      "subgrupos": [
+       {
+        "id": 1,
+        "nombre": "CH3",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 19,
+        "nombre": "CH3CO",
+        "grupoPrincipal": 10,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC) traducida a LLEUFSG por nombre de subgrupo con R y Q identicos"
+     }
+    ],
+    "especiesSinAsignacion": [
+     "67-56-1"
+    ],
+    "interaccionesDirigidasFaltantes": [],
+    "nota": "cualquier subconjunto de 'especies' esta cubierto si 'interaccionesDirigidasFaltantes' esta vacia; no se publican pares moleculares porque el modelo no los usa"
+   }
+  }
+ ],
+ "volumenesMaximos": 3,
+ "componentesMaximos": 7,
+ "tamanos": {
+  "cuenta": "componentes declarados por volumen (las especies con cantidad exactamente cero se retiran del problema activo y conservan su ID)",
+  "componentesMaximosPorVolumen": 7,
+  "fasesMaximas": 3,
+  "contrastados": {
+   "mezcla-ideal": {
+    "estatico": [
+     2,
+     3,
+     4,
+     5,
+     7
+    ],
+    "dinamico": [
+     2,
+     4,
+     5,
+     7
+    ]
+   },
+   "nrtl-chemsep": {
+    "estatico": [
+     2,
+     3,
+     4
+    ],
+    "dinamico": [
+     2,
+     4
+    ]
+   },
+   "nrtl-lle-agua-butanol": {
+    "estatico": [
+     2
+    ],
+    "dinamico": [
+     2
+    ]
+   },
+   "unifac-original-public": {
+    "estatico": [
+     2,
+     3,
+     4,
+     5,
+     7
+    ],
+    "dinamico": [
+     2,
+     4,
+     5
+    ]
+   },
+   "unifac-dortmund-public": {
+    "estatico": [
+     2,
+     3,
+     4,
+     5,
+     7
+    ],
+    "dinamico": [
+     2,
+     4
+    ]
+   },
+   "unifac-original-lle-public": {
+    "estatico": [
+     2,
+     4,
+     6
+    ],
+    "dinamico": [
+     2
+    ]
+   },
+   "agua-iapws95": {
+    "estatico": [
+     1
+    ],
+    "dinamico": [
+     1
+    ]
+   }
+  },
+  "estabilidad": {
+   "N <= 3": "malla especializada (binaria en logit, ternaria en el simplex) con refinamiento",
+   "N >= 4": "Michelsen multisemilla (vertices, ideal y Sobol con semilla 12345) con L-BFGS-B en beta = 2 sqrt(W); caras del simplex incluidas",
+   "alcance": "busqueda finita: no demuestra el minimo global"
+  },
+  "presupuesto": "por estado: 3 fases como maximo; la busqueda de estabilidad usa N + 1 + 2^ceil(log2(8N)) arranques; un estado con una fase competidora que no cabe en el tope se rechaza (tope_fases)"
+ },
+ "fronteras": [
+  "rigida",
+  "presion_prescrita"
+ ],
+ "corrientes": {
+  "mecanismos": [
+   "convectivo"
+  ],
+  "materia": [
+   "por_componente",
+   "total_desde_donante"
+  ],
+  "internas": true,
+  "inversion": true,
+  "entrePaquetes": "misma_referencia"
+ },
+ "intercambiosTermicos": [
+  "impuesto",
+  "conductancia"
+ ],
+ "extracciones": [
+  "mezcla_homogenea",
+  "fase"
+ ],
+ "segundaLey": true,
+ "integradores": [
+  {
+   "id": "rk45",
+   "nombre": "Dormand-Prince 5(4) con eventos de fase"
+  }
+ ],
+ "muestrasMaximas": 1001,
+ "noSoportado": [
+  {
+   "elemento": "transferencia selectiva",
+   "motivo": "sin ley energetica propia"
+  },
+  {
+   "elemento": "reaccion, electrolitos, membranas, nucleacion, capilaridad, momento",
+   "motivo": "fuera de la primera ampliacion"
+  },
+  {
+   "elemento": "corriente entre volumenes con paquetes de referencia distinta (agua IAPWS-95 frente a mezcla)",
+   "motivo": "los modelos del agua difieren hasta ~700 J/mol entre estados: ninguna constante conserva la energia; entre paquetes de mezcla (misma referencia) si se admite"
+  },
+  {
+   "elemento": "presion con escalones",
+   "motivo": "sin regla de salto"
+  },
+  {
+   "elemento": "fase solida (hielo Ih) en volumenes dinamicos",
+   "motivo": "agua-iapws95-hielo-ih es solo estatico (sin pruebas dinamicas); solidos en mezclas (solubilidad, SLE, eutecticos) necesitan paquetes y datos propios"
+  }
+ ]
+}

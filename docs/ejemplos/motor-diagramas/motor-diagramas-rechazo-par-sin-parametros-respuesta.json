@@ -1,0 +1,38 @@
+{
+ "revision": 1,
+ "solicitudId": "ej-sin-par",
+ "estado": "no_soportado",
+ "identidad": {
+  "modelo": {
+   "id": "nrtl-chemsep",
+   "version": "1"
+  },
+  "huellaModelo": null,
+  "firmaConsulta": null,
+  "trazador": {
+   "id": "trazador-lv-binario",
+   "version": "1"
+  }
+ },
+ "condicion": null,
+ "ramas": [],
+ "puntos": [],
+ "puntosEspeciales": [],
+ "candidatosDescartados": [],
+ "incidencias": [],
+ "cobertura": null,
+ "metodo": "",
+ "evidencia": null,
+ "diagnosticos": [
+  {
+   "codigo": "MOTOR_DIAG_PARAMETRO_AUSENTE",
+   "estado": "no_soportado",
+   "ruta": "componentes",
+   "mensaje": "No hay parámetros NRTL ChemSep para el par 7732-18-5 / 71-43-2; no se completan con cero.",
+   "componenteIds": [
+    1,
+    2
+   ]
+  }
+ ]
+}

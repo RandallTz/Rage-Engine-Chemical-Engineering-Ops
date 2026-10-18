@@ -1,0 +1,139 @@
+{
+ "revision": 1,
+ "solicitudId": "ej-lle",
+ "modelo": {
+  "id": "nrtl-lle-agua-butanol",
+  "version": "1"
+ },
+ "estado": "evaluado",
+ "evaluacion": {
+  "T": 298.15,
+  "P": 100000.0,
+  "composicionMolar": {
+   "1": 0.75,
+   "2": 0.25
+  },
+  "componentes": [
+   {
+    "id": 1,
+    "cas": "7732-18-5",
+    "masaMolarKgMol": 0.01801528,
+    "fuente": "thermo (IUPAC), agua"
+   },
+   {
+    "id": 2,
+    "cas": "71-36-3",
+    "masaMolarKgMol": 0.0741216,
+    "fuente": "thermo (IUPAC), 1-butanol"
+   }
+  ],
+  "fases": [
+   {
+    "id": "liquido-1",
+    "tipo": "liquido",
+    "regimen": "ordinario",
+    "fraccionMolar": 0.5099472241272265,
+    "fraccionMasica": 0.3030601392875364,
+    "fraccionVolumen": 0.2706731417844737,
+    "composicionMolar": {
+     "1": 0.9816936238536343,
+     "2": 0.01830637614636561
+    },
+    "propiedades": {
+     "u": -2320469.3271009293,
+     "h": -2320367.3173940917,
+     "v": 0.0010200970683759344,
+     "s": -6257.92950727402
+    }
+   },
+   {
+    "id": "liquido-2",
+    "tipo": "liquido",
+    "regimen": "ordinario",
+    "fraccionMolar": 0.49005277587277346,
+    "fraccionMasica": 0.6969398607124637,
+    "fraccionVolumen": 0.7293268582155262,
+    "composicionMolar": {
+     "1": 0.508900416140459,
+     "2": 0.49109958385954106
+    },
+    "propiedades": {
+     "u": -1032774.6724542574,
+     "h": -1032655.1492969253,
+     "v": 0.0011952315733199921,
+     "s": -2699.340048687999
+    }
+   }
+  ],
+  "mezcla": {
+   "u": -1423023.5938512937,
+   "h": -1422909.378322708,
+   "v": 0.0011421552858575923,
+   "s": -3777.806665674237
+  },
+  "referencia": {
+   "id": "gas-ideal-298.15K-1bar-h0-s0",
+   "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+  },
+  "estabilidad": {
+   "estado": "estable",
+   "alcance": [
+    "liquido",
+    "vapor"
+   ],
+   "metodo": "Vapor ideal + líquido NRTL ajustado a la solubilidad mutua agua/1-butanol (IUPAC SDS-15). Mínimo de G a (T, P, n): fase única de menor G, prueba de distancia al plano tangente frente a vapor (mínimo analítico) y líquido (malla en el simplex de hasta 3 componentes y refinamiento local), adición de la fase inestable, minimización de G y pulido de Newton de la igualdad de potenciales; certificación final con la prueba completa. Hasta 3 fases (LLV). Especies ausentes excluidas sin evaluar log(0). Parámetros: ajuste propio a IUPAC-NIST SDS vol. 15 (Hefter 1984), valores (R) de solubilidad mutua 293-373 K; tests/ajuste_nrtl_lle_agua_butanol.py."
+  },
+  "verificaciones": [
+   {
+    "id": "estabilidad",
+    "estado": "cumple",
+    "residuo": 6.292761033252169e-16,
+    "tolerancia": 1e-09,
+    "motivo": "-min tm sobre fases de prueba vapor (minimo analitico) y liquido (malla en el simplex y refinamiento local). Fases candidatas: liquido, vapor; 15 pruebas de fase; min tm = -6.29e-16."
+   },
+   {
+    "id": "equilibrio",
+    "estado": "cumple",
+    "residuo": 2.2013161767525325e-15,
+    "tolerancia": 1e-10,
+    "motivo": "T y P comunes por construcción; max |mu_i^a - mu_i^b|/(R T) entre fases presentes"
+   },
+   {
+    "id": "reconstruccion_material",
+    "estado": "cumple",
+    "residuo": 0.0,
+    "tolerancia": 1e-12,
+    "motivo": "max |sum_a n^a x_i^a - n_i| / n"
+   },
+   {
+    "id": "identidad_h_u_Pv",
+    "estado": "cumple",
+    "residuo": 1.3094499181292834e-15,
+    "tolerancia": 1e-12,
+    "motivo": "max por fase |h - u - Pv|/(RT), molar"
+   },
+   {
+    "id": "identidad_g_h_Ts",
+    "estado": "cumple",
+    "residuo": 2.935088235670043e-15,
+    "tolerancia": 1e-09,
+    "motivo": "max por fase |g - (h - Ts)|/(RT) con g = sum x_i mu_i: potenciales y entalpía/entropía salen de la misma función de Gibbs"
+   },
+   {
+    "id": "bases_fase",
+    "estado": "cumple",
+    "residuo": 0.0,
+    "tolerancia": 1e-12,
+    "motivo": "max(|Σβ-1|, |Σχ-1|, |Σε-1|); β molar, χ másica (masa molar de cada fase), ε volumétrica"
+   },
+   {
+    "id": "dominio",
+    "estado": "cumple",
+    "residuo": null,
+    "tolerancia": null,
+    "motivo": "T en [293, 373] K (rangos de Psat y cp de las especies, T < 0.9 Tc) y P en [100, 500000] Pa (vapor ideal)."
+   }
+  ]
+ },
+ "diagnosticos": []
+}

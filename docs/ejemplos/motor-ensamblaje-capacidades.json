@@ -1,0 +1,107 @@
+{
+ "revision": 1,
+ "disponible": true,
+ "motivo": null,
+ "modelos": [
+  {
+   "id": "agua-iapws95",
+   "version": "1"
+  }
+ ],
+ "componentesCAS": [
+  "7732-18-5"
+ ],
+ "volumenes": 1,
+ "componentes": 1,
+ "balances": {
+  "materia": true,
+  "energia": true,
+  "momento": false
+ },
+ "formas": {
+  "materia": "cantidad",
+  "energia": "total"
+ },
+ "fronteras": [
+  "rigida",
+  "presion_prescrita"
+ ],
+ "inicializaciones": {
+  "rigida": [
+   "U",
+   "T"
+  ],
+  "presion_prescrita": [
+   "U",
+   "T"
+  ]
+ },
+ "presionPrescrita": {
+  "constante": true,
+  "funcionSuave": true,
+  "discontinua": false
+ },
+ "corrientes": {
+  "mecanismos": [
+   "convectivo"
+  ],
+  "materia": [
+   "por_componente",
+   "total_y_composicion"
+  ],
+  "presionExterior": [
+   "dato",
+   "continuidad"
+  ],
+  "inversion": true
+ },
+ "extracciones": [
+  "mezcla_homogenea",
+  "fase"
+ ],
+ "fases": {
+  "monofasico": true,
+  "coexistenciaLiquidoVapor": true,
+  "eventos": true
+ },
+ "transferencias": [
+  "calor"
+ ],
+ "expresiones": {
+  "variables": [
+   "t"
+  ],
+  "unidadTiempo": "s",
+  "suaves": [
+   "+",
+   "-",
+   "*",
+   "/",
+   "^",
+   "sin",
+   "cos",
+   "exp",
+   "log",
+   "sqrt"
+  ],
+  "noAdmitidas": [
+   "abs",
+   "max",
+   "min",
+   "step"
+  ]
+ },
+ "integradores": [
+  {
+   "id": "rk45",
+   "nombre": "Dormand-Prince 5(4) con eventos de fase",
+   "tolerancias": [
+    "rtol",
+    "atol.masa",
+    "atol.energia"
+   ]
+  }
+ ],
+ "muestrasMaximas": 1001,
+ "dinamicaApiPuntual": false
+}

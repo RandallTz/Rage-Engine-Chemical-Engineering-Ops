@@ -1,0 +1,52 @@
+{
+ "revision": 1,
+ "solicitudId": "u2b",
+ "propietarioId": "ejemplos",
+ "componentes": [
+  {
+   "id": 1,
+   "nombre": "agua",
+   "simbolo": "ag",
+   "identidadQuimica": {
+    "cas": "7732-18-5"
+   }
+  },
+  {
+   "id": 2,
+   "nombre": "butanol",
+   "simbolo": "bu",
+   "identidadQuimica": {
+    "cas": "71-36-3"
+   }
+  }
+ ],
+ "declaracion": {
+  "modelo": {
+   "id": "unifac-original-public",
+   "version": "1"
+  },
+  "politica": {
+   "cantidad": "sin_restriccion",
+   "cambioInterno": "permitido",
+   "evaluacion": "equilibrio_estable"
+  },
+  "especificacion": {
+   "tipo": "TP",
+   "T": {
+    "valor": 298.15,
+    "unidad": "K"
+   },
+   "P": {
+    "valor": 101325,
+    "unidad": "Pa"
+   },
+   "composicion": {
+    "base": "molar",
+    "fracciones": {
+     "1": 0.75,
+     "2": 0.25
+    }
+   }
+  }
+ }
+}

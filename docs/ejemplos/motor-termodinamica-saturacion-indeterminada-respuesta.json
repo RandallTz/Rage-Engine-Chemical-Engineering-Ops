@@ -1,0 +1,38 @@
+{
+  "revision": 1,
+  "solicitudId": "ejemplo-saturacion-indeterminada",
+  "modelo": {
+    "id": "agua-iapws95",
+    "version": "1"
+  },
+  "estado": "incompleto",
+  "evaluacion": null,
+  "diagnosticos": [
+    {
+      "codigo": "MOTOR_ESTADO_SATURACION_INDETERMINADA",
+      "mensaje": "P = 932203.564 Pa coincide con Psat(450 K) = 932203.564 Pa (|P/Psat - 1| <= 1e-06). Liquido y vapor coexisten y T, P no determinan cuanto hay de cada uno. Hace falta una especificación de energía o volumen (PH, UP o UV); no se elige una fracción de vapor por omisión.",
+      "ruta": "declaracion.especificacion",
+      "componenteIds": [
+        1
+      ],
+      "propietarioId": "volumen:deposito",
+      "alternativas": [
+        [
+          "P",
+          "h",
+          "composicion"
+        ],
+        [
+          "U",
+          "P",
+          "cantidades"
+        ],
+        [
+          "U",
+          "V",
+          "cantidades"
+        ]
+      ]
+    }
+  ]
+}

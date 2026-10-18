@@ -1,0 +1,146 @@
+{
+  "revision": 1,
+  "solicitudId": "ejemplo-up-liquido-calentado-1bar",
+  "modelo": {
+    "id": "agua-iapws95",
+    "version": "1"
+  },
+  "estado": "evaluado",
+  "evaluacion": {
+    "T": 332.87618531510685,
+    "P": 100000.0,
+    "composicionMolar": {
+      "1": 1.0
+    },
+    "componentes": [
+      {
+        "id": 1,
+        "cas": "7732-18-5",
+        "masaMolarKgMol": 0.018015268,
+        "fuente": "IAPWS-95 (R6-95(2018)): M = 18.015268 g/mol"
+      }
+    ],
+    "fases": [
+      {
+        "id": "liquido-1",
+        "tipo": "liquido",
+        "regimen": "ordinario",
+        "fraccionMolar": 1.0,
+        "fraccionMasica": 1.0,
+        "fraccionVolumen": 1.0,
+        "composicionMolar": {
+          "1": 1.0
+        },
+        "propiedades": {
+          "u": 249999.9999999997,
+          "h": 250101.69465087756,
+          "v": 0.001016946508838086,
+          "s": 827.8095358363307,
+          "cp": 4184.837227430032,
+          "cv": 3977.8568187711658
+        }
+      }
+    ],
+    "mezcla": {
+      "u": 249999.9999999997,
+      "h": 250101.69465087756,
+      "v": 0.001016946508838086,
+      "s": 827.8095358363307,
+      "cp": 4184.837227430032,
+      "cv": 3977.8568187711658
+    },
+    "referencia": {
+      "id": "iapws95-u0-s0-liquido-saturado-punto-triple",
+      "descripcion": "IAPWS-95: u = 0 y s = 0 del líquido saturado en el punto triple (273.16 K, 611.655 Pa). Propiedades específicas por kg."
+    },
+    "estabilidad": {
+      "estado": "estable",
+      "alcance": [
+        "liquido",
+        "vapor",
+        "fluido"
+      ],
+      "metodo": "Criterio UP: estado estable en G a su propia (T, P) cuya u = U/m coincide; único porque u crece a lo largo de la isobara de equilibrio (no se invoca un extremo de S a U, P). Estado de una fase: distancia al plano tangente a la T y P resultantes sobre las ramas monofásicas de IAPWS-95, como en TP."
+    },
+    "verificaciones": [
+      {
+        "id": "estabilidad",
+        "estado": "cumple",
+        "residuo": 1.2805685401713417e-14,
+        "tolerancia": 1e-09,
+        "motivo": "Una fase: residuo = max(0, -min TPD)/P a la T y P resultantes, como en TP. Búsqueda: 840 evaluaciones en vapor [6.509e-10, 0.1289] kg/m3; liquido [983.3, 1223] kg/m3. (∂P/∂ρ)_T = 2.28605e+06 Pa·m3/kg > 0."
+      },
+      {
+        "id": "dominio",
+        "estado": "cumple",
+        "residuo": null,
+        "tolerancia": null,
+        "motivo": "T en [273.16, 1073.15] K, P en [100, 1e+08] Pa, fuera de la banda crítica T en [643.861, 650.331] K × P en [2.09608e+07, 2.31672e+07] Pa; coexistencia solo con Tsat ≤ 643.861 K. Sin hielo estable: T ≥ 273.16 K y P ≤ 100 MPa (curvas de fusión IAPWS R14-08). Comprobación de pertenencia, sin residuo."
+      },
+      {
+        "id": "ecuacion_estado",
+        "estado": "cumple",
+        "residuo": 2.6074248240433827e-15,
+        "tolerancia": 1e-12,
+        "motivo": "Residuo = |P(T,ρ) - P| / max(P, ρ(∂P/∂ρ)_T)."
+      },
+      {
+        "id": "energia",
+        "estado": "cumple",
+        "residuo": 1.8944307517779873e-15,
+        "tolerancia": 1e-10,
+        "motivo": "Residuo = |u reconstruida - especificada|/(R T), con la especificada u = U/m y la reconstruida como Σ w_α (propiedad de fase)."
+      },
+      {
+        "id": "identidad_h_u_Pv",
+        "estado": "cumple",
+        "residuo": 3.8790967183196184e-14,
+        "tolerancia": 1e-09,
+        "motivo": "Residuo = max por fase de |h - u - P v|/(R T) con la P publicada."
+      },
+      {
+        "id": "identidad_g_h_Ts",
+        "estado": "cumple",
+        "residuo": 1.4208230638334906e-16,
+        "tolerancia": 1e-12,
+        "motivo": "Residuo = max por fase de |g - (h - T s)|/(R T), g desde φ: misma referencia en todas las fases."
+      },
+      {
+        "id": "derivadas",
+        "estado": "cumple",
+        "residuo": 4.757333472213029e-10,
+        "tolerancia": 1e-06,
+        "motivo": "Residuo = max(|cp - (∂h/∂T)_P|/cp, |cv - (∂u/∂T)_ρ|/cv) frente a diferencias centradas."
+      },
+      {
+        "id": "saturacion",
+        "estado": "cumple",
+        "residuo": 2.133365830345986e-13,
+        "tolerancia": 1e-09,
+        "motivo": "Curva que separa las ramas a T: Psat = 19695.0294 Pa; residuo de Maxwell de los ajustes."
+      },
+      {
+        "id": "reconstruccion_material",
+        "estado": "cumple",
+        "residuo": 0.0,
+        "tolerancia": 1e-12,
+        "motivo": "Residuo = |Σ β_α x_α - z| = |Σ β_α - 1| (un componente, x_α = z = 1)."
+      },
+      {
+        "id": "bases_fase",
+        "estado": "cumple",
+        "residuo": 0.0,
+        "tolerancia": 1e-12,
+        "motivo": "Residuo = max(|Σ w_α - 1|, |Σ ε_α - 1|), ε_α = w_α v_α / v. Fracción molar = másica (un componente); la volumétrica difiere."
+      },
+      {
+        "id": "unicidad",
+        "estado": "cumple",
+        "residuo": null,
+        "tolerancia": null,
+        "motivo": "u(T) creciente a P fija ((∂u/∂T)_P > 0 en la rama y meseta lineal en q a Tsat): a lo sumo un estado; se ubica primero respecto de la meseta y luego se resuelve T por Brent en una horquilla con cambio de signo."
+      }
+    ]
+  },
+  "diagnosticos": []
+}

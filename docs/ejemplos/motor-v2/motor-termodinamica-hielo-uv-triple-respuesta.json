@@ -1,0 +1,165 @@
+{
+ "revision": 1,
+ "solicitudId": "ej-hielo-uv",
+ "modelo": {
+  "id": "agua-iapws95-hielo-ih",
+  "version": "1"
+ },
+ "estado": "evaluado",
+ "evaluacion": {
+  "T": 273.15999999999633,
+  "P": 611.6547710077494,
+  "composicionMolar": {
+   "1": 1.0
+  },
+  "componentes": [
+   {
+    "id": 1,
+    "cas": "7732-18-5",
+    "masaMolarKgMol": 0.018015268,
+    "fuente": "IAPWS-95 (R6-95(2018)): M = 18.015268 g/mol"
+   }
+  ],
+  "fases": [
+   {
+    "id": "solido-1",
+    "tipo": "solido",
+    "regimen": "ordinario",
+    "fraccionMolar": 0.33444024811278683,
+    "fraccionMasica": 0.33444024811278683,
+    "fraccionVolumen": 0.00036482686277236457,
+    "composicionMolar": {
+     "1": 1.0
+    },
+    "propiedades": {
+     "u": -333444.9211964255,
+     "h": -333444.2539678474,
+     "v": 0.0010908581273666863,
+     "s": -1220.694339396509,
+     "cp": 2096.7843162166437
+    }
+   },
+   {
+    "id": "liquido-1",
+    "tipo": "liquido",
+    "regimen": "ordinario",
+    "fraccionMolar": 0.6607101553751722,
+    "fraccionMasica": 0.6607101553751722,
+    "fraccionVolumen": 0.000660847267945451,
+    "composicionMolar": {
+     "1": 1.0
+    },
+    "propiedades": {
+     "u": -4.3766474776473894e-08,
+     "h": 0.6117816339762828,
+     "v": 0.0010002075230252832,
+     "s": -1.336307813737392e-10,
+     "cp": 4219.911516370857
+    }
+   },
+   {
+    "id": "vapor-1",
+    "tipo": "vapor",
+    "regimen": "ordinario",
+    "fraccionMolar": 0.004849596512040988,
+    "fraccionMasica": 0.004849596512040988,
+    "fraccionVolumen": 0.9989743258692823,
+    "composicionMolar": {
+     "1": 1.0
+    },
+    "propiedades": {
+     "u": 2374919.675959376,
+     "h": 2500915.191465684,
+     "v": 205.9912249171543,
+     "s": 9155.49340929865,
+     "cp": 1884.352032157788
+    }
+   }
+  ],
+  "mezcla": {
+   "u": -100000.00000000001,
+   "h": -99388.34522900924,
+   "v": 1.0,
+   "s": -363.8488688339822
+  },
+  "referencia": {
+   "id": "iapws95-u0-s0-liquido-saturado-punto-triple",
+   "descripcion": "IAPWS-95: u = 0 y s = 0 del líquido saturado en el punto triple; el hielo Ih de IAPWS R10-06(2009) usa la constante s0 de la versión IAPWS-95, de modo que comparte esa referencia. Propiedades específicas por kg."
+  },
+  "estabilidad": {
+   "estado": "estable",
+   "alcance": [
+    "solido",
+    "liquido",
+    "vapor"
+   ],
+   "metodo": "Criterio UV: máximo de S a (U, V, m) entre todas las candidatas que cumplen U y V (una fase, dos fases sobre cada curva, tres en el triple). Estabilidad: g mínima entre hielo Ih (R10-06), líquido y vapor (IAPWS-95, raíz de densidad de cada rama) a la T y P del estado; tolerancia 1e-09 en Δg/(R T). Una fase no evaluable a esa T, P (hielo por encima de 273.16 K, vapor sin raíz sobre su curva, líquido bajo 235 K) solo entra en el alcance si las curvas de coexistencia del mismo cierre la dejan fuera de la región estable."
+  },
+  "verificaciones": [
+   {
+    "id": "estabilidad",
+    "estado": "cumple",
+    "residuo": 0.0,
+    "tolerancia": 1e-09,
+    "motivo": "Residuo = max(0, -min (g_candidata - g_estado)/(R T)) sobre las candidatas evaluables a la T y P del estado: solido, liquido, vapor."
+   },
+   {
+    "id": "dominio",
+    "estado": "cumple",
+    "residuo": null,
+    "tolerancia": null,
+    "motivo": "T en [200.0, 300.0] K, P en [0.1, 1e+08] Pa. P ≤ 100 MPa deja fuera los hielos II, III, V… (IAPWS R14-08); no se declaran por extrapolación. Líquido sobreenfriado candidato solo con T ≥ 235.0 K. Comprobación de pertenencia, sin residuo."
+   },
+   {
+    "id": "equilibrio",
+    "estado": "cumple",
+    "residuo": 2.2304312885641698e-13,
+    "tolerancia": 1e-10,
+    "motivo": "Residuo = (max g - min g)/(R T) entre las fases presentes, a T y P comunes por construcción (curva de coexistencia o punto triple de la propia formulación)."
+   },
+   {
+    "id": "energia",
+    "estado": "cumple",
+    "residuo": 1.154288479271297e-16,
+    "tolerancia": 1e-12,
+    "motivo": "Residuo relativo de la especificación (h, u y, en UV, v) reconstruida como Σ w_α (propiedad de fase) frente a la pedida."
+   },
+   {
+    "id": "identidad_h_u_Pv",
+    "estado": "cumple",
+    "residuo": 2.0396488432996e-13,
+    "tolerancia": 1e-12,
+    "motivo": "Residuo relativo por fase (escala max(|h|, R T)), con la P publicada."
+   },
+   {
+    "id": "identidad_g_h_Ts",
+    "estado": "cumple",
+    "residuo": 7.752860902324489e-16,
+    "tolerancia": 1e-12,
+    "motivo": "Residuo relativo por fase (escala max(|h|, R T)), con la P publicada."
+   },
+   {
+    "id": "reconstruccion_material",
+    "estado": "cumple",
+    "residuo": 0.0,
+    "tolerancia": 1e-12,
+    "motivo": "Un componente: Σ β_α = 1 y x_α = z = 1."
+   },
+   {
+    "id": "bases_fase",
+    "estado": "cumple",
+    "residuo": 0.0,
+    "tolerancia": 1e-12,
+    "motivo": "max(|Σ w_α - 1|, |Σ ε_α - 1|), ε_α = w_α v_α / v; fracción molar = másica (un componente)."
+   },
+   {
+    "id": "unicidad",
+    "estado": "cumple",
+    "residuo": null,
+    "tolerancia": null,
+    "motivo": "1 candidata(s) con U y V dadas; se publica la de mayor S."
+   }
+  ]
+ },
+ "diagnosticos": []
+}

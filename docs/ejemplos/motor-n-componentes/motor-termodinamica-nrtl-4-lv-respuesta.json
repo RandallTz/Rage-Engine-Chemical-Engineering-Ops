@@ -1,0 +1,157 @@
+{
+ "revision": 1,
+ "solicitudId": "na",
+ "modelo": {
+  "id": "nrtl-chemsep",
+  "version": "1"
+ },
+ "estado": "evaluado",
+ "evaluacion": {
+  "T": 345.0,
+  "P": 101325.0,
+  "composicionMolar": {
+   "1": 0.25,
+   "2": 0.25,
+   "3": 0.25,
+   "4": 0.25
+  },
+  "componentes": [
+   {
+    "id": 1,
+    "cas": "64-17-5",
+    "masaMolarKgMol": 0.04606844,
+    "fuente": "thermo (IUPAC), etanol"
+   },
+   {
+    "id": 2,
+    "cas": "71-43-2",
+    "masaMolarKgMol": 0.07811184,
+    "fuente": "thermo (IUPAC), benceno"
+   },
+   {
+    "id": 3,
+    "cas": "108-88-3",
+    "masaMolarKgMol": 0.09213842,
+    "fuente": "thermo (IUPAC), tolueno"
+   },
+   {
+    "id": 4,
+    "cas": "67-56-1",
+    "masaMolarKgMol": 0.03204186,
+    "fuente": "thermo (IUPAC), metanol"
+   }
+  ],
+  "fases": [
+   {
+    "id": "vapor-1",
+    "tipo": "vapor",
+    "regimen": "ordinario",
+    "fraccionMolar": 0.7446307101239833,
+    "fraccionMasica": 0.6801782678214653,
+    "fraccionVolumen": 0.9989012139969338,
+    "composicionMolar": {
+     "1": 0.28828071057460286,
+     "2": 0.23794784074892877,
+     "3": 0.1608768550587243,
+     "4": 0.31289459361774397
+    },
+    "propiedades": {
+     "u": 10025.05810767786,
+     "h": 60601.5651816024,
+     "v": 0.49915131580483135,
+     "s": 385.6106116643533
+    }
+   },
+   {
+    "id": "liquido-1",
+    "tipo": "liquido",
+    "regimen": "ordinario",
+    "fraccionMolar": 0.2553692898760168,
+    "fraccionMasica": 0.3198217321785346,
+    "fraccionVolumen": 0.0010987860030663079,
+    "composicionMolar": {
+     "1": 0.13837736631113096,
+     "2": 0.2851428627381529,
+     "3": 0.5098739681593069,
+     "4": 0.0666058027914091
+    },
+    "propiedades": {
+     "u": -392884.163906039,
+     "h": -392765.8449876398,
+     "v": 0.00116771693460798,
+     "s": -957.7113727274266
+    }
+   }
+  ],
+  "mezcla": {
+   "u": -118834.06718745483,
+   "h": -84395.18525202083,
+   "v": 0.3398853386176559,
+   "s": -44.012952257332145
+  },
+  "referencia": {
+   "id": "gas-ideal-298.15K-1bar-h0-s0",
+   "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+  },
+  "estabilidad": {
+   "estado": "estable",
+   "alcance": [
+    "liquido",
+    "vapor"
+   ],
+   "metodo": "Vapor ideal + líquido NRTL con parámetros binarios ChemSep. Mínimo de G a (T, P, n): fase única de menor G, prueba de distancia al plano tangente frente a vapor (mínimo analítico) y líquido (malla en el simplex de hasta 3 componentes y refinamiento local), adición de la fase inestable, minimización de G y pulido de Newton de la igualdad de potenciales; certificación final con la prueba completa. Hasta 3 fases (LLV). Especies ausentes excluidas sin evaluar log(0). Parámetros: ChemSep (thermo.interaction_parameters.IPDB, tabla 'ChemSep NRTL')."
+  },
+  "verificaciones": [
+   {
+    "id": "estabilidad",
+    "estado": "cumple",
+    "residuo": 0.0,
+    "tolerancia": 1e-09,
+    "motivo": "-min tm sobre fases de prueba vapor (minimo analitico) y liquido (malla en el simplex y refinamiento local). Fases candidatas: liquido, vapor; 4 pruebas de fase; min tm = -0."
+   },
+   {
+    "id": "equilibrio",
+    "estado": "cumple",
+    "residuo": 4.755959551440345e-16,
+    "tolerancia": 1e-10,
+    "motivo": "T y P comunes por construcción; max |mu_i^a - mu_i^b|/(R T) entre fases presentes"
+   },
+   {
+    "id": "reconstruccion_material",
+    "estado": "cumple",
+    "residuo": 0.0,
+    "tolerancia": 1e-12,
+    "motivo": "max |sum_a n^a x_i^a - n_i| / n"
+   },
+   {
+    "id": "identidad_h_u_Pv",
+    "estado": "cumple",
+    "residuo": 1.7525215534604394e-16,
+    "tolerancia": 1e-12,
+    "motivo": "max por fase |h - u - Pv|/(RT), molar"
+   },
+   {
+    "id": "identidad_g_h_Ts",
+    "estado": "cumple",
+    "residuo": 3.1706397009602295e-16,
+    "tolerancia": 1e-09,
+    "motivo": "max por fase |g - (h - Ts)|/(RT) con g = sum x_i mu_i: potenciales y entalpía/entropía salen de la misma función de Gibbs"
+   },
+   {
+    "id": "bases_fase",
+    "estado": "cumple",
+    "residuo": 1.1102230246251565e-16,
+    "tolerancia": 1e-12,
+    "motivo": "max(|Σβ-1|, |Σχ-1|, |Σε-1|); β molar, χ másica (masa molar de cada fase), ε volumétrica"
+   },
+   {
+    "id": "dominio",
+    "estado": "cumple",
+    "residuo": null,
+    "tolerancia": null,
+    "motivo": "T en [278.68, 461.376] K (rangos de Psat y cp de las especies, T < 0.9 Tc) y P en [100, 500000] Pa (vapor ideal)."
+   }
+  ]
+ },
+ "diagnosticos": []
+}

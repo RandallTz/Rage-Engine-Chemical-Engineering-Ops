@@ -1,0 +1,109 @@
+{
+ "revision": 1,
+ "solicitudId": "ej-hielo-tp",
+ "modelo": {
+  "id": "agua-iapws95-hielo-ih",
+  "version": "1"
+ },
+ "estado": "evaluado",
+ "evaluacion": {
+  "T": 263.15,
+  "P": 100000.0,
+  "composicionMolar": {
+   "1": 1.0
+  },
+  "componentes": [
+   {
+    "id": 1,
+    "cas": "7732-18-5",
+    "masaMolarKgMol": 0.018015268,
+    "fuente": "IAPWS-95 (R6-95(2018)): M = 18.015268 g/mol"
+   }
+  ],
+  "fases": [
+   {
+    "id": "solido-1",
+    "tipo": "solido",
+    "regimen": "ordinario",
+    "fraccionMolar": 1.0,
+    "fraccionMasica": 1.0,
+    "fraccionVolumen": 1.0,
+    "composicionMolar": {
+     "1": 1.0
+    },
+    "propiedades": {
+     "u": -354069.1622765739,
+     "h": -353960.2494650871,
+     "v": 0.0010891281148681603,
+     "s": -1297.6066740141769,
+     "cp": 2023.098133365963
+    }
+   }
+  ],
+  "mezcla": {
+   "u": -354069.1622765739,
+   "h": -353960.2494650871,
+   "v": 0.0010891281148681603,
+   "s": -1297.6066740141769,
+   "cp": 2023.098133365963
+  },
+  "referencia": {
+   "id": "iapws95-u0-s0-liquido-saturado-punto-triple",
+   "descripcion": "IAPWS-95: u = 0 y s = 0 del líquido saturado en el punto triple; el hielo Ih de IAPWS R10-06(2009) usa la constante s0 de la versión IAPWS-95, de modo que comparte esa referencia. Propiedades específicas por kg."
+  },
+  "estabilidad": {
+   "estado": "estable",
+   "alcance": [
+    "solido",
+    "liquido",
+    "vapor"
+   ],
+   "metodo": "Criterio TP: fase de menor g entre las candidatas evaluables a (T, P). Estabilidad: g mínima entre hielo Ih (R10-06), líquido y vapor (IAPWS-95, raíz de densidad de cada rama) a la T y P del estado; tolerancia 1e-09 en Δg/(R T). Una fase no evaluable a esa T, P (hielo por encima de 273.16 K, vapor sin raíz sobre su curva, líquido bajo 235 K) solo entra en el alcance si las curvas de coexistencia del mismo cierre la dejan fuera de la región estable."
+  },
+  "verificaciones": [
+   {
+    "id": "estabilidad",
+    "estado": "cumple",
+    "residuo": 0.0,
+    "tolerancia": 1e-09,
+    "motivo": "Residuo = max(0, -min (g_candidata - g_estado)/(R T)) sobre las candidatas evaluables a la T y P del estado: solido, liquido. No evaluables a esta T, P: vapor (fuera de la validez de su formulación o sin raíz de densidad en su rama); vapor queda(n) fuera de la región estable según las curvas de fusión, sublimación y vaporización de este mismo cierre (contrastadas con IAPWS R14-08)."
+   },
+   {
+    "id": "dominio",
+    "estado": "cumple",
+    "residuo": null,
+    "tolerancia": null,
+    "motivo": "T en [200.0, 300.0] K, P en [0.1, 1e+08] Pa. P ≤ 100 MPa deja fuera los hielos II, III, V… (IAPWS R14-08); no se declaran por extrapolación. Líquido sobreenfriado candidato solo con T ≥ 235.0 K. Comprobación de pertenencia, sin residuo."
+   },
+   {
+    "id": "identidad_h_u_Pv",
+    "estado": "cumple",
+    "residuo": 2.4972159009983682e-17,
+    "tolerancia": 1e-12,
+    "motivo": "Residuo relativo por fase (escala max(|h|, R T)), con la P publicada."
+   },
+   {
+    "id": "identidad_g_h_Ts",
+    "estado": "cumple",
+    "residuo": 0.0,
+    "tolerancia": 1e-12,
+    "motivo": "Residuo relativo por fase (escala max(|h|, R T)), con la P publicada."
+   },
+   {
+    "id": "reconstruccion_material",
+    "estado": "cumple",
+    "residuo": 0.0,
+    "tolerancia": 1e-12,
+    "motivo": "Un componente: Σ β_α = 1 y x_α = z = 1."
+   },
+   {
+    "id": "bases_fase",
+    "estado": "cumple",
+    "residuo": 0.0,
+    "tolerancia": 1e-12,
+    "motivo": "max(|Σ w_α - 1|, |Σ ε_α - 1|), ε_α = w_α v_α / v; fracción molar = másica (un componente)."
+   }
+  ]
+ },
+ "diagnosticos": []
+}

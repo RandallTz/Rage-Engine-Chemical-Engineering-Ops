@@ -1,0 +1,19 @@
+{
+ "revision": 1,
+ "solicitudId": "smm",
+ "modelo": {
+  "id": "nrtl-chemsep",
+  "version": "1"
+ },
+ "estado": "no_soportado",
+ "evaluacion": null,
+ "diagnosticos": [
+  {
+   "codigo": "MOTOR_ESTADO_SUSTITUCION_NO_ADMITIDA",
+   "mensaje": "la masa molar es identidad de la sustancia (convierte masa en cantidad): no se sustituye",
+   "ruta": "declaracion.datosPuros.64-17-5.masa_molar",
+   "componenteIds": [],
+   "propietarioId": "ejemplos"
+  }
+ ]
+}

@@ -1,0 +1,35 @@
+{
+ "revision": 1,
+ "solicitudId": "ej-huella",
+ "estado": "invalido",
+ "identidad": {
+  "modelo": {
+   "id": "nrtl-chemsep",
+   "version": "1"
+  },
+  "huellaModelo": "sha256:0f92e2b1637d13ef5c538421cb05417e943140a22f9a9a81e52dfad16c6c0e9d",
+  "firmaConsulta": null,
+  "trazador": {
+   "id": "trazador-lv-binario",
+   "version": "1"
+  }
+ },
+ "condicion": null,
+ "ramas": [],
+ "puntos": [],
+ "puntosEspeciales": [],
+ "candidatosDescartados": [],
+ "incidencias": [],
+ "cobertura": null,
+ "metodo": "",
+ "evidencia": null,
+ "diagnosticos": [
+  {
+   "codigo": "MOTOR_DIAG_HUELLA_DISTINTA",
+   "estado": "invalido",
+   "ruta": "huellaModeloEsperada",
+   "mensaje": "La huella esperada no coincide con la del paquete actual (sha256:0f92e2b1637d13ef5c538421cb05417e943140a22f9a9a81e52dfad16c6c0e9d): los datos o parametros cambiaron; vuelve a resolver antes de comparar.",
+   "componenteIds": []
+  }
+ ]
+}

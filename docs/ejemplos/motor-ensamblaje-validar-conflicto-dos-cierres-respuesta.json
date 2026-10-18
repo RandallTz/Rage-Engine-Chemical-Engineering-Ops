@@ -1,0 +1,171 @@
+{
+ "revision": 1,
+ "solicitudId": "dos-cierres",
+ "modeloId": "ens-aa7727b82f8db1a0390631d44e2f8bec",
+ "recuento": {
+  "estado": "incompleto",
+  "analisis": "estructural",
+  "variables": 7,
+  "ecuacionesIndependientes": 5,
+  "datosDefinidos": 4,
+  "datosFaltantes": 1,
+  "inicialesFaltantes": 0,
+  "gradosLibertad": 1,
+  "motivo": "Incógnitas sin ecuación: volumen.dominio.V. Análisis estructural: emparejamiento máximo entre ecuaciones e incógnitas (derivadas de los estados, variables algebraicas y datos pendientes). La regla de fases no se resta aparte: el reparto entre fases lo fija el cierre de equilibrio."
+ },
+ "variables": [
+  {
+   "id": "volumen.dominio.m.1",
+   "propietarioId": "volumen:dominio",
+   "magnitud": "masa",
+   "unidadSI": "kg",
+   "papel": "diferencial",
+   "componenteId": 1
+  },
+  {
+   "id": "volumen.dominio.U",
+   "propietarioId": "volumen:dominio",
+   "magnitud": "energia",
+   "unidadSI": "J",
+   "papel": "diferencial"
+  },
+  {
+   "id": "volumen.dominio.P",
+   "propietarioId": "volumen:dominio",
+   "magnitud": "presion",
+   "unidadSI": "Pa",
+   "papel": "algebraica"
+  },
+  {
+   "id": "volumen.dominio.V",
+   "propietarioId": "volumen:dominio",
+   "magnitud": "volumen",
+   "unidadSI": "m3",
+   "papel": "algebraica",
+   "datoId": "volumen.dominio.V"
+  },
+  {
+   "id": "volumen.dominio.T",
+   "propietarioId": "volumen:dominio",
+   "magnitud": "temperatura",
+   "unidadSI": "K",
+   "papel": "algebraica"
+  },
+  {
+   "id": "volumen.dominio.q",
+   "propietarioId": "volumen:dominio",
+   "magnitud": "fraccion_masica_vapor",
+   "unidadSI": "1",
+   "papel": "algebraica"
+  },
+  {
+   "id": "volumen.dominio.Q",
+   "propietarioId": "volumen:dominio",
+   "magnitud": "potencia",
+   "unidadSI": "W",
+   "papel": "dato",
+   "datoId": "volumen.dominio.Q"
+  }
+ ],
+ "ecuaciones": [
+  {
+   "id": "materia.1",
+   "propietarioId": "volumen:dominio",
+   "familia": "materia",
+   "variableIds": [
+    "volumen.dominio.m.1"
+   ],
+   "latex": "\\frac{dm_{1}}{dt}=0",
+   "unidadResiduo": "kg/s"
+  },
+  {
+   "id": "energia",
+   "propietarioId": "volumen:dominio",
+   "familia": "energia",
+   "variableIds": [
+    "volumen.dominio.U",
+    "volumen.dominio.m.1",
+    "volumen.dominio.Q"
+   ],
+   "latex": "\\frac{dU}{dt}=0+Q-P\\frac{dV}{dt},\\quad V=V_{\\mathrm{geom}}\\Rightarrow\\frac{dV}{dt}=0",
+   "unidadResiduo": "W"
+  },
+  {
+   "id": "estado.flujo",
+   "propietarioId": "volumen:dominio",
+   "familia": "estado",
+   "variableIds": [],
+   "latex": "u+Pv\\equiv h\\ \\text{(identidad aplicada al trabajo de flujo; se resuelve con }h\\text{)}",
+   "unidadResiduo": "J/kg"
+  },
+  {
+   "id": "estado.u",
+   "propietarioId": "volumen:dominio",
+   "familia": "estado",
+   "variableIds": [
+    "volumen.dominio.U",
+    "volumen.dominio.m.1",
+    "volumen.dominio.T",
+    "volumen.dominio.P",
+    "volumen.dominio.q"
+   ],
+   "latex": "U=m\\,u(T,P,q)",
+   "unidadResiduo": "J"
+  },
+  {
+   "id": "estado.v",
+   "propietarioId": "volumen:dominio",
+   "familia": "estado",
+   "variableIds": [
+    "volumen.dominio.V",
+    "volumen.dominio.m.1",
+    "volumen.dominio.T",
+    "volumen.dominio.P",
+    "volumen.dominio.q"
+   ],
+   "latex": "V=m\\,v(T,P,q)",
+   "unidadResiduo": "m3"
+  },
+  {
+   "id": "estado.reparto",
+   "propietarioId": "volumen:dominio",
+   "familia": "estado",
+   "variableIds": [
+    "volumen.dominio.T",
+    "volumen.dominio.P",
+    "volumen.dominio.q"
+   ],
+   "latex": "q:\\ \\max S\\ \\text{a}\\ (U,V,m)\\ \\text{(IAPWS-95, cierre UV)}",
+   "unidadResiduo": "1"
+  }
+ ],
+ "diagnosticos": [
+  {
+   "codigo": "MOTOR_ENS_DOS_CIERRES",
+   "estado": "conflicto",
+   "mensaje": "La relación manual u(T) y el cierre IAPWS determinarían el mismo estado: son dos cierres. Retira uno; no se elige por omisión.",
+   "variableIds": [],
+   "origen": {
+    "propietarioId": "volumen:dominio",
+    "ruta": "/volumen/formulacionEnergia/modelo"
+   }
+  },
+  {
+   "codigo": "MOTOR_ENS_DATO_PENDIENTE",
+   "estado": "incompleto",
+   "mensaje": "Dato sin declarar: en blanco es pendiente, nunca cero.",
+   "variableIds": [
+    "volumen.dominio.V"
+   ],
+   "origen": {
+    "propietarioId": "volumen:dominio",
+    "ruta": "/config/datos/geometria_V"
+   }
+  }
+ ],
+ "inicializacion": {
+  "estado": "pendiente",
+  "variables": {},
+  "estadoTermodinamico": null
+ }
+}

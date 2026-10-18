@@ -1,0 +1,52 @@
+{
+ "revision": 1,
+ "solicitudId": "ej-ideal",
+ "propietarioId": "ejemplos",
+ "componentes": [
+  {
+   "id": 1,
+   "nombre": "benceno",
+   "simbolo": "be",
+   "identidadQuimica": {
+    "cas": "71-43-2"
+   }
+  },
+  {
+   "id": 2,
+   "nombre": "tolueno",
+   "simbolo": "to",
+   "identidadQuimica": {
+    "cas": "108-88-3"
+   }
+  }
+ ],
+ "declaracion": {
+  "modelo": {
+   "id": "mezcla-ideal",
+   "version": "1"
+  },
+  "politica": {
+   "cantidad": "sin_restriccion",
+   "cambioInterno": "permitido",
+   "evaluacion": "equilibrio_estable"
+  },
+  "especificacion": {
+   "tipo": "TP",
+   "T": {
+    "valor": 372,
+    "unidad": "K"
+   },
+   "P": {
+    "valor": 101325,
+    "unidad": "Pa"
+   },
+   "composicion": {
+    "base": "molar",
+    "fracciones": {
+     "1": 0.4,
+     "2": 0.6
+    }
+   }
+  }
+ }
+}

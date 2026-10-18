@@ -1,0 +1,19 @@
+{
+ "revision": 1,
+ "solicitudId": "siw",
+ "modelo": {
+  "id": "agua-iapws95",
+  "version": "1"
+ },
+ "estado": "no_soportado",
+ "evaluacion": null,
+ "diagnosticos": [
+  {
+   "codigo": "MOTOR_ESTADO_SUSTITUCION_NO_ADMITIDA",
+   "mensaje": "El modelo agua-iapws95 no admite sustituir datos puros: es una formulacion completa sin entradas sustituibles.",
+   "ruta": "declaracion.datosPuros",
+   "componenteIds": [],
+   "propietarioId": "ejemplos"
+  }
+ ]
+}

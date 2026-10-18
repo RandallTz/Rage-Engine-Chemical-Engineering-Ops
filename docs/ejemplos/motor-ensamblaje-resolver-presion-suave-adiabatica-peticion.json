@@ -1,0 +1,346 @@
+{
+ "revision": 1,
+ "solicitudId": "presion-suave",
+ "componentes": [
+  {
+   "id": 1,
+   "nombre": "Fluido de prueba",
+   "simbolo": "A",
+   "identidadQuimica": {
+    "cas": "7732-18-5"
+   }
+  }
+ ],
+ "volumen": {
+  "id": "dominio",
+  "componenteIds": [
+   1
+  ],
+  "balances": {
+   "materia": true,
+   "energia": true,
+   "momento": false
+  },
+  "formulacionMateria": {
+   "campo": {
+    "sinReaccion": true,
+    "sinDifusion": false,
+    "sinConveccion": false,
+    "estacionario": false,
+    "difusion": "flujo"
+   },
+   "coordenadas": "cartesianas",
+   "expandida": false,
+   "vista": "cantidad",
+   "uniforme": false,
+   "fija": false,
+   "sinAcumulacion": false,
+   "invariantes": [
+    false,
+    false,
+    false
+   ],
+   "generacionUniforme": false,
+   "consumoUniforme": false,
+   "restoImpermeable": true,
+   "cantidadVolumen": false,
+   "densidadMediaConstante": false,
+   "densidadComunPuertos": false,
+   "expandirProducto": false
+  },
+  "formulacionEnergia": {
+   "forma": "total",
+   "trabajoTotalHeredado": false,
+   "separarPresion": true,
+   "entalpia": true,
+   "sinCinetica": true,
+   "sinTrabajoViscoso": true,
+   "sinFuerzasVolumen": true,
+   "sinFuenteVolumetrica": true,
+   "sinConduccionLocal": false,
+   "adiabatico": true,
+   "estacionario": false,
+   "sinAcumulacionTotal": false,
+   "uniforme": true,
+   "monofasico": false,
+   "sinCambioFase": false,
+   "densidadConstante": false,
+   "presionUniforme": true,
+   "presionPrescrita": true,
+   "modelo": "sin_declarar"
+  },
+  "contextoEnergia": {
+   "volumenId": "dominio",
+   "fija": false,
+   "restoCerrado": true,
+   "puertos": [],
+   "componentesIds": [
+    1
+   ]
+  },
+  "cierre": {
+   "modelo": {
+    "id": "agua-iapws95",
+    "version": "1"
+   },
+   "politica": {
+    "cantidad": "sin_restriccion",
+    "cambioInterno": "permitido",
+    "evaluacion": "equilibrio_estable"
+   }
+  },
+  "frontera": {
+   "tipo": "presion_prescrita",
+   "presionId": "volumen.dominio.Pext"
+  },
+  "inicial": {
+   "masaIds": {
+    "1": "volumen.dominio.m0.1"
+   },
+   "energia": {
+    "tipo": "T",
+    "datoId": "volumen.dominio.T0"
+   }
+  }
+ },
+ "corrientes": [],
+ "datos": {
+  "volumen.dominio.m0.1": {
+   "magnitud": "masa",
+   "funcion": "inicial",
+   "declaracion": {
+    "texto": "1",
+    "unidad": "kg"
+   },
+   "origen": {
+    "propietarioId": "volumen:dominio",
+    "ruta": "/prueba"
+   }
+  },
+  "estudio.tfinal": {
+   "magnitud": "tiempo",
+   "funcion": "estudio",
+   "declaracion": {
+    "texto": "100",
+    "unidad": "s"
+   },
+   "origen": {
+    "propietarioId": "estudio",
+    "ruta": "/prueba"
+   }
+  },
+  "volumen.dominio.T0": {
+   "magnitud": "temperatura",
+   "funcion": "inicial",
+   "declaracion": {
+    "texto": "500",
+    "unidad": "K"
+   },
+   "origen": {
+    "propietarioId": "volumen:dominio",
+    "ruta": "/prueba"
+   }
+  },
+  "volumen.dominio.Pext": {
+   "magnitud": "presion",
+   "funcion": "frontera",
+   "declaracion": {
+    "texto": "3e5 + 2e5*sin(0.05*t)",
+    "unidad": "Pa"
+   },
+   "origen": {
+    "propietarioId": "volumen:dominio",
+    "ruta": "/prueba"
+   }
+  }
+ },
+ "transferencias": {},
+ "estudio": {
+  "tipo": "temporal",
+  "tiempoId": "estudio.tfinal",
+  "metodoSolicitado": "rk45",
+  "muestras": 21,
+  "rtol": 1e-10,
+  "atol": {
+   "masa": 1e-11,
+   "energia": 1e-06
+  }
+ },
+ "derivacion": {
+  "materia": [
+   {
+    "titulo": "Conservación local",
+    "ecuaciones": [
+     "\\frac{\\partial\\rho_i}{\\partial t}=-\\nabla\\!\\cdot(\\rho_i\\mathbf v)-\\nabla\\!\\cdot\\mathbf j_i+\\gamma_i(\\mathbf x,t)-\\chi_i(\\mathbf x,t)"
+    ]
+   },
+   {
+    "titulo": "Declarar componente A",
+    "ecuaciones": [
+     "\\frac{\\partial\\rho_{A}}{\\partial t}=-\\nabla\\!\\cdot(\\rho_{A}\\mathbf v)+\\gamma_{A}(\\mathbf x,t)-\\chi_{A}(\\mathbf x,t)"
+    ]
+   },
+   {
+    "titulo": "Integrar la conservación de materia",
+    "ecuaciones": [
+     "\\frac{d}{dt}\\int_{V(t)}\\rho_{A}\\,dV=-\\oint_{\\partial V(t)}\\left(\\rho_{A}\\mathbf v-\\rho_{A}\\mathbf v_b\\right)\\!\\cdot\\mathbf n\\,dA+\\int_{V(t)}\\gamma_{A}(\\mathbf x,t)\\,dV-\\int_{V(t)}\\chi_{A}(\\mathbf x,t)\\,dV"
+    ]
+   },
+   {
+    "titulo": "Expresar la conservación material total",
+    "ecuaciones": [
+     "\\frac{dm_{A}}{dt}=-\\Phi_{A,\\mathrm{resto}}+G_{A}(t)-C_{A}(t)"
+    ]
+   },
+   {
+    "titulo": "Retirar generación y consumo materiales",
+    "ecuaciones": [
+     "\\frac{dm_{A}}{dt}=-\\Phi_{A,\\mathrm{resto}}"
+    ]
+   },
+   {
+    "titulo": "Cerrar el transporte material por el resto",
+    "ecuaciones": [
+     "\\frac{dm_{A}}{dt}=0"
+    ]
+   },
+   {
+    "titulo": "Declarar dos puertos y frontera móvil",
+    "ecuaciones": [
+     "\\frac{dm_{A}}{dt}=\\dot m^{\\mathrm{cte}}_{A,1}-\\dot m^{\\mathrm{cte}}_{A,2}"
+    ]
+   },
+   {
+    "titulo": "Identificar Fluido de prueba · CAS 7732-18-5",
+    "ecuaciones": [
+     "\\frac{dm_{A}}{dt}=\\dot m^{\\mathrm{cte}}_{A,1}-\\dot m^{\\mathrm{cte}}_{A,2}"
+    ]
+   }
+  ],
+  "energia": [
+   {
+    "titulo": "Conservación local de energía",
+    "ecuacion": "\\frac{\\partial(\\rho e)}{\\partial t}=-\\nabla\\cdot(\\rho e\\mathbf v)-\\nabla\\cdot\\mathbf q+\\nabla\\cdot(\\boldsymbol\\sigma\\cdot\\mathbf v)+\\rho\\mathbf b\\cdot\\mathbf v+r_v",
+    "relaciones": [
+     "e=u+\\frac{\\mathbf v\\cdot\\mathbf v}{2}",
+     "\\mathbf q:\\ \\text{flujo energético no convectivo}"
+    ]
+   },
+   {
+    "titulo": "Integrar sobre V(t) y aplicar Gauss",
+    "ecuacion": "\\int_{V(t)}\\frac{\\partial(\\rho e)}{\\partial t}\\,dV=-\\oint_{\\partial V(t)}\\rho e(\\mathbf v)\\cdot\\mathbf n\\,dA-\\oint_{\\partial V(t)}\\mathbf q\\cdot\\mathbf n\\,dA+\\oint_{\\partial V(t)}(\\boldsymbol\\sigma\\cdot\\mathbf v)\\cdot\\mathbf n\\,dA+\\int_{V(t)}\\rho\\mathbf b\\cdot\\mathbf v\\,dV+\\int_{V(t)}r_v\\,dV",
+    "relaciones": [
+     "\\int_{V(t)}\\nabla\\cdot\\mathbf F\\,dV=\\oint_{\\partial V(t)}\\mathbf F\\cdot\\mathbf n\\,dA"
+    ]
+   },
+   {
+    "titulo": "Aplicar el teorema de transporte de Reynolds",
+    "ecuacion": "\\frac{dE}{dt}=-\\oint_{\\partial V(t)}\\rho e(\\mathbf v-\\mathbf v_b)\\cdot\\mathbf n\\,dA-\\oint_{\\partial V(t)}\\mathbf q\\cdot\\mathbf n\\,dA+\\oint_{\\partial V(t)}(\\boldsymbol\\sigma\\cdot\\mathbf v)\\cdot\\mathbf n\\,dA+\\int_{V(t)}\\rho\\mathbf b\\cdot\\mathbf v\\,dV+\\int_{V(t)}r_v\\,dV",
+    "relaciones": [
+     "\\frac{d}{dt}\\int_{V(t)}\\rho e\\,dV=\\int_{V(t)}\\frac{\\partial(\\rho e)}{\\partial t}\\,dV+\\oint_{\\partial V(t)}\\rho e\\mathbf v_b\\cdot\\mathbf n\\,dA",
+     "E(t)=\\int_{V(t)}\\rho e\\,dV"
+    ]
+   },
+   {
+    "titulo": "Separar presión y viscosidad",
+    "ecuacion": "\\frac{dE}{dt}=-\\oint_{\\partial V(t)}\\rho e(\\mathbf v-\\mathbf v_b)\\cdot\\mathbf n\\,dA-\\oint_{\\partial V(t)}\\mathbf q\\cdot\\mathbf n\\,dA-\\oint_{\\partial V(t)}p\\mathbf v\\cdot\\mathbf n\\,dA+\\oint_{\\partial V(t)}(\\boldsymbol\\tau\\cdot\\mathbf v)\\cdot\\mathbf n\\,dA+\\int_{V(t)}\\rho\\mathbf b\\cdot\\mathbf v\\,dV+\\int_{V(t)}r_v\\,dV",
+    "relaciones": [
+     "\\boldsymbol\\sigma=-p\\mathbf I+\\boldsymbol\\tau"
+    ]
+   },
+   {
+    "titulo": "Agrupar el trabajo de flujo en entalpía",
+    "ecuacion": "\\frac{dE}{dt}=-\\oint_{\\partial V(t)}\\rho(h+e_c)(\\mathbf v-\\mathbf v_b)\\cdot\\mathbf n\\,dA-\\oint_{\\partial V(t)}\\mathbf q\\cdot\\mathbf n\\,dA-\\oint_{\\partial V(t)}p\\mathbf v_b\\cdot\\mathbf n\\,dA+\\oint_{\\partial V(t)}(\\boldsymbol\\tau\\cdot\\mathbf v)\\cdot\\mathbf n\\,dA+\\int_{V(t)}\\rho\\mathbf b\\cdot\\mathbf v\\,dV+\\int_{V(t)}r_v\\,dV",
+    "relaciones": [
+     "h=u+p/\\rho",
+     "\\mathbf v=(\\mathbf v-\\mathbf v_b)+\\mathbf v_b"
+    ]
+   },
+   {
+    "titulo": "Particionar la frontera en puertos y superficie restante",
+    "ecuacion": "\\frac{dE}{dt}=\\dot m_{1}\\left(\\bar h_{1}+\\overline{e_{c,p}}\\right)-\\dot m_{2}\\left(\\bar h_{2}+\\overline{e_{c,p}}\\right)+\\dot Q-\\dot W_b+\\dot W_\\tau+\\dot W_{\\mathbf b}+R",
+    "relaciones": [
+     "\\partial V=\\left(\\bigcup_p A_p\\right)\\cup S_{\\mathrm{resto}},\\quad A_p\\cap A_q=\\varnothing\\ (p\\ne q)",
+     "\\dot m_p=\\varepsilon_p\\int_{A_p}\\rho(\\mathbf v-\\mathbf v_b)\\cdot\\mathbf n\\,dA,\\quad\\varepsilon_{\\mathrm{ent}}=-1,\\ \\varepsilon_{\\mathrm{sal}}=1",
+     "\\dot m_p\\bar h_p=\\varepsilon_p\\int_{A_p}\\rho h(\\mathbf v-\\mathbf v_b)\\cdot\\mathbf n\\,dA"
+    ]
+   },
+   {
+    "titulo": "Despreciar energía cinética",
+    "ecuacion": "\\frac{dU}{dt}=\\dot m_{1}\\left(\\bar h_{1}\\right)-\\dot m_{2}\\left(\\bar h_{2}\\right)+\\dot Q-\\dot W_b+\\dot W_\\tau+\\dot W_{\\mathbf b}+R",
+    "relaciones": [
+     "e_c\\simeq0"
+    ]
+   },
+   {
+    "titulo": "Retirar trabajo viscoso",
+    "ecuacion": "\\frac{dU}{dt}=\\dot m_{1}\\left(\\bar h_{1}\\right)-\\dot m_{2}\\left(\\bar h_{2}\\right)+\\dot Q-\\dot W_b+\\dot W_{\\mathbf b}+R",
+    "relaciones": [
+     "\\dot W_\\tau=0"
+    ]
+   },
+   {
+    "titulo": "Retirar trabajo de fuerzas de volumen",
+    "ecuacion": "\\frac{dU}{dt}=\\dot m_{1}\\left(\\bar h_{1}\\right)-\\dot m_{2}\\left(\\bar h_{2}\\right)+\\dot Q-\\dot W_b+R",
+    "relaciones": [
+     "\\dot W_{\\mathbf b}=0"
+    ]
+   },
+   {
+    "titulo": "Retirar aportes volumétricos",
+    "ecuacion": "\\frac{dU}{dt}=\\dot m_{1}\\left(\\bar h_{1}\\right)-\\dot m_{2}\\left(\\bar h_{2}\\right)+\\dot Q-\\dot W_b",
+    "relaciones": [
+     "R=0"
+    ]
+   },
+   {
+    "titulo": "Declarar temperatura y energía específica uniformes",
+    "ecuacion": "\\frac{dU}{dt}=\\dot m_{1}\\left(\\bar h_{1}\\right)-\\dot m_{2}\\left(\\bar h_{2}\\right)+\\dot Q-\\dot W_b",
+    "relaciones": [
+     "T(\\mathbf x,t)=T(t),\\quad u(\\mathbf x,t)=\\bar u(t),\\quad U=m\\bar u"
+    ]
+   },
+   {
+    "titulo": "Asumir una fase",
+    "ecuacion": "\\frac{dU}{dt}=\\dot m_{1}\\left(\\bar h_{1}\\right)-\\dot m_{2}\\left(\\bar h_{2}\\right)+\\dot Q-\\dot W_b",
+    "relaciones": [
+     "N_{\\mathrm{fases}}=1"
+    ]
+   },
+   {
+    "titulo": "Excluir cambio de fase",
+    "ecuacion": "\\frac{dU}{dt}=\\dot m_{1}\\left(\\bar h_{1}\\right)-\\dot m_{2}\\left(\\bar h_{2}\\right)+\\dot Q-\\dot W_b",
+    "relaciones": [
+     "\\text{régimen sin transición de fase}"
+    ]
+   },
+   {
+    "titulo": "Declarar relación u(T) lineal",
+    "ecuacion": "\\frac{dU}{dt}=\\dot m_{1}\\left(\\bar h_{1}\\right)-\\dot m_{2}\\left(\\bar h_{2}\\right)+\\dot Q-\\dot W_b",
+    "relaciones": [
+     "u=u_{\\mathrm{ref}}+c_u(T-T_{\\mathrm{ref}})"
+    ]
+   },
+   {
+    "titulo": "Declarar densidad de mezcla constante",
+    "ecuacion": "\\frac{dU}{dt}=\\dot m_{1}\\left(\\bar h_{1}\\right)-\\dot m_{2}\\left(\\bar h_{2}\\right)+\\dot Q-\\dot W_b",
+    "relaciones": [
+     "V=m/\\rho_*"
+    ]
+   },
+   {
+    "titulo": "Declarar presión uniforme e impuesta",
+    "ecuacion": "\\frac{dU}{dt}=\\dot m_{1}\\left(\\bar h_{1}\\right)-\\dot m_{2}\\left(\\bar h_{2}\\right)+\\dot Q-\\dot W_b",
+    "relaciones": [
+     "P=P_{\\mathrm{ext}}(t)",
+     "\\dot W_b=p\\,dm/dt/\\rho_*"
+    ]
+   },
+   {
+    "titulo": "Retirar cierre manual y densidad",
+    "ecuacion": "\\frac{dU}{dt}=\\dot m_{1}\\left(\\bar h_{1}\\right)-\\dot m_{2}\\left(\\bar h_{2}\\right)+\\dot Q-\\dot W_b",
+    "relaciones": []
+   }
+  ]
+ }
+}

@@ -1,0 +1,70 @@
+{
+ "revision": 1,
+ "solicitudId": "na",
+ "propietarioId": "ejemplos",
+ "componentes": [
+  {
+   "id": 1,
+   "nombre": "etanol",
+   "simbolo": "et",
+   "identidadQuimica": {
+    "cas": "64-17-5"
+   }
+  },
+  {
+   "id": 2,
+   "nombre": "benceno",
+   "simbolo": "be",
+   "identidadQuimica": {
+    "cas": "71-43-2"
+   }
+  },
+  {
+   "id": 3,
+   "nombre": "tolueno",
+   "simbolo": "to",
+   "identidadQuimica": {
+    "cas": "108-88-3"
+   }
+  },
+  {
+   "id": 4,
+   "nombre": "metanol",
+   "simbolo": "me",
+   "identidadQuimica": {
+    "cas": "67-56-1"
+   }
+  }
+ ],
+ "declaracion": {
+  "modelo": {
+   "id": "nrtl-chemsep",
+   "version": "1"
+  },
+  "politica": {
+   "cantidad": "sin_restriccion",
+   "cambioInterno": "permitido",
+   "evaluacion": "equilibrio_estable"
+  },
+  "especificacion": {
+   "tipo": "TP",
+   "T": {
+    "valor": 345,
+    "unidad": "K"
+   },
+   "P": {
+    "valor": 101325,
+    "unidad": "Pa"
+   },
+   "composicion": {
+    "base": "molar",
+    "fracciones": {
+     "1": 0.25,
+     "2": 0.25,
+     "3": 0.25,
+     "4": 0.25
+    }
+   }
+  }
+ }
+}

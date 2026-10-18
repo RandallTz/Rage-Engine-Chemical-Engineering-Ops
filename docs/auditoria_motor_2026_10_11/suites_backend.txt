@@ -1,0 +1,42 @@
+==============================================================================
+VALIDACION COMPLETA -- 37 suites
+==============================================================================
+[OK   ] validar_api.py                          8.7s
+[OK   ] validar_api_especificaciones.py         6.5s
+[OK   ] validar_caida_presion.py                1.8s
+[OK   ] validar_corriente.py                    1.9s
+[OK   ] validar_diagrama_corrientes.py          2.7s
+[OK   ] validar_diagrama_flujo.py               1.8s
+[OK   ] validar_dimensionado.py                 2.4s
+[OK   ] validar_ell.py                          2.2s
+[OK   ] validar_energia_reactor.py              2.1s
+[OK   ] validar_entalpia.py                     1.7s
+[OK   ] validar_especificaciones.py           119.5s
+[OK   ] validar_estudios.py                    18.1s
+[OK   ] validar_estudios_agua_balances.py       6.1s
+[OK   ] validar_estudios_circuitos.py           5.9s
+[OK   ] validar_estudios_energia.py             9.7s
+[OK   ] validar_estudios_interfaz.py           17.7s
+[OK   ] validar_estudios_interfaz_material.py    6.6s
+[OK   ] validar_estudios_interfaz_material_energia.py   10.2s
+[OK   ] validar_estudios_pared.py               6.1s
+[OK   ] validar_estudios_reaccion.py           50.6s
+[OK   ] validar_estudios_reaccion_interfaz.py   20.5s
+[OK   ] validar_estudios_recuento.py           12.8s
+[OK   ] validar_estudios_tanque_termico.py     11.6s
+[OK   ] validar_estudios_transferencia.py       7.8s
+[OK   ] validar_estudios_transferencia_json.py    8.5s
+[OK   ] validar_estudios_unidades_especificaciones.py   14.8s
+[OK   ] validar_estudios_vapor.py               4.9s
+[OK   ] validar_flash.py                        2.0s
+[OK   ] validar_fug.py                          1.8s
+[OK   ] validar_laboratorio.py                 21.4s
+[OK   ] validar_mccabe_thiele.py                2.5s
+[OK   ] validar_operaciones_nuevas.py          42.4s
+[OK   ] validar_planta_encadenada.py           15.3s
+[OK   ] validar_ponchon_savarit.py              3.6s
+[OK   ] validar_termodinamica.py                8.4s
+[OK   ] validar_trazabilidad.py                 3.8s
+[OK   ] validar_varias_reacciones.py            2.2s
+------------------------------------------------------------------------------
+TODO VERDE: 37 suites en 466.7s

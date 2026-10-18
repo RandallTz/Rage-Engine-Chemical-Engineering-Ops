@@ -1,0 +1,111 @@
+{
+  "revision": 1,
+  "solicitudId": "ejemplo-supercritico-900K-50MPa",
+  "modelo": {
+    "id": "agua-iapws95",
+    "version": "1"
+  },
+  "estado": "evaluado",
+  "evaluacion": {
+    "T": 900.0,
+    "P": 50000000.0,
+    "composicionMolar": {
+      "1": 1.0
+    },
+    "componentes": [
+      {
+        "id": 1,
+        "cas": "7732-18-5",
+        "masaMolarKgMol": 0.018015268,
+        "fuente": "IAPWS-95 (R6-95(2018)): M = 18.015268 g/mol"
+      }
+    ],
+    "fases": [
+      {
+        "id": "fluido-1",
+        "tipo": "fluido",
+        "regimen": "supercritico",
+        "fraccionMolar": 1.0,
+        "fraccionMasica": 1.0,
+        "fraccionVolumen": 1.0,
+        "composicionMolar": {
+          "1": 1.0
+        },
+        "propiedades": {
+          "u": 3029350.6057156534,
+          "h": 3358223.8578253314,
+          "v": 0.006577465042193567,
+          "s": 5943.748889976104,
+          "cp": 3786.9352736630954,
+          "cv": 2203.4403644387194
+        }
+      }
+    ],
+    "mezcla": {
+      "u": 3029350.6057156534,
+      "h": 3358223.8578253314,
+      "v": 0.006577465042193567,
+      "s": 5943.748889976104,
+      "cp": 3786.9352736630954,
+      "cv": 2203.4403644387194
+    },
+    "referencia": {
+      "id": "iapws95-u0-s0-liquido-saturado-punto-triple",
+      "descripcion": "IAPWS-95: u = 0 y s = 0 del líquido saturado en el punto triple (273.16 K, 611.655 Pa). Propiedades específicas por kg."
+    },
+    "estabilidad": {
+      "estado": "estable",
+      "alcance": [
+        "liquido",
+        "vapor",
+        "fluido"
+      ],
+      "metodo": "Distancia al plano tangente de sustancia pura a T fija sobre las ramas monofásicas de IAPWS-95 (vapor y líquido separados por la curva de saturación por debajo de T_c; una rama por encima), malla de 400 puntos por rama hasta ρ(1 GPa) y refinamiento acotado de cada mínimo local. Tolerancia -min TPD/P ≤ 1e-9."
+    },
+    "verificaciones": [
+      {
+        "id": "estabilidad",
+        "estado": "cumple",
+        "residuo": 1.192092895507813e-15,
+        "tolerancia": 1e-09,
+        "motivo": "Residuo = max(0, -min TPD)/P, con TPD(ρ) = ρ[f(T,ρ) - g*] + P* (distancia al plano tangente de sustancia pura a T fija). Búsqueda: 410 evaluaciones en fluido [2.408e-10, 962] kg/m3; sin otro mínimo local en las ramas. (∂P/∂ρ)_T = 267941 Pa·m3/kg > 0. Alcance: fases fluidas de IAPWS-95; el sólido lo excluye el dominio, no esta búsqueda."
+      },
+      {
+        "id": "dominio",
+        "estado": "cumple",
+        "residuo": null,
+        "tolerancia": null,
+        "motivo": "T en [273.16, 1073.15] K, P en [100, 1e+08] Pa, fuera de la banda crítica T en [643.861, 650.331] K × P en [2.09608e+07, 2.31672e+07] Pa. Sin hielo estable: T ≥ 273.16 K y P ≤ 100 MPa (curvas de fusión IAPWS R14-08). Comprobación de pertenencia, sin residuo."
+      },
+      {
+        "id": "ecuacion_estado",
+        "estado": "cumple",
+        "residuo": 2.9802322387695313e-16,
+        "tolerancia": 1e-12,
+        "motivo": "Residuo = |P(T,ρ) - P| / max(P, ρ(∂P/∂ρ)_T): error de presión relativo a la presión o al módulo de compresibilidad isoterma, el mayor."
+      },
+      {
+        "id": "identidad_h_u_Pv",
+        "estado": "cumple",
+        "residuo": 8.408145093273154e-16,
+        "tolerancia": 1e-09,
+        "motivo": "Residuo = |h - u - P v|/(R T) con la P especificada; incluye el error de resolver ρ."
+      },
+      {
+        "id": "derivadas",
+        "estado": "cumple",
+        "residuo": 4.3675693155139226e-10,
+        "tolerancia": 1e-06,
+        "motivo": "Residuo = max(|cp - (∂h/∂T)_P|/cp, |cv - (∂u/∂T)_ρ|/cv), derivadas analíticas de la EOS frente a diferencias centradas de paso 1e-5·T re-resolviendo ρ en la misma rama."
+      },
+      {
+        "id": "reconstruccion_material",
+        "estado": "cumple",
+        "residuo": 0.0,
+        "tolerancia": 1e-12,
+        "motivo": "Una fase con la composición global: Σβ = 1 y z = x exactamente."
+      }
+    ]
+  },
+  "diagnosticos": []
+}

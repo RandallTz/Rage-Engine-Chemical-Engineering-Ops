@@ -1,0 +1,969 @@
+{
+ "revision": 1,
+ "trazador": {
+  "id": "trazador-lv-binario",
+  "version": "1"
+ },
+ "operaciones": [
+  "Txy",
+  "Pxy"
+ ],
+ "componentes": 2,
+ "perfiles": [
+  {
+   "id": "exploratoria",
+   "puntosBase": 41,
+   "refinamientoMaximo": 3,
+   "saltoMaximoT": 2.0,
+   "saltoMaximoLnP": 0.1,
+   "saltoMaximoComposicion": 0.05,
+   "limiteEvaluaciones": 6000,
+   "limiteSegundos": 60.0,
+   "toleranciaMu": 1e-10,
+   "toleranciaEstabilidad": 1e-09
+  },
+  {
+   "id": "refinada",
+   "puntosBase": 121,
+   "refinamientoMaximo": 5,
+   "saltoMaximoT": 0.5,
+   "saltoMaximoLnP": 0.025,
+   "saltoMaximoComposicion": 0.015,
+   "limiteEvaluaciones": 30000,
+   "limiteSegundos": 240.0,
+   "toleranciaMu": 1e-10,
+   "toleranciaEstabilidad": 1e-09
+  }
+ ],
+ "paquetes": [
+  {
+   "modelo": {
+    "id": "mezcla-ideal",
+    "version": "1"
+   },
+   "operaciones": [
+    "Txy",
+    "Pxy"
+   ],
+   "fases": [
+    "liquido",
+    "vapor"
+   ],
+   "componentesCAS": [
+    "7732-18-5",
+    "64-17-5",
+    "71-43-2",
+    "108-88-3",
+    "71-36-3",
+    "141-78-6",
+    "67-56-1",
+    "67-64-1"
+   ],
+   "dominio": {
+    "T": [
+     159.05,
+     582.615
+    ],
+    "P": [
+     100.0,
+     500000.0
+    ]
+   },
+   "pares": null,
+   "combinacionesDetectadas": [
+    "liquido_vapor (ramas y segmentos certificados)",
+    "azeotropo (x = y refinado)",
+    "encuentro_otra_fase (liquido competidor identificado; LL/LLV no se traza)",
+    "limite_dominio",
+    "extremo_puro"
+   ],
+   "limites": [
+    "vapor ideal: P <= 500000 Pa",
+    "T dentro del dominio del par (rangos de Psat y cp, T <= 0.9 Tc)",
+    "variable de continuacion: x del liquido (no hay continuacion por longitud de arco: un pliegue en x se declararia, no se sigue)"
+   ]
+  },
+  {
+   "modelo": {
+    "id": "nrtl-chemsep",
+    "version": "1"
+   },
+   "operaciones": [
+    "Txy",
+    "Pxy"
+   ],
+   "fases": [
+    "liquido",
+    "vapor"
+   ],
+   "componentesCAS": [
+    "7732-18-5",
+    "64-17-5",
+    "71-43-2",
+    "108-88-3",
+    "71-36-3",
+    "141-78-6",
+    "67-56-1",
+    "67-64-1"
+   ],
+   "dominio": {
+    "T": [
+     159.05,
+     582.615
+    ],
+    "P": [
+     100.0,
+     500000.0
+    ]
+   },
+   "pares": [
+    {
+     "componentesCAS": [
+      "7732-18-5",
+      "64-17-5"
+     ],
+     "evidencia": "contrastada",
+     "procedencia": "ChemSep NRTL (thermo IPDB)"
+    },
+    {
+     "componentesCAS": [
+      "7732-18-5",
+      "71-36-3"
+     ],
+     "evidencia": "cualitativa",
+     "procedencia": "ChemSep NRTL (thermo IPDB)"
+    },
+    {
+     "componentesCAS": [
+      "7732-18-5",
+      "141-78-6"
+     ],
+     "evidencia": "cualitativa",
+     "procedencia": "ChemSep NRTL (thermo IPDB)"
+    },
+    {
+     "componentesCAS": [
+      "7732-18-5",
+      "67-56-1"
+     ],
+     "evidencia": "cualitativa",
+     "procedencia": "ChemSep NRTL (thermo IPDB)"
+    },
+    {
+     "componentesCAS": [
+      "7732-18-5",
+      "67-64-1"
+     ],
+     "evidencia": "cualitativa",
+     "procedencia": "ChemSep NRTL (thermo IPDB)"
+    },
+    {
+     "componentesCAS": [
+      "64-17-5",
+      "71-43-2"
+     ],
+     "evidencia": "cualitativa",
+     "procedencia": "ChemSep NRTL (thermo IPDB)"
+    },
+    {
+     "componentesCAS": [
+      "64-17-5",
+      "108-88-3"
+     ],
+     "evidencia": "cualitativa",
+     "procedencia": "ChemSep NRTL (thermo IPDB)"
+    },
+    {
+     "componentesCAS": [
+      "64-17-5",
+      "141-78-6"
+     ],
+     "evidencia": "cualitativa",
+     "procedencia": "ChemSep NRTL (thermo IPDB)"
+    },
+    {
+     "componentesCAS": [
+      "64-17-5",
+      "67-56-1"
+     ],
+     "evidencia": "cualitativa",
+     "procedencia": "ChemSep NRTL (thermo IPDB)"
+    },
+    {
+     "componentesCAS": [
+      "64-17-5",
+      "67-64-1"
+     ],
+     "evidencia": "cualitativa",
+     "procedencia": "ChemSep NRTL (thermo IPDB)"
+    },
+    {
+     "componentesCAS": [
+      "71-43-2",
+      "108-88-3"
+     ],
+     "evidencia": "cualitativa",
+     "procedencia": "ChemSep NRTL (thermo IPDB)"
+    },
+    {
+     "componentesCAS": [
+      "71-43-2",
+      "67-56-1"
+     ],
+     "evidencia": "cualitativa",
+     "procedencia": "ChemSep NRTL (thermo IPDB)"
+    },
+    {
+     "componentesCAS": [
+      "71-43-2",
+      "67-64-1"
+     ],
+     "evidencia": "cualitativa",
+     "procedencia": "ChemSep NRTL (thermo IPDB)"
+    },
+    {
+     "componentesCAS": [
+      "108-88-3",
+      "67-56-1"
+     ],
+     "evidencia": "cualitativa",
+     "procedencia": "ChemSep NRTL (thermo IPDB)"
+    },
+    {
+     "componentesCAS": [
+      "108-88-3",
+      "67-64-1"
+     ],
+     "evidencia": "cualitativa",
+     "procedencia": "ChemSep NRTL (thermo IPDB)"
+    },
+    {
+     "componentesCAS": [
+      "71-36-3",
+      "67-56-1"
+     ],
+     "evidencia": "cualitativa",
+     "procedencia": "ChemSep NRTL (thermo IPDB)"
+    },
+    {
+     "componentesCAS": [
+      "141-78-6",
+      "67-56-1"
+     ],
+     "evidencia": "cualitativa",
+     "procedencia": "ChemSep NRTL (thermo IPDB)"
+    },
+    {
+     "componentesCAS": [
+      "67-56-1",
+      "67-64-1"
+     ],
+     "evidencia": "cualitativa",
+     "procedencia": "ChemSep NRTL (thermo IPDB)"
+    }
+   ],
+   "combinacionesDetectadas": [
+    "liquido_vapor (ramas y segmentos certificados)",
+    "azeotropo (x = y refinado)",
+    "encuentro_otra_fase (liquido competidor identificado; LL/LLV no se traza)",
+    "limite_dominio",
+    "extremo_puro"
+   ],
+   "limites": [
+    "vapor ideal: P <= 500000 Pa",
+    "T dentro del dominio del par (rangos de Psat y cp, T <= 0.9 Tc)",
+    "variable de continuacion: x del liquido (no hay continuacion por longitud de arco: un pliegue en x se declararia, no se sigue)"
+   ]
+  },
+  {
+   "modelo": {
+    "id": "nrtl-lle-agua-butanol",
+    "version": "1"
+   },
+   "operaciones": [
+    "Txy",
+    "Pxy"
+   ],
+   "fases": [
+    "liquido",
+    "vapor"
+   ],
+   "componentesCAS": [
+    "7732-18-5",
+    "71-36-3"
+   ],
+   "dominio": {
+    "T": [
+     293.0,
+     373.0
+    ],
+    "P": [
+     100.0,
+     500000.0
+    ]
+   },
+   "pares": [
+    {
+     "componentesCAS": [
+      "7732-18-5",
+      "71-36-3"
+     ],
+     "evidencia": "contrastada",
+     "procedencia": "ajuste propio a IUPAC-NIST SDS vol. 15 (Hefter 1984), valores (R) de solubilidad mutua 293-373 K; tests/ajuste_nrtl_lle_agua_butanol.py"
+    }
+   ],
+   "combinacionesDetectadas": [
+    "liquido_vapor (ramas y segmentos certificados)",
+    "azeotropo (x = y refinado)",
+    "encuentro_otra_fase (liquido competidor identificado; LL/LLV no se traza)",
+    "limite_dominio",
+    "extremo_puro"
+   ],
+   "limites": [
+    "vapor ideal: P <= 500000 Pa",
+    "T dentro del dominio del par (rangos de Psat y cp, T <= 0.9 Tc)",
+    "variable de continuacion: x del liquido (no hay continuacion por longitud de arco: un pliegue en x se declararia, no se sigue)"
+   ]
+  },
+  {
+   "coberturaGrupos": {
+    "tipo": "contribucion_de_grupos",
+    "variante": "original",
+    "datos": {
+     "variante": "original",
+     "fuente_interacciones": "thermo 0.6.1: 'UNIFAC original interaction parameters.tsv' (parametros publicados por DDBST, tal como los distribuye thermo)",
+     "sha256_interacciones": "2599fa3aaf70c47f02bf207eba6f28883403c151d55b39f2e2f55970105af70b",
+     "fuente_asignaciones": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC)",
+     "sha256_asignaciones": "2ce711b99d8295331fde045b417ad6a4e8e8543e3e77bd5c4589c44915d9ece9",
+     "fuente_subgrupos": "thermo 0.6.1: UFSG"
+    },
+    "especies": [
+     {
+      "cas": "7732-18-5",
+      "subgrupos": [
+       {
+        "id": 16,
+        "nombre": "H2O",
+        "grupoPrincipal": 7,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC)"
+     },
+     {
+      "cas": "64-17-5",
+      "subgrupos": [
+       {
+        "id": 1,
+        "nombre": "CH3",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 2,
+        "nombre": "CH2",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 14,
+        "nombre": "OH",
+        "grupoPrincipal": 5,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC)"
+     },
+     {
+      "cas": "71-43-2",
+      "subgrupos": [
+       {
+        "id": 9,
+        "nombre": "ACH",
+        "grupoPrincipal": 3,
+        "cuenta": 6
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC)"
+     },
+     {
+      "cas": "108-88-3",
+      "subgrupos": [
+       {
+        "id": 9,
+        "nombre": "ACH",
+        "grupoPrincipal": 3,
+        "cuenta": 5
+       },
+       {
+        "id": 11,
+        "nombre": "ACCH3",
+        "grupoPrincipal": 4,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC)"
+     },
+     {
+      "cas": "71-36-3",
+      "subgrupos": [
+       {
+        "id": 1,
+        "nombre": "CH3",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 2,
+        "nombre": "CH2",
+        "grupoPrincipal": 1,
+        "cuenta": 3
+       },
+       {
+        "id": 14,
+        "nombre": "OH",
+        "grupoPrincipal": 5,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC)"
+     },
+     {
+      "cas": "141-78-6",
+      "subgrupos": [
+       {
+        "id": 1,
+        "nombre": "CH3",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 2,
+        "nombre": "CH2",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 21,
+        "nombre": "CH3COO",
+        "grupoPrincipal": 11,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC)"
+     },
+     {
+      "cas": "67-56-1",
+      "subgrupos": [
+       {
+        "id": 15,
+        "nombre": "CH3OH",
+        "grupoPrincipal": 6,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC)"
+     },
+     {
+      "cas": "67-64-1",
+      "subgrupos": [
+       {
+        "id": 1,
+        "nombre": "CH3",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 18,
+        "nombre": "CH3CO",
+        "grupoPrincipal": 9,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC)"
+     }
+    ],
+    "especiesSinAsignacion": [],
+    "interaccionesDirigidasFaltantes": [],
+    "nota": "cualquier subconjunto de 'especies' esta cubierto si 'interaccionesDirigidasFaltantes' esta vacia; no se publican pares moleculares porque el modelo no los usa"
+   },
+   "modelo": {
+    "id": "unifac-original-public",
+    "version": "1"
+   },
+   "operaciones": [
+    "Txy",
+    "Pxy"
+   ],
+   "fases": [
+    "liquido",
+    "vapor"
+   ],
+   "componentesCAS": [
+    "7732-18-5",
+    "64-17-5",
+    "71-43-2",
+    "108-88-3",
+    "71-36-3",
+    "141-78-6",
+    "67-56-1",
+    "67-64-1"
+   ],
+   "dominio": {
+    "T": [
+     159.05,
+     582.615
+    ],
+    "P": [
+     100.0,
+     500000.0
+    ]
+   },
+   "pares": null,
+   "combinacionesDetectadas": [
+    "liquido_vapor (ramas y segmentos certificados)",
+    "azeotropo (x = y refinado)",
+    "encuentro_otra_fase (liquido competidor identificado; LL/LLV no se traza)",
+    "limite_dominio",
+    "extremo_puro"
+   ],
+   "limites": [
+    "vapor ideal: P <= 500000 Pa",
+    "T dentro del dominio del par (rangos de Psat y cp, T <= 0.9 Tc)",
+    "variable de continuacion: x del liquido (no hay continuacion por longitud de arco: un pliegue en x se declararia, no se sigue)"
+   ]
+  },
+  {
+   "coberturaGrupos": {
+    "tipo": "contribucion_de_grupos",
+    "variante": "dortmund",
+    "datos": {
+     "variante": "dortmund",
+     "fuente_interacciones": "thermo 0.6.1: 'UNIFAC modified Dortmund interaction parameters.tsv' (parametros publicados por DDBST, tal como los distribuye thermo)",
+     "sha256_interacciones": "0826be336f4c7130744172f93bcebd9952a082c144d6de94c57f00b886df1c77",
+     "fuente_asignaciones": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo MODIFIED_UNIFAC)",
+     "sha256_asignaciones": "2ce711b99d8295331fde045b417ad6a4e8e8543e3e77bd5c4589c44915d9ece9",
+     "fuente_subgrupos": "thermo 0.6.1: DOUFSG"
+    },
+    "especies": [
+     {
+      "cas": "7732-18-5",
+      "subgrupos": [
+       {
+        "id": 16,
+        "nombre": "H2O",
+        "grupoPrincipal": 7,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo MODIFIED_UNIFAC)"
+     },
+     {
+      "cas": "64-17-5",
+      "subgrupos": [
+       {
+        "id": 1,
+        "nombre": "CH3",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 2,
+        "nombre": "CH2",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 14,
+        "nombre": "OH(P)",
+        "grupoPrincipal": 5,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo MODIFIED_UNIFAC)"
+     },
+     {
+      "cas": "71-43-2",
+      "subgrupos": [
+       {
+        "id": 9,
+        "nombre": "ACH",
+        "grupoPrincipal": 3,
+        "cuenta": 6
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo MODIFIED_UNIFAC)"
+     },
+     {
+      "cas": "108-88-3",
+      "subgrupos": [
+       {
+        "id": 9,
+        "nombre": "ACH",
+        "grupoPrincipal": 3,
+        "cuenta": 5
+       },
+       {
+        "id": 11,
+        "nombre": "ACCH3",
+        "grupoPrincipal": 4,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo MODIFIED_UNIFAC)"
+     },
+     {
+      "cas": "71-36-3",
+      "subgrupos": [
+       {
+        "id": 1,
+        "nombre": "CH3",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 2,
+        "nombre": "CH2",
+        "grupoPrincipal": 1,
+        "cuenta": 3
+       },
+       {
+        "id": 14,
+        "nombre": "OH(P)",
+        "grupoPrincipal": 5,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo MODIFIED_UNIFAC)"
+     },
+     {
+      "cas": "141-78-6",
+      "subgrupos": [
+       {
+        "id": 1,
+        "nombre": "CH3",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 2,
+        "nombre": "CH2",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 21,
+        "nombre": "CH3COO",
+        "grupoPrincipal": 11,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo MODIFIED_UNIFAC)"
+     },
+     {
+      "cas": "67-56-1",
+      "subgrupos": [
+       {
+        "id": 15,
+        "nombre": "CH3OH",
+        "grupoPrincipal": 6,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo MODIFIED_UNIFAC)"
+     },
+     {
+      "cas": "67-64-1",
+      "subgrupos": [
+       {
+        "id": 1,
+        "nombre": "CH3",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 18,
+        "nombre": "CH3CO",
+        "grupoPrincipal": 9,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo MODIFIED_UNIFAC)"
+     }
+    ],
+    "especiesSinAsignacion": [],
+    "interaccionesDirigidasFaltantes": [],
+    "nota": "cualquier subconjunto de 'especies' esta cubierto si 'interaccionesDirigidasFaltantes' esta vacia; no se publican pares moleculares porque el modelo no los usa"
+   },
+   "modelo": {
+    "id": "unifac-dortmund-public",
+    "version": "1"
+   },
+   "operaciones": [
+    "Txy",
+    "Pxy"
+   ],
+   "fases": [
+    "liquido",
+    "vapor"
+   ],
+   "componentesCAS": [
+    "7732-18-5",
+    "64-17-5",
+    "71-43-2",
+    "108-88-3",
+    "71-36-3",
+    "141-78-6",
+    "67-56-1",
+    "67-64-1"
+   ],
+   "dominio": {
+    "T": [
+     159.05,
+     582.615
+    ],
+    "P": [
+     100.0,
+     500000.0
+    ]
+   },
+   "pares": null,
+   "combinacionesDetectadas": [
+    "liquido_vapor (ramas y segmentos certificados)",
+    "azeotropo (x = y refinado)",
+    "encuentro_otra_fase (liquido competidor identificado; LL/LLV no se traza)",
+    "limite_dominio",
+    "extremo_puro"
+   ],
+   "limites": [
+    "vapor ideal: P <= 500000 Pa",
+    "T dentro del dominio del par (rangos de Psat y cp, T <= 0.9 Tc)",
+    "variable de continuacion: x del liquido (no hay continuacion por longitud de arco: un pliegue en x se declararia, no se sigue)"
+   ]
+  },
+  {
+   "coberturaGrupos": {
+    "tipo": "contribucion_de_grupos",
+    "variante": "lle",
+    "datos": {
+     "variante": "lle",
+     "fuente_interacciones": "thermo 0.6.1: 'UNIFAC LLE interaction parameters.tsv' (parametros publicados por DDBST, tal como los distribuye thermo)",
+     "sha256_interacciones": "515d115c4e542edf750c21556dae148d2d84865f681a414c9613a7a6e9c3d7f9",
+     "fuente_asignaciones": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC) traducida a LLEUFSG por nombre de subgrupo con R y Q identicos",
+     "sha256_asignaciones": "2ce711b99d8295331fde045b417ad6a4e8e8543e3e77bd5c4589c44915d9ece9",
+     "fuente_subgrupos": "thermo 0.6.1: LLEUFSG",
+     "rango_T_datos": [
+      283.15,
+      313.15
+     ],
+     "fuente_tabla": "Magnussen, Rasmussen y Fredenslund, Ind. Eng. Chem. Process Des. Dev. 20 (1981) 331-339, doi:10.1021/i200013a024 (ELL, 10-40 C)"
+    },
+    "especies": [
+     {
+      "cas": "7732-18-5",
+      "subgrupos": [
+       {
+        "id": 17,
+        "nombre": "H2O",
+        "grupoPrincipal": 8,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC) traducida a LLEUFSG por nombre de subgrupo con R y Q identicos"
+     },
+     {
+      "cas": "64-17-5",
+      "subgrupos": [
+       {
+        "id": 1,
+        "nombre": "CH3",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 2,
+        "nombre": "CH2",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 14,
+        "nombre": "OH",
+        "grupoPrincipal": 5,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC) traducida a LLEUFSG por nombre de subgrupo con R y Q identicos"
+     },
+     {
+      "cas": "71-43-2",
+      "subgrupos": [
+       {
+        "id": 9,
+        "nombre": "ACH",
+        "grupoPrincipal": 3,
+        "cuenta": 6
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC) traducida a LLEUFSG por nombre de subgrupo con R y Q identicos"
+     },
+     {
+      "cas": "108-88-3",
+      "subgrupos": [
+       {
+        "id": 9,
+        "nombre": "ACH",
+        "grupoPrincipal": 3,
+        "cuenta": 5
+       },
+       {
+        "id": 11,
+        "nombre": "ACCH3",
+        "grupoPrincipal": 4,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC) traducida a LLEUFSG por nombre de subgrupo con R y Q identicos"
+     },
+     {
+      "cas": "71-36-3",
+      "subgrupos": [
+       {
+        "id": 1,
+        "nombre": "CH3",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 2,
+        "nombre": "CH2",
+        "grupoPrincipal": 1,
+        "cuenta": 3
+       },
+       {
+        "id": 14,
+        "nombre": "OH",
+        "grupoPrincipal": 5,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC) traducida a LLEUFSG por nombre de subgrupo con R y Q identicos"
+     },
+     {
+      "cas": "141-78-6",
+      "subgrupos": [
+       {
+        "id": 1,
+        "nombre": "CH3",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 2,
+        "nombre": "CH2",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 25,
+        "nombre": "CH3COO",
+        "grupoPrincipal": 14,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC) traducida a LLEUFSG por nombre de subgrupo con R y Q identicos"
+     },
+     {
+      "cas": "67-64-1",
+      "subgrupos": [
+       {
+        "id": 1,
+        "nombre": "CH3",
+        "grupoPrincipal": 1,
+        "cuenta": 1
+       },
+       {
+        "id": 19,
+        "nombre": "CH3CO",
+        "grupoPrincipal": 10,
+        "cuenta": 1
+       }
+      ],
+      "procedencia": "thermo 0.6.1: 'DDBST UNIFAC assignments.tsv' (modelo UNIFAC) traducida a LLEUFSG por nombre de subgrupo con R y Q identicos"
+     }
+    ],
+    "especiesSinAsignacion": [
+     "67-56-1"
+    ],
+    "interaccionesDirigidasFaltantes": [],
+    "nota": "cualquier subconjunto de 'especies' esta cubierto si 'interaccionesDirigidasFaltantes' esta vacia; no se publican pares moleculares porque el modelo no los usa"
+   },
+   "modelo": {
+    "id": "unifac-original-lle-public",
+    "version": "1"
+   },
+   "operaciones": [
+    "Txy",
+    "Pxy"
+   ],
+   "fases": [
+    "liquido",
+    "vapor"
+   ],
+   "componentesCAS": [
+    "7732-18-5",
+    "64-17-5",
+    "71-43-2",
+    "108-88-3",
+    "71-36-3",
+    "141-78-6",
+    "67-64-1"
+   ],
+   "dominio": {
+    "T": [
+     283.15,
+     313.15
+    ],
+    "P": [
+     100.0,
+     500000.0
+    ]
+   },
+   "pares": null,
+   "combinacionesDetectadas": [
+    "liquido_vapor (ramas y segmentos certificados)",
+    "azeotropo (x = y refinado)",
+    "encuentro_otra_fase (liquido competidor identificado; LL/LLV no se traza)",
+    "limite_dominio",
+    "extremo_puro"
+   ],
+   "limites": [
+    "vapor ideal: P <= 500000 Pa",
+    "T dentro del dominio del par (rangos de Psat y cp, T <= 0.9 Tc)",
+    "variable de continuacion: x del liquido (no hay continuacion por longitud de arco: un pliegue en x se declararia, no se sigue)"
+   ]
+  }
+ ],
+ "noSoportado": [
+  {
+   "elemento": "mas de dos componentes",
+   "motivo": "el trazador inicial es binario; no se elimina ni renormaliza un tercer componente"
+  },
+  {
+   "elemento": "diagramas LL, LLV y SLE completos",
+   "motivo": "se detecta y explica el encuentro con otra fase; trazar sus regiones queda para otra entrega"
+  },
+  {
+   "elemento": "agua-iapws95 y agua-iapws95-hielo-ih",
+   "motivo": "un solo componente: su diagrama es P-T (GET /motor/termodinamica/diagrama para el hielo)"
+  },
+  {
+   "elemento": "region critica",
+   "motivo": "excluida por los paquetes (T <= 0.9 Tc)"
+  },
+  {
+   "elemento": "superficies 3D y cortes multicomponente",
+   "motivo": "fuera de esta entrega"
+  }
+ ]
+}

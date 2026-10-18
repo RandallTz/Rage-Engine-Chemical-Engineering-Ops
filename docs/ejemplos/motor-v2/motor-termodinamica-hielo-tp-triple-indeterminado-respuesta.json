@@ -1,0 +1,28 @@
+{
+ "revision": 1,
+ "solicitudId": "ej-hielo-triple",
+ "modelo": {
+  "id": "agua-iapws95-hielo-ih",
+  "version": "1"
+ },
+ "estado": "incompleto",
+ "evaluacion": null,
+ "diagnosticos": [
+  {
+   "codigo": "MOTOR_ESTADO_SATURACION_INDETERMINADA",
+   "mensaje": "T = 273.16 K, P = 611.654771 Pa es el punto triple del cierre (273.16 K, 611.654771 Pa): coexisten hielo Ih, líquido y vapor y T, P no determinan cuánto hay de cada uno. Hace falta U y V (masa, energía y volumen fijan las tres fracciones); no se elige un reparto por omisión.",
+   "ruta": "declaracion.especificacion",
+   "componenteIds": [
+    1
+   ],
+   "propietarioId": "ejemplos",
+   "alternativas": [
+    [
+     "U",
+     "V",
+     "cantidades"
+    ]
+   ]
+  }
+ ]
+}

@@ -1,0 +1,22 @@
+{
+ "revision": 1,
+ "solicitudId": "lm",
+ "modelo": {
+  "id": "unifac-original-lle-public",
+  "version": "1"
+ },
+ "estado": "no_soportado",
+ "evaluacion": null,
+ "diagnosticos": [
+  {
+   "codigo": "MOTOR_ESTADO_UNIFAC_ASIGNACION_AUSENTE",
+   "mensaje": "Sin asignacion de grupos UNIFAC (lle) para 67-56-1: el subgrupo original 15 (CH3OH) no existe en la tabla LLE con los mismos R y Q.",
+   "ruta": "componentes",
+   "componenteIds": [
+    1,
+    2
+   ],
+   "propietarioId": "ejemplos"
+  }
+ ]
+}

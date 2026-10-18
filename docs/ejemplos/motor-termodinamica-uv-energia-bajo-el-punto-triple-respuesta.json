@@ -1,0 +1,21 @@
+{
+  "revision": 1,
+  "solicitudId": "ejemplo-uv-energia-bajo-el-punto-triple",
+  "modelo": {
+    "id": "agua-iapws95",
+    "version": "1"
+  },
+  "estado": "no_soportado",
+  "evaluacion": null,
+  "diagnosticos": [
+    {
+      "codigo": "MOTOR_ESTADO_FUERA_DE_DOMINIO",
+      "mensaje": "u = -50000 J/kg con v = 0.001 m3/kg exige T < 273.16 K: posible hielo, fuera del dominio.",
+      "ruta": "declaracion.especificacion.U",
+      "componenteIds": [
+        1
+      ],
+      "propietarioId": "volumen:deposito"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+ "revision": 1,
+ "solicitudId": "hex",
+ "modelo": {
+  "id": "unifac-original-public",
+  "version": "1"
+ },
+ "estado": "no_soportado",
+ "evaluacion": null,
+ "diagnosticos": [
+  {
+   "codigo": "MOTOR_ESTADO_COMPONENTE_NO_SOPORTADO",
+   "mensaje": "El paquete unifac-original-public no tiene datos de componente puro para 110-54-3.",
+   "ruta": "componentes.2.identidadQuimica.cas",
+   "componenteIds": [
+    2
+   ],
+   "propietarioId": "ejemplos"
+  }
+ ]
+}

@@ -1,0 +1,47 @@
+{
+ "revision": 1,
+ "solicitudId": "ej-tres",
+ "componentes": [
+  {
+   "id": 1,
+   "nombre": "etanol",
+   "simbolo": "E",
+   "identidadQuimica": {
+    "cas": "64-17-5"
+   }
+  },
+  {
+   "id": 2,
+   "nombre": "agua",
+   "simbolo": "W",
+   "identidadQuimica": {
+    "cas": "7732-18-5"
+   }
+  },
+  {
+   "id": 3,
+   "nombre": "metanol",
+   "simbolo": "M",
+   "identidadQuimica": {
+    "cas": "67-56-1"
+   }
+  }
+ ],
+ "modelo": {
+  "id": "nrtl-chemsep",
+  "version": "1"
+ },
+ "componenteEjeId": 1,
+ "corte": {
+  "tipo": "Txy",
+  "P": {
+   "valor": 101325,
+   "unidad": "Pa"
+  }
+ },
+ "intervaloComposicion": [
+  0.0,
+  1.0
+ ],
+ "resolucion": "exploratoria"
+}

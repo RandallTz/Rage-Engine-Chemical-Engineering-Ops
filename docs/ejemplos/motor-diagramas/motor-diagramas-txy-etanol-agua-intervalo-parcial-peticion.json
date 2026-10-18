@@ -1,0 +1,39 @@
+{
+ "revision": 1,
+ "solicitudId": "ej-ew-int",
+ "componentes": [
+  {
+   "id": 1,
+   "nombre": "etanol",
+   "simbolo": "et",
+   "identidadQuimica": {
+    "cas": "64-17-5"
+   }
+  },
+  {
+   "id": 2,
+   "nombre": "agua",
+   "simbolo": "ag",
+   "identidadQuimica": {
+    "cas": "7732-18-5"
+   }
+  }
+ ],
+ "modelo": {
+  "id": "nrtl-chemsep",
+  "version": "1"
+ },
+ "componenteEjeId": 2,
+ "corte": {
+  "tipo": "Txy",
+  "P": {
+   "valor": 101325,
+   "unidad": "Pa"
+  }
+ },
+ "intervaloComposicion": [
+  0.05,
+  0.6
+ ],
+ "resolucion": "exploratoria"
+}
