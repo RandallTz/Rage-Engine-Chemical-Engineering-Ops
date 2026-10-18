@@ -1,5 +1,7 @@
 # Simulador de destilación reactiva
 
+> **Estructura del proyecto y reglas de trabajo:** [ARQUITECTURA_MOTOR.md](ARQUITECTURA_MOTOR.md) (motor de motores, modelo común, termodinámica siempre presente). Agentes: empezar por [AGENTS.md](AGENTS.md).
+
 Simulador de procesos **orientado a ecuaciones** (EO) para destilación,
 reacción y separación líquido-vapor. No es un script que calcula en una
 dirección fija: cada equipo aporta ecuaciones a un pool compartido y el
