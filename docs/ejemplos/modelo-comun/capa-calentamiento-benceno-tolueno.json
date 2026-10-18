@@ -1,0 +1,594 @@
+{
+ "modelo": {
+  "formato": "rage.modelo",
+  "version": 0,
+  "id": "guia-calentamiento-benceno-tolueno",
+  "nombre": "Mezcla benceno-tolueno calentada hasta hervir",
+  "componentes": [
+   {
+    "id": 1,
+    "nombre": "benceno",
+    "simbolo": "B",
+    "identidadQuimica": {
+     "cas": "71-43-2"
+    }
+   },
+   {
+    "id": 2,
+    "nombre": "tolueno",
+    "simbolo": "T",
+    "identidadQuimica": {
+     "cas": "108-88-3"
+    }
+   }
+  ],
+  "termodinamica": {
+   "paquetes": [
+    {
+     "id": "p",
+     "modelo": {
+      "id": "mezcla-ideal",
+      "version": "1"
+     }
+    }
+   ]
+  },
+  "volumenes": [
+   {
+    "id": "A",
+    "componenteIds": [
+     1,
+     2
+    ],
+    "balances": {
+     "materia": true,
+     "energia": true,
+     "momento": false
+    },
+    "supuestos": {
+     "materia": {
+      "campo": {
+       "sinReaccion": true,
+       "sinDifusion": false,
+       "sinConveccion": false,
+       "estacionario": false,
+       "difusion": "flujo"
+      },
+      "coordenadas": "cartesianas",
+      "expandida": false,
+      "vista": "cantidad",
+      "uniforme": false,
+      "fija": false,
+      "sinAcumulacion": false,
+      "invariantes": [
+       false,
+       false,
+       false
+      ],
+      "generacionUniforme": false,
+      "consumoUniforme": false,
+      "restoImpermeable": true,
+      "cantidadVolumen": false,
+      "densidadMediaConstante": false,
+      "densidadComunPuertos": false,
+      "expandirProducto": false
+     },
+     "energia": {
+      "forma": "total",
+      "trabajoTotalHeredado": false,
+      "separarPresion": true,
+      "entalpia": true,
+      "sinCinetica": true,
+      "sinTrabajoViscoso": true,
+      "sinFuerzasVolumen": true,
+      "sinFuenteVolumetrica": true,
+      "sinConduccionLocal": false,
+      "adiabatico": false,
+      "estacionario": false,
+      "sinAcumulacionTotal": false,
+      "uniforme": true,
+      "monofasico": false,
+      "sinCambioFase": false,
+      "densidadConstante": false,
+      "presionUniforme": true,
+      "presionPrescrita": true,
+      "modelo": "sin_declarar"
+     }
+    },
+    "frontera": {
+     "tipo": "presion_prescrita",
+     "presionId": "volumen.A.P"
+    },
+    "inicial": {
+     "cantidades": {
+      "base": "molar",
+      "datoIds": {
+       "1": "volumen.A.n0.1",
+       "2": "volumen.A.n0.2"
+      }
+     },
+     "energia": {
+      "tipo": "T",
+      "datoId": "volumen.A.T0"
+     }
+    },
+    "termodinamica": {
+     "tipo": "equilibrio",
+     "paqueteId": "p",
+     "politica": {
+      "cantidad": "sin_restriccion",
+      "cambioInterno": "permitido",
+      "evaluacion": "equilibrio_estable"
+     }
+    }
+   }
+  ],
+  "corrientes": [],
+  "intercambios": [
+   {
+    "id": "q",
+    "desde": null,
+    "hasta": "A",
+    "ley": {
+     "tipo": "impuesto",
+     "potenciaId": "calor.q.Q"
+    },
+    "temperaturaFronteraId": "calor.q.Tf"
+   }
+  ],
+  "datos": {
+   "estudio.tf": {
+    "magnitud": "tiempo",
+    "funcion": "estudio",
+    "declaracion": {
+     "texto": "500",
+     "unidad": "s"
+    },
+    "origen": {
+     "propietarioId": "estudio",
+     "ruta": "/guia"
+    }
+   },
+   "volumen.A.n0.1": {
+    "magnitud": "cantidad",
+    "funcion": "inicial",
+    "declaracion": {
+     "texto": "0.5",
+     "unidad": "mol"
+    },
+    "origen": {
+     "propietarioId": "volumen:A",
+     "ruta": "/guia"
+    }
+   },
+   "volumen.A.n0.2": {
+    "magnitud": "cantidad",
+    "funcion": "inicial",
+    "declaracion": {
+     "texto": "0.5",
+     "unidad": "mol"
+    },
+    "origen": {
+     "propietarioId": "volumen:A",
+     "ruta": "/guia"
+    }
+   },
+   "volumen.A.T0": {
+    "magnitud": "temperatura",
+    "funcion": "inicial",
+    "declaracion": {
+     "texto": "330",
+     "unidad": "K"
+    },
+    "origen": {
+     "propietarioId": "volumen:A",
+     "ruta": "/guia"
+    }
+   },
+   "volumen.A.P": {
+    "magnitud": "presion",
+    "funcion": "frontera",
+    "declaracion": {
+     "texto": "101325",
+     "unidad": "Pa"
+    },
+    "origen": {
+     "propietarioId": "volumen:A",
+     "ruta": "/guia"
+    }
+   },
+   "calor.q.Q": {
+    "magnitud": "potencia",
+    "funcion": "frontera",
+    "declaracion": {
+     "texto": "100",
+     "unidad": "W"
+    },
+    "origen": {
+     "propietarioId": "calor:q",
+     "ruta": "/guia"
+    }
+   },
+   "calor.q.Tf": {
+    "magnitud": "temperatura",
+    "funcion": "frontera",
+    "declaracion": {
+     "texto": "600",
+     "unidad": "K"
+    },
+    "origen": {
+     "propietarioId": "calor:q",
+     "ruta": "/guia"
+    }
+   }
+  },
+  "matematico": null,
+  "estudio": {
+   "tipo": "temporal",
+   "tiempoId": "estudio.tf",
+   "metodoSolicitado": "rk45",
+   "muestras": 26,
+   "rtol": 1e-08,
+   "atol": {
+    "cantidad": 1e-10,
+    "energia": 1e-06
+   }
+  },
+  "motores": {},
+  "procedencia": {
+   "tipo": "nuevo",
+   "solicitudId": "guia-calentamiento",
+   "revision": 2
+  }
+ },
+ "referencias": {
+  "T_burbuja_K": 365.2747844047677,
+  "T_rocio_K": 371.91943788420014,
+  "T_burbuja_Antoine_K": 365.26171982536397,
+  "T_rocio_Antoine_K": 371.9227941074897
+ },
+ "eventos": [
+  {
+   "codigo": "aparicion_fase",
+   "tiempo": 51.80583211050457,
+   "faseIds": [
+    "vapor-1"
+   ]
+  },
+  {
+   "codigo": "desaparicion_fase",
+   "tiempo": 393.0264737686266,
+   "faseIds": [
+    "liquido-1"
+   ]
+  }
+ ],
+ "traza": [
+  {
+   "t": 0.0,
+   "T": 329.99999999999994,
+   "presentes": [
+    "liquido-1"
+   ],
+   "betaVapor": 0.0,
+   "tmVapor": 1.1662780227082086,
+   "tmLiquido": 0.0,
+   "complementariedad": 0.0
+  },
+  {
+   "t": 20.0,
+   "T": 343.7060442836619,
+   "presentes": [
+    "liquido-1"
+   ],
+   "betaVapor": 0.0,
+   "tmVapor": 0.6795645570067954,
+   "tmLiquido": 0.0,
+   "complementariedad": 0.0
+  },
+  {
+   "t": 40.0,
+   "T": 357.303227045363,
+   "presentes": [
+    "liquido-1"
+   ],
+   "betaVapor": 0.0,
+   "tmVapor": 0.23994125085050882,
+   "tmLiquido": 0.0,
+   "complementariedad": 0.0
+  },
+  {
+   "t": 51.80583211050457,
+   "T": 365.274784412999,
+   "presentes": [
+    "vapor-1",
+    "liquido-1"
+   ],
+   "betaVapor": 1.3301745479203298e-09,
+   "tmVapor": 0.0,
+   "tmLiquido": 0.0,
+   "complementariedad": 0.0
+  },
+  {
+   "t": 60.0,
+   "T": 365.4271816940455,
+   "presentes": [
+    "vapor-1",
+    "liquido-1"
+   ],
+   "betaVapor": 0.024478354485714008,
+   "tmVapor": 0.0,
+   "tmLiquido": 0.0,
+   "complementariedad": 0.0
+  },
+  {
+   "t": 80.0,
+   "T": 365.8059154885281,
+   "presentes": [
+    "vapor-1",
+    "liquido-1"
+   ],
+   "betaVapor": 0.08411590778776108,
+   "tmVapor": 0.0,
+   "tmLiquido": 0.0,
+   "complementariedad": 0.0
+  },
+  {
+   "t": 100.0,
+   "T": 366.19340489712425,
+   "presentes": [
+    "vapor-1",
+    "liquido-1"
+   ],
+   "betaVapor": 0.1435987595489152,
+   "tmVapor": 0.0,
+   "tmLiquido": 0.0,
+   "complementariedad": 0.0
+  },
+  {
+   "t": 120.0,
+   "T": 366.5884320639595,
+   "presentes": [
+    "vapor-1",
+    "liquido-1"
+   ],
+   "betaVapor": 0.20292665225188555,
+   "tmVapor": 0.0,
+   "tmLiquido": 0.0,
+   "complementariedad": 0.0
+  },
+  {
+   "t": 140.0,
+   "T": 366.9896026435905,
+   "presentes": [
+    "vapor-1",
+    "liquido-1"
+   ],
+   "betaVapor": 0.26210077611274263,
+   "tmVapor": 0.0,
+   "tmLiquido": 0.0,
+   "complementariedad": 0.0
+  },
+  {
+   "t": 160.0,
+   "T": 367.3953719700554,
+   "presentes": [
+    "vapor-1",
+    "liquido-1"
+   ],
+   "betaVapor": 0.32112381945252066,
+   "tmVapor": 0.0,
+   "tmLiquido": 0.0,
+   "complementariedad": 0.0
+  },
+  {
+   "t": 180.0,
+   "T": 367.8040806960924,
+   "presentes": [
+    "vapor-1",
+    "liquido-1"
+   ],
+   "betaVapor": 0.3799999555963861,
+   "tmVapor": 0.0,
+   "tmLiquido": 0.0,
+   "complementariedad": 0.0
+  },
+  {
+   "t": 200.0,
+   "T": 368.21399804192674,
+   "presentes": [
+    "vapor-1",
+    "liquido-1"
+   ],
+   "betaVapor": 0.43873476273503065,
+   "tmVapor": 0.0,
+   "tmLiquido": 0.0,
+   "complementariedad": 0.0
+  },
+  {
+   "t": 220.0,
+   "T": 368.62336984201914,
+   "presentes": [
+    "vapor-1",
+    "liquido-1"
+   ],
+   "betaVapor": 0.4973350797376562,
+   "tmVapor": 0.0,
+   "tmLiquido": 0.0,
+   "complementariedad": 0.0
+  },
+  {
+   "t": 240.0,
+   "T": 369.03046795712294,
+   "presentes": [
+    "vapor-1",
+    "liquido-1"
+   ],
+   "betaVapor": 0.555808807441921,
+   "tmVapor": 0.0,
+   "tmLiquido": 0.0,
+   "complementariedad": 0.0
+  },
+  {
+   "t": 260.0,
+   "T": 369.4336374576406,
+   "presentes": [
+    "vapor-1",
+    "liquido-1"
+   ],
+   "betaVapor": 0.6141646703138125,
+   "tmVapor": 0.0,
+   "tmLiquido": 0.0,
+   "complementariedad": 0.0
+  },
+  {
+   "t": 280.0,
+   "T": 369.8313383143473,
+   "presentes": [
+    "vapor-1",
+    "liquido-1"
+   ],
+   "betaVapor": 0.6724119566418711,
+   "tmVapor": 0.0,
+   "tmLiquido": 0.0,
+   "complementariedad": 0.0
+  },
+  {
+   "t": 300.0,
+   "T": 370.2221790786253,
+   "presentes": [
+    "vapor-1",
+    "liquido-1"
+   ],
+   "betaVapor": 0.7305602561491926,
+   "tmVapor": 0.0,
+   "tmLiquido": 0.0,
+   "complementariedad": 0.0
+  },
+  {
+   "t": 320.0,
+   "T": 370.60494103821765,
+   "presentes": [
+    "vapor-1",
+    "liquido-1"
+   ],
+   "betaVapor": 0.788619212178765,
+   "tmVapor": 0.0,
+   "tmLiquido": 0.0,
+   "complementariedad": 0.0
+  },
+  {
+   "t": 340.0,
+   "T": 370.97859240282014,
+   "presentes": [
+    "vapor-1",
+    "liquido-1"
+   ],
+   "betaVapor": 0.8465983020183269,
+   "tmVapor": 0.0,
+   "tmLiquido": 0.0,
+   "complementariedad": 0.0
+  },
+  {
+   "t": 360.0,
+   "T": 371.3422930298122,
+   "presentes": [
+    "vapor-1",
+    "liquido-1"
+   ],
+   "betaVapor": 0.9045066543317932,
+   "tmVapor": 0.0,
+   "tmLiquido": 0.0,
+   "complementariedad": 0.0
+  },
+  {
+   "t": 380.0,
+   "T": 371.6953909219213,
+   "presentes": [
+    "vapor-1",
+    "liquido-1"
+   ],
+   "betaVapor": 0.9623529079316968,
+   "tmVapor": 0.0,
+   "tmLiquido": 0.0,
+   "complementariedad": 0.0
+  },
+  {
+   "t": 393.0264737686266,
+   "T": 371.9194379483552,
+   "presentes": [
+    "vapor-1"
+   ],
+   "betaVapor": 1.0,
+   "tmVapor": 0.0,
+   "tmLiquido": 1.892414845627233e-09,
+   "complementariedad": 0.0
+  },
+  {
+   "t": 400.0,
+   "T": 377.8530197502126,
+   "presentes": [
+    "vapor-1"
+   ],
+   "betaVapor": 1.0,
+   "tmVapor": 0.0,
+   "tmLiquido": 0.1717427819240458,
+   "complementariedad": 0.0
+  },
+  {
+   "t": 420.0,
+   "T": 394.3700914942793,
+   "presentes": [
+    "vapor-1"
+   ],
+   "betaVapor": 1.0,
+   "tmVapor": 0.0,
+   "tmLiquido": 0.6175613103060883,
+   "complementariedad": 0.0
+  },
+  {
+   "t": 440.0,
+   "T": 410.2212355358399,
+   "presentes": [
+    "vapor-1"
+   ],
+   "betaVapor": 1.0,
+   "tmVapor": 0.0,
+   "tmLiquido": 1.005690289324789,
+   "complementariedad": 0.0
+  },
+  {
+   "t": 460.0,
+   "T": 425.488610562367,
+   "presentes": [
+    "vapor-1"
+   ],
+   "betaVapor": 1.0,
+   "tmVapor": 0.0,
+   "tmLiquido": 1.3476073515489484,
+   "complementariedad": 0.0
+  },
+  {
+   "t": 480.0,
+   "T": 440.2400810002192,
+   "presentes": [
+    "vapor-1"
+   ],
+   "betaVapor": 1.0,
+   "tmVapor": 0.0,
+   "tmLiquido": 1.6518855927772123,
+   "complementariedad": 0.0
+  },
+  {
+   "t": 500.0,
+   "T": 454.53239531436657,
+   "presentes": [
+    "vapor-1"
+   ],
+   "betaVapor": 1.0,
+   "tmVapor": 0.0,
+   "tmLiquido": 1.9250653398616928,
+   "complementariedad": 0.0
+  }
+ ]
+}
