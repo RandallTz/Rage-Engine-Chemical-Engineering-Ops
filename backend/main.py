@@ -11,6 +11,7 @@ Documentacion automatica interactiva en /docs una vez corriendo.
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from backend.api_unidades import router as router_unidades
+from backend.api_modelo import router as router_modelo
 
 from backend.schemas import (
     ResolverColumnaRequest, ResolverColumnaResponse, EjemploPreset,
@@ -72,6 +73,7 @@ app = FastAPI(
     version="0.1.0",
 )
 app.include_router(router_unidades)
+app.include_router(router_modelo)
 
 # Abierto por ahora (sin lista de origenes fija) porque el frontend
 # todavia no tiene un dominio de despliegue definitivo -- restringir a
