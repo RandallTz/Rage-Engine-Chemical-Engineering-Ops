@@ -31,6 +31,9 @@ import { spawn } from "node:child_process";
 import { readdirSync } from "node:fs";
 
 const NECESITA = {
+  "verificar_adimensionalizacion.mjs": "logica",
+  "verificar_integracion_adimensionalizacion.mjs": "logica",
+  "verificar_capa_dimensional.mjs": "logica",
   "verificar_enlace.mjs": "logica",
   "verificar_plantillas.mjs": "api",
 };

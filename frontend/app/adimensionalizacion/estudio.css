@@ -1,0 +1,197 @@
+/* Estudio de formulaciones y piezas comunes de resultados.
+   Misma paleta que estilos.css: tinta #2d3928, texto suave #6d7b63,
+   bordes #d5dec9, fondo de tarjeta #fbfcf7, acento #425e35. */
+
+.adim :focus-visible { outline: 2px solid #5f7f4e; outline-offset: 2px; border-radius: 4px; }
+.adim .adim-button.is-primary { background: #425e35; border-color: #425e35; color: #fafbf5; }
+.adim .adim-button.is-primary:hover:not(:disabled) { background: #354b2b; }
+
+/* Pestañas */
+.adim-pestanas { display: flex; flex-wrap: nowrap; gap: 4px; overflow-x: auto; scrollbar-width: thin; border-bottom: 1px solid #d5ddca; margin: 20px 0 18px; }
+.adim-pestanas button { flex: none; border: 0; border-bottom: 2px solid transparent; background: none; padding: 10px 14px; font-size: 13px; color: #5c6852; cursor: pointer; transition: color 150ms, border-color 150ms; }
+.adim-pestanas button:hover { color: #2d3928; }
+.adim-pestanas button[aria-pressed="true"] { color: #2d3928; border-bottom-color: #425e35; font-weight: 600; }
+.adim-pestanas-mini { display: flex; gap: 6px; margin: 8px 0; }
+.adim-pestanas-mini button { border: 1px solid #d5dec9; background: #fbfcf7; border-radius: 999px; padding: 3px 10px; font-size: 12px; cursor: pointer; }
+.adim-pestanas-mini button[aria-pressed="true"] { background: #dde6d3; border-color: #718366; }
+
+/* Formulaciones */
+.adim-formas { display: flex; flex-wrap: wrap; gap: 6px; margin: 18px 0 10px; }
+.adim-forma-boton { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; border: 1px solid #d5dec9; background: #fbfcf7; border-radius: 6px; padding: 7px 11px; font-size: 13px; color: #33432b; cursor: pointer; transition: background 150ms, border-color 150ms; }
+.adim-forma-boton small { font-size: 11px; color: #7b8470; }
+.adim-forma-boton:hover { background: #f0f3e8; }
+.adim-forma-boton[aria-selected="true"] { background: #e3ebd8; border-color: #5f7f4e; }
+.adim-explicacion { margin: 6px 0 4px; font-size: 13px; color: #5d6853; max-width: 80ch; }
+.adim-explicacion summary { cursor: pointer; width: fit-content; color: #4c5d40; }
+.adim-explicacion p { margin-top: 8px; line-height: 1.7; }
+.adim-barra-resultado { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.adim-barra-resultado .adim-pestanas { flex: 1 1 360px; margin-bottom: 0; }
+
+/* Menú de exportación */
+.adim-menu { position: relative; margin-bottom: 6px; }
+.adim-menu > summary { list-style: none; cursor: pointer; }
+.adim-menu > summary::-webkit-details-marker { display: none; }
+.adim-menu-lista { position: absolute; right: 0; top: calc(100% + 4px); z-index: 20; min-width: 250px; background: #fff; border: 1px solid #d5dec9; border-radius: 8px; box-shadow: 0 8px 24px rgba(40, 52, 32, .12); padding: 6px; display: grid; }
+.adim-menu-lista button { text-align: left; border: 0; background: none; padding: 9px 10px; border-radius: 5px; font-size: 13px; color: #2d3928; cursor: pointer; }
+.adim-menu-lista button:hover { background: #eef2e6; }
+
+/* Estudio */
+.adim-estudio { margin-top: 8px; }
+.adim-valores { }
+.adim-valores-cabecera h3 { font-size: 15px; font-weight: 600; color: #2d3928; }
+.adim-valores-cabecera p { margin-top: 4px; font-size: 12px; color: #6d7b63; max-width: 80ch; line-height: 1.6; }
+.adim-valores-rejilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px 16px; margin: 14px 0; }
+.adim-valor { display: grid; gap: 4px; font-size: 12px; color: #5c6852; }
+.adim-valor-nombre { display: flex; align-items: baseline; gap: 6px; }
+.adim-valor-nombre em { font-style: normal; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: #8a5a2b; }
+.adim-valor-campos { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.adim-valor-campos input, .adim-form-linea input, .adim-form-linea select, .adim-comparador select {
+  width: 100%; min-width: 0; border: 1px solid #c6cdbd; border-radius: 5px; background: #fff; padding: 6px 8px; font-size: 13px; color: #2d3928; font-variant-numeric: tabular-nums; }
+.adim-valor-campos input:focus, .adim-form-linea input:focus { border-color: #5f7f4e; }
+.adim-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 4px; }
+.adim-estudio-vista { display: grid; gap: 4px; }
+.adim-estudio-bloque { padding: 18px 0; border-bottom: 1px solid #e3e7dc; }
+.adim-estudio-bloque:last-child { border-bottom: 0; }
+.adim-estudio-bloque h3 { font-size: 15px; font-weight: 600; color: #2d3928; margin-bottom: 8px; }
+.adim-estudio-bloque h4 { font-size: 13px; font-weight: 600; color: #3a4a31; margin: 12px 0 6px; }
+.adim-estudio-nota { font-size: 12px; color: #6d7b63; line-height: 1.6; max-width: 85ch; }
+.adim-estudio-metodo { margin-top: 10px; font-size: 11px; color: #8a9580; line-height: 1.6; max-width: 90ch; }
+.adim-etiqueta { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: #7b8470; margin-bottom: 4px; }
+.adim-estado { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; margin: 8px 0; font-size: 12px; }
+.adim-estado span { border-radius: 999px; padding: 2px 9px; font-weight: 600; background: #eef0e8; color: #4c5a42; }
+.adim-estado small { color: #6d7b63; line-height: 1.5; }
+.adim-estado.is-requiere_datos span, .adim-estado.is-no_aplicable span { background: #f3ecdc; color: #7a5a1e; }
+.adim-estado.is-no_soportado span, .adim-estado.is-no_convergente span, .adim-estado.is-rechazado span { background: #f3e2dc; color: #8a3b24; }
+.adim-estado.is-cargando span { background: #e6eef1; color: #2f5f73; }
+.adim-chips { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; padding: 0; margin: 8px 0; }
+.adim-chips li { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #d5dec9; background: #fff; border-radius: 999px; padding: 3px 12px; font-size: 12px; color: #4c5a42; }
+.adim-par { display: inline-flex; align-items: baseline; gap: 4px; margin-right: 12px; }
+
+/* Tablas */
+.adim-tabla-scroll { overflow-x: auto; margin: 8px 0; }
+.adim-tabla { width: 100%; border-collapse: collapse; font-size: 13px; color: #2d3928; }
+.adim-tabla caption { text-align: left; font-size: 12px; color: #5c6852; padding: 4px 0 8px; }
+.adim-tabla th, .adim-tabla td { border-bottom: 1px solid #e3e7dc; padding: 8px 10px; text-align: left; vertical-align: top; }
+.adim-tabla thead th { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #7b8470; font-weight: 600; }
+.adim-tabla thead th .formula-latex, .adim-etiqueta .formula-latex { text-transform: none; letter-spacing: normal; font-size: 14px; color: #2d3928; }
+.adim-tabla tbody th { font-weight: 500; color: #5c6852; white-space: nowrap; }
+.adim-tabla td .formula-latex { font-size: 15px; }
+.adim-tabla .is-num, .is-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.adim-tabla-matriz td.is-cero { color: #b6bcae; }
+.adim-nombre-clasico { display: block; font-weight: 600; color: #33432b; }
+.adim-lectura { display: block; font-size: 12px; color: #5d6853; line-height: 1.5; }
+.adim-lectura.is-secundaria { color: #8a9580; }
+.adim-marca-aviso { margin-left: 6px; font-size: 10px; color: #8a3b24; text-transform: uppercase; letter-spacing: .04em; }
+.adim-falta { font-size: 11px; color: #7a5a1e; }
+.adim-magnitudes ul { list-style: none; padding: 0; margin: 4px 0; display: grid; gap: 2px; max-width: 520px; }
+.adim-magnitudes li { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; padding: 3px 0; border-bottom: 1px dotted #e3e7dc; }
+
+/* Regímenes */
+.adim-balance { border: 1px solid #e0e5d8; border-radius: 8px; padding: 12px 16px; margin: 10px 0; background: #fff; }
+.adim-balance-columnas { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.adim-balance-columnas ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; }
+.adim-balance-columnas li { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; }
+.adim-reducida { margin-top: 10px; padding: 8px 12px; background: #f4f6ee; border-radius: 6px; overflow-x: auto; }
+.adim-capa { margin-top: 10px; padding: 10px 12px; border-left: 3px solid #8aa078; background: #f6f8f1; font-size: 13px; line-height: 1.6; color: #33432b; }
+.adim-capa.is-perturbacion_singular { border-left-color: #8a5a2b; background: #faf5ec; }
+.adim-capa p + p { margin-top: 6px; }
+.adim-detalle { margin-top: 8px; font-size: 12px; color: #5d6853; }
+.adim-detalle summary { cursor: pointer; width: fit-content; }
+.adim-detalle ul { margin: 6px 0 0 16px; display: grid; gap: 4px; }
+
+/* Estabilidad y continuación */
+.adim-estado-homogeneo { border: 1px solid #e0e5d8; border-radius: 8px; padding: 12px 16px; margin: 10px 0; background: #fff; font-size: 13px; line-height: 1.6; }
+.adim-estado-homogeneo h4 { margin-top: 0; }
+.adim-sello { border-radius: 4px; padding: 1px 7px; font-size: 12px; }
+.adim-sello.is-estable { background: #e3ecda; color: #2f4a24; }
+.adim-sello.is-inestable { background: #f3e2dc; color: #8a3b24; }
+.adim-sello.is-marginal { background: #f3ecdc; color: #7a5a1e; }
+.adim-dispersion { margin-top: 10px; }
+.adim-form-linea { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin: 10px 0; }
+.adim-form-linea label { display: grid; gap: 4px; font-size: 12px; color: #5c6852; min-width: 120px; flex: 1 1 120px; max-width: 200px; }
+.adim-lista-especiales { margin: 8px 0 0 18px; font-size: 13px; display: grid; gap: 4px; }
+
+/* Simulación */
+.adim-sim-barra { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 8px; }
+.adim-sim-barra input[type="range"] { flex: 1 1 200px; accent-color: #425e35; }
+.adim-sim-tiempo { font-size: 13px; color: #33432b; font-variant-numeric: tabular-nums; min-width: 150px; }
+.adim-conmutador { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #5c6852; }
+.adim-conmutador input { accent-color: #425e35; }
+.adim-sim-datos { font-size: 12px; color: #6d7b63; line-height: 1.6; margin: 8px 0; }
+.adim-aviso { color: #8a5a2b; }
+
+/* Gráficos */
+.adim-grafico { margin: 8px 0; max-width: 760px; }
+.adim-grafico svg { width: 100%; height: auto; display: block; background: #fff; border: 1px solid #e3e7dc; border-radius: 6px; }
+.adim-grafico-rejilla { stroke: #eef1e8; stroke-width: 1; }
+.adim-grafico-eje { stroke: #9aa48f; stroke-width: 1; }
+.adim-grafico-cero { stroke: #b8bfae; stroke-width: 1; stroke-dasharray: 3 3; }
+.adim-grafico-marca { fill: #6d7b63; font-size: 11px; font-family: var(--font-geist-sans), system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+.adim-grafico-titulo-eje { fill: #4c5a42; font-size: 12px; font-family: var(--font-geist-sans), system-ui, sans-serif; }
+.adim-grafico-etiqueta { fill: #2d3928; font-size: 11px; font-family: var(--font-geist-sans), system-ui, sans-serif; }
+.adim-grafico-leyenda { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 6px; font-size: 12px; color: #5c6852; }
+.adim-grafico-leyenda i { display: inline-block; width: 14px; height: 3px; margin-right: 6px; vertical-align: middle; border-radius: 2px; }
+.adim-grafico-vacio { font-size: 12px; color: #8a9580; }
+
+/* Comparador */
+.adim-comparador { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; margin-top: 12px; }
+.adim-comparador-columna { border: 1px solid #e0e5d8; border-radius: 8px; padding: 14px 16px; background: #fff; display: grid; gap: 10px; align-content: start; overflow-x: auto; }
+.adim-comparador-columna .adim-etiqueta { display: grid; gap: 4px; }
+.adim-metricas { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 13px; }
+.adim-metricas dt { color: #6d7b63; }
+.adim-metricas dd { margin: 0; color: #2d3928; }
+
+/* Resultado: tarjeta de ecuación con cabecera propia (número y copiar). */
+.adim .adim-final-equation { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.adim .adim-equation-header-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.adim .adim-equation-header-bar .adim-equation-num { margin-top: 0; }
+.adim .adim-equation-body { overflow-y: hidden; }
+.adim .adim-equation-factor-badge .formula-latex { font-size: 15px; color: #2d3928; }
+
+/* Resultado */
+.adim-lista-simple { list-style: none; padding: 0; margin: 6px 0; display: grid; gap: 6px; font-size: 13px; }
+.adim-lista-simple small { color: #7b8470; margin-left: 6px; }
+.adim-condicion { margin: 8px 0; }
+.adim-bases-pi { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 10px; }
+.adim-base-pi { border: 1px solid #e0e5d8; border-radius: 8px; padding: 10px 14px; background: #fff; overflow-x: auto; }
+
+/* Cuaderno */
+.adim-catalogo-lista { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 1px; background: #e3e7dc; border: 1px solid #e3e7dc; border-radius: 8px; overflow: hidden; }
+.adim-catalogo-lista > li { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 16px; background: #fbfcf7; }
+.adim-catalogo-lista h3 { font-size: 14px; font-weight: 600; color: #2d3928; margin: 2px 0; }
+.adim-catalogo-lista p { font-size: 12px; color: #6d7b63; line-height: 1.5; max-width: 80ch; }
+.adim-catalogo-lista .adim-button { flex: none; }
+.adim-vacio { grid-column: 1 / -1; padding: 40px 16px; text-align: center; border: 1px dashed #c6cdbd; border-radius: 8px; color: #6d7b63; font-size: 13px; display: grid; gap: 12px; justify-items: center; }
+.adim-archivo { margin-top: 32px; padding: 18px 20px; border: 1px solid #e0e5d8; border-radius: 8px; background: #f7f8f3; }
+.adim-archivo h3 { font-size: 14px; font-weight: 600; color: #2d3928; margin-bottom: 12px; }
+.adim-archivo-rejilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
+.adim-archivo-fila { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px; background: #fff; border: 1px solid #e0e5d8; border-radius: 6px; font-size: 13px; }
+.adim-archivo-fila span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.adim-borrador { font: 12px var(--font-geist-mono), monospace; color: #5c6852; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.adim-vista-previa { width: 100%; text-align: center; overflow-x: auto; }
+.adim-centrado { max-width: 1100px; margin-left: auto; margin-right: auto; padding: 0 16px; }
+
+/* Un solo tema en la ruta: las utilidades oscuras de Tailwind que quedaban
+   en el editor avanzado se reasignan a la paleta clara (Tailwind v4 coloca
+   sus utilidades en una capa, así que estas reglas sin capa prevalecen). */
+.adim .bg-zinc-900, .adim .bg-zinc-950, .adim .bg-zinc-800 { background-color: #fff; }
+.adim .text-zinc-100, .adim .text-zinc-200, .adim .text-zinc-300 { color: #2d3928; }
+.adim .text-zinc-400, .adim .text-zinc-500 { color: #6d7b63; }
+.adim .border-zinc-600, .adim .border-zinc-700, .adim .border-zinc-800 { border-color: #d5dec9; }
+
+/* Fórmulas largas: desplazamiento horizontal en lugar de desbordar */
+.adim .katex-display { overflow-x: auto; overflow-y: hidden; padding: 2px 0; }
+
+@media (max-width: 640px) {
+  .adim-valores { }
+  .adim-catalogo-lista > li { flex-direction: column; align-items: flex-start; }
+  .adim-metricas { grid-template-columns: 1fr; }
+  .adim-menu-lista { left: 0; right: auto; }
+}
+
+/* Comparación con el motor: una cifra, como los paneles del motor. */
+.adim-comparacion-motor { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin-top: 18px; padding: 16px 20px; border-radius: 6px; background: var(--motor-acento-suave, #e5eee2); color: var(--motor-tinta, #2c332b); font-size: 12px; }
+.adim-comparacion-motor strong { font-size: 26px; font-weight: 500; letter-spacing: -.03em; color: var(--motor-acento, #416647); }
+.adim-comparacion-motor small { flex-basis: 100%; color: #6a7263; }
+.adim-valor-nombre { flex-wrap: wrap; }
+.adim-valor-origen { flex-basis: 100%; font-size: 11px; color: #6a7263; }
