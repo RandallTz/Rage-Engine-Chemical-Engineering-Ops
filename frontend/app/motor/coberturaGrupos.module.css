@@ -1,0 +1,13 @@
+.coverage { margin-top:24px; font-size:12px; line-height:1.6; min-width:0; }
+.coverage h3 { font-size:13px; font-weight:500; margin:0 0 8px; }
+.coverage p { overflow-wrap:anywhere; }
+.coverage small { display:block; color:#747c6c; font-size:11px; font-weight:400; }
+.scroll { overflow-x:auto; margin:12px 0; }
+.coverage table { width:100%; border-collapse:collapse; font-size:12px; }
+.coverage td,.coverage th { text-align:left; vertical-align:top; padding:10px 12px 10px 0; border-bottom:1px solid var(--motor-borde,#d7dbcf); font-weight:400; min-width:130px; }
+.coverage thead th { font-weight:500; }
+.coverage details { margin-top:16px; }
+.coverage summary { cursor:pointer; }
+.coverage dt { margin-top:12px; color:#747c6c; font-size:11px; }
+.coverage dd { margin:3px 0 0; overflow-wrap:anywhere; }
+.hash { font-family:monospace; font-size:11px; }

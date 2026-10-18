@@ -1,0 +1,23 @@
+.editor { margin:22px 0; padding-top:16px; border-top:1px solid var(--motor-borde,#d7dbcf); min-width:0; font-size:12px; }
+.editor summary { cursor:pointer; color:var(--motor-acento,#536844); }
+.content { margin-top:16px; min-width:0; }
+.content p,.content small { color:var(--motor-tinta-suave,#74776f); line-height:1.6; overflow-wrap:anywhere; }
+.content h3 { font-size:14px; font-weight:500; margin:22px 0 12px; }
+.content h3 small { display:block; font-size:11px; font-weight:400; }
+.property { padding:14px 0; border-bottom:1px solid var(--motor-borde,#d7dbcf); }
+.property header { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+.property strong { font-weight:500; }
+.property header span { font-size:11px; color:var(--motor-tinta-suave,#74776f); }
+.property details { margin:10px 0; }
+.property details summary { font-size:11px; }
+.property pre { overflow-x:auto; font-size:11px; padding:10px; }
+.actions { display:flex; gap:18px; flex-wrap:wrap; margin:12px 0; }
+.editor button { color:var(--motor-acento,#536844); font-size:12px; cursor:pointer; padding:5px 0; }
+.editor button:disabled { opacity:.45; cursor:default; }
+.editor :is(button,input,select,summary):focus-visible { outline:2px solid var(--motor-acento,#536844); outline-offset:3px; }
+.form { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px 18px; background:var(--motor-fondo-campo,#fafaf6); border:1px solid var(--motor-borde,#d7dbcf); padding:16px; margin:14px 0; }
+.form label { display:grid; gap:7px; font-size:11px; }
+.form input,.form select { width:100%; min-width:0; background:var(--motor-superficie,#fff); border:1px solid var(--motor-borde,#d7dbcf); border-radius:4px; padding:9px; font-size:12px; color:var(--motor-tinta,#293222); }
+.form small,.form .actions,.form label:has(input[aria-label="Fuente de la sustitución"]) { grid-column:1/-1; }
+.coefficients { font-variant-numeric:tabular-nums; }
+@media(max-width:650px) { .form { grid-template-columns:minmax(0,1fr); } }

@@ -1,0 +1,26 @@
+.picker { margin:0 0 24px; min-width:0; font-size:12px; }
+.picker>label { display:grid; gap:8px; color:#747c6c; font-size:11px; }
+.picker input { width:100%; min-width:0; padding:10px 12px; border:1px solid var(--motor-borde,#d7dbcf); border-radius:4px; background:var(--motor-fondo-campo,#fafaf6); color:var(--motor-tinta,#293222); font-size:13px; }
+.list { max-height:300px; overflow-y:auto; margin:10px 0; border-top:1px solid var(--motor-borde,#d7dbcf); }
+.row { display:grid; grid-template-columns:minmax(140px,1fr) minmax(0,1.6fr); gap:12px; padding:12px 0; border-bottom:1px solid var(--motor-borde,#d7dbcf); }
+.row button { display:grid; gap:4px; text-align:left; align-content:start; padding:4px 8px; border-left:2px solid transparent; }
+.row button strong { font-weight:500; font-size:13px; }
+.row button span { font-size:11px; font-variant-numeric:tabular-nums; color:#747c6c; }
+.row button[aria-pressed=true] { border-color:var(--motor-acento,#536844); background:var(--motor-fondo-campo,#fafaf6); }
+.admission { align-self:center; overflow-wrap:anywhere; }
+.admission .inspect { display:inline; margin-top:5px; padding:0; border:0; font-size:11px; }
+.picker small { display:block; color:#747c6c; font-size:11px; line-height:1.6; }
+.details { margin-top:18px; border-top:1px solid var(--motor-borde,#d7dbcf); padding-top:16px; }
+.details summary { cursor:pointer; color:var(--motor-acento,#536844); margin-bottom:12px; }
+.details h4 { font-weight:500; margin:18px 0 6px; }
+.details dl { display:grid; grid-template-columns:100px minmax(0,1fr); gap:8px 14px; }
+.details dt { color:#747c6c; }
+.details dd { margin:0; overflow-wrap:anywhere; }
+.coefficient { display:inline-block; margin-right:16px; font-variant-numeric:tabular-nums; }
+.hash { font-family:monospace; font-size:11px; overflow-wrap:anywhere; margin-top:18px; }
+.loading { min-height:70px; padding:12px 0; color:#747c6c; }
+.failure { padding:14px 0; }
+.failure button { display:block; margin-top:12px; }
+.picker :is(input,button,summary):focus-visible { outline:2px solid var(--motor-acento,#536844); outline-offset:3px; }
+.picker button:active { transform:translateY(1px); }
+@media(max-width:650px) { .row { grid-template-columns:minmax(0,1fr); gap:6px; } .admission { padding-left:8px; } .details dl { grid-template-columns:minmax(0,1fr); gap:4px; } .details dd { margin-bottom:8px; } }

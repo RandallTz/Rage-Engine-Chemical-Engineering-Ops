@@ -1,0 +1,30 @@
+'use client';
+import {crearHojasPruebaMultifasico} from './hojasPruebaMultifasico';
+import {crearHojasPruebaNComponentes} from './hojasPruebaNComponentes';
+import {crearHojasPruebaUNIFAC} from './hojasPruebaUNIFAC';
+import {crearHojasDemostracion} from './hojasDemostracion';
+import {useRouter} from 'next/navigation';
+import Link from 'next/link';
+import {useState} from 'react';
+import {duplicarHoja,guardarHoja,guardarHojasNuevas,nuevaHoja} from './hojasMotor';
+import {catalogoComponentes} from './ensamblajeMateria';
+import {crearHojasPruebaAcoplamiento,crearHojasPruebaMulticomponente} from './hojasPruebaAcoplamiento';
+import {crearHojasPruebaEnergia} from './hojasPruebaEnergia';
+import {crearHojasPruebaMateria} from './hojasPruebaMateria';
+import {useHojasMotor} from './useHojasMotor';
+import styles from './trabajoMotor.module.css';
+export default function BibliotecaHojas(){
+  const router=useRouter();
+  const hojas=useHojasMotor(),[creando,setCreando]=useState(false),[nombre,setNombre]=useState(''),[error,setError]=useState(''),[aviso,setAviso]=useState(''),[archivadas,setArchivadas]=useState(false);
+  return <div className={styles.page}>
+    <header className={styles.heading}><div><span className={styles.eyebrow}>Motor / Sistemas</span><h1>Mis sistemas</h1></div><button className={styles.primary} onClick={()=>{setCreando(true);setError('');}}>Nueva hoja</button></header>
+    {error&&<div role="alert" className={styles.error}>{error}<button aria-label="Cerrar aviso" onClick={()=>setError('')}>×</button></div>}
+    {aviso&&<div role="status" className={styles.notice}>{aviso}<button aria-label="Cerrar confirmación" onClick={()=>setAviso('')}>×</button></div>}
+    {creando?<form className={styles.newSheet} onSubmit={e=>{e.preventDefault();if(!nombre.trim()){setError('Escribe un nombre.');return;}try{const h=guardarHoja(nuevaHoja(nombre));router.push(`/motor/hojas/${h.id}`);}catch(e){setError((e as Error).message);}}}><h2>Nueva hoja</h2><label>Nombre<input autoFocus value={nombre} onChange={e=>setNombre(e.target.value)} maxLength={100} placeholder="Mi sistema"/></label><footer><button type="button" onClick={()=>setCreando(false)}>Cancelar</button><button className={styles.primary}>Crear hoja</button></footer></form>:<>
+      <nav className={styles.localNav}><button aria-pressed={!archivadas} onClick={()=>setArchivadas(false)}>Mis hojas</button><button aria-pressed={archivadas} onClick={()=>setArchivadas(true)}>Archivadas</button><Link href="/motor">Abrir una hoja sin guardar</Link></nav>
+      {!archivadas&&<div className={styles.sampleTools}><button className={styles.primary} onClick={()=>{try{const n=guardarHojasNuevas(crearHojasDemostracion());setAviso(n?`${n} ejemplos de demostración añadidos. Ábrelos y pulsa Resolver.`:'Los ejemplos de demostración ya están guardados.');setError('');}catch(e){setError((e as Error).message);}}}>Añadir ejemplos de demostración</button><button onClick={()=>{try{const n=guardarHojasNuevas([...crearHojasPruebaMultifasico(),...crearHojasPruebaNComponentes(),...crearHojasPruebaUNIFAC()]);setAviso(n?`${n} hojas multifásicas añadidas.`:"Las hojas multifásicas ya están guardadas.");}catch(e){setError((e as Error).message);}}}>Añadir pruebas multifásicas</button><button onClick={()=>{try{const n=guardarHojasNuevas(crearHojasPruebaEnergia());setAviso(n?`${n} hojas con derivación de materia y energía añadidas.`:'Las pruebas de energía ya están guardadas.');setError('');}catch{setError('No se pudieron guardar las pruebas de energía.');}}}>Añadir pruebas · materia + energía</button><button onClick={()=>{try{const n=guardarHojasNuevas(crearHojasPruebaMateria());setAviso(n?`${n} hojas de materia añadidas. Listas para resolver.`:'Las hojas de prueba ya están guardadas.');setError('');}catch{setError('No se pudieron guardar las hojas de prueba.');}}}>Añadir hojas de prueba · materia</button><button onClick={()=>{try{const n=guardarHojasNuevas(crearHojasPruebaAcoplamiento());setAviso(n?`${n} sistemas acoplados añadidos.`:'Los sistemas acoplados ya están guardados.');setError('');}catch{setError('No se pudieron guardar los sistemas.');}}}>Añadir pruebas de acoplamiento</button><button onClick={()=>{try{const n=guardarHojasNuevas(crearHojasPruebaMulticomponente());setAviso(n?`${n} hojas multicomponente añadidas. Listas para resolver.`:'Las hojas multicomponente ya están guardadas.');setError('');}catch{setError('No se pudieron guardar las hojas multicomponente.');}}}>Añadir ejemplos multicomponente</button></div>}
+      {!hojas.filter(h=>!!h.archivada===archivadas).length?<div className={styles.empty}><h2>{archivadas?'Sin hojas archivadas':'Tu primera hoja'}</h2><span>{archivadas?'Las hojas archivadas se pueden recuperar.':'Una hoja por sistema. Materia, energía y momento dentro de ella.'}</span>{!archivadas&&<button className={styles.primary} onClick={()=>setCreando(true)}>Crear hoja</button>}</div>:<div className={styles.sheetList}>{hojas.filter(h=>!!h.archivada===archivadas).map(h=><article key={h.id}><Link href={`/motor/hojas/${h.id}`}><h2>{h.nombre}</h2><span>{h.redTermodinamica?`${h.redTermodinamica.solicitud.volumenes.length} volúmenes · ${h.redTermodinamica.solicitud.componentes.length} componentes · multifásico`:h.ensamblaje?`${h.ensamblaje.volumenes.length} volúmenes · ${h.ensamblaje.corrientes.length} corrientes · ${catalogoComponentes(h.ensamblaje).length} componentes`:`${h.historial.pasos.length} pasos · ${h.historial.pasos[h.historial.activo].formulacion.componentes?.length??0} componentes`}</span><small>{new Date(h.actualizada).toLocaleString('es-MX')}</small></Link><div><Link className={styles.solveLink} href={`/motor/hojas/${h.id}/resolver`}>Resolver →</Link><button onClick={()=>{try{guardarHoja(duplicarHoja(h));}catch(e){setError((e as Error).message);}}}>Duplicar</button><button onClick={()=>{try{guardarHoja({...h,archivada:!h.archivada});}catch(e){setError((e as Error).message);}}}>{h.archivada?'Restaurar':'Archivar'}</button></div></article>)}</div>}
+      <small className={styles.muted}>Guardado en este navegador.</small>
+    </>}
+  </div>;
+}

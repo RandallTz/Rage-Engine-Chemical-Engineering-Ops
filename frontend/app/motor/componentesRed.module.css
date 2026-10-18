@@ -1,0 +1,22 @@
+.editor { font-size:12px; }
+.list article { padding:18px 0; border-bottom:1px solid var(--motor-borde,#d7dbcf); }
+.identity { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto; gap:14px; align-items:end; }
+.identity label { display:grid; gap:7px; color:#707767; font-size:11px; }
+.identity input { width:100%; min-width:0; padding:9px; font-size:13px; color:var(--motor-tinta,#293222); background:var(--motor-fondo-campo,#fafaf6); border:1px solid var(--motor-borde,#d7dbcf); border-radius:4px; }
+.identity button { padding:10px 0; }
+.editor button { cursor:pointer; color:var(--motor-acento,#536844); font-size:12px; }
+.editor button:disabled { opacity:.45; cursor:default; }
+.editor :is(input,button):focus-visible { outline:2px solid var(--motor-acento,#536844); outline-offset:3px; }
+.editor fieldset { display:flex; flex-wrap:wrap; gap:12px 20px; margin:14px 0 0; padding:0; border:0; }
+.editor fieldset label { display:flex; align-items:center; gap:7px; }
+.editor fieldset input { width:14px; height:14px; accent-color:var(--motor-acento,#536844); }
+.editor fieldset legend { margin-bottom:10px; color:#747c6c; font-size:11px; }
+.editor fieldset small { color:#747c6c; font-variant-numeric:tabular-nums; }
+.add { display:block; margin:20px 0; padding:9px 12px; border:1px solid var(--motor-borde,#d7dbcf); border-radius:4px; }
+.new { padding:22px 0; border-bottom:1px solid var(--motor-borde,#d7dbcf); }
+.new .identity { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.actions { display:flex; gap:20px; align-items:center; margin-top:18px; }
+.actions button:first-child { background:var(--motor-acento,#536844); color:#fff; border-radius:4px; padding:10px 14px; }
+.scope { display:block; margin-top:16px; color:#747c6c; font-size:11px; }
+.srOnly { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
+@media(max-width:650px) { .identity,.new .identity { grid-template-columns:minmax(0,1fr); } .identity button { justify-self:start; } }
