@@ -1,0 +1,76 @@
+/** Lector estricto del modelo común en el cliente: las reglas estructurales de
+ * core/modelo/lector.py (claves, identidades, referencias y cierre
+ * termodinámico obligatorio). La validación matemática completa y la de la
+ * configuración de cada motor las hace el servidor. */
+import type { ModeloComun } from "./contrato";
+import { VERSION_MODELO } from "./contrato";
+
+const CLAVES = ["formato", "version", "id", "nombre", "componentes", "termodinamica", "volumenes", "corrientes",
+  "intercambios", "datos", "matematico", "estudio", "motores", "procedencia"];
+
+export class ErrorModelo extends Error {
+  constructor(public ruta: string, public motivo: string) { super(`${ruta}: ${motivo}`); }
+}
+const fallo = (ruta: string, motivo: string): never => { throw new ErrorModelo(ruta, motivo); };
+type Obj = Record<string, unknown>;
+const obj = (v: unknown, ruta: string): Obj => (v && typeof v === "object" && !Array.isArray(v) ? v as Obj : fallo(ruta, "se esperaba un objeto"));
+const lista = (v: unknown, ruta: string): unknown[] => (Array.isArray(v) ? v : fallo(ruta, "se esperaba una lista"));
+function claves(v: unknown, ruta: string, obligatorias: string[], opcionales: string[] = []): Obj {
+  const o = obj(v, ruta);
+  const faltan = obligatorias.filter(k => !(k in o));
+  if (faltan.length) fallo(ruta, "faltan " + faltan.join(", "));
+  const sobran = Object.keys(o).filter(k => !obligatorias.includes(k) && !opcionales.includes(k));
+  if (sobran.length) fallo(ruta, "campos desconocidos: " + sobran.join(", "));
+  return o;
+}
+function unicos(items: unknown[], ruta: string): Set<unknown> {
+  const vistos = new Set<unknown>();
+  items.forEach((x, i) => { const k = obj(x, `${ruta}[${i}]`).id; if (vistos.has(k)) fallo(`${ruta}[${i}].id`, `identidad repetida: ${String(k)}`); vistos.add(k); });
+  return vistos;
+}
+const ref = (v: unknown, conjunto: Set<unknown>, ruta: string, que: string) => { if (!conjunto.has(v)) fallo(ruta, `referencia inexistente (${que} ${String(v)})`); };
+
+export function leerModeloComun(dato: unknown): ModeloComun {
+  const m = claves(dato, "modelo", CLAVES);
+  if (m.formato !== "rage.modelo") fallo("formato", "valor no admitido");
+  if (m.version !== VERSION_MODELO) fallo("version", "valor no admitido");
+  const datos = new Set(Object.keys(obj(m.datos, "datos")));
+  for (const [k, d] of Object.entries(m.datos as Obj)) {
+    const o = claves(d, `datos.${k}`, ["magnitud", "funcion", "declaracion", "origen"]);
+    if (!["inicial", "frontera", "geometria", "estudio", "parametro"].includes(o.funcion as string)) fallo(`datos.${k}.funcion`, "valor no admitido");
+    claves(o.declaracion, `datos.${k}.declaracion`, ["texto", "unidad"]);
+    claves(o.origen, `datos.${k}.origen`, ["propietarioId", "ruta"]);
+  }
+  const dato_ = (v: unknown, ruta: string) => ref(v, datos, ruta, "dato");
+  const comps = unicos(lista(m.componentes, "componentes"), "componentes");
+  const paqs = unicos(lista(claves(m.termodinamica, "termodinamica", ["paquetes"]).paquetes, "termodinamica.paquetes"), "termodinamica.paquetes");
+  const volsL = lista(m.volumenes, "volumenes"), vols = unicos(volsL, "volumenes");
+  volsL.forEach((v, i) => {
+    const r = `volumenes[${i}]`, o = claves(v, r, ["id", "componenteIds", "balances", "supuestos", "frontera", "inicial", "termodinamica"]);
+    lista(o.componenteIds, r + ".componenteIds").forEach((c, j) => ref(c, comps, `${r}.componenteIds[${j}]`, "componente"));
+    const f = obj(o.frontera, r + ".frontera");
+    if (f.tipo === "rigida") dato_(f.datoId, r + ".frontera.datoId");
+    else if (f.tipo === "presion_prescrita") dato_(f.presionId, r + ".frontera.presionId");
+    else if (f.tipo !== "sin_relacion" && f.tipo !== "malla_1d") fallo(r + ".frontera.tipo", "valor no admitido");
+    const t = o.termodinamica as Obj | null;
+    if (!t || typeof t !== "object" || !("tipo" in t)) fallo(r + ".termodinamica", "todo volumen declara su cierre termodinámico (equilibrio con un paquete, o un supuesto explícito con su motivo)");
+    if (t!.tipo === "equilibrio") { claves(t, r + ".termodinamica", ["tipo", "paqueteId", "politica"]); ref(t!.paqueteId, paqs, r + ".termodinamica.paqueteId", "paquete"); }
+    else if (t!.tipo === "supuesto") { const s = claves(t, r + ".termodinamica", ["tipo", "supuesto", "motivo"]); if (typeof s.motivo !== "string" || !s.motivo.trim()) fallo(r + ".termodinamica.motivo", "texto requerido"); }
+    else fallo(r + ".termodinamica.tipo", "valor no admitido");
+  });
+  lista(m.corrientes, "corrientes").forEach((c, i) => {
+    const r = `corrientes[${i}]`, o = claves(c, r, ["id", "desde", "hasta", "componenteIds", "mecanismo", "materia"], ["estadoExterior", "extraccion", "constante"]);
+    for (const k of ["desde", "hasta"] as const) if (o[k] !== null) ref(o[k], vols, `${r}.${k}`, "volumen");
+    if (o.desde === null && o.hasta === null) fallo(r, "una corriente necesita al menos un extremo en un volumen");
+    const mat = obj(o.materia, r + ".materia");
+    if (mat.modo === "por_componente") Object.values(obj(mat.caudalIds, r + ".materia.caudalIds")).forEach(d => dato_(d, r + ".materia.caudalIds"));
+    else if (mat.modo === "total_desde_donante") dato_(mat.caudalId, r + ".materia.caudalId");
+    else fallo(r + ".materia.modo", "valor no admitido");
+  });
+  unicos(lista(m.intercambios, "intercambios"), "intercambios");
+  if (m.estudio !== null) dato_(obj(m.estudio, "estudio").tiempoId, "estudio.tiempoId");
+  if (m.matematico !== null) obj(m.matematico, "matematico");
+  for (const k of Object.keys(obj(m.motores, "motores"))) if (k !== "adimensionalizacion") fallo(`motores.${k}`, "motor desconocido");
+  if (!["documento_adimensional", "ensamblaje_v2", "hoja_motor_materia", "nuevo"].includes(obj(m.procedencia, "procedencia").tipo as string)) fallo("procedencia.tipo", "valor no admitido");
+  return m as unknown as ModeloComun;
+}

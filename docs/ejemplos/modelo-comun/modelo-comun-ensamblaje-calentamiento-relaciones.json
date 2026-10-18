@@ -1,0 +1,68 @@
+[
+ {
+  "id": "estado.A.energia",
+  "familia": "estado",
+  "propietarioId": "volumen:A",
+  "descripcion": "cierre PH del paquete: energía de todas las fases"
+ },
+ {
+  "id": "estado.A.volumen",
+  "familia": "estado",
+  "propietarioId": "volumen:A",
+  "descripcion": "cierre PH del paquete: volumen de todas las fases"
+ },
+ {
+  "id": "equilibrio.A",
+  "familia": "equilibrio",
+  "propietarioId": "volumen:A",
+  "descripcion": "reparto de equilibrio entre todas las fases candidatas, con prueba de estabilidad; una fase ausente tiene cantidad cero"
+ },
+ {
+  "id": "estado.A.U",
+  "familia": "estado",
+  "propietarioId": "volumen:A",
+  "descripcion": "U = H - P V"
+ },
+ {
+  "id": "mecanica.A.trabajo",
+  "familia": "mecanica",
+  "propietarioId": "volumen:A",
+  "descripcion": "trabajo de frontera P dV/dt (comprobación)"
+ },
+ {
+  "id": "materia.A.1",
+  "familia": "materia",
+  "propietarioId": "volumen:A",
+  "descripcion": "conservación por componente"
+ },
+ {
+  "id": "materia.A.2",
+  "familia": "materia",
+  "propietarioId": "volumen:A",
+  "descripcion": "conservación por componente"
+ },
+ {
+  "id": "energia.A",
+  "familia": "energia",
+  "propietarioId": "volumen:A",
+  "descripcion": "primera ley"
+ },
+ {
+  "id": "global.materia.1",
+  "familia": "verificacion",
+  "propietarioId": "red",
+  "descripcion": "conservación global del componente"
+ },
+ {
+  "id": "global.materia.2",
+  "familia": "verificacion",
+  "propietarioId": "red",
+  "descripcion": "conservación global del componente"
+ },
+ {
+  "id": "global.energia",
+  "familia": "verificacion",
+  "propietarioId": "red",
+  "descripcion": "conservación global de energía"
+ }
+]

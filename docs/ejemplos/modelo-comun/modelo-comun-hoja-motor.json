@@ -1,0 +1,465 @@
+{
+ "formato": "rage.modelo",
+ "version": 0,
+ "id": "motor-prueba-materia-v1-6",
+ "nombre": "06 · Conversión de A en B",
+ "componentes": [
+  {
+   "id": 1,
+   "nombre": "Componente A",
+   "simbolo": "A"
+  },
+  {
+   "id": 2,
+   "nombre": "Componente B",
+   "simbolo": "B"
+  }
+ ],
+ "termodinamica": {
+  "paquetes": []
+ },
+ "volumenes": [
+  {
+   "id": "dominio",
+   "componenteIds": [
+    1,
+    2
+   ],
+   "balances": {
+    "materia": true,
+    "energia": false,
+    "momento": false
+   },
+   "supuestos": {
+    "materia": {
+     "campo": {
+      "sinReaccion": false,
+      "sinDifusion": true,
+      "sinConveccion": true,
+      "estacionario": false,
+      "difusion": "flujo"
+     },
+     "coordenadas": "cartesianas",
+     "expandida": false,
+     "vista": "cantidad",
+     "uniforme": false,
+     "fija": true,
+     "sinAcumulacion": false,
+     "invariantes": [
+      false,
+      false,
+      false
+     ],
+     "generacionUniforme": false,
+     "consumoUniforme": false,
+     "restoImpermeable": true,
+     "cantidadVolumen": false,
+     "densidadMediaConstante": false,
+     "densidadComunPuertos": false,
+     "expandirProducto": false
+    },
+    "energia": null
+   },
+   "frontera": {
+    "tipo": "sin_relacion"
+   },
+   "inicial": {
+    "tipo": "por_datos"
+   },
+   "termodinamica": {
+    "tipo": "supuesto",
+    "supuesto": "fase_no_evaluada",
+    "motivo": "el solver de materia del motor (navegador) no evalúa el estado termodinámico"
+   }
+  }
+ ],
+ "corrientes": [],
+ "intercambios": [],
+ "datos": {
+  "inicial_1": {
+   "magnitud": "masa",
+   "funcion": "inicial",
+   "declaracion": {
+    "texto": "1",
+    "unidad": "kg"
+   },
+   "origen": {
+    "propietarioId": "volumen:dominio",
+    "ruta": "config.datos.inicial_1"
+   }
+  },
+  "inicial_2": {
+   "magnitud": "masa",
+   "funcion": "inicial",
+   "declaracion": {
+    "texto": "0",
+    "unidad": "kg"
+   },
+   "origen": {
+    "propietarioId": "volumen:dominio",
+    "ruta": "config.datos.inicial_2"
+   }
+  },
+  "generacion_1": {
+   "magnitud": "caudal",
+   "funcion": "parametro",
+   "declaracion": {
+    "texto": "0",
+    "unidad": "kg/s"
+   },
+   "origen": {
+    "propietarioId": "volumen:dominio",
+    "ruta": "config.datos.generacion_1"
+   }
+  },
+  "consumo_1": {
+   "magnitud": "caudal",
+   "funcion": "parametro",
+   "declaracion": {
+    "texto": "0.2*m_A",
+    "unidad": "kg/s"
+   },
+   "origen": {
+    "propietarioId": "volumen:dominio",
+    "ruta": "config.datos.consumo_1"
+   }
+  },
+  "generacion_2": {
+   "magnitud": "caudal",
+   "funcion": "parametro",
+   "declaracion": {
+    "texto": "0.2*m_A",
+    "unidad": "kg/s"
+   },
+   "origen": {
+    "propietarioId": "volumen:dominio",
+    "ruta": "config.datos.generacion_2"
+   }
+  },
+  "consumo_2": {
+   "magnitud": "caudal",
+   "funcion": "parametro",
+   "declaracion": {
+    "texto": "0",
+    "unidad": "kg/s"
+   },
+   "origen": {
+    "propietarioId": "volumen:dominio",
+    "ruta": "config.datos.consumo_2"
+   }
+  },
+  "estudio.tf": {
+   "magnitud": "tiempo",
+   "funcion": "estudio",
+   "declaracion": {
+    "texto": "20",
+    "unidad": "s"
+   },
+   "origen": {
+    "propietarioId": "estudio",
+    "ruta": "config.tiempo"
+   }
+  }
+ },
+ "matematico": {
+  "id": "b365963a-69be-4d79-af56-0ca322decc9d",
+  "revision": 1,
+  "simbolos": [
+   {
+    "id": "t",
+    "nombre": "t",
+    "rol": "tiempo",
+    "dimension": {
+     "T": {
+      "n": 1,
+      "d": 1
+     }
+    },
+    "unidad": null,
+    "constante": false,
+    "dependeDe": [],
+    "signo": "desconocido"
+   },
+   {
+    "id": "m_A",
+    "nombre": "m_A",
+    "rol": "campo",
+    "dimension": {
+     "M": {
+      "n": 1,
+      "d": 1
+     }
+    },
+    "unidad": "kg",
+    "constante": false,
+    "dependeDe": [
+     "t"
+    ],
+    "signo": "desconocido"
+   },
+   {
+    "id": "m_B",
+    "nombre": "m_B",
+    "rol": "campo",
+    "dimension": {
+     "M": {
+      "n": 1,
+      "d": 1
+     }
+    },
+    "unidad": "kg",
+    "constante": false,
+    "dependeDe": [
+     "t"
+    ],
+    "signo": "desconocido"
+   },
+   {
+    "id": "k_A",
+    "nombre": "k_A",
+    "rol": "parametro",
+    "dimension": {
+     "T": {
+      "n": -1,
+      "d": 1
+     }
+    },
+    "unidad": "s^-1",
+    "constante": true,
+    "dependeDe": [],
+    "signo": "positivo"
+   },
+   {
+    "id": "m_A0",
+    "nombre": "m_A0",
+    "rol": "parametro",
+    "dimension": {
+     "M": {
+      "n": 1,
+      "d": 1
+     }
+    },
+    "unidad": "kg",
+    "constante": true,
+    "dependeDe": [],
+    "signo": "positivo"
+   },
+   {
+    "id": "g_B",
+    "nombre": "g_B",
+    "rol": "parametro",
+    "dimension": {
+     "T": {
+      "n": -1,
+      "d": 1
+     }
+    },
+    "unidad": "s^-1",
+    "constante": true,
+    "dependeDe": [],
+    "signo": "positivo"
+   },
+   {
+    "id": "tf",
+    "nombre": "tf",
+    "rol": "parametro",
+    "dimension": {
+     "T": {
+      "n": 1,
+      "d": 1
+     }
+    },
+    "unidad": "s",
+    "constante": true,
+    "dependeDe": [],
+    "signo": "positivo"
+   }
+  ],
+  "funciones": [],
+  "ecuaciones": [
+   {
+    "id": "balance_A",
+    "izquierda": {
+     "tipo": "derivada",
+     "expresion": {
+      "tipo": "simbolo",
+      "id": "m_A"
+     },
+     "respecto": "t",
+     "orden": 1
+    },
+    "derecha": {
+     "tipo": "producto",
+     "argumentos": [
+      {
+       "tipo": "numero",
+       "valor": -1
+      },
+      {
+       "tipo": "simbolo",
+       "id": "k_A"
+      },
+      {
+       "tipo": "simbolo",
+       "id": "m_A"
+      }
+     ]
+    }
+   },
+   {
+    "id": "balance_B",
+    "izquierda": {
+     "tipo": "derivada",
+     "expresion": {
+      "tipo": "simbolo",
+      "id": "m_B"
+     },
+     "respecto": "t",
+     "orden": 1
+    },
+    "derecha": {
+     "tipo": "producto",
+     "argumentos": [
+      {
+       "tipo": "simbolo",
+       "id": "g_B"
+      },
+      {
+       "tipo": "simbolo",
+       "id": "m_A"
+      }
+     ]
+    }
+   }
+  ],
+  "dominios": [
+   {
+    "id": "it",
+    "variableId": "t",
+    "desde": {
+     "tipo": "numero",
+     "valor": 0
+    },
+    "hasta": {
+     "tipo": "simbolo",
+     "id": "tf"
+    }
+   }
+  ],
+  "condiciones": [
+   {
+    "id": "inicial_m_A",
+    "tipo": "inicial",
+    "dominioId": "it",
+    "ecuacion": {
+     "id": "inicial_m_A-eq",
+     "izquierda": {
+      "tipo": "simbolo",
+      "id": "m_A"
+     },
+     "derecha": {
+      "tipo": "simbolo",
+      "id": "m_A0"
+     }
+    }
+   },
+   {
+    "id": "inicial_m_B",
+    "tipo": "inicial",
+    "dominioId": "it",
+    "ecuacion": {
+     "id": "inicial_m_B-eq",
+     "izquierda": {
+      "tipo": "simbolo",
+      "id": "m_B"
+     },
+     "derecha": {
+      "tipo": "numero",
+      "valor": 0
+     }
+    }
+   }
+  ]
+ },
+ "estudio": {
+  "tipo": "temporal",
+  "tiempoId": "estudio.tf",
+  "metodoSolicitado": "rk45",
+  "muestras": 101,
+  "rtol": 1e-8,
+  "atol": {
+   "cantidad": 1e-11
+  },
+  "espacial": {
+   "celdas": 40,
+   "frontera": ""
+  }
+ },
+ "motores": {},
+ "procedencia": {
+  "tipo": "hoja_motor_materia",
+  "hojaId": "motor-prueba-materia-v1-6",
+  "firmaHoja": "(omitida en el ejemplo)",
+  "pasos": [
+   {
+    "titulo": "Conservación local",
+    "operacion": null
+   },
+   {
+    "titulo": "Declarar A y B",
+    "operacion": {
+     "componentes": [
+      {
+       "id": 1,
+       "nombre": "Componente A",
+       "simbolo": "A"
+      },
+      {
+       "id": 2,
+       "nombre": "Componente B",
+       "simbolo": "B"
+      }
+     ]
+    }
+   },
+   {
+    "titulo": "Usar balances de cantidad por componente",
+    "operacion": {
+     "vista": "cantidad"
+    }
+   },
+   {
+    "titulo": "Cerrar el dominio y retirar transporte",
+    "operacion": {
+     "fija": true,
+     "restoImpermeable": true,
+     "campo": {
+      "sinReaccion": false,
+      "sinDifusion": true,
+      "sinConveccion": true,
+      "estacionario": false,
+      "difusion": "flujo"
+     }
+    }
+   }
+  ],
+  "valoresMatematico": {
+   "k_A": {
+    "valor": "0.2",
+    "unidad": "s^-1"
+   },
+   "m_A0": {
+    "valor": "1",
+    "unidad": "kg"
+   },
+   "g_B": {
+    "valor": "0.2",
+    "unidad": "s^-1"
+   },
+   "tf": {
+    "valor": "20",
+    "unidad": "s"
+   }
+  }
+ }
+}
