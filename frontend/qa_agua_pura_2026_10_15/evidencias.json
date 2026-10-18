@@ -1,0 +1,91 @@
+{
+  "comprobaciones": 2467,
+  "actual_10kw": {
+    "estado": "parcial",
+    "muestras": 41,
+    "potencia_W": 10000,
+    "tiempo_final_s": 337.00061747431755,
+    "T_final_C": 417.3393576695755,
+    "P_final_bar": 999.9999985556013,
+    "fases_finales": [
+      {
+        "tipo": "fluido",
+        "masa_kg": 2,
+        "fraccionMasica": 1,
+        "fraccionVolumen": 1
+      }
+    ],
+    "error_energia_J": 4.656612873077393e-10,
+    "error_P_IF97_rel": 0.00023059476870749193,
+    "error_calor_IF97_J": 474.3548675929196,
+    "error_q_IF97_abs": 1.9207311444289447e-06,
+    "muestras_q_IF97": 35,
+    "eventos": [
+      {
+        "codigo": "desaparicion_fase",
+        "tiempo": 280.8576486110687,
+        "variableIds": [
+          "volumen.dominio.q",
+          "volumen.dominio.T"
+        ]
+      },
+      {
+        "codigo": "cambio_denominacion",
+        "tiempo": 312.5688741803169,
+        "variableIds": [
+          "volumen.dominio.q",
+          "volumen.dominio.T"
+        ]
+      },
+      {
+        "codigo": "salida_dominio",
+        "tiempo": 337.00061747431755,
+        "variableIds": [
+          "volumen.dominio.q",
+          "volumen.dominio.T"
+        ]
+      }
+    ]
+  },
+  "referencia_1kw": {
+    "estado": "resuelto",
+    "muestras": 101,
+    "potencia_W": 1000.0,
+    "tiempo_final_s": 900.0,
+    "T_final_C": 117.0521100601419,
+    "P_final_bar": 1.8081903098049583,
+    "fases_finales": [
+      {
+        "tipo": "liquido",
+        "masa_kg": 1.9990901356958983,
+        "fraccionMasica": 0.9995450678479492,
+        "fraccionVolumen": 0.7048008862671717
+      },
+      {
+        "tipo": "vapor",
+        "masa_kg": 0.000909864304101697,
+        "fraccionMasica": 0.0004549321520508485,
+        "fraccionVolumen": 0.29519911373282826
+      }
+    ],
+    "error_energia_J": 1.1641532182693481e-10,
+    "error_P_IF97_rel": 7.047702394526646e-05,
+    "error_calor_IF97_J": 141.83811247791164,
+    "error_q_IF97_abs": 4.4319481265866264e-08,
+    "muestras_q_IF97": 101,
+    "eventos": []
+  },
+  "convergencia_maxima": {
+    "T": 0.0,
+    "P": 0.0,
+    "q": 0.0,
+    "U": 2.9103830456733704e-11
+  },
+  "convergencia_10kw": {
+    "error_eventos_s": 0.0,
+    "muestras_comunes": 41
+  },
+  "T_final_IF97_C": 117.0603531366645,
+  "referencia": "IAPWS-IF97 R7-97(2012), regions 1/2/3/4 via chemicals.iapws",
+  "limites": "Ideal equilibrium vessel; no air, wall heat capacity, losses, valve or structural failure. IF97 shares reference water data with IAPWS-95."
+}

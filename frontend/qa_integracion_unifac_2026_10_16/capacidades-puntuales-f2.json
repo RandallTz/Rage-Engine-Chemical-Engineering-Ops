@@ -1,0 +1,352 @@
+{
+  "revision": 1,
+  "modelos": [
+    {
+      "id": "agua-iapws95",
+      "version": "1",
+      "nombre": "Agua pura, IAPWS-95 (estado de equilibrio puntual)",
+      "componentesCAS": [
+        "7732-18-5"
+      ],
+      "especificaciones": [
+        "TP",
+        "PH",
+        "UP",
+        "UV"
+      ],
+      "fases": [
+        "liquido",
+        "vapor",
+        "fluido"
+      ],
+      "dominio": {
+        "T": [
+          273.16,
+          1073.15
+        ],
+        "P": [
+          100,
+          100000000
+        ]
+      },
+      "referencia": {
+        "id": "iapws95-u0-s0-liquido-saturado-punto-triple",
+        "descripcion": "IAPWS-95: u = 0 y s = 0 del líquido saturado en el punto triple (273.16 K, 611.655 Pa). Propiedades específicas por kg."
+      },
+      "propiedades": [
+        "u",
+        "h",
+        "v",
+        "s",
+        "cp",
+        "cv"
+      ],
+      "dinamica": false
+    },
+    {
+      "id": "mezcla-ideal",
+      "version": "1",
+      "nombre": "Vapor ideal + solución líquida ideal (Raoult con Poynting)",
+      "componentesCAS": [
+        "7732-18-5",
+        "64-17-5",
+        "71-43-2",
+        "108-88-3",
+        "71-36-3",
+        "141-78-6",
+        "67-56-1"
+      ],
+      "especificaciones": [
+        "TP",
+        "PH",
+        "UP",
+        "UV"
+      ],
+      "fases": [
+        "liquido",
+        "vapor"
+      ],
+      "dominio": {
+        "T": [
+          159.05,
+          582.615
+        ],
+        "P": [
+          100,
+          500000
+        ]
+      },
+      "referencia": {
+        "id": "gas-ideal-298.15K-1bar-h0-s0",
+        "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+      },
+      "propiedades": [
+        "u",
+        "h",
+        "v",
+        "s"
+      ],
+      "dinamica": false
+    },
+    {
+      "id": "nrtl-chemsep",
+      "version": "1",
+      "nombre": "Vapor ideal + líquido NRTL con parámetros binarios ChemSep",
+      "componentesCAS": [
+        "7732-18-5",
+        "64-17-5",
+        "71-43-2",
+        "108-88-3",
+        "71-36-3",
+        "141-78-6",
+        "67-56-1"
+      ],
+      "especificaciones": [
+        "TP",
+        "PH",
+        "UP",
+        "UV"
+      ],
+      "fases": [
+        "liquido",
+        "vapor"
+      ],
+      "dominio": {
+        "T": [
+          159.05,
+          582.615
+        ],
+        "P": [
+          100,
+          500000
+        ]
+      },
+      "referencia": {
+        "id": "gas-ideal-298.15K-1bar-h0-s0",
+        "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+      },
+      "propiedades": [
+        "u",
+        "h",
+        "v",
+        "s"
+      ],
+      "dinamica": false
+    },
+    {
+      "id": "nrtl-lle-agua-butanol",
+      "version": "1",
+      "nombre": "Vapor ideal + líquido NRTL ajustado a la solubilidad mutua agua/1-butanol (IUPAC SDS-15)",
+      "componentesCAS": [
+        "7732-18-5",
+        "71-36-3"
+      ],
+      "especificaciones": [
+        "TP",
+        "PH",
+        "UP",
+        "UV"
+      ],
+      "fases": [
+        "liquido",
+        "vapor"
+      ],
+      "dominio": {
+        "T": [
+          293,
+          373
+        ],
+        "P": [
+          100,
+          500000
+        ]
+      },
+      "referencia": {
+        "id": "gas-ideal-298.15K-1bar-h0-s0",
+        "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+      },
+      "propiedades": [
+        "u",
+        "h",
+        "v",
+        "s"
+      ],
+      "dinamica": false
+    },
+    {
+      "id": "unifac-original-public",
+      "version": "1",
+      "nombre": "Vapor ideal + líquido UNIFAC original (parámetros DDBST publicados, asignaciones DDBST)",
+      "componentesCAS": [
+        "7732-18-5",
+        "64-17-5",
+        "71-43-2",
+        "108-88-3",
+        "71-36-3",
+        "141-78-6",
+        "67-56-1"
+      ],
+      "especificaciones": [
+        "TP",
+        "PH",
+        "UP",
+        "UV"
+      ],
+      "fases": [
+        "liquido",
+        "vapor"
+      ],
+      "dominio": {
+        "T": [
+          159.05,
+          582.615
+        ],
+        "P": [
+          100,
+          500000
+        ]
+      },
+      "referencia": {
+        "id": "gas-ideal-298.15K-1bar-h0-s0",
+        "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+      },
+      "propiedades": [
+        "u",
+        "h",
+        "v",
+        "s"
+      ],
+      "dinamica": false
+    },
+    {
+      "id": "unifac-dortmund-public",
+      "version": "1",
+      "nombre": "Vapor ideal + líquido UNIFAC modificado (Dortmund; parámetros DDBST publicados 2016, asignaciones DDBST)",
+      "componentesCAS": [
+        "7732-18-5",
+        "64-17-5",
+        "71-43-2",
+        "108-88-3",
+        "71-36-3",
+        "141-78-6",
+        "67-56-1"
+      ],
+      "especificaciones": [
+        "TP",
+        "PH",
+        "UP",
+        "UV"
+      ],
+      "fases": [
+        "liquido",
+        "vapor"
+      ],
+      "dominio": {
+        "T": [
+          159.05,
+          582.615
+        ],
+        "P": [
+          100,
+          500000
+        ]
+      },
+      "referencia": {
+        "id": "gas-ideal-298.15K-1bar-h0-s0",
+        "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+      },
+      "propiedades": [
+        "u",
+        "h",
+        "v",
+        "s"
+      ],
+      "dinamica": false
+    },
+    {
+      "id": "unifac-original-lle-public",
+      "version": "1",
+      "nombre": "Vapor ideal + líquido UNIFAC con la tabla dedicada a ELL (Magnussen et al. 1981; 10-40 °C)",
+      "componentesCAS": [
+        "7732-18-5",
+        "64-17-5",
+        "71-43-2",
+        "108-88-3",
+        "71-36-3",
+        "141-78-6"
+      ],
+      "especificaciones": [
+        "TP",
+        "PH",
+        "UP",
+        "UV"
+      ],
+      "fases": [
+        "liquido",
+        "vapor"
+      ],
+      "dominio": {
+        "T": [
+          283.15,
+          313.15
+        ],
+        "P": [
+          100,
+          500000
+        ]
+      },
+      "referencia": {
+        "id": "gas-ideal-298.15K-1bar-h0-s0",
+        "descripcion": "Por especie: gas ideal puro a 298.15 K y 1e5 Pa con h = 0 y s = 0. Compartida por todos los paquetes de mezcla; distinta de la referencia IAPWS-95 del agua."
+      },
+      "propiedades": [
+        "u",
+        "h",
+        "v",
+        "s"
+      ],
+      "dinamica": false
+    },
+    {
+      "id": "agua-iapws95-hielo-ih",
+      "version": "1",
+      "nombre": "Agua pura con hielo Ih: IAPWS-95 (fluido) + IAPWS R10-06 (hielo Ih)",
+      "componentesCAS": [
+        "7732-18-5"
+      ],
+      "especificaciones": [
+        "TP",
+        "PH",
+        "UP",
+        "UV"
+      ],
+      "fases": [
+        "solido",
+        "liquido",
+        "vapor"
+      ],
+      "dominio": {
+        "T": [
+          200,
+          300
+        ],
+        "P": [
+          0.1,
+          100000000
+        ]
+      },
+      "referencia": {
+        "id": "iapws95-u0-s0-liquido-saturado-punto-triple",
+        "descripcion": "IAPWS-95: u = 0 y s = 0 del líquido saturado en el punto triple; el hielo Ih de IAPWS R10-06(2009) usa la constante s0 de la versión IAPWS-95, de modo que comparte esa referencia. Propiedades específicas por kg."
+      },
+      "propiedades": [
+        "u",
+        "h",
+        "v",
+        "s",
+        "cp"
+      ],
+      "dinamica": false
+    }
+  ]
+}

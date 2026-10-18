@@ -1,0 +1,105 @@
+import fs from 'node:fs';import ts from 'typescript';import assert from 'node:assert/strict';
+const cache=new Map();function cargar(n){if(cache.has(n))return cache.get(n);const m={exports:{}};cache.set(n,m.exports);new Function('exports','module','require',ts.transpileModule(fs.readFileSync(`app/motor/${n}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(m.exports,m,r=>cargar(r.slice(2)));return m.exports;}
+const lector=cargar('lectorEnsamblajeTermodinamico'),adapter=cargar('resultadoEnsamblaje'),datos=cargar('datosEnsamblajeTermodinamico'),prep=cargar('prepararEnsamblajeTermodinamico'),estado=cargar('estadoEnergiaHoja'),rec=cargar('recorridoEnergia'),vol=cargar('volumenControl'),modelo=cargar('modeloHojaMotor'),roles=cargar('papelesVariables');
+const path='../docs/ejemplos/',leer=n=>JSON.parse(fs.readFileSync(path+n,'utf8'));let checks=0;const check=(v,m)=>{checks++;assert.ok(v,m);},rechaza=f=>{checks++;assert.throws(f);};
+const cap=lector.validarCapacidadesEnsamblaje(leer('motor-ensamblaje-capacidades.json'));check(cap.integradores[0].id==='rk45'&&cap.fases.eventos,'Capacidades reales');
+let muestras=0;for(const n of fs.readdirSync(path).filter(n=>n.startsWith('motor-ensamblaje-')&&n.endsWith('-peticion.json'))){
+  const s=leer(n);let r=leer(n.replace('-peticion','-respuesta'));
+  if(n.includes('-resolver-')){
+    muestras+=r.resultados?.tiempos.length??0;
+    lector.validarResolucionEnsamblaje(r,s);checks++;
+    if(r.resultados){
+      const h=cargar('hojasPruebaEnergia').crearHojasPruebaEnergia()[0],out=adapter.adaptarResultadoEnsamblaje(h,s,r);adapter.validarResultadoDinamico(out);checks++;
+      check(JSON.stringify(out.tiempos)===JSON.stringify(r.resultados.tiempos),'Sin remuestreo');
+      for(const q of r.resultados.series){const real=out.seriesEvaluadas.find(v=>v.id===q.variableId);check(real.unidad===q.unidadSI&&JSON.stringify(real.valores)===JSON.stringify(q.valores),'Valores SI originales por ID');}
+      const graficas=cargar('datosGraficasMotor').datosGraficasMotor(h,out,'tiempo');
+      check(adapter.graficasInicialesDinamicas(out).every(g=>g.y.every(id=>graficas.variables.some(v=>v.id===id))),'Gráficas iniciales con variables existentes');
+      const liquido=`volumen.${s.volumen.id}.fraccionMasica.liquido`;
+      check(graficas.variables.some(v=>v.id===liquido&&v.unidad==='1'),'Fracción líquida disponible sin volver a resolver');
+      r.resultados.estadosTermodinamicos.forEach((e,k)=>check(graficas.filas[k][liquido]===e.fases.filter(f=>f.tipo==='liquido').reduce((a,f)=>a+f.fraccionMasica,0),'Líquido procede de las fases certificadas, no de 1-q'));
+      const pruebaFluido=structuredClone(out);
+      pruebaFluido.ensamblajeTermodinamico.respuesta.resultados.estadosTermodinamicos[0].fases=[{tipo:'fluido',fraccionMasica:1}];
+      const fasesFluido=cargar('fraccionesFaseGraficas').fraccionesFaseGraficas(pruebaFluido);
+      check(fasesFluido.find(v=>v.id===liquido).valores[0]===0&&fasesFluido.find(v=>v.id.endsWith('.fluido')).valores[0]===1,'Fluido supercrítico no se etiqueta como líquido');
+      check(out.seriesEvaluadas.length===r.resultados.series.length,'Las series derivadas no alteran el resultado original ni su persistencia');
+      const malo=structuredClone(out);malo.seriesEvaluadas[0].valores[0]+=1;rechaza(()=>adapter.validarResultadoDinamico(malo));
+      const bad=structuredClone(r);bad.resultados.series[0].valores.pop();rechaza(()=>lector.validarResolucionEnsamblaje(bad,s));
+      const errado=structuredClone(r);errado.resultados.estadosTermodinamicos[0].P*=2;rechaza(()=>lector.validarResolucionEnsamblaje(errado,s));
+      const corto=structuredClone(r);corto.resultados.estadosTermodinamicos.pop();rechaza(()=>lector.validarResolucionEnsamblaje(corto,s));
+      const unit=structuredClone(r);unit.resultados.series[0].unidadSI='g';rechaza(()=>lector.validarResolucionEnsamblaje(unit,s));
+      rechaza(()=>lector.validarResolucionEnsamblaje(r,{...s,solicitudId:'vieja'}));rechaza(()=>lector.validarResolucionEnsamblaje(r,s,'ens-otro'));
+    }
+  }else {lector.validarRespuestaEnsamblaje(r,s);checks++;}
+}
+const manual=cargar('hojasPruebaEnergia').crearHojasPruebaEnergia()[0],antes=JSON.stringify(manual),real=datos.elegirCierreReal(manual,cap.modelos[0]);
+check(JSON.stringify(manual)===antes,'Selección no muta hoja anterior');check(real.energia.datos.energia_c.texto===manual.energia.datos.energia_c.texto,'Conserva parámetros manuales inactivos');
+check(!modelo.analizarHoja(real).listo,'Ningún fallback al integrador manual');
+let h=cargar('estadoTermodinamicoHoja').identificarComponenteEstado(real,1,'7732-18-5');h=vol.guardarGeometria(vol.elegirVolumenControl(h,'dominio','rigido'),'dominio',{texto:'10',unidad:'L'});
+let p=prep.prepararEnsamblajeTermodinamico(h,'ui');check(!p.diagnosticos.length,'Preparación válida después de elección explícita');
+check(Object.keys(p.solicitud.datos).every(id=>!id.includes('energia_c')),'Sin duplicación de cierre manual');
+const m=Object.values(p.solicitud.volumen.inicial.masaIds)[0],editada=datos.editarDatoDinamico(h,m,{texto:'20',unidad:'kg'});
+check(editada.config.datos.inicial_1.texto==='20'&&h.config.datos.inicial_1.texto==='10','Edición por origen y fuente única');
+rechaza(()=>datos.editarDatoDinamico(h,'dato-no-presente',{texto:'0',unidad:'kg'}));
+h=datos.editarDatoDinamico(h,p.solicitud.volumen.inicial.energia.datoId,{texto:'25',unidad:'degC'});p=prep.prepararEnsamblajeTermodinamico(h,'ui');
+check(p.solicitud.datos[p.solicitud.volumen.inicial.energia.datoId].declaracion.unidad==='degC','Conserva unidad sin copiar resultado');
+h=datos.aplicarPoliticaDinamica(h,{cantidad:'sin_restriccion',cambioInterno:'permitido',evaluacion:'equilibrio_estable'});p=prep.prepararEnsamblajeTermodinamico(h,'ui');
+check(!p.diagnosticos.some(d=>d.codigo==='MOTOR_ENS_POLITICA')&&!estado.formulacionEnergiaHoja(h).monofasico,'Política compartida y trazable');
+check(roles.variablesVolumen(h,'dominio').find(v=>v.id==='P').papel==='Por cierre','P rígida se obtiene del cierre, no dato');
+check(roles.datosVolumen(h,'dominio').some(v=>v.id.includes('.T0')),'Iniciales visibles también fuera de Resolver');
+const vuelta=datos.elegirCierreManual(h);check(!datos.usaEnsamblajeTermodinamico(vuelta)&&estado.formulacionEnergiaHoja(vuelta).modelo==='u_lineal','Elección manual explícita');
+check(JSON.stringify(vuelta.energia.datos)===JSON.stringify(h.energia.datos),'Cambiar modelo conserva las declaraciones');
+// Real open-system input ownership, pressure switching, reversal and edited ports.
+let abierta=datos.elegirCierreReal(cargar('hojasPruebaEnergia').crearHojasPruebaEnergia()[3],cap.modelos[0]);
+abierta=cargar('estadoTermodinamicoHoja').identificarComponenteEstado(abierta,1,'7732-18-5');
+abierta={...abierta,resultadoRef:{firma:'vieja',estado:'resuelto',fecha:''}};
+abierta=datos.editarDatoDinamico(abierta,'corriente.1.Pext',{texto:'2',unidad:'bar'});
+const original=JSON.stringify(abierta),firmaDato=modelo.firmaHoja(abierta);
+let continua=datos.elegirPresionCorriente(abierta,1,'continuidad'),pc=prep.prepararEnsamblajeTermodinamico(continua,'continuidad');
+check(JSON.stringify(abierta)===original,'Alternar presión no muta la hoja original');
+check(!continua.resultadoRef&&modelo.firmaHoja(continua)!==firmaDato,'Cambiar relación invalida el resultado');
+check(pc.solicitud.corrientes[0].estadoExterior.presion.tipo==='continuidad'&&!pc.solicitud.datos['corriente.1.Pext'],'Continuidad no especifica P dos veces');
+check(!pc.diagnosticos.some(d=>d.codigo==='MOTOR_ENS_P_DUPLICADA'),'Sin conflicto artificial de P');
+check(continua.presionesExterioresInactivas[1].texto==='2','Valor propio conservado fuera de los datos activos');
+let propia=datos.elegirPresionCorriente(continua,1,'dato');
+check(propia.config.datos.corriente_1_P.texto==='2'&&propia.config.datos.corriente_1_P.unidad==='bar','Restaura texto y unidad propios, no P calculada');
+check(prep.prepararEnsamblajeTermodinamico(propia,'propia').solicitud.corrientes[0].estadoExterior.presion.tipo==='dato','Restaurar activa solo el dato');
+const inactive=structuredClone(continua);inactive.presionesExterioresInactivas[1].texto='9';
+check(modelo.firmaHoja(inactive)===modelo.firmaHoja(continua),'Datos inactivos no cambian identidad física');
+rechaza(()=>datos.elegirPresionCorriente(abierta,2,'continuidad'));
+let pr=prep.prepararEnsamblajeTermodinamico(continua,'signos').solicitud;
+check(!prep.puedeExtraerDinamica(pr.corrientes[0],'dominio',pr.datos)&&prep.puedeExtraerDinamica(pr.corrientes[1],'dominio',pr.datos),'Extracción solo donde el signo puede sacar materia');
+continua=datos.editarDatoDinamico(continua,'corriente.2.F.1',{texto:'cos(t/10)',unidad:'kg/s'});
+pr=prep.prepararEnsamblajeTermodinamico(continua,'inversion').solicitud;
+check(continua.historial.pasos[continua.historial.activo].formulacion.fronteras.find(p=>p.id===2).constante===false,'F(t) explícito retira la hipótesis previa de caudal constante en el desglose');
+check(!prep.prepararEnsamblajeTermodinamico(continua,'inversion').diagnosticos.some(d=>d.codigo==='MOTOR_ENS_CONTEXTO'),'Caudal temporal mantiene el contexto energético vigente');
+check(!!pr.corrientes[1].estadoExterior&&prep.puedeExtraerDinamica(pr.corrientes[1],'dominio',pr.datos),'Inversión requiere donante exterior y permite extracción');
+let hist=cargar('recorridoMateria').recorridoMateria(continua.historial,{tipo:'cambiar',titulo:'Agregar corriente',cambios:{fronteras:[...continua.historial.pasos[continua.historial.activo].formulacion.fronteras,{id:3,sentido:'salida',constante:true}]}});
+const editadaE=estado.actualizarContextoDinamico({...continua,historial:hist});
+check(!prep.prepararEnsamblajeTermodinamico(editadaE,'nuevo').diagnosticos.some(d=>d.codigo==='MOTOR_ENS_CONTEXTO'),'Agregar corriente vuelve a ensamblar la misma primera ley');
+check(JSON.stringify(editadaE.energia.datos)===JSON.stringify(continua.energia.datos),'Sin perder propiedades, iniciales ni calor al actualizar contexto');
+check(JSON.stringify(estado.formulacionEnergiaHoja(editadaE))===JSON.stringify(estado.formulacionEnergiaHoja(continua)),'Actualizar corrientes no introduce supuestos');
+check(prep.prepararEnsamblajeTermodinamico(editadaE,'nuevo').diagnosticos.some(d=>d.variableIds.includes('corriente.3.F.1')),'Nueva corriente pide su caudal, nunca lo supone cero');
+hist=cargar('recorridoMateria').recorridoMateria(hist,{tipo:'cambiar',titulo:'Quitar corriente',cambios:{fronteras:hist.pasos[hist.activo].formulacion.fronteras.filter(p=>p.id!==3)}});
+const quitada=estado.actualizarContextoDinamico({...editadaE,historial:hist});
+check(!prep.prepararEnsamblajeTermodinamico(quitada,'quitada').solicitud.corrientes.some(c=>c.id===3),'Quitar corriente la elimina de las ecuaciones activas');
+check(estado.actualizarContextoDinamico(quitada)===quitada,'Sin pasos redundantes cuando el contexto no cambia');
+const conDatos=datos.editarDatoDinamico(editadaE,'corriente.3.F.1',{texto:'0.5',unidad:'kg/s'}),sinPuerto=estado.actualizarContextoDinamico({...conDatos,historial:hist});
+check(!sinPuerto.config.datos.salida_1_3,'Retirar puerto elimina el caudal activo asociado al puerto retirado');
+const recreada=estado.actualizarContextoDinamico({...sinPuerto,historial:cargar('recorridoMateria').recorridoMateria(hist,{tipo:'cambiar',titulo:'Nueva salida',cambios:{fronteras:[...hist.pasos[hist.activo].formulacion.fronteras,{id:3,sentido:'salida',constante:false}]}})});
+check(prep.prepararEnsamblajeTermodinamico(recreada,'recreada').solicitud.datos['corriente.3.F.1'].declaracion.texto==='','Puerto nuevo no hereda silenciosamente el valor del puerto eliminado');
+const ens=cargar('ensamblajeMateria'),migrada=ens.iniciarEnsamblaje(propia.historial,propia.config);
+let graph={...propia,...ens.normalizarEnsamblaje(migrada.ensamblaje,migrada.config),cierresDinamicos:{v1:structuredClone(propia.cierresDinamicos.dominio)}};
+graph=estado.actualizarContextoDinamico(graph);graph=datos.editarDatoDinamico(graph,'corriente.1.Pext',{texto:'3',unidad:'bar'});
+graph=datos.elegirPresionCorriente(graph,1,'continuidad');
+check(!graph.ensamblaje.corrientes[0].datos.P&&graph.presionesExterioresInactivas[1].texto==='3','Mismo selector con corriente normalizada');
+graph=datos.elegirPresionCorriente(graph,1,'dato');
+check(graph.ensamblaje.corrientes[0].datos.P.texto==='3','Restaura en el propietario de la corriente normalizada');
+const presentacion=cargar('presentacionEnsamblaje'),fixture=leer('motor-ensamblaje-resolver-llenado-rigido-respuesta.json').validacion;
+for(const variable of fixture.variables)check(presentacion.ecuacionesDeVariable(fixture,variable.id).every(e=>e.variableIds.includes(variable.id)),'Enlaces usan incidencia publicada, no LaTeX');
+const pendiente=prep.prepararEnsamblajeTermodinamico(editadaE,'pendiente').solicitud;
+check(!presentacion.caudalIntroducido(pendiente.corrientes.find(c=>c.id===3),pendiente),'Sin caudal no se piden datos exteriores prematuramente');
+check(presentacion.caudalIntroducido(pr.corrientes[1],pr),'Expresión temporal declarada permite completar el donante exterior');
+const corrupta=leer('motor-ensamblaje-resolver-llenado-rigido-respuesta.json');
+corrupta.resultados.series.find(v=>v.variableId.endsWith('.q')).valores[0]=0.5;
+rechaza(()=>lector.validarResolucionEnsamblaje(corrupta,leer('motor-ensamblaje-resolver-llenado-rigido-peticion.json')));
+console.log(`${checks} comprobaciones de integración: 13 pares reales aceptados sin correcciones; ${muestras} muestras originales verificadas. Persistencia, políticas, edición, presión y fuentes únicas.`);

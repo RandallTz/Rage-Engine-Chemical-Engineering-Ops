@@ -1,0 +1,154 @@
+
+> frontend@0.1.0 test:motor-fundamental
+> node verificar_operadores_materia.mjs && node verificar_recorrido_materia.mjs && node verificar_un_volumen_materia.mjs && node verificar_solver_motor.mjs && node verificar_hojas_prueba_materia.mjs && node verificar_acoplamiento_materia.mjs && node verificar_multicomponente_materia.mjs && node verificar_preparacion_estado_materia.mjs && node verificar_seleccion_balances.mjs && node verificar_energia_motor.mjs && node verificar_relaciones_energia.mjs && node verificar_integracion_ensamblaje.mjs && node verificar_contrato_termodinamica.mjs && node verificar_volumen_control.mjs && node verificar_entrega_h0_h1_motor.mjs && node verificar_preparacion_ensamblaje_termodinamico.mjs && node verificar_entrega_h3_motor.mjs && node verificar_estructura_termodinamica.mjs && node verificar_integracion_multifasica.mjs && node verificar_consolidacion_multifasica.mjs
+
+Operadores: referencias analíticas en 3 coordenadas, 48 combinaciones generales, 72 reducciones direccionales, geometría y acumulación deducida correctas.
+Hoja: orden libre, pasos cancelados retirados y recuperación con Rehacer, formas diferencial/integral/total, fuentes locales independientes, resto de frontera explícito, regla del producto y unidades; 288 combinaciones renderizadas.
+Componentes: 54 configuraciones con dos conservaciones, identidades estables al renombrar/retirar/sustituir pasos, relaciones de mezcla y variables separadas por dominio/corriente; 27 especies renderizadas.
+Un volumen / una especie: 147 comprobaciones, 66 contrastes independientes; error relativo máximo 3.32e-11. Sin ejecutar el solver ni importar el laboratorio.
+Solver independiente: 335 comprobaciones. Temporal directo, rigidez, agotamiento, unidades, 1D conservativo, convergencia espacial, difusión compatible, rechazos y expresiones seguras. Error de advección por malla: 4.168e-2 / 2.215e-2 / 1.142e-2.
+Hojas de prueba de materia: 9190 comprobaciones. Ocho hojas completas, referencias analíticas, conservación, agotamiento y guardado sin sobrescribir documentos.
+[
+  {
+    "nombre": "01 · Tanque que se llena",
+    "estado": "resuelto",
+    "tiempo_final_s": 600,
+    "ultimo_estado": [
+      699.9999999999994
+    ],
+    "error_referencia": 5.684341886080801e-13,
+    "residuo_presupuesto": [
+      0
+    ]
+  },
+  {
+    "nombre": "02 · Tanque que se vacía",
+    "estado": "resuelto",
+    "tiempo_final_s": 30,
+    "ultimo_estado": [
+      40.00000000000034
+    ],
+    "error_referencia": 3.410605131648481e-13,
+    "residuo_presupuesto": [
+      3.197442310920451e-13
+    ]
+  },
+  {
+    "nombre": "03 · Llenado en litros",
+    "estado": "resuelto",
+    "tiempo_final_s": 300,
+    "ultimo_estado": [
+      0.7
+    ],
+    "error_referencia": 1.1102230246251565e-16,
+    "residuo_presupuesto": [
+      0
+    ]
+  },
+  {
+    "nombre": "04 · Entradas y salidas iguales",
+    "estado": "resuelto",
+    "tiempo_final_s": 600,
+    "ultimo_estado": [
+      100
+    ],
+    "error_referencia": 0,
+    "residuo_presupuesto": [
+      0
+    ]
+  },
+  {
+    "nombre": "05 · Vaciado hasta agotarse",
+    "estado": "parcial",
+    "tiempo_final_s": 49.999999999999815,
+    "ultimo_estado": [
+      4.798383912429927e-13
+    ],
+    "error_referencia": 1.1035616864774056e-13,
+    "residuo_presupuesto": [
+      5.684341886080802e-14
+    ]
+  },
+  {
+    "nombre": "06 · Conversión de A en B",
+    "estado": "resuelto",
+    "tiempo_final_s": 20,
+    "ultimo_estado": [
+      0.018315638890964957,
+      0.981684361109035
+    ],
+    "error_referencia": 1.1200929073140742e-11,
+    "residuo_presupuesto": [
+      0,
+      0
+    ]
+  },
+  {
+    "nombre": "07 · Transporte por convección · 1D",
+    "estado": "resuelto",
+    "tiempo_final_s": 0.25,
+    "ultimo_estado": null,
+    "error_referencia": 0.011422452047417847,
+    "residuo_presupuesto": [
+      -2.168404344971009e-18
+    ]
+  },
+  {
+    "nombre": "08 · Difusión de dos componentes · 1D",
+    "estado": "resuelto",
+    "tiempo_final_s": 0.5,
+    "ultimo_estado": null,
+    "error_referencia": 0.00001889525191323127,
+    "residuo_presupuesto": [
+      6.650225075482963e-17,
+      -4.006127027333939e-17
+    ]
+  }
+]
+Acoplado 1 · Dos tanques en serie: 700.000000 / 800.000000 kg; 100 pasos.
+Acoplado 2 · Cadena de tres con expresiones: 0.135335283 / 0.270670566 / 0.270670566 kg; 104 pasos.
+Acoplado 3 · División y reunión de corrientes: 100.000000 / 50.0000000 / 60.0000000 / 40.0000000 kg; 100 pasos.
+Acoplado 4 · Recirculación cerrada: 0.995298089 / 1.00099020 / 1.00371171 kg; 120 pasos.
+Acoplado 5 · Intercambio selectivo de A: 0.509157819 / 2.00000000 / 0.490842181 / 3.00000000 kg; 100 pasos.
+Acoplado 6 · Conversión y transporte acoplados: 0.00247875218 / 0.0158368867 / 0.665014165 / 0.316670196 kg; 113 pasos.
+Acoplamiento de materia: 3726 comprobaciones. Incidencia genérica, cadenas, ramas, ciclos, especies, reacción, no linealidad y métodos conjuntos.
+3 componentes · 2 volúmenes · 6 balances · 2 gráficas: Multicomponente · Mezcla de tres componentes en serie
+4 componentes · 2 volúmenes · 8 balances · 2 gráficas: Multicomponente · Intercambio selectivo de cuatro componentes
+4 componentes · 3 volúmenes · 12 balances · 3 gráficas: Multicomponente · Conversión A → B → C e inerte D
+8 componentes · 2 volúmenes · 16 balances · 8 gráficas: Multicomponente · Ocho componentes y trazas
+Multicomponente: 13150 comprobaciones. Referencias analíticas, conservación, ecuaciones, catálogo, tabla y selección inicial de todas las gráficas.
+Preparación estructural de materia: 1163 comprobaciones. Compatibilidad bit a bit, catálogo, especificaciones, reglas, variables y persistencia.
+744 comprobaciones: selección por sistema, guardas de solver, persistencia e identidad material.
+Energía · Recipiente cerrado calentado 300.65 [ 0, 0 ]
+Energía · Enfriamiento por calor declarado 307.3209965822305 [ 0, -4.656612873077393e-10 ]
+Materia + energía · Entrada caliente y cantidad constante 329.52128186840343 [ 0, 0 ]
+Materia + energía · Cantidad creciente y calor 311.8757700976694 [ -7.815970093361102e-13, 0 ]
+Materia + energía · Vaciado y entrada fría 307.1500000000009 [ -1.1368683772161603e-13, 2.421438694000244e-8 ]
+Materia + energía · Llenado con entrada caliente 323.15 [ 0, 0 ]
+rk45 · caso 1: error T máximo 0.000e+0 K
+euler_implicito · caso 1: error T máximo 0.000e+0 K
+rk45 · caso 2: error T máximo 1.137e-13 K
+euler_implicito · caso 2: error T máximo 1.511e-4 K
+rk45 · caso 3: error T máximo 3.394e-11 K
+euler_implicito · caso 3: error T máximo 2.061e-4 K
+rk45 · caso 4: error T máximo 6.025e-12 K
+euler_implicito · caso 4: error T máximo 8.690e-5 K
+rk45 · caso 5: error T máximo 9.095e-13 K
+euler_implicito · caso 5: error T máximo 2.021e-4 K
+rk45 · caso 6: error T máximo 5.684e-14 K
+euler_implicito · caso 6: error T máximo 1.376e-4 K
+11936 comprobaciones: fundamentos, transformaciones, presupuestos, referencias independientes, unidades, eventos, selección y compatibilidad material.
+155 comprobaciones: presión espacial/dato, compatibilidad antigua, volumen ocupado/geometría, relaciones activas, donantes y procedencia.
+422 comprobaciones de integración: 13 pares reales aceptados sin correcciones; 164 muestras originales verificadas. Persistencia, políticas, edición, presión y fuentes únicas.
+262 comprobaciones del contrato: unidades, reconstrucción, hipótesis, propietarios, vigencia, guardas y regresión manual. Datos sintéticos: no validan propiedades ni estabilidad física.
+237 comprobaciones: geometría compartida, leyes de frontera, papeles de variables, unidades, referencias temporales y compatibilidad material/energética.
+48 comprobaciones H0/H1: respuestas reales, masa molar por modelo, persistencia y separación del cierre dinámico.
+42 comprobaciones: borrador de ensamblaje, datos únicos, fronteras, donantes, bases, trazabilidad y guardas sin ejecutar termodinámica.
+67 comprobaciones H3: ejemplos reales, reconstrucción UV, bases de fase, límites de Cp/Cv y cambios de especificación.
+560 comprobaciones: conservación estructural en redes, cancelación interna, fronteras, marco de equilibrio y compatibilidad v1. No certifica nuevos flashes ni modelos físicos.
+motor-ensamblaje-v2-resolver-binario-acoplado-peticion.json: 5 muestras, 42 variables graficables
+motor-ensamblaje-v2-resolver-calentamiento-etanol-agua-peticion.json: 9 muestras, 31 variables graficables
+motor-ensamblaje-v2-resolver-contacto-dos-aguas-peticion.json: 6 muestras, 49 variables graficables
+motor-ensamblaje-v2-resolver-decantador-agua-butanol-peticion.json: 5 muestras, 31 variables graficables
+334 comprobaciones de integración multifásica; 36 estados reales. IDs de fases, tres bases, composición, persistencia, errores y copia explícita.
+231 comprobaciones de consolidación: certificación independiente, catálogo, potenciales totales, eventos, evidencia, respuestas históricas y controles negativos.

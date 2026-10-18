@@ -1,0 +1,495 @@
+{
+  "revision": 2,
+  "revisionesAdmitidas": [
+    1,
+    2
+  ],
+  "disponible": true,
+  "motivo": null,
+  "paquetes": [
+    {
+      "modelo": {
+        "id": "agua-iapws95",
+        "version": "1"
+      },
+      "operaciones": [
+        "TP",
+        "PH",
+        "UP",
+        "UV",
+        "TV"
+      ],
+      "fases": [
+        "liquido",
+        "vapor",
+        "fluido"
+      ],
+      "combinaciones": [
+        {
+          "id": "una_fase",
+          "nombre": "una fase (liquido, vapor o fluido supercritico)",
+          "publicada": true,
+          "evidencia": "contrastada",
+          "motivo": "H1: IAPWS-95 frente a sus valores publicados e IF97"
+        },
+        {
+          "id": "liquido_vapor",
+          "nombre": "liquido-vapor puro",
+          "publicada": true,
+          "evidencia": "contrastada",
+          "motivo": "H3: coexistencia de Maxwell verificada"
+        },
+        {
+          "id": "solido",
+          "nombre": "solido (hielo Ih) en volumenes dinamicos",
+          "publicada": false,
+          "evidencia": "sin_modelo",
+          "motivo": "el hielo Ih existe solo como modelo estatico agua-iapws95-hielo-ih en /motor/termodinamica (TP, PH, UP, UV, triple); no esta habilitado en volumenes dinamicos"
+        },
+        {
+          "id": "region_critica",
+          "nombre": "region critica",
+          "publicada": false,
+          "evidencia": "excluida",
+          "motivo": "banda critica excluida (H1)"
+        }
+      ],
+      "componentesCAS": [
+        "7732-18-5"
+      ],
+      "dominio": {
+        "T": [
+          273.16,
+          1073.15
+        ],
+        "P": [
+          100.0,
+          100000000.0
+        ]
+      },
+      "limites": [
+        "sin hielo: T >= 273.16 K y P <= 100 MPa",
+        "banda critica excluida",
+        "coexistencia solo con Tsat <= 0.995 Tc"
+      ],
+      "dinamica": true
+    },
+    {
+      "modelo": {
+        "id": "mezcla-ideal",
+        "version": "1"
+      },
+      "operaciones": [
+        "TP",
+        "PH",
+        "UP",
+        "UV",
+        "TV"
+      ],
+      "fases": [
+        "liquido",
+        "vapor"
+      ],
+      "combinaciones": [
+        {
+          "id": "una_fase",
+          "nombre": "una fase liquida o vapor",
+          "publicada": true,
+          "evidencia": "contrastada",
+          "motivo": "M1/M2"
+        },
+        {
+          "id": "liquido_vapor",
+          "nombre": "liquido-vapor",
+          "publicada": true,
+          "evidencia": "contrastada",
+          "motivo": "Raoult con Poynting frente a la expresion analitica (seccion 1)"
+        },
+        {
+          "id": "liquido_liquido",
+          "nombre": "liquido-liquido y liquido-liquido-vapor",
+          "publicada": false,
+          "evidencia": "imposible_en_el_modelo",
+          "motivo": "la solucion ideal (g^E = 0) es siempre estable frente a separacion liquida: no es falta de datos"
+        },
+        {
+          "id": "liquido_rigido_lleno",
+          "nombre": "liquido incompresible llenando un volumen rigido",
+          "publicada": false,
+          "evidencia": "sin_modelo",
+          "motivo": "presion indeterminada con liquido incompresible"
+        },
+        {
+          "id": "solido",
+          "nombre": "solido",
+          "publicada": false,
+          "evidencia": "sin_modelo",
+          "motivo": "sin modelo de solidos en mezclas (solubilidad, SLE, eutecticos)"
+        }
+      ],
+      "componentesCAS": [
+        "7732-18-5",
+        "64-17-5",
+        "71-43-2",
+        "108-88-3",
+        "71-36-3",
+        "141-78-6",
+        "67-56-1"
+      ],
+      "dominio": {
+        "T": [
+          159.05,
+          582.615
+        ],
+        "P": [
+          100.0,
+          500000.0
+        ]
+      },
+      "limites": [
+        "vapor ideal: P <= 500000 Pa",
+        "liquido incompresible (v_L a 298.15 K)",
+        "T <= 0.9 Tc de cada especie"
+      ],
+      "dinamica": true
+    },
+    {
+      "modelo": {
+        "id": "nrtl-chemsep",
+        "version": "1"
+      },
+      "operaciones": [
+        "TP",
+        "PH",
+        "UP",
+        "UV",
+        "TV"
+      ],
+      "fases": [
+        "liquido",
+        "vapor"
+      ],
+      "combinaciones": [
+        {
+          "id": "una_fase",
+          "nombre": "una fase liquida o vapor",
+          "publicada": true,
+          "evidencia": "contrastada",
+          "motivo": "M1/M2"
+        },
+        {
+          "id": "liquido_vapor",
+          "nombre": "liquido-vapor",
+          "publicada": true,
+          "evidencia": "cualitativa",
+          "motivo": "contrastada solo para etanol-agua (azeotropo a 1 atm); la evidencia de cada par esta en `pares`"
+        },
+        {
+          "id": "liquido_liquido",
+          "nombre": "liquido-liquido y liquido-liquido-vapor",
+          "publicada": true,
+          "evidencia": "cualitativa",
+          "motivo": "mismo algoritmo de estabilidad que el paquete LLE; los parametros ChemSep estan ajustados a VLE: la solubilidad mutua predicha no esta contrastada"
+        },
+        {
+          "id": "liquido_rigido_lleno",
+          "nombre": "liquido incompresible llenando un volumen rigido",
+          "publicada": false,
+          "evidencia": "sin_modelo",
+          "motivo": "presion indeterminada con liquido incompresible"
+        },
+        {
+          "id": "solido",
+          "nombre": "solido",
+          "publicada": false,
+          "evidencia": "sin_modelo",
+          "motivo": "sin modelo de solidos en mezclas (solubilidad, SLE, eutecticos)"
+        }
+      ],
+      "componentesCAS": [
+        "7732-18-5",
+        "64-17-5",
+        "71-43-2",
+        "108-88-3",
+        "71-36-3",
+        "141-78-6",
+        "67-56-1"
+      ],
+      "dominio": {
+        "T": [
+          159.05,
+          582.615
+        ],
+        "P": [
+          100.0,
+          500000.0
+        ]
+      },
+      "limites": [
+        "vapor ideal: P <= 500000 Pa",
+        "liquido incompresible (v_L a 298.15 K)",
+        "T <= 0.9 Tc de cada especie"
+      ],
+      "dinamica": true,
+      "pares": [
+        {
+          "componentesCAS": [
+            "7732-18-5",
+            "64-17-5"
+          ],
+          "procedencia": "ChemSep NRTL (thermo IPDB)",
+          "evidencia": "contrastada",
+          "motivo": "azeotropo a 1 atm frente a la literatura (tests/validar_motor_ensamblaje_v2.py seccion 2); ln gamma frente a thermo.nrtl"
+        },
+        {
+          "componentesCAS": [
+            "7732-18-5",
+            "71-36-3"
+          ],
+          "procedencia": "ChemSep NRTL (thermo IPDB)",
+          "evidencia": "cualitativa",
+          "motivo": "parametros publicados sin contraste propio en estas pruebas"
+        },
+        {
+          "componentesCAS": [
+            "7732-18-5",
+            "141-78-6"
+          ],
+          "procedencia": "ChemSep NRTL (thermo IPDB)",
+          "evidencia": "cualitativa",
+          "motivo": "parametros publicados sin contraste propio en estas pruebas"
+        },
+        {
+          "componentesCAS": [
+            "7732-18-5",
+            "67-56-1"
+          ],
+          "procedencia": "ChemSep NRTL (thermo IPDB)",
+          "evidencia": "cualitativa",
+          "motivo": "parametros publicados sin contraste propio en estas pruebas"
+        },
+        {
+          "componentesCAS": [
+            "64-17-5",
+            "71-43-2"
+          ],
+          "procedencia": "ChemSep NRTL (thermo IPDB)",
+          "evidencia": "cualitativa",
+          "motivo": "parametros publicados sin contraste propio en estas pruebas"
+        },
+        {
+          "componentesCAS": [
+            "64-17-5",
+            "108-88-3"
+          ],
+          "procedencia": "ChemSep NRTL (thermo IPDB)",
+          "evidencia": "cualitativa",
+          "motivo": "parametros publicados sin contraste propio en estas pruebas"
+        },
+        {
+          "componentesCAS": [
+            "64-17-5",
+            "141-78-6"
+          ],
+          "procedencia": "ChemSep NRTL (thermo IPDB)",
+          "evidencia": "cualitativa",
+          "motivo": "parametros publicados sin contraste propio en estas pruebas"
+        },
+        {
+          "componentesCAS": [
+            "64-17-5",
+            "67-56-1"
+          ],
+          "procedencia": "ChemSep NRTL (thermo IPDB)",
+          "evidencia": "cualitativa",
+          "motivo": "parametros publicados sin contraste propio en estas pruebas"
+        },
+        {
+          "componentesCAS": [
+            "71-43-2",
+            "108-88-3"
+          ],
+          "procedencia": "ChemSep NRTL (thermo IPDB)",
+          "evidencia": "cualitativa",
+          "motivo": "parametros publicados sin contraste propio en estas pruebas"
+        },
+        {
+          "componentesCAS": [
+            "71-43-2",
+            "67-56-1"
+          ],
+          "procedencia": "ChemSep NRTL (thermo IPDB)",
+          "evidencia": "cualitativa",
+          "motivo": "parametros publicados sin contraste propio en estas pruebas"
+        },
+        {
+          "componentesCAS": [
+            "108-88-3",
+            "67-56-1"
+          ],
+          "procedencia": "ChemSep NRTL (thermo IPDB)",
+          "evidencia": "cualitativa",
+          "motivo": "parametros publicados sin contraste propio en estas pruebas"
+        },
+        {
+          "componentesCAS": [
+            "71-36-3",
+            "67-56-1"
+          ],
+          "procedencia": "ChemSep NRTL (thermo IPDB)",
+          "evidencia": "cualitativa",
+          "motivo": "parametros publicados sin contraste propio en estas pruebas"
+        },
+        {
+          "componentesCAS": [
+            "141-78-6",
+            "67-56-1"
+          ],
+          "procedencia": "ChemSep NRTL (thermo IPDB)",
+          "evidencia": "cualitativa",
+          "motivo": "parametros publicados sin contraste propio en estas pruebas"
+        }
+      ]
+    },
+    {
+      "modelo": {
+        "id": "nrtl-lle-agua-butanol",
+        "version": "1"
+      },
+      "operaciones": [
+        "TP",
+        "PH",
+        "UP",
+        "UV",
+        "TV"
+      ],
+      "fases": [
+        "liquido",
+        "vapor"
+      ],
+      "combinaciones": [
+        {
+          "id": "una_fase",
+          "nombre": "una fase liquida o vapor",
+          "publicada": true,
+          "evidencia": "contrastada",
+          "motivo": "M1/M2"
+        },
+        {
+          "id": "liquido_vapor",
+          "nombre": "liquido-vapor",
+          "publicada": true,
+          "evidencia": "cualitativa",
+          "motivo": "los parametros se ajustaron solo a LLE; heteroazeotropo ~1.1 K sobre la literatura"
+        },
+        {
+          "id": "liquido_liquido",
+          "nombre": "liquido-liquido y liquido-liquido-vapor",
+          "publicada": true,
+          "evidencia": "contrastada",
+          "motivo": "solubilidad mutua frente a IUPAC-NIST SDS vol. 15 en 293-373 K (ajuste y validacion), meseta LLV por PH y UV (M4)"
+        },
+        {
+          "id": "liquido_rigido_lleno",
+          "nombre": "liquido incompresible llenando un volumen rigido",
+          "publicada": false,
+          "evidencia": "sin_modelo",
+          "motivo": "presion indeterminada con liquido incompresible"
+        },
+        {
+          "id": "solido",
+          "nombre": "solido",
+          "publicada": false,
+          "evidencia": "sin_modelo",
+          "motivo": "sin modelo de solidos en mezclas (solubilidad, SLE, eutecticos)"
+        }
+      ],
+      "componentesCAS": [
+        "7732-18-5",
+        "71-36-3"
+      ],
+      "dominio": {
+        "T": [
+          293.0,
+          373.0
+        ],
+        "P": [
+          100.0,
+          500000.0
+        ]
+      },
+      "limites": [
+        "vapor ideal: P <= 500000 Pa",
+        "liquido incompresible (v_L a 298.15 K)",
+        "T <= 0.9 Tc de cada especie"
+      ],
+      "dinamica": true,
+      "pares": [
+        {
+          "componentesCAS": [
+            "7732-18-5",
+            "71-36-3"
+          ],
+          "procedencia": "ajuste propio a IUPAC-NIST SDS vol. 15 (Hefter 1984), valores (R) de solubilidad mutua 293-373 K; tests/ajuste_nrtl_lle_agua_butanol.py",
+          "evidencia": "contrastada",
+          "motivo": "LLE frente a IUPAC (incluidas temperaturas no usadas en el ajuste)"
+        }
+      ]
+    }
+  ],
+  "volumenesMaximos": 3,
+  "componentesMaximos": 3,
+  "fronteras": [
+    "rigida",
+    "presion_prescrita"
+  ],
+  "corrientes": {
+    "mecanismos": [
+      "convectivo"
+    ],
+    "materia": [
+      "por_componente",
+      "total_desde_donante"
+    ],
+    "internas": true,
+    "inversion": true
+  },
+  "intercambiosTermicos": [
+    "impuesto",
+    "conductancia"
+  ],
+  "extracciones": [
+    "mezcla_homogenea",
+    "fase"
+  ],
+  "segundaLey": true,
+  "integradores": [
+    {
+      "id": "rk45",
+      "nombre": "Dormand-Prince 5(4) con eventos de fase"
+    }
+  ],
+  "muestrasMaximas": 1001,
+  "noSoportado": [
+    {
+      "elemento": "transferencia selectiva",
+      "motivo": "sin ley energetica propia"
+    },
+    {
+      "elemento": "reaccion, electrolitos, membranas, nucleacion, capilaridad, momento",
+      "motivo": "fuera de la primera ampliacion"
+    },
+    {
+      "elemento": "corriente entre volumenes con paquetes de referencia distinta",
+      "motivo": "sin conversion de referencias implementada"
+    },
+    {
+      "elemento": "presion con escalones",
+      "motivo": "sin regla de salto"
+    },
+    {
+      "elemento": "fase solida (hielo Ih) en volumenes dinamicos",
+      "motivo": "agua-iapws95-hielo-ih es solo estatico (sin pruebas dinamicas); solidos en mezclas (solubilidad, SLE, eutecticos) necesitan paquetes y datos propios"
+    }
+  ]
+}

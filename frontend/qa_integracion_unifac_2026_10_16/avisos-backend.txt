@@ -1,0 +1,18 @@
+INFO:     Uvicorn running on http://127.0.0.1:8004 (Press CTRL+C to quit)
+C:\Users\randa\Desktop\reactive_distillation\core\mezclas.py:1075: RuntimeWarning: overflow encountered in exp
+  ps = [np.exp(v[j + q * m:j + (q + 1) * m]) for q in range(k - 1)]
+  ps = [np.exp(v[j + q * m:j + (q + 1) * m]) for q in range(k - 1)]
+C:\Users\randa\Desktop\reactive_distillation\core\mezclas.py:1086: RuntimeWarning: invalid value encountered in divide
+  mus = [self.mu(t, Tv, Pv, p / p.sum(), idx) for t, p in zip(tipos, ps)]
+  mus = [self.mu(t, Tv, Pv, p / p.sum(), idx) for t, p in zip(tipos, ps)]
+C:\Users\randa\Desktop\reactive_distillation\core\mezclas.py:375: RuntimeWarning: invalid value encountered in divide
+  xs = nfase / ntot
+  xs = nfase / ntot
+C:\Users\randa\Desktop\reactive_distillation\core\unifac.py:222: RuntimeWarning: invalid value encountered in log
+  return self._Q * (1.0 - np.log(S) - (th / S) @ psi.T)
+  return self._Q * (1.0 - np.log(S) - (th / S) @ psi.T)
+C:\Users\randa\Desktop\reactive_distillation\core\unifac.py:222: RuntimeWarning: invalid value encountered in divide
+  return self._Q * (1.0 - np.log(S) - (th / S) @ psi.T)
+  return self._Q * (1.0 - np.log(S) - (th / S) @ psi.T)
+C:\Users\randa\Desktop\reactive_distillation\core\mezclas.py:661: RuntimeWarning: overflow encountered in exp
+  ps = [np.exp(zv[a * m:(a + 1) * m]) for a in range(k - 1)]

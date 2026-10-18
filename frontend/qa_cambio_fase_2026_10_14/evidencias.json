@@ -1,0 +1,106 @@
+{
+  "principal": {
+    "estado": "resuelto",
+    "muestras": 103,
+    "tiempoFinal": 300,
+    "horizonteSolicitado": 300,
+    "errorH_J": 2.3283064365386963e-10,
+    "errorUW_J": 0.02043766900897026,
+    "masaFinal_kg": 1,
+    "temperaturaFinal_K": 577.854396268415,
+    "qFinal": 1,
+    "eventos": [
+      {
+        "codigo": "aparicion_fase",
+        "tiempo_s": 33.349785750182086
+      },
+      {
+        "codigo": "desaparicion_fase",
+        "tiempo_s": 259.0941623808709
+      }
+    ]
+  },
+  "cambioProhibido": {
+    "estado": "parcial",
+    "muestras": 13,
+    "tiempoFinal": 33.349785750182086,
+    "horizonteSolicitado": 300,
+    "errorH_J": 5.820766091346741e-11,
+    "errorUW_J": 0.000025562592782080173,
+    "masaFinal_kg": 1,
+    "temperaturaFinal_K": 372.7559288971216,
+    "qFinal": 2.706396447121228e-10,
+    "eventos": [
+      {
+        "codigo": "aparicion_fase",
+        "tiempo_s": 33.349785750182086
+      }
+    ]
+  },
+  "potenciaDoble": {
+    "estado": "resuelto",
+    "muestras": 103,
+    "tiempoFinal": 150,
+    "horizonteSolicitado": 150,
+    "errorH_J": 2.3283064365386963e-10,
+    "errorUW_J": 0.02043766900897026,
+    "masaFinal_kg": 1,
+    "temperaturaFinal_K": 577.854396268415,
+    "qFinal": 1,
+    "eventos": [
+      {
+        "codigo": "aparicion_fase",
+        "tiempo_s": 16.674892875091043
+      },
+      {
+        "codigo": "desaparicion_fase",
+        "tiempo_s": 129.54708119043545
+      }
+    ]
+  },
+  "referenciaPrimeraLey": {
+    "aparicion_s": 33.3497856890867,
+    "desaparicion_s": 259.0941623526303,
+    "Tsat_K": 372.7559288971216
+  },
+  "condensacionRigida": {
+    "estado": "resuelto",
+    "muestras": 102,
+    "errorU_J": 0,
+    "T_inicial_K": 499.9999999999998,
+    "T_final_K": 394.5006591293389,
+    "P_inicial_Pa": 452717.138904303,
+    "P_final_Pa": 207323.11939484454,
+    "q_final": 0.5833492743462257,
+    "eventos": [
+      {
+        "codigo": "aparicion_fase",
+        "tiempo": 55.220155239105225,
+        "variableIds": [
+          "volumen.dominio.q",
+          "volumen.dominio.T"
+        ]
+      }
+    ]
+  },
+  "salidaLiquido": {
+    "estado": "resuelto",
+    "muestras": 102,
+    "errorM_kg": 5.551115123125783e-15,
+    "errorH_J": 2.3283064365386963e-9,
+    "masaFinal_kg": 0.8500000000000055,
+    "qFinal": 0.6107907347225164,
+    "aparicionReferencia_s": 32.79981237046725,
+    "eventos": [
+      {
+        "codigo": "aparicion_fase",
+        "tiempo": 32.79981244573821,
+        "variableIds": [
+          "volumen.dominio.q",
+          "volumen.dominio.T"
+        ]
+      }
+    ]
+  },
+  "comprobaciones": 1720
+}

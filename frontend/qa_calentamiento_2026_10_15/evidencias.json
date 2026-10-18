@@ -1,0 +1,23 @@
+{
+  "hojaId": "f8346222-26e0-4658-bfa0-45c6ee2832f2",
+  "estado": "resuelto",
+  "muestras": 102,
+  "inicial": {
+    "T_C": 9.999999999999773,
+    "P_bar_absoluta": 0.01228198930688091,
+    "fraccionMasicaVapor": 0.0018720177157623414
+  },
+  "desaparicionLiquido": {
+    "t_s": 1267.730047592091,
+    "T_C": 178.57923737467866,
+    "P_bar_absoluta": 9.704609620642339
+  },
+  "final": {
+    "t_s": 1287.2729020225838,
+    "T_C": 199.99999999999994,
+    "P_bar_absoluta": 10.281678387101916,
+    "fraccionMasicaVapor": 1
+  },
+  "errorEnergia_J": 1.862645149230957e-9,
+  "comprobaciones": 416
+}

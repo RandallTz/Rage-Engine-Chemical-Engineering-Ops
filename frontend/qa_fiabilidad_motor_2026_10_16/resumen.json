@@ -1,0 +1,368 @@
+{
+  "fuente": "../docs/ejemplos/motor-unifac/motor-ensamblaje-v2-resolver-unifac-monofasico-detenido-peticion.json",
+  "fechaUTC": "2026-10-16T11:56:37.712Z",
+  "resultados": [
+    {
+      "modelo": "nrtl-chemsep",
+      "tiemposSegundos": {
+        "validar": 0.05505110000000002,
+        "resolver": 6.4250847
+      },
+      "estado": "parcial",
+      "certificacion": {
+        "estado": "no_cumple",
+        "motivo": "cierre_constitutivo: residuo(s) sobre su tolerancia: mecanica.A.trabajo",
+        "aspectos": [
+          {
+            "id": "estados_termodinamicos",
+            "estado": "cumple",
+            "motivo": "2 estados por volumen publicados, cada uno con sus verificaciones cumplidas (una muestra que no se certifica detiene la publicación y queda en diagnósticos)",
+            "referencias": [
+              "estados"
+            ],
+            "primeraMuestraNoCumple": null
+          },
+          {
+            "id": "conservacion",
+            "estado": "cumple",
+            "motivo": "materia por componente y energía global dentro de tolerancia",
+            "referencias": [
+              "global.materia.1",
+              "global.materia.2",
+              "global.energia"
+            ],
+            "primeraMuestraNoCumple": null
+          },
+          {
+            "id": "cierre_constitutivo",
+            "estado": "no_cumple",
+            "motivo": "residuo(s) sobre su tolerancia: mecanica.A.trabajo",
+            "referencias": [
+              "mecanica.A.trabajo"
+            ],
+            "primeraMuestraNoCumple": 1
+          },
+          {
+            "id": "segunda_ley",
+            "estado": "cumple",
+            "motivo": "S_gen >= 0 y no decreciente",
+            "referencias": [
+              "segundaLey",
+              "red.Sgen"
+            ],
+            "primeraMuestraNoCumple": null
+          }
+        ],
+        "alcance": {
+          "tInicial": 0,
+          "tFinal": 21.674666447867764,
+          "muestras": 2,
+          "completa": false
+        },
+        "ultimaMuestraCertificada": 0
+      },
+      "eventos": [
+        {
+          "codigo": "aparicion_fase",
+          "tiempo": 21.674666447867764,
+          "volumenId": "A",
+          "faseIds": [
+            "vapor-1"
+          ],
+          "variableIds": [
+            "volumen.A.fases"
+          ],
+          "faseIdsAntes": [
+            "liquido-1"
+          ],
+          "faseIdsDespues": [
+            "vapor-1",
+            "liquido-1"
+          ],
+          "descripcion": "aparece una fase (transición de primer orden del conjunto de fases)"
+        }
+      ],
+      "residuos": [
+        {
+          "ecuacionId": "global.materia.1",
+          "maximoEscalado": 0,
+          "tolerancia": 10,
+          "definicion": "max_t |sum_v n_v,i - n_i(0) - int ndot_ext,i dt| / (atol + rtol max_t sum_v,i n); las transferencias internas se suman y restan como el mismo número"
+        },
+        {
+          "ecuacionId": "global.materia.2",
+          "maximoEscalado": 0,
+          "tolerancia": 10,
+          "definicion": "max_t |sum_v n_v,i - n_i(0) - int ndot_ext,i dt| / (atol + rtol max_t sum_v,i n); las transferencias internas se suman y restan como el mismo número"
+        },
+        {
+          "ecuacionId": "global.energia",
+          "maximoEscalado": 4.198992930464935e-8,
+          "tolerancia": 10,
+          "definicion": "max_t |sum U_v - U(0) - (int E_ext dt - sum W_v)| / (atol + rtol max_t(|sum U|, |int E_ext|, |sum W|)), con W_v = [P V] - int V dP/dt dt: U de los estados certificados frente a la contabilidad de transferencias exteriores y trabajo"
+        },
+        {
+          "ecuacionId": "mecanica.A.trabajo",
+          "maximoEscalado": 1.1051195826511973,
+          "tolerancia": 1,
+          "definicion": "max_t |int P dV/dt dt (dV/dt total de V(H, P, n) por diferencia centrada) - ([P V] - int V dP)| / (atol + 1e-5 max|W|): verifica la derivada total de V (diferencia centrada, integrada a traves de las aristas de cambio de fase; acuerdo medido ~2e-6 relativo, tolerancia 1e-5 declarada)"
+        },
+        {
+          "ecuacionId": "estado.A.energia",
+          "maximoEscalado": 7.263122906750158e-8,
+          "tolerancia": 1,
+          "definicion": "max |E del estado certificado - E integrada| / escala de energia"
+        }
+      ],
+      "contabilidadSI": {
+        "advertencia": "Identidades de esta petición cerrada a P y Q constantes; no son una certificación independiente del flash ni de la cuadratura auxiliar de trabajo. W es la serie publicada, no el auxiliar interno.",
+        "maxErrorEntalpiaJ": 9.094947017729282e-12,
+        "maxErrorUigualHmenosPVJ": 2.7265745217164294e-11,
+        "maxErrorTrabajoPublicadoJ": 0.0000011480860701602922,
+        "maxErrorPrimerPrincipioPublicadoJ": 0.000001148102489965715
+      }
+    },
+    {
+      "modelo": "unifac-original-public",
+      "tiemposSegundos": {
+        "validar": 0.019486699999999472,
+        "resolver": 21.749583700000002
+      },
+      "estado": "parcial",
+      "certificacion": {
+        "estado": "cumple",
+        "motivo": "conservación, cierre constitutivo, estados y segunda ley comprobados en todas las muestras",
+        "aspectos": [
+          {
+            "id": "estados_termodinamicos",
+            "estado": "cumple",
+            "motivo": "2 estados por volumen publicados, cada uno con sus verificaciones cumplidas (una muestra que no se certifica detiene la publicación y queda en diagnósticos)",
+            "referencias": [
+              "estados"
+            ],
+            "primeraMuestraNoCumple": null
+          },
+          {
+            "id": "conservacion",
+            "estado": "cumple",
+            "motivo": "materia por componente y energía global dentro de tolerancia",
+            "referencias": [
+              "global.materia.1",
+              "global.materia.2",
+              "global.energia"
+            ],
+            "primeraMuestraNoCumple": null
+          },
+          {
+            "id": "cierre_constitutivo",
+            "estado": "cumple",
+            "motivo": "energía y volumen del estado certificado frente a los integrados, y trabajo de frontera",
+            "referencias": [
+              "mecanica.A.trabajo",
+              "estado.A.energia"
+            ],
+            "primeraMuestraNoCumple": null
+          },
+          {
+            "id": "segunda_ley",
+            "estado": "cumple",
+            "motivo": "S_gen >= 0 y no decreciente",
+            "referencias": [
+              "segundaLey",
+              "red.Sgen"
+            ],
+            "primeraMuestraNoCumple": null
+          }
+        ],
+        "alcance": {
+          "tInicial": 0,
+          "tFinal": 21.94812097996574,
+          "muestras": 2,
+          "completa": false
+        },
+        "ultimaMuestraCertificada": 1
+      },
+      "eventos": [
+        {
+          "codigo": "aparicion_fase",
+          "tiempo": 21.94812097996574,
+          "volumenId": "A",
+          "faseIds": [
+            "vapor-1"
+          ],
+          "variableIds": [
+            "volumen.A.fases"
+          ],
+          "faseIdsAntes": [
+            "liquido-1"
+          ],
+          "faseIdsDespues": [
+            "vapor-1",
+            "liquido-1"
+          ],
+          "descripcion": "aparece una fase (transición de primer orden del conjunto de fases)"
+        }
+      ],
+      "residuos": [
+        {
+          "ecuacionId": "global.materia.1",
+          "maximoEscalado": 0,
+          "tolerancia": 10,
+          "definicion": "max_t |sum_v n_v,i - n_i(0) - int ndot_ext,i dt| / (atol + rtol max_t sum_v,i n); las transferencias internas se suman y restan como el mismo número"
+        },
+        {
+          "ecuacionId": "global.materia.2",
+          "maximoEscalado": 0,
+          "tolerancia": 10,
+          "definicion": "max_t |sum_v n_v,i - n_i(0) - int ndot_ext,i dt| / (atol + rtol max_t sum_v,i n); las transferencias internas se suman y restan como el mismo número"
+        },
+        {
+          "ecuacionId": "global.energia",
+          "maximoEscalado": 1.1164831066529288e-7,
+          "tolerancia": 10,
+          "definicion": "max_t |sum U_v - U(0) - (int E_ext dt - sum W_v)| / (atol + rtol max_t(|sum U|, |int E_ext|, |sum W|)), con W_v = [P V] - int V dP/dt dt: U de los estados certificados frente a la contabilidad de transferencias exteriores y trabajo"
+        },
+        {
+          "ecuacionId": "mecanica.A.trabajo",
+          "maximoEscalado": 0.6301143844154167,
+          "tolerancia": 1,
+          "definicion": "max_t |int P dV/dt dt (dV/dt total de V(H, P, n) por diferencia centrada) - ([P V] - int V dP)| / (atol + 1e-5 max|W|): verifica la derivada total de V (diferencia centrada, integrada a traves de las aristas de cambio de fase; acuerdo medido ~2e-6 relativo, tolerancia 1e-5 declarada)"
+        },
+        {
+          "ecuacionId": "estado.A.energia",
+          "maximoEscalado": 1.0718237823868116e-7,
+          "tolerancia": 1,
+          "definicion": "max |E del estado certificado - E integrada| / escala de energia"
+        }
+      ],
+      "contabilidadSI": {
+        "advertencia": "Identidades de esta petición cerrada a P y Q constantes; no son una certificación independiente del flash ni de la cuadratura auxiliar de trabajo. W es la serie publicada, no el auxiliar interno.",
+        "maxErrorEntalpiaJ": 5.9117155615240335e-12,
+        "maxErrorUigualHmenosPVJ": 4.121103458487596e-11,
+        "maxErrorTrabajoPublicadoJ": 6.546129079488069e-7,
+        "maxErrorPrimerPrincipioPublicadoJ": 6.546582796849738e-7
+      }
+    },
+    {
+      "modelo": "mezcla-ideal",
+      "tiemposSegundos": {
+        "validar": 0.010682499999998981,
+        "resolver": 8.326769600000004
+      },
+      "estado": "parcial",
+      "certificacion": {
+        "estado": "cumple",
+        "motivo": "conservación, cierre constitutivo, estados y segunda ley comprobados en todas las muestras",
+        "aspectos": [
+          {
+            "id": "estados_termodinamicos",
+            "estado": "cumple",
+            "motivo": "2 estados por volumen publicados, cada uno con sus verificaciones cumplidas (una muestra que no se certifica detiene la publicación y queda en diagnósticos)",
+            "referencias": [
+              "estados"
+            ],
+            "primeraMuestraNoCumple": null
+          },
+          {
+            "id": "conservacion",
+            "estado": "cumple",
+            "motivo": "materia por componente y energía global dentro de tolerancia",
+            "referencias": [
+              "global.materia.1",
+              "global.materia.2",
+              "global.energia"
+            ],
+            "primeraMuestraNoCumple": null
+          },
+          {
+            "id": "cierre_constitutivo",
+            "estado": "cumple",
+            "motivo": "energía y volumen del estado certificado frente a los integrados, y trabajo de frontera",
+            "referencias": [
+              "mecanica.A.trabajo",
+              "estado.A.energia"
+            ],
+            "primeraMuestraNoCumple": null
+          },
+          {
+            "id": "segunda_ley",
+            "estado": "cumple",
+            "motivo": "S_gen >= 0 y no decreciente",
+            "referencias": [
+              "segundaLey",
+              "red.Sgen"
+            ],
+            "primeraMuestraNoCumple": null
+          }
+        ],
+        "alcance": {
+          "tInicial": 0,
+          "tFinal": 28.12214761083669,
+          "muestras": 2,
+          "completa": false
+        },
+        "ultimaMuestraCertificada": 1
+      },
+      "eventos": [
+        {
+          "codigo": "aparicion_fase",
+          "tiempo": 28.12214761083669,
+          "volumenId": "A",
+          "faseIds": [
+            "vapor-1"
+          ],
+          "variableIds": [
+            "volumen.A.fases"
+          ],
+          "faseIdsAntes": [
+            "liquido-1"
+          ],
+          "faseIdsDespues": [
+            "vapor-1",
+            "liquido-1"
+          ],
+          "descripcion": "aparece una fase (transición de primer orden del conjunto de fases)"
+        }
+      ],
+      "residuos": [
+        {
+          "ecuacionId": "global.materia.1",
+          "maximoEscalado": 0,
+          "tolerancia": 10,
+          "definicion": "max_t |sum_v n_v,i - n_i(0) - int ndot_ext,i dt| / (atol + rtol max_t sum_v,i n); las transferencias internas se suman y restan como el mismo número"
+        },
+        {
+          "ecuacionId": "global.materia.2",
+          "maximoEscalado": 0,
+          "tolerancia": 10,
+          "definicion": "max_t |sum_v n_v,i - n_i(0) - int ndot_ext,i dt| / (atol + rtol max_t sum_v,i n); las transferencias internas se suman y restan como el mismo número"
+        },
+        {
+          "ecuacionId": "global.energia",
+          "maximoEscalado": 5.754229069336356e-7,
+          "tolerancia": 10,
+          "definicion": "max_t |sum U_v - U(0) - (int E_ext dt - sum W_v)| / (atol + rtol max_t(|sum U|, |int E_ext|, |sum W|)), con W_v = [P V] - int V dP/dt dt: U de los estados certificados frente a la contabilidad de transferencias exteriores y trabajo"
+        },
+        {
+          "ecuacionId": "mecanica.A.trabajo",
+          "maximoEscalado": 0.09442090540460886,
+          "tolerancia": 1,
+          "definicion": "max_t |int P dV/dt dt (dV/dt total de V(H, P, n) por diferencia centrada) - ([P V] - int V dP)| / (atol + 1e-5 max|W|): verifica la derivada total de V (diferencia centrada, integrada a traves de las aristas de cambio de fase; acuerdo medido ~2e-6 relativo, tolerancia 1e-5 declarada)"
+        },
+        {
+          "ecuacionId": "estado.A.energia",
+          "maximoEscalado": 5.731839072957615e-7,
+          "tolerancia": 1,
+          "definicion": "max |E del estado certificado - E integrada| / escala de energia"
+        }
+      ],
+      "contabilidadSI": {
+        "advertencia": "Identidades de esta petición cerrada a P y Q constantes; no son una certificación independiente del flash ni de la cuadratura auxiliar de trabajo. W es la serie publicada, no el auxiliar interno.",
+        "maxErrorEntalpiaJ": 0,
+        "maxErrorUigualHmenosPVJ": 2.3210589006339433e-10,
+        "maxErrorTrabajoPublicadoJ": 9.809194138629182e-8,
+        "maxErrorPrimerPrincipioPublicadoJ": 9.785808416986992e-8
+      }
+    }
+  ]
+}

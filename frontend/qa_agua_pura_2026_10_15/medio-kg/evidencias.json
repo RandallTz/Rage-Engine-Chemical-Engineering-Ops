@@ -1,0 +1,19 @@
+{
+  "comprobaciones": 125,
+  "masa_kg": 0.5,
+  "volumen_L": 3,
+  "calor_W": 10000,
+  "final": {
+    "t_s": 114.51161102950573,
+    "T_C": 372.35939764378156,
+    "P_bar": 209.60799964570145,
+    "q": 1
+  },
+  "calor_acumulado_J": 1145116.1102950573,
+  "error_primera_ley_J": 2.9103830456733704e-11,
+  "max_error_P_saturacion_IF97_rel": 0.0001701793938241325,
+  "P_final_IF97_bar": 209.60179931005345,
+  "error_P_final_IF97_rel": 2.9580625064418165e-05,
+  "error_u_final_IF97_Jkg": 182.6397603605874,
+  "limite": "Partial trajectory: excluded critical band, not a prediction of vessel failure."
+}

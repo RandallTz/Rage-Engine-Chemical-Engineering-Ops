@@ -1,0 +1,48 @@
+{
+  "revision": 1,
+  "solicitudId": "ds",
+  "componentes": [
+    {
+      "id": 1,
+      "nombre": "etanol",
+      "simbolo": "et",
+      "identidadQuimica": {
+        "cas": "64-17-5"
+      }
+    },
+    {
+      "id": 2,
+      "nombre": "agua",
+      "simbolo": "ag",
+      "identidadQuimica": {
+        "cas": "7732-18-5"
+      }
+    }
+  ],
+  "modelo": {
+    "id": "nrtl-chemsep",
+    "version": "1"
+  },
+  "componenteEjeId": 1,
+  "corte": {
+    "tipo": "Pxy",
+    "T": {
+      "valor": 350,
+      "unidad": "K"
+    }
+  },
+  "intervaloComposicion": [
+    0,
+    1
+  ],
+  "resolucion": "exploratoria",
+  "datosPuros": {
+    "64-17-5": {
+      "volumen_liquido": {
+        "valor": 60,
+        "unidad": "cm3/mol",
+        "fuente": "ejemplo F2.4 (valor ilustrativo)"
+      }
+    }
+  }
+}

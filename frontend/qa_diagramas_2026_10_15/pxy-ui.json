@@ -1,0 +1,3522 @@
+{
+  "solicitud": {
+    "revision": 1,
+    "solicitudId": "52dfc21f-06eb-47a3-8dee-1a79dfb5d1e0",
+    "componentes": [
+      {
+        "id": 1,
+        "nombre": "etanol",
+        "simbolo": "et",
+        "identidadQuimica": {
+          "cas": "64-17-5"
+        }
+      },
+      {
+        "id": 2,
+        "nombre": "agua",
+        "simbolo": "ag",
+        "identidadQuimica": {
+          "cas": "7732-18-5"
+        }
+      }
+    ],
+    "modelo": {
+      "id": "nrtl-chemsep",
+      "version": "1"
+    },
+    "huellaModeloEsperada": "sha256:0f92e2b1637d13ef5c538421cb05417e943140a22f9a9a81e52dfad16c6c0e9d",
+    "componenteEjeId": 1,
+    "corte": {
+      "tipo": "Pxy",
+      "T": {
+        "valor": 354.6888391923392,
+        "unidad": "K"
+      }
+    },
+    "intervaloComposicion": [
+      0,
+      1
+    ],
+    "resolucion": "exploratoria"
+  },
+  "respuesta": {
+    "revision": 1,
+    "solicitudId": "52dfc21f-06eb-47a3-8dee-1a79dfb5d1e0",
+    "estado": "completo",
+    "identidad": {
+      "modelo": {
+        "id": "nrtl-chemsep",
+        "version": "1"
+      },
+      "huellaModelo": "sha256:0f92e2b1637d13ef5c538421cb05417e943140a22f9a9a81e52dfad16c6c0e9d",
+      "firmaConsulta": "sha256:7f870c8e62389e103bf2e4c0ace7b140c90b5dac455a14c81ba1e170fabb489c",
+      "trazador": {
+        "id": "trazador-lv-binario",
+        "version": "1"
+      }
+    },
+    "condicion": {
+      "corte": {
+        "tipo": "Pxy",
+        "T": {
+          "valor": 354.6888391923392,
+          "unidad": "K"
+        }
+      },
+      "corteSI": {
+        "tipo": "Pxy",
+        "T": 354.6888391923392
+      },
+      "componentes": [
+        {
+          "id": 1,
+          "cas": "64-17-5"
+        },
+        {
+          "id": 2,
+          "cas": "7732-18-5"
+        }
+      ],
+      "componenteEjeId": 1,
+      "intervaloComposicion": [
+        0,
+        1
+      ],
+      "resolucion": "exploratoria"
+    },
+    "ramas": [
+      {
+        "id": "lv-1",
+        "tipo": "LV",
+        "segmentos": [
+          {
+            "id": "lv-1-s1",
+            "puntoIds": [
+              "p0001",
+              "p0002",
+              "p0003",
+              "p0004",
+              "p0005",
+              "p0006",
+              "p0007",
+              "p0008",
+              "p0009",
+              "p0010",
+              "p0011",
+              "p0012",
+              "p0013",
+              "p0014",
+              "p0015",
+              "p0016",
+              "p0017",
+              "p0018",
+              "p0019",
+              "p0020",
+              "p0021",
+              "p0022",
+              "p0023",
+              "p0024",
+              "p0025",
+              "p0026",
+              "p0027",
+              "p0028",
+              "p0029",
+              "p0030",
+              "p0031",
+              "p0032",
+              "p0033",
+              "p0034",
+              "p0035",
+              "p0036",
+              "p0037",
+              "p0038",
+              "p0039",
+              "p0040",
+              "p0041",
+              "p0042",
+              "p0043",
+              "p0044",
+              "p0045",
+              "p0046",
+              "p0047"
+            ],
+            "xEje": [
+              0,
+              1
+            ]
+          }
+        ]
+      }
+    ],
+    "puntos": [
+      {
+        "id": "p0001",
+        "T": 354.6888391923392,
+        "P": 50372.52340311682,
+        "xEje": 0,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0,
+              "2": 1
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0,
+              "2": 1
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 0,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9996913758776917,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": 0,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "extremo_puro"
+      },
+      {
+        "id": "p0002",
+        "T": 354.6888391923392,
+        "P": 51235.07362674257,
+        "xEje": 0.001541333133436018,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.001541333133436018,
+              "2": 0.998458666866564
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.018338670907319016,
+              "2": 0.981661329092681
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 1.0794101803787935e-15,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9996850038315263,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -1.67862380577367e-16,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0003",
+        "T": 354.6888391923392,
+        "P": 53724.66131004948,
+        "xEje": 0.006155829702431115,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.006155829702431115,
+              "2": 0.9938441702975689
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.06804690719788241,
+              "2": 0.9319530928021176
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 1.6962159977381042e-15,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9996662841958251,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -1.6237011735142914e-15,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0004",
+        "T": 354.6888391923392,
+        "P": 55689.79983187056,
+        "xEje": 0.009985434751796418,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.009985434751796418,
+              "2": 0.9900145652482035
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.10423039561959792,
+              "2": 0.8957696043804021
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 6.168058173593106e-16,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9996511410352147,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -7.077671781985373e-16,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "refinamiento"
+      },
+      {
+        "id": "p0005",
+        "T": 354.6888391923392,
+        "P": 57568.20782538185,
+        "xEje": 0.013815039801161721,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.013815039801161721,
+              "2": 0.9861849601988383
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.1365805374464853,
+              "2": 0.8634194625535148
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 1.8504174520779317e-15,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9996363385129594,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -2.0539125955565396e-15,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0006",
+        "T": 354.6888391923392,
+        "P": 60045.50826401604,
+        "xEje": 0.019143390826792478,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.019143390826792478,
+              "2": 0.9808566091732075
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.17626189229287287,
+              "2": 0.8237381077071271
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 3.084029086796553e-16,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9996162839640795,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -3.3306690738754696e-16,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "refinamiento"
+      },
+      {
+        "id": "p0007",
+        "T": 354.6888391923392,
+        "P": 62374.06145430123,
+        "xEje": 0.024471741852423234,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.024471741852423234,
+              "2": 0.9755282581475768
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.2108075975551891,
+              "2": 0.7891924024448109
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 7.710072716991382e-16,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9995968273856545,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -9.992007221626409e-16,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0008",
+        "T": 354.6888391923392,
+        "P": 65143.325908205705,
+        "xEje": 0.03126598779838993,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.03126598779838993,
+              "2": 0.96873401220161
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.24883674150991214,
+              "2": 0.7511632584900878
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 1.2336116347186212e-15,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9995728332880907,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -1.1657341758564144e-15,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "refinamiento"
+      },
+      {
+        "id": "p0009",
+        "T": 354.6888391923392,
+        "P": 67706.2056609067,
+        "xEje": 0.03806023374435663,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.03806023374435663,
+              "2": 0.9619397662556434
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.2814249382615173,
+              "2": 0.7185750617384827
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 6.168058173593106e-16,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.999549693701945,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": 1.8118614830568904e-17,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0010",
+        "T": 354.6888391923392,
+        "P": 70555.22608806951,
+        "xEje": 0.04627848582508634,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.04627848582508634,
+              "2": 0.9537215141749137
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.3150731454275939,
+              "2": 0.6849268545724061
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 7.710072716991382e-16,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9995227613550641,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -6.661338147750939e-16,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "refinamiento"
+      },
+      {
+        "id": "p0011",
+        "T": 354.6888391923392,
+        "P": 73155.47878699143,
+        "xEje": 0.05449673790581605,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.05449673790581605,
+              "2": 0.9455032620941839
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.3436960848524269,
+              "2": 0.6563039151475731
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 6.168058173593106e-16,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9994968950592772,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -4.996003610813204e-16,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0012",
+        "T": 354.6888391923392,
+        "P": 75908.645442711,
+        "xEje": 0.06408832786438495,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.06408832786438495,
+              "2": 0.9359116721356151
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.3720944959094198,
+              "2": 0.6279055040905802
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 7.710072716991382e-16,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.999467935969878,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -7.216449660063518e-16,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "refinamiento"
+      },
+      {
+        "id": "p0013",
+        "T": 354.6888391923392,
+        "P": 78391.6287826221,
+        "xEje": 0.07367991782295386,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.07367991782295386,
+              "2": 0.9263200821770461
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.3962205623854437,
+              "2": 0.6037794376145563
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 6.168058173593106e-16,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9994401791463695,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -5.551115123125783e-16,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0014",
+        "T": 354.6888391923392,
+        "P": 83189.00644999523,
+        "xEje": 0.09549150281252627,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.09549150281252627,
+              "2": 0.9045084971874737
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.4394519653550833,
+              "2": 0.5605480346449168
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 6.168058173593106e-16,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9993809358065378,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -3.305630678549991e-18,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0015",
+        "T": 354.6888391923392,
+        "P": 87427.5798942803,
+        "xEje": 0.11979701719998453,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.11979701719998453,
+              "2": 0.8802029828000155
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.4746473161714895,
+              "2": 0.5253526838285105
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 7.710072716991382e-16,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9993201350118043,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -5.0723218314608303e-17,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0016",
+        "T": 354.6888391923392,
+        "P": 91076.58296245072,
+        "xEje": 0.1464466094067262,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.1464466094067262,
+              "2": 0.8535533905932737
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.5032811269965238,
+              "2": 0.49671887300347617
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 1.0794101803787935e-15,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9992583396703482,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": 1.0175246325234138e-16,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0017",
+        "T": 354.6888391923392,
+        "P": 94169.70109015574,
+        "xEje": 0.17527597583490812,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.17527597583490812,
+              "2": 0.8247240241650919
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.5267704545978429,
+              "2": 0.4732295454021571
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 3.084029086796553e-16,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9991957707519099,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -2.220446049250313e-16,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0018",
+        "T": 354.6888391923392,
+        "P": 96779.2817452665,
+        "xEje": 0.20610737385376343,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.20610737385376343,
+              "2": 0.7938926261462366
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.546369667004737,
+              "2": 0.453630332995263
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 1.0794101803787935e-15,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9991323998302605,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -8.881784197001252e-16,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0019",
+        "T": 354.6888391923392,
+        "P": 98994.30986959605,
+        "xEje": 0.23875071764202555,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.23875071764202555,
+              "2": 0.7612492823579744
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.5631461604839537,
+              "2": 0.4368538395160463
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 6.168058173593106e-16,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9990680480519645,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -2.95624744977412e-17,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0020",
+        "T": 354.6888391923392,
+        "P": 100904.18834896227,
+        "xEje": 0.2730047501302266,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.2730047501302266,
+              "2": 0.7269952498697734
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.5779898429219946,
+              "2": 0.4220101570780054
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 6.939065445292245e-16,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.999002477191728,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": 2.7951452750780462e-18,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0021",
+        "T": 354.6888391923392,
+        "P": 102588.42096537884,
+        "xEje": 0.3086582838174551,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.3086582838174551,
+              "2": 0.6913417161825449
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.5916338641101,
+              "2": 0.4083661358899
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 4.626043630194829e-16,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9989354650349299,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -4.440892098500626e-16,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0022",
+        "T": 354.6888391923392,
+        "P": 104111.24147484894,
+        "xEje": 0.3454915028125263,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.3454915028125263,
+              "2": 0.6545084971874737
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.6046768595160125,
+              "2": 0.39532314048398753
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 6.939065445292245e-16,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9988668623346458,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -3.7174506195988245e-17,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0023",
+        "T": 354.6888391923392,
+        "P": 105519.87771274478,
+        "xEje": 0.38327731807204724,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.38327731807204724,
+              "2": 0.6167226819279528
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.6176030308934439,
+              "2": 0.3823969691065561
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 3.855036358495691e-16,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9987966316648822,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -3.138202393863936e-17,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0024",
+        "T": 354.6888391923392,
+        "P": 106845.20563826052,
+        "xEje": 0.4217827674798845,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.4217827674798845,
+              "2": 0.5782172325201155
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.63079902064246,
+              "2": 0.36920097935754004
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 5.397050901893968e-16,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9987248699573357,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -1.41872569671547e-16,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0025",
+        "T": 354.6888391923392,
+        "P": 108103.79922002174,
+        "xEje": 0.4607704521360775,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.4607704521360775,
+              "2": 0.5392295478639225
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.6445675587667595,
+              "2": 0.35543244123324047
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 8.481079988690521e-16,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9986518169340192,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -1.2021288201362912e-16,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0026",
+        "T": 354.6888391923392,
+        "P": 109300.66681481742,
+        "xEje": 0.49999999999999994,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.49999999999999994,
+              "2": 0.5
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.6591381843874453,
+              "2": 0.3408618156125547
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 9.252087260389658e-16,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.998577851566429,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -4.440892098500626e-16,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0027",
+        "T": 354.6888391923392,
+        "P": 110432.20841086155,
+        "xEje": 0.5392295478639224,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.5392295478639224,
+              "2": 0.4607704521360776
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.6746753997009118,
+              "2": 0.32532460029908816
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 2.3130218150974146e-16,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9985034784822729,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -6.27415317803192e-17,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0028",
+        "T": 354.6888391923392,
+        "P": 111489.10731834098,
+        "xEje": 0.5782172325201153,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.5782172325201153,
+              "2": 0.42178276747988475
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.691284593218286,
+              "2": 0.30871540678171405
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 5.397050901893968e-16,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9984293061100947,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -1.0337626338876131e-16,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0029",
+        "T": 354.6888391923392,
+        "P": 112458.98843187971,
+        "xEje": 0.6167226819279527,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.6167226819279527,
+              "2": 0.38327731807204735
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.7090160465627003,
+              "2": 0.29098395343729966
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 1.0408598167938367e-15,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9983560183689523,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -7.771561172376096e-16,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0030",
+        "T": 354.6888391923392,
+        "P": 113328.7475683452,
+        "xEje": 0.6545084971874737,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.6545084971874737,
+              "2": 0.3454915028125263
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.7278673394514942,
+              "2": 0.2721326605485058
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 3.084029086796553e-16,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9982843418517897,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -5.487249704160129e-17,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0031",
+        "T": 354.6888391923392,
+        "P": 114086.49844034144,
+        "xEje": 0.6913417161825448,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.6913417161825448,
+              "2": 0.3086582838174552
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.7477844944921472,
+              "2": 0.25221550550785277
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 6.168058173593106e-16,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9982150106462121,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -4.440892098500626e-16,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0032",
+        "T": 354.6888391923392,
+        "P": 114723.1085798773,
+        "xEje": 0.7269952498697734,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.7269952498697734,
+              "2": 0.2730047501302266
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.7686622533056742,
+              "2": 0.23133774669432583
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 6.5535618094426755e-16,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9981487310994446,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": 6.482305507945818e-18,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0033",
+        "T": 354.6888391923392,
+        "P": 115233.31201743973,
+        "xEje": 0.7612492823579744,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.7612492823579744,
+              "2": 0.2387507176420256
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.7903439415665976,
+              "2": 0.2096560584334024
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 3.084029086796553e-16,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9980861488886055,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -2.7755575615628914e-17,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0034",
+        "T": 354.6888391923392,
+        "P": 115616.40010405832,
+        "xEje": 0.7938926261462365,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.7938926261462365,
+              "2": 0.20610737385376354
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.8126214537536597,
+              "2": 0.18737854624634032
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 6.5535618094426755e-16,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9980278206498198,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -8.326672684688674e-16,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0035",
+        "T": 354.6888391923392,
+        "P": 115876.50504959404,
+        "xEje": 0.8247240241650917,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.8247240241650917,
+              "2": 0.17527597583490828
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.8352359563414066,
+              "2": 0.16476404365859343
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 3.662284540570907e-16,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9979741921274259,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -4.718447854656915e-16,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0036",
+        "T": 354.6888391923392,
+        "P": 116022.50413563574,
+        "xEje": 0.8535533905932737,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.8535533905932737,
+              "2": 0.14644660940672627
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.8578799540838873,
+              "2": 0.1421200459161127
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 3.084029086796553e-16,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9979255843361134,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -3.885780586188048e-16,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0037",
+        "T": 354.6888391923392,
+        "P": 116067.58564973973,
+        "xEje": 0.8801911100735331,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.8801911100735331,
+              "2": 0.11980888992646688
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.8801911100735331,
+              "2": 0.11980888992646688
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 6.168058173593106e-16,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9978822075940151,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -4.996003610813204e-16,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "singular"
+      },
+      {
+        "id": "p0038",
+        "T": 354.6888391923392,
+        "P": 116067.58564059844,
+        "xEje": 0.8802029828000155,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.8802029828000155,
+              "2": 0.11979701719998448
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.8802013668479618,
+              "2": 0.1197986331520382
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 1.349262725473492e-16,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9978821886199449,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -3.332323736853033e-17,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0039",
+        "T": 354.6888391923392,
+        "P": 116028.52931222413,
+        "xEje": 0.9045084971874737,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.9045084971874737,
+              "2": 0.09549150281252627
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.901810200508732,
+              "2": 0.09818979949126805
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 6.168058173593106e-16,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9978440707980581,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -2.732970689546524e-17,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0040",
+        "T": 354.6888391923392,
+        "P": 115924.76373278508,
+        "xEje": 0.9263200821770461,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.9263200821770461,
+              "2": 0.07367991782295391
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.9222882427484858,
+              "2": 0.07771175725151425
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 5.782554537743537e-16,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9978111838728332,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -3.2910751859249716e-17,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0041",
+        "T": 354.6888391923392,
+        "P": 115777.26937519429,
+        "xEje": 0.9455032620941839,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.9455032620941839,
+              "2": 0.054496737905816106
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.9412019594748693,
+              "2": 0.05879804052513071
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 1.2336116347186212e-15,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9977833881086682,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -6.869504964868156e-16,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0042",
+        "T": 354.6888391923392,
+        "P": 115607.39913276651,
+        "xEje": 0.9619397662556434,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.9619397662556434,
+              "2": 0.03806023374435663
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.9581184125533229,
+              "2": 0.04188158744667714
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 2.4672232694372425e-15,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9977604767271289,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -4.85722573273506e-16,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0043",
+        "T": 354.6888391923392,
+        "P": 115435.6875815632,
+        "xEje": 0.9755282581475768,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.9755282581475768,
+              "2": 0.02447174185242318
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.9726235908312019,
+              "2": 0.027376409168798133
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 4.317640721515174e-15,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9977422050527336,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": 1.6167551025628477e-18,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0044",
+        "T": 354.6888391923392,
+        "P": 115280.71647254717,
+        "xEje": 0.9861849601988383,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.9861849601988383,
+              "2": 0.013815039801161721
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.9843420973141803,
+              "2": 0.01565790268581968
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 4.317640721515174e-15,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9977283207120936,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": 3.426396378328681e-18,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0045",
+        "T": 354.6888391923392,
+        "P": 115158.09743179902,
+        "xEje": 0.9938441702975689,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.9938441702975689,
+              "2": 0.006155829702431115
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.9929567424380111,
+              "2": 0.007043257561988869
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 2.5289038511731736e-14,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9977185924492615,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": 1.4121035498566638e-18,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0046",
+        "T": 354.6888391923392,
+        "P": 115079.62415164658,
+        "xEje": 0.998458666866564,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 0.998458666866564,
+              "2": 0.0015413331334359626
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 0.9982263435410038,
+              "2": 0.0017736564589961867
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 1.1102504712467592e-14,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9977128352675614,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": -3.523770502568491e-18,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "continuacion"
+      },
+      {
+        "id": "p0047",
+        "T": 354.6888391923392,
+        "P": 115052.63606750115,
+        "xEje": 1,
+        "fases": [
+          {
+            "id": "liquido-limite",
+            "tipo": "liquido",
+            "composicionMolar": {
+              "1": 1,
+              "2": 0
+            }
+          },
+          {
+            "id": "vapor-limite",
+            "tipo": "vapor",
+            "composicionMolar": {
+              "1": 1,
+              "2": 0
+            }
+          }
+        ],
+        "certificado": {
+          "estado": "cumple",
+          "residuos": [
+            {
+              "id": "igualdad_mu",
+              "valor": 0,
+              "tolerancia": 1e-10,
+              "escala": "R T",
+              "estado": "cumple"
+            },
+            {
+              "id": "normalizacion",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "1",
+              "estado": "cumple"
+            },
+            {
+              "id": "condicion_fija",
+              "valor": 0,
+              "tolerancia": 1e-14,
+              "escala": "relativa al corte",
+              "estado": "cumple"
+            },
+            {
+              "id": "distincion_fases",
+              "valor": 0.9977109299249394,
+              "tolerancia": 0.001,
+              "escala": "|v_V - v_L|/v_V",
+              "estado": "cumple"
+            }
+          ],
+          "estabilidad": {
+            "estado": "estable",
+            "tmMinimo": 0,
+            "tolerancia": 1e-9,
+            "candidatas": [
+              "liquido",
+              "vapor"
+            ],
+            "pruebas": 2,
+            "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+          }
+        },
+        "origen": "extremo_puro"
+      }
+    ],
+    "puntosEspeciales": [
+      {
+        "id": "e001",
+        "tipo": "extremo_puro",
+        "T": 354.6888391923392,
+        "P": 50372.52340311682,
+        "xEje": 0,
+        "puntoId": "p0001",
+        "descripcion": "saturacion del componente 2 puro en el mismo paquete"
+      },
+      {
+        "id": "e002",
+        "tipo": "extremo_puro",
+        "T": 354.6888391923392,
+        "P": 115052.63606750115,
+        "xEje": 1,
+        "puntoId": "p0047",
+        "descripcion": "saturacion del componente 1 puro en el mismo paquete"
+      },
+      {
+        "id": "e003",
+        "tipo": "azeotropo",
+        "T": 354.6888391923392,
+        "P": 116067.58564973973,
+        "xEje": 0.8801911100735331,
+        "puntoId": "p0037",
+        "clase": "maximo",
+        "descripcion": "azeotropo homogeneo L-V refinado con x = y (maximo de P); igualdad de mu y estabilidad certificadas",
+        "composiciones": {
+          "liquido-limite": {
+            "1": 0.8801911100735331,
+            "2": 0.11980888992646688
+          },
+          "vapor-limite": {
+            "1": 0.8801911100735331,
+            "2": 0.11980888992646688
+          }
+        },
+        "residuos": [
+          {
+            "id": "igualdad_mu",
+            "valor": 6.168058173593106e-16,
+            "tolerancia": 1e-10,
+            "escala": "R T",
+            "estado": "cumple"
+          },
+          {
+            "id": "normalizacion",
+            "valor": 0,
+            "tolerancia": 1e-14,
+            "escala": "1",
+            "estado": "cumple"
+          },
+          {
+            "id": "condicion_fija",
+            "valor": 0,
+            "tolerancia": 1e-14,
+            "escala": "relativa al corte",
+            "estado": "cumple"
+          },
+          {
+            "id": "distincion_fases",
+            "valor": 0.9978822075940151,
+            "tolerancia": 0.001,
+            "escala": "|v_V - v_L|/v_V",
+            "estado": "cumple"
+          }
+        ],
+        "estabilidad": {
+          "estado": "estable",
+          "tmMinimo": -4.996003610813204e-16,
+          "tolerancia": 1e-9,
+          "candidatas": [
+            "liquido",
+            "vapor"
+          ],
+          "pruebas": 2,
+          "metodo": "distancia al plano tangente con la mu comun: vapor por minimo analitico, liquido en malla de 1361 puntos en logit con refinamiento de cada minimo local (no es una demostracion del minimo global)"
+        }
+      }
+    ],
+    "candidatosDescartados": [],
+    "incidencias": [],
+    "cobertura": {
+      "intervaloPedido": [
+        0,
+        1
+      ],
+      "intervalosPublicados": [
+        [
+          0,
+          1
+        ]
+      ],
+      "huecos": [],
+      "finalizacion": "recorrido_completo",
+      "presupuesto": {
+        "evaluaciones": 137,
+        "limiteEvaluaciones": 6000,
+        "segundos": 1.457,
+        "limiteSegundos": 60
+      },
+      "reproducibilidad": {
+        "puntosComparados": 41,
+        "maxDiferenciaCondicion": 1.7763568394002505e-15,
+        "maxDiferenciaComposicion": 2.220446049250313e-16
+      }
+    },
+    "metodo": "Continuacion en x del liquido sobre una malla de Chebyshev, en los dos sentidos, desde la saturacion del puro del mismo paquete o desde una semilla por flash TP certificado; Newton en (ln P, logit y) sobre la igualdad de mu del paquete; subdivision del paso si falla; refinamiento adaptativo por saltos; biseccion de fronteras estable/inestable y de dominio; azeotropos por cambio de signo o minimo de |y - x| refinados con x = y. Certificado por punto: igualdad de mu (|dmu|/RT <= 1e-10), normalizacion, condicion fija, distincion de fases (volumen molar) y plano tangente con la mu comun (tm >= -1e-9; malla, no demostracion del minimo global). Las lineas entre puntos son interpolacion visual.",
+    "evidencia": {
+      "combinacion": "liquido_vapor",
+      "nivel": "contrastada",
+      "motivo": "azeotropo a 1 atm frente a la literatura (tests/validar_motor_ensamblaje_v2.py seccion 2); ln gamma frente a thermo.nrtl",
+      "pares": [
+        {
+          "componentesCAS": [
+            "7732-18-5",
+            "64-17-5"
+          ],
+          "evidencia": "contrastada",
+          "procedencia": "ChemSep NRTL (thermo IPDB)"
+        }
+      ]
+    },
+    "diagnosticos": []
+  }
+}

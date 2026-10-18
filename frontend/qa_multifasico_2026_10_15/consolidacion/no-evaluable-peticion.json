@@ -1,0 +1,191 @@
+{
+  "revision": 2,
+  "solicitudId": "qa-certificacion-no-evaluable",
+  "componentes": [
+    {
+      "id": 1,
+      "nombre": "agua",
+      "simbolo": "ag",
+      "identidadQuimica": {
+        "cas": "7732-18-5"
+      }
+    }
+  ],
+  "paquetes": [
+    {
+      "id": "w",
+      "modelo": {
+        "id": "agua-iapws95",
+        "version": "1"
+      }
+    }
+  ],
+  "volumenes": [
+    {
+      "id": "A",
+      "componenteIds": [
+        1
+      ],
+      "balances": {
+        "materia": true,
+        "energia": true,
+        "momento": false
+      },
+      "formulacionMateria": {
+        "campo": {
+          "sinReaccion": true,
+          "sinDifusion": false,
+          "sinConveccion": false,
+          "estacionario": false,
+          "difusion": "flujo"
+        },
+        "coordenadas": "cartesianas",
+        "expandida": false,
+        "vista": "cantidad",
+        "uniforme": false,
+        "fija": true,
+        "sinAcumulacion": false,
+        "invariantes": [
+          false,
+          false,
+          false
+        ],
+        "generacionUniforme": false,
+        "consumoUniforme": false,
+        "restoImpermeable": true,
+        "cantidadVolumen": false,
+        "densidadMediaConstante": false,
+        "densidadComunPuertos": false,
+        "expandirProducto": false
+      },
+      "formulacionEnergia": {
+        "forma": "total",
+        "trabajoTotalHeredado": false,
+        "separarPresion": true,
+        "entalpia": true,
+        "sinCinetica": true,
+        "sinTrabajoViscoso": true,
+        "sinFuerzasVolumen": true,
+        "sinFuenteVolumetrica": true,
+        "sinConduccionLocal": false,
+        "adiabatico": false,
+        "estacionario": false,
+        "sinAcumulacionTotal": false,
+        "uniforme": true,
+        "monofasico": false,
+        "sinCambioFase": false,
+        "densidadConstante": false,
+        "presionUniforme": false,
+        "presionPrescrita": false,
+        "modelo": "sin_declarar"
+      },
+      "paqueteId": "w",
+      "politica": {
+        "cantidad": "sin_restriccion",
+        "cambioInterno": "permitido",
+        "evaluacion": "equilibrio_estable"
+      },
+      "frontera": {
+        "tipo": "rigida",
+        "datoId": "volumen.A.V"
+      },
+      "inicial": {
+        "cantidades": {
+          "base": "masica",
+          "datoIds": {
+            "1": "volumen.A.n0.1"
+          }
+        },
+        "energia": {
+          "tipo": "T",
+          "datoId": "volumen.A.T0"
+        }
+      }
+    }
+  ],
+  "corrientes": [],
+  "intercambiosTermicos": [
+    {
+      "id": "qa",
+      "desde": null,
+      "hasta": "A",
+      "ley": {
+        "tipo": "impuesto",
+        "potenciaId": "calor.qa.Q"
+      }
+    }
+  ],
+  "datos": {
+    "estudio.tf": {
+      "magnitud": "tiempo",
+      "funcion": "estudio",
+      "declaracion": {
+        "texto": "20",
+        "unidad": "s"
+      },
+      "origen": {
+        "propietarioId": "estudio",
+        "ruta": "/prueba"
+      }
+    },
+    "volumen.A.n0.1": {
+      "magnitud": "masa",
+      "funcion": "inicial",
+      "declaracion": {
+        "texto": "10",
+        "unidad": "kg"
+      },
+      "origen": {
+        "propietarioId": "volumen:A",
+        "ruta": "/prueba"
+      }
+    },
+    "volumen.A.T0": {
+      "magnitud": "temperatura",
+      "funcion": "inicial",
+      "declaracion": {
+        "texto": "350",
+        "unidad": "K"
+      },
+      "origen": {
+        "propietarioId": "volumen:A",
+        "ruta": "/prueba"
+      }
+    },
+    "volumen.A.V": {
+      "magnitud": "volumen",
+      "funcion": "geometria",
+      "declaracion": {
+        "texto": "0.0105",
+        "unidad": "m3"
+      },
+      "origen": {
+        "propietarioId": "volumen:A",
+        "ruta": "/prueba"
+      }
+    },
+    "calor.qa.Q": {
+      "magnitud": "potencia",
+      "funcion": "frontera",
+      "declaracion": {
+        "texto": "1000",
+        "unidad": "W"
+      },
+      "origen": {
+        "propietarioId": "calor:qa",
+        "ruta": "/redTermodinamica/solicitud/datos/calor.qa.Q/declaracion"
+      }
+    }
+  },
+  "estudio": {
+    "tipo": "temporal",
+    "tiempoId": "estudio.tf",
+    "metodoSolicitado": "rk45",
+    "muestras": 5,
+    "rtol": 1e-08,
+    "atol": {
+      "cantidad": 1e-10,
+      "energia": 1e-06
+    }
+  }
+}

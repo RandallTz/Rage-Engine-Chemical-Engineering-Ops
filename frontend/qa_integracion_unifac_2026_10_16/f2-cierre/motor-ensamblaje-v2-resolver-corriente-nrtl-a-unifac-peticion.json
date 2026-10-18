@@ -1,0 +1,384 @@
+{
+  "revision": 2,
+  "solicitudId": "f25",
+  "componentes": [
+    {
+      "id": 1,
+      "nombre": "etanol",
+      "simbolo": "et",
+      "identidadQuimica": {
+        "cas": "64-17-5"
+      }
+    },
+    {
+      "id": 2,
+      "nombre": "agua",
+      "simbolo": "ag",
+      "identidadQuimica": {
+        "cas": "7732-18-5"
+      }
+    }
+  ],
+  "paquetes": [
+    {
+      "id": "pn",
+      "modelo": {
+        "id": "nrtl-chemsep",
+        "version": "1"
+      }
+    },
+    {
+      "id": "pu",
+      "modelo": {
+        "id": "unifac-original-public",
+        "version": "1"
+      }
+    }
+  ],
+  "volumenes": [
+    {
+      "id": "A",
+      "componenteIds": [
+        1,
+        2
+      ],
+      "balances": {
+        "materia": true,
+        "energia": true,
+        "momento": false
+      },
+      "formulacionMateria": {
+        "campo": {
+          "sinReaccion": true,
+          "sinDifusion": false,
+          "sinConveccion": false,
+          "estacionario": false,
+          "difusion": "flujo"
+        },
+        "coordenadas": "cartesianas",
+        "expandida": false,
+        "vista": "cantidad",
+        "uniforme": false,
+        "fija": false,
+        "sinAcumulacion": false,
+        "invariantes": [
+          false,
+          false,
+          false
+        ],
+        "generacionUniforme": false,
+        "consumoUniforme": false,
+        "restoImpermeable": true,
+        "cantidadVolumen": false,
+        "densidadMediaConstante": false,
+        "densidadComunPuertos": false,
+        "expandirProducto": false
+      },
+      "formulacionEnergia": {
+        "forma": "total",
+        "trabajoTotalHeredado": false,
+        "separarPresion": true,
+        "entalpia": true,
+        "sinCinetica": true,
+        "sinTrabajoViscoso": true,
+        "sinFuerzasVolumen": true,
+        "sinFuenteVolumetrica": true,
+        "sinConduccionLocal": false,
+        "adiabatico": false,
+        "estacionario": false,
+        "sinAcumulacionTotal": false,
+        "uniforme": true,
+        "monofasico": false,
+        "sinCambioFase": false,
+        "densidadConstante": false,
+        "presionUniforme": true,
+        "presionPrescrita": true,
+        "modelo": "sin_declarar"
+      },
+      "paqueteId": "pn",
+      "politica": {
+        "cantidad": "sin_restriccion",
+        "cambioInterno": "permitido",
+        "evaluacion": "equilibrio_estable"
+      },
+      "frontera": {
+        "tipo": "presion_prescrita",
+        "presionId": "volumen.A.P"
+      },
+      "inicial": {
+        "cantidades": {
+          "base": "molar",
+          "datoIds": {
+            "1": "volumen.A.n0.1",
+            "2": "volumen.A.n0.2"
+          }
+        },
+        "energia": {
+          "tipo": "T",
+          "datoId": "volumen.A.T0"
+        }
+      }
+    },
+    {
+      "id": "B",
+      "componenteIds": [
+        1,
+        2
+      ],
+      "balances": {
+        "materia": true,
+        "energia": true,
+        "momento": false
+      },
+      "formulacionMateria": {
+        "campo": {
+          "sinReaccion": true,
+          "sinDifusion": false,
+          "sinConveccion": false,
+          "estacionario": false,
+          "difusion": "flujo"
+        },
+        "coordenadas": "cartesianas",
+        "expandida": false,
+        "vista": "cantidad",
+        "uniforme": false,
+        "fija": false,
+        "sinAcumulacion": false,
+        "invariantes": [
+          false,
+          false,
+          false
+        ],
+        "generacionUniforme": false,
+        "consumoUniforme": false,
+        "restoImpermeable": true,
+        "cantidadVolumen": false,
+        "densidadMediaConstante": false,
+        "densidadComunPuertos": false,
+        "expandirProducto": false
+      },
+      "formulacionEnergia": {
+        "forma": "total",
+        "trabajoTotalHeredado": false,
+        "separarPresion": true,
+        "entalpia": true,
+        "sinCinetica": true,
+        "sinTrabajoViscoso": true,
+        "sinFuerzasVolumen": true,
+        "sinFuenteVolumetrica": true,
+        "sinConduccionLocal": false,
+        "adiabatico": false,
+        "estacionario": false,
+        "sinAcumulacionTotal": false,
+        "uniforme": true,
+        "monofasico": false,
+        "sinCambioFase": false,
+        "densidadConstante": false,
+        "presionUniforme": true,
+        "presionPrescrita": true,
+        "modelo": "sin_declarar"
+      },
+      "paqueteId": "pu",
+      "politica": {
+        "cantidad": "sin_restriccion",
+        "cambioInterno": "permitido",
+        "evaluacion": "equilibrio_estable"
+      },
+      "frontera": {
+        "tipo": "presion_prescrita",
+        "presionId": "volumen.B.P"
+      },
+      "inicial": {
+        "cantidades": {
+          "base": "molar",
+          "datoIds": {
+            "1": "volumen.B.n0.1",
+            "2": "volumen.B.n0.2"
+          }
+        },
+        "energia": {
+          "tipo": "T",
+          "datoId": "volumen.B.T0"
+        }
+      }
+    }
+  ],
+  "corrientes": [
+    {
+      "id": "s",
+      "desde": "A",
+      "hasta": "B",
+      "componenteIds": [
+        1,
+        2
+      ],
+      "mecanismo": "convectivo",
+      "materia": {
+        "modo": "total_desde_donante",
+        "base": "molar",
+        "caudalId": "corriente.s.F"
+      },
+      "extraccion": {
+        "A": {
+          "tipo": "mezcla_homogenea"
+        }
+      }
+    }
+  ],
+  "intercambiosTermicos": [
+    {
+      "id": "c",
+      "desde": "A",
+      "hasta": "B",
+      "ley": {
+        "tipo": "conductancia",
+        "conductanciaId": "calor.c.G"
+      }
+    }
+  ],
+  "datos": {
+    "estudio.tf": {
+      "magnitud": "tiempo",
+      "funcion": "estudio",
+      "declaracion": {
+        "texto": "200",
+        "unidad": "s"
+      },
+      "origen": {
+        "propietarioId": "estudio",
+        "ruta": "/prueba"
+      }
+    },
+    "volumen.A.n0.1": {
+      "magnitud": "cantidad",
+      "funcion": "inicial",
+      "declaracion": {
+        "texto": "0.7",
+        "unidad": "mol"
+      },
+      "origen": {
+        "propietarioId": "volumen:A",
+        "ruta": "/prueba"
+      }
+    },
+    "volumen.A.n0.2": {
+      "magnitud": "cantidad",
+      "funcion": "inicial",
+      "declaracion": {
+        "texto": "0.3",
+        "unidad": "mol"
+      },
+      "origen": {
+        "propietarioId": "volumen:A",
+        "ruta": "/prueba"
+      }
+    },
+    "volumen.A.T0": {
+      "magnitud": "temperatura",
+      "funcion": "inicial",
+      "declaracion": {
+        "texto": "340",
+        "unidad": "K"
+      },
+      "origen": {
+        "propietarioId": "volumen:A",
+        "ruta": "/prueba"
+      }
+    },
+    "volumen.A.P": {
+      "magnitud": "presion",
+      "funcion": "frontera",
+      "declaracion": {
+        "texto": "101325",
+        "unidad": "Pa"
+      },
+      "origen": {
+        "propietarioId": "volumen:A",
+        "ruta": "/prueba"
+      }
+    },
+    "volumen.B.n0.1": {
+      "magnitud": "cantidad",
+      "funcion": "inicial",
+      "declaracion": {
+        "texto": "0.2",
+        "unidad": "mol"
+      },
+      "origen": {
+        "propietarioId": "volumen:B",
+        "ruta": "/prueba"
+      }
+    },
+    "volumen.B.n0.2": {
+      "magnitud": "cantidad",
+      "funcion": "inicial",
+      "declaracion": {
+        "texto": "0.8",
+        "unidad": "mol"
+      },
+      "origen": {
+        "propietarioId": "volumen:B",
+        "ruta": "/prueba"
+      }
+    },
+    "volumen.B.T0": {
+      "magnitud": "temperatura",
+      "funcion": "inicial",
+      "declaracion": {
+        "texto": "320",
+        "unidad": "K"
+      },
+      "origen": {
+        "propietarioId": "volumen:B",
+        "ruta": "/prueba"
+      }
+    },
+    "volumen.B.P": {
+      "magnitud": "presion",
+      "funcion": "frontera",
+      "declaracion": {
+        "texto": "101325",
+        "unidad": "Pa"
+      },
+      "origen": {
+        "propietarioId": "volumen:B",
+        "ruta": "/prueba"
+      }
+    },
+    "corriente.s.F": {
+      "magnitud": "caudal_molar",
+      "funcion": "frontera",
+      "declaracion": {
+        "texto": "0.002",
+        "unidad": "mol/s"
+      },
+      "origen": {
+        "propietarioId": "corriente:s",
+        "ruta": "/prueba"
+      }
+    },
+    "calor.c.G": {
+      "magnitud": "conductancia",
+      "funcion": "parametro",
+      "declaracion": {
+        "texto": "0.5",
+        "unidad": "W/K"
+      },
+      "origen": {
+        "propietarioId": "calor:c",
+        "ruta": "/prueba"
+      }
+    }
+  },
+  "estudio": {
+    "tipo": "temporal",
+    "tiempoId": "estudio.tf",
+    "metodoSolicitado": "rk45",
+    "muestras": 5,
+    "rtol": 1e-8,
+    "atol": {
+      "cantidad": 1e-10,
+      "energia": 0.000001
+    }
+  }
+}

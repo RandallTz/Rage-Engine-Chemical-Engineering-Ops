@@ -1,0 +1,106 @@
+import fs from 'node:fs';
+import ts from 'typescript';
+import assert from 'node:assert/strict';
+const cache=new Map();
+function cargar(nombre){if(cache.has(nombre))return cache.get(nombre);const m={exports:{}};new Function('exports','module','require',ts.transpileModule(fs.readFileSync(`app/motor/${nombre}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(m.exports,m,r=>cargar(r.slice(2)));cache.set(nombre,m.exports);return m.exports;}
+const m=cargar('recorridoMateria'),n=cargar('modeloNumerico'),s=cargar('integracionMotor'),e=cargar('expresionesMotor'),u=cargar('unidadesMotor');
+let checks=0;
+function check(v,t){checks++;assert.ok(v,t);}
+function cerca(v,r,t,tol=1e-6){check(Math.abs(v-r)<=tol*Math.max(1,Math.abs(r)),`${t}: ${v} frente a ${r}`);}
+const base={...m.iniciarRecorrido().pasos[0].formulacion,componentes:[{id:1,nombre:'Agua',simbolo:'A'}],vista:'cantidad',campo:{sinReaccion:true,sinDifusion:false,sinConveccion:false,estacionario:false,difusion:'flujo'},restoImpermeable:true,fronteras:[{id:1,sentido:'entrada',constante:false},{id:2,sentido:'salida',constante:false}]};
+const dato=(texto,unidad)=>({texto:String(texto),unidad});
+const c=()=>({...n.iniciarConfiguracion(),muestras:11,tiempo:dato(600,'s'),datos:{inicial_1:dato(100,'kg'),entrada_1_1:dato(3,'kg/s'),salida_1_2:dato(2,'kg/s')}});
+check(!n.analizarMotor(base,n.iniciarConfiguracion()).listo,'No completar datos por omisión');
+check(n.analizarMotor(base,n.iniciarConfiguracion()).gl===2,'GL de las funciones de frontera pendientes');
+check(n.analizarMotor(base,n.iniciarConfiguracion()).inicialesPendientes===1,'Inicial pendiente separada del GL');
+const r=await s.resolverMotor(base,c());
+check(r.estado==='resuelto','Temporal resuelto');r.tiempos.forEach((t,i)=>cerca(r.valores[i][0][0],100+t,'m=100+t',1e-10));
+cerca(r.conservacion[0],0,'Cierre de presupuesto temporal',1e-10);
+const eq=c();eq.tiempo=dato(10,'min');eq.datos.entrada_1_1=dato(10800,'kg/h');eq.datos.inicial_1=dato(100000,'g');
+const rr=await s.resolverMotor(base,eq);check(JSON.stringify(r.valores)===JSON.stringify(rr.valores),'Unidades equivalentes dan los mismos estados');
+const zero=c();zero.datos.entrada_1_1=dato(0,'kg/s');check(n.analizarMotor(base,zero).listo,'Cero explícito es dato');
+const vacio=c();vacio.tiempo=dato(10,'s');vacio.datos.inicial_1=dato(10,'kg');vacio.datos.entrada_1_1=dato(0,'kg/s');vacio.datos.salida_1_2=dato(3,'kg/s');
+const parcial=await s.resolverMotor(base,vacio);check(parcial.estado==='parcial','Agotamiento parcial');cerca(parcial.tiempos.at(-1),10/3,'Instante de agotamiento',1e-8);check(parcial.valores.every(v=>v.flat().every(x=>x>=0)),'No publicar masas negativas');
+vacio.datos.inicial_1=dato(0,'kg');const inmediata=await s.resolverMotor(base,vacio);check(inmediata.estado==='parcial'&&inmediata.tiempos.length===1,'Agotamiento en t=0');
+const volumen={...base,cantidadVolumen:true,densidadMediaConstante:true,densidadComunPuertos:true};
+const cv={...n.iniciarConfiguracion(),muestras:11,tiempo:dato(600,'s'),datos:{inicial_1:dato(100,'L'),entrada_1_1:dato(3,'L/s'),salida_1_2:dato(2,'L/s')}};
+check(!n.analizarMotor(volumen,cv).campos.some(d=>d.id==='densidad'),'No pedir una propiedad cancelada en la ecuación final');
+const rv=await s.resolverMotor(volumen,cv);cerca(rv.valores.at(-1)[0][0],.7,'Resolver V=0.7 m³ directamente',1e-10);check(rv.unidadEstado==='m3','La variable resuelta y su unidad coinciden con la ecuación');
+const v0={...cv,datos:{...cv.datos,inicial_1:dato(0,'L')}};const rv0=await s.resolverMotor(volumen,v0);cerca(rv0.valores.at(-1)[0][0],.6,'Ley volumétrica continua desde volumen cero, sin inventar densidad',1e-10);
+const producto={...base,cantidadVolumen:true};const cc=c();cc.cierre='volumen';cc.datos.volumen=dato(1,'m3');const rc=await s.resolverMotor(producto,cc);cerca(rc.valores.at(-1)[0][0],700,'Volumen como dato y densidad como resultado',1e-10);
+const cr=c();cr.cierre='densidad';cr.datos.densidad=dato('100+t','kg/m3');const rc2=await s.resolverMotor(producto,cr);cerca(rc2.valores.at(-1)[0][0],700,'Densidad como dato y volumen como resultado',1e-10);
+check(!n.analizarMotor(producto,c()).listo,'La relación rho V necesita elegir y especificar un cierre');
+check(n.analizarMotor({...volumen,fija:true},cv).bloqueos.length>0,'Restricción algebraica no integrada como una ODE');
+const sinV=c();sinV.datos.entrada_1_1=dato('V','kg/s');check(!!n.analizarMotor(base,sinV).errores.entrada_1_1,'No inventar volumen para una expresión');
+const fuentes={...base,fronteras:[],campo:{...base.campo,sinReaccion:false},restoImpermeable:true};
+const fuenteVol=n.camposMotor({...fuentes,generacionUniforme:true}).campos.find(d=>d.id==='generacion_1');check(fuenteVol.magnitud==='tasa'&&fuenteVol.simbolo.includes('\\gamma')&&!fuenteVol.simbolo.includes('V'),'La variable de fuente uniforme es gamma, no gamma V');
+const rigido={...n.iniciarConfiguracion(),muestras:11,tiempo:dato(1,'s'),rtol:1e-5,datos:{inicial_1:dato(1,'kg'),generacion_1:dato(10,'kg/s'),consumo_1:dato('1000*m','kg/s')}};
+for(const metodo of ['rk45','euler_implicito']){const res=await s.resolverMotor(fuentes,{...rigido,metodo});check(res.estado==='resuelto',metodo+' resuelve: '+res.mensaje+'; pasos='+res.pasos+'; tiempo='+res.tiempos.at(-1));cerca(res.valores.at(-1)[0][0],.01,metodo+' límite rígido',1e-6);cerca(res.conservacion[0],0,metodo+' presupuesto',1e-8);}
+const campo={...base,vista:'campo',fija:true,invariantes:[false,true,true],fronteras:[],restoImpermeable:false};
+const cp=()=>({...n.iniciarConfiguracion(),tiempo:dato(.25,'s'),muestras:6,frontera:'periodica',rtol:1e-8,celdas:40,datos:{inicio:dato(0,'m'),fin:dato(1,'m'),velocidad:dato(1,'m/s'),inicial_1:dato('2+0.3*sin(2*pi*x)','kg/m3')}});
+check(n.analizarMotor(campo,cp()).listo,'Campo 1D completo');
+const errores=[];
+for(const celdas of [20,40,80]){const resultado=await s.resolverMotor(campo,{...cp(),celdas});check(resultado.estado==='resuelto','Advección 1D resuelta');const perfil=resultado.valores.at(-1)[0];errores.push(perfil.reduce((sum,v,i)=>sum+Math.abs(v-(2+.3*Math.sin(2*Math.PI*(resultado.x[i]-.25)))),0)/celdas);cerca(resultado.conservacion[0],0,'Conservación periódica 1D',1e-10);}
+check(errores[1]<errores[0]*.7&&errores[2]<errores[1]*.7,'Convergencia espacial de advección al refinar la malla');
+const dif={...campo,componentes:[...base.componentes,{id:2,nombre:'B',simbolo:'B'}],campo:{...campo.campo,sinConveccion:true,difusion:'laplaciano'}};
+const cd={...cp(),tiempo:dato(.2,'s'),celdas:40,datos:{inicio:dato(0,'m'),fin:dato(1,'m'),inicial_1:dato('0.5+0.1*sin(2*pi*x)','kg/m3'),inicial_2:dato('0.5-0.1*sin(2*pi*x)','kg/m3'),difusion_1:dato(.05,'m2/s'),difusion_2:dato(.05,'m2/s')}};
+const rd=await s.resolverMotor(dif,cd),lambda=-4*.05*Math.sin(Math.PI/40)**2/(1/40)**2;
+rd.valores.at(-1)[0].forEach((v,i)=>cerca(v,.5+.1*Math.sin(2*Math.PI*rd.x[i])*Math.exp(lambda*.2),'Modo propio de difusión semidiscreta',1e-7));
+rd.valores.at(-1)[0].forEach((v,i)=>cerca(v+rd.valores.at(-1)[1][i],1,'Densidad total y suma de flujos compatibles',1e-10));
+check(rd.estado==='resuelto','Difusión 1D resuelta');
+await assert.rejects(()=>s.resolverMotor(dif,{...cd,datos:{...cd.datos,difusion_2:dato(.1,'m2/s')}}),/flujos difusivos no suman cero/);checks++;
+const yCampo={...campo,invariantes:[true,false,true]},cy=cp();cy.datos.inicial_1=dato('2+0.3*sin(2*pi*y)','kg/m3');check(n.analizarMotor(yCampo,cy).listo,'La coordenada activa y tiene expresión propia');await s.resolverMotor(yCampo,cy);checks++;
+check(n.analizarMotor({...campo,invariantes:[false,false,true]},cp()).bloqueos.length>0,'2D no se reduce silenciosamente a 1D');
+check(n.analizarMotor({...campo,fija:false},cp()).bloqueos.length>0,'Malla móvil no asumida fija');
+check(n.analizarMotor({...base,vista:'integral'},c()).bloqueos.length>0,'Integral sin cierre no ejecutable');
+check(n.analizarMotor({...base,invariantes:[true,true,true]},c()).bloqueos.length>0,'No ignorar restricciones locales al resolver una suma total');
+const invertido=c();invertido.tiempo=dato(2,'s');invertido.datos.entrada_1_1=dato(-2,'kg/s');invertido.datos.salida_1_2=dato(0,'kg/s');const ri=await s.resolverMotor(base,invertido);cerca(ri.valores.at(-1)[0][0],96,'Un caudal orientado negativo invierte el sentido',1e-10);
+const local={...campo,invariantes:[true,true,true],campo:{...campo.campo,sinReaccion:false,sinConsumo:true}};
+const cl={...n.iniciarConfiguracion(),tiempo:dato(3,'s'),muestras:7,datos:{inicial_1:dato(2,'kg/m3'),generacion_1:dato(1,'kg/(m3 s)')}};
+const rl=await s.resolverMotor(local,cl);rl.tiempos.forEach((t,i)=>cerca(rl.valores[i][0][0],2+t,'Campo homogéneo reducido a una ODE temporal',1e-10));
+check(rl.unidadEstado==='kg/m3','No convertir silenciosamente densidad local en masa');
+const quieto={...campo,campo:{...campo.campo,sinConveccion:true}};
+const rq=await s.resolverMotor(quieto,cp());check(rq.estado==='resuelto','Un campo quieto conserva su derivada temporal, aunque sea cero');
+cerca(rq.valores.at(-1)[0][0],rq.valores[0][0][0],'Estado quieto no se mueve',1e-12);
+check(n.analizarMotor({...campo,generacionUniforme:true,campo:{...campo.campo,sinReaccion:false,sinConsumo:true}},{...cp(),datos:{...cp().datos,generacion_1:dato('rho','kg/(m3 s)')}}).errores.generacion_1,'No hacer depender una fuente espacialmente uniforme de rho local');
+await assert.rejects(()=>s.resolverMotor(campo,{...cp(),frontera:'sin_flujo'}),/contradice la frontera/);checks++;
+for(const text of ['globalThis','constructor(1)','1;while(1)','Math.exp(1)','fetch(1)','t=2']){assert.throws(()=>e.analizarExpresion(text,['t']));checks++;}
+cerca(e.evaluarExpresion(e.analizarExpresion('-2^2',[]),{}),-4,'Precedencia de potencia');cerca(e.evaluarExpresion(e.analizarExpresion('2^3^2',[]),{}),512,'Potencia asociativa por derecha');
+assert.throws(()=>u.factorUnidad('masa','s'));checks++;
+const ac=new AbortController();ac.abort();await assert.rejects(()=>s.resolverMotor(base,c(),{signal:ac.signal}),/cancelado/);checks++;
+const puertoConstante={...base,fronteras:base.fronteras.map(p=>({...p,constante:true}))},valorVariable=c();valorVariable.datos.entrada_1_1=dato('2+t','kg/s');check(!!n.analizarMotor(puertoConstante,valorVariable).errores.entrada_1_1,'Respetar el supuesto de caudal constante');
+const horizonteInfinito=c();horizonteInfinito.tiempo=dato(1e308,'h');check(!!n.analizarMotor(base,horizonteInfinito).errores.tiempo,'Rechazar desbordamiento al convertir tiempo');
+await assert.rejects(()=>s.resolverMotor(local,{...cl,datos:{...cl.datos,inicial_1:dato(1e308,'kg/L')}}),/normalizado no es finito/);checks++;
+// Cross-component laws must use a simultaneous state, including the implicit Jacobian.
+const acoplado={...fuentes,componentes:[...base.componentes,{id:2,nombre:'Producto',simbolo:'B'}]};
+const cac={...n.iniciarConfiguracion(),tiempo:dato(2,'s'),muestras:9,rtol:1e-7,atol:1e-11,datos:{inicial_1:dato(1,'kg'),inicial_2:dato(0,'kg'),generacion_1:dato(0,'kg/s'),consumo_1:dato('2*m_A','kg/s'),generacion_2:dato('2*m_A','kg/s'),consumo_2:dato(0,'kg/s')}};
+let rac;
+for(const metodo of ['rk45','euler_implicito']){
+  const z=await s.resolverMotor(acoplado,{...cac,metodo});check(z.estado==='resuelto',metodo+' sistema acoplado');
+  z.tiempos.forEach((t,k)=>{cerca(z.valores[k][0][0],Math.exp(-2*t),metodo+' A analítico',metodo==='rk45'?1e-7:2e-4);cerca(z.valores[k][0][0]+z.valores[k][1][0],1,metodo+' masa entre especies',1e-10);});rac=z;
+}
+const traza={...rigido,rtol:1e-6,atol:1e-30,metodo:'euler_implicito',datos:{inicial_1:dato(1e-20,'kg'),generacion_1:dato(0,'kg/s'),consumo_1:dato('1e20*m^2','kg/s')}};
+const rt=await s.resolverMotor(fuentes,traza);check(rt.estado==='resuelto','Newton escalado resuelve una masa en trazas');check(Math.abs(rt.valores.at(-1)[0][0]/1e-20-.5)<.001,'Traza no anulada por la tolerancia del Newton');
+const reaccion1d={...campo,componentes:acoplado.componentes,campo:{...campo.campo,sinConveccion:true,sinDifusion:true,sinReaccion:false}};
+const cr1={...cp(),tiempo:dato(.5,'s'),datos:{inicio:dato(0,'m'),fin:dato(1,'m'),inicial_1:dato('1+.1*sin(2*pi*x)','kg/m3'),inicial_2:dato(0,'kg/m3'),generacion_1:dato(0,'kg/(m3 s)'),consumo_1:dato('2*rho_A','kg/(m3 s)'),generacion_2:dato('2*rho_A','kg/(m3 s)'),consumo_2:dato(0,'kg/(m3 s)')}};
+const rp=await s.resolverMotor(reaccion1d,cr1);check(rp.estado==='resuelto','Fuentes locales acopladas en 1D');rp.x.forEach((x,j)=>cerca(rp.valores.at(-1)[0][j],(1+.1*Math.sin(2*Math.PI*x))*Math.exp(-1),'Conversión local analítica',1e-7));
+const cerrado={...cp(),frontera:'sin_flujo',tiempo:dato(.05,'s'),datos:{...cp().datos,velocidad:dato('sin(2*pi*x)','m/s')}};
+const rz=await s.resolverMotor(campo,cerrado);check(rz.estado==='resuelto','Cero de una velocidad trigonométrica en la pared');cerca(rz.conservacion[0],0,'Presupuesto sin flujo',1e-10);
+await assert.rejects(()=>s.resolverMotor(campo,{...cerrado,datos:{...cerrado.datos,velocidad:dato(1e-15,'m/s')}}),/contradice la frontera/);checks++;
+const fick={...dif,campo:{...dif.campo,difusion:'fick'}};
+const cf={...cd,atol:1e-24,rtol:1e-8,datos:{...cd.datos,inicial_1:dato('1-1e-12*(1+.1*sin(2*pi*x))','kg/m3'),inicial_2:dato('1e-12*(1+.1*sin(2*pi*x))','kg/m3')}};
+const rf=await s.resolverMotor(fick,cf),rf2=await s.resolverMotor({...fick,componentes:[...fick.componentes].reverse()},cf);
+check(rf.estado==='resuelto'&&rf2.estado==='resuelto','Fick conserva las trazas con cualquier orden de especies');
+rf.x.forEach((x,j)=>{const ref=1e-12*(1+.1*Math.sin(2*Math.PI*x)*Math.exp(lambda*.2));check(Math.abs(rf.valores.at(-1)[1][j]/ref-1)<1e-7,'Derivada del soluto en trazas');check(Math.abs(rf.valores.at(-1)[1][j]/rf2.valores.at(-1)[0][j]-1)<1e-10,'Orden de componentes no cambia la trayectoria');});
+const graf=cargar('datosGraficasMotor'),alm=cargar('hojasMotor');
+const hoja=(f,c)=>({...alm.nuevaHoja('Prueba'),historial:{...m.iniciarRecorrido(),pasos:[{...m.iniciarRecorrido().pasos[0],formulacion:f}],activo:0},config:c});
+const gv=graf.datosGraficasMotor(hoja(volumen,cv),rv,'tiempo');check(gv.variables.some(v=>v.id==='V')&&!gv.variables.some(v=>v.id.startsWith('m_')),'No inventar masa para un volumen sin densidad');cerca(gv.filas.at(-1).V,.7,'Gráfico conserva la unidad de estado');
+const ga=graf.datosGraficasMotor(hoja(acoplado,cac),rac,'tiempo');cerca(ga.filas.at(-1).dato_generacion_2,2*rac.valores.at(-1)[0][0],'Gráfico evalúa los mismos alias que el solver',1e-12);
+const gp=graf.datosGraficasMotor(hoja(reaccion1d,cr1),rp,'perfil',rp.tiempos.length-1);cerca(gp.filas[0].dato_generacion_2,2*rp.valores.at(-1)[0][0],'Perfil evalúa las fuentes acopladas',1e-12);
+const ruido=[{y:2},{y:2+1e-14}],antes=JSON.stringify(ruido),lim=graf.limitesGraficaMotor(ruido,['y']);check(lim[1]-lim[0]>.01&&JSON.stringify(ruido)===antes,'Los ejes no exageran ruido ni alteran los datos');
+const memoria=new Map();globalThis.window=new EventTarget();globalThis.localStorage={getItem:k=>memoria.get(k)??null,setItem:(k,v)=>memoria.set(k,String(v))};
+const ha=alm.nuevaHoja('A'),hb=alm.nuevaHoja('B');alm.guardarHoja(ha);alm.guardarHoja(hb);alm.guardarHoja({...ha,nombre:'A editada'});check(alm.leerHojas().length===2&&alm.leerHojas().some(h=>h.nombre==='B'),'Guardar hojas independientes sin sobrescribir las otras');
+const copia=alm.duplicarHoja({...ha,resultadoRef:{firma:'antigua',estado:'resuelto',fecha:''}});copia.config.datos.x=dato(1,'kg');check(copia.id!==ha.id&&!ha.config.datos.x&&!copia.resultadoRef,'Duplicar sin compartir datos ni resultados antiguos');
+alm.guardarHoja({...hb,archivada:true});check(alm.leerHojas().find(h=>h.id===hb.id).archivada,'Archivar recuperablemente');alm.guardarHoja({...hb,archivada:false});check(!alm.leerHojas().find(h=>h.id===hb.id).archivada,'Recuperar una hoja');
+check(alm.moverGrafica([{id:'a'},{id:'b'}],'b','a')[0].id==='b','Reordenar gráficos');delete globalThis.window;delete globalThis.localStorage;
+console.log(`Solver independiente: ${checks} comprobaciones. Temporal directo, rigidez, agotamiento, unidades, 1D conservativo, convergencia espacial, difusión compatible, rechazos y expresiones seguras. Error de advección por malla: ${errores.map(x=>x.toExponential(3)).join(' / ')}.`);
