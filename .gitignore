@@ -106,3 +106,6 @@ $RECYCLE.BIN/
 
 salidas/
 resultados/
+# Los servicios de resultados del motor son codigo, no salidas.
+!core/resultados/
+!frontend/motores/resultados/
