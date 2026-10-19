@@ -31,7 +31,7 @@ function unicos(items: unknown[], ruta: string): Set<unknown> {
 const ref = (v: unknown, conjunto: Set<unknown>, ruta: string, que: string) => { if (!conjunto.has(v)) fallo(ruta, `referencia inexistente (${que} ${String(v)})`); };
 
 export function leerModeloComun(dato: unknown): ModeloComun {
-  const m = claves(dato, "modelo", CLAVES);
+  const m = claves(dato, "modelo", CLAVES, ["restricciones"]);
   if (m.formato !== "rage.modelo") fallo("formato", "valor no admitido");
   if (m.version !== VERSION_MODELO) fallo("version", "valor no admitido");
   const datos = new Set(Object.keys(obj(m.datos, "datos")));
@@ -70,6 +70,18 @@ export function leerModeloComun(dato: unknown): ModeloComun {
   unicos(lista(m.intercambios, "intercambios"), "intercambios");
   if (m.estudio !== null) dato_(obj(m.estudio, "estudio").tiempoId, "estudio.tiempoId");
   if (m.matematico !== null) obj(m.matematico, "matematico");
+  if ("restricciones" in m) {
+    if (m.matematico === null) fallo("restricciones", "las restricciones se declaran sobre variables del modelo matemático");
+    const campos = new Set((m.matematico as { simbolos: { id: string; rol: string }[] }).simbolos.filter(s => s.rol === "campo").map(s => s.id));
+    const vistos = new Set<string>();
+    lista(m.restricciones, "restricciones").forEach((x, i) => {
+      const o = claves(x, `restricciones[${i}]`, ["simboloId", "tipo"]);
+      ref(o.simboloId, campos, `restricciones[${i}].simboloId`, "variable del modelo matemático");
+      if (vistos.has(o.simboloId as string)) fallo(`restricciones[${i}].simboloId`, "identidad repetida");
+      vistos.add(o.simboloId as string);
+      if (o.tipo !== "no_negativo") fallo(`restricciones[${i}].tipo`, "valor no admitido");
+    });
+  }
   for (const k of Object.keys(obj(m.motores, "motores"))) if (k !== "adimensionalizacion") fallo(`motores.${k}`, "motor desconocido");
   if (!["documento_adimensional", "ensamblaje_v2", "hoja_motor_materia", "nuevo"].includes(obj(m.procedencia, "procedencia").tipo as string)) fallo("procedencia.tipo", "valor no admitido");
   return m as unknown as ModeloComun;

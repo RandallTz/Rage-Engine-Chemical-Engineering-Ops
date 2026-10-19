@@ -106,7 +106,7 @@ class _Lectura:
 def leer_modelo_comun(dato):
     if len(json.dumps(dato, ensure_ascii=False).encode("utf-8")) > LIMITE_BYTES:
         _fallo("modelo", "el modelo supera 8 MB")
-    m = _claves(dato, "modelo", CLAVES)
+    m = _claves(dato, "modelo", CLAVES, ["restricciones"])
     _opcion(m["formato"], "formato", ["rage.modelo"])
     _opcion(m["version"], "version", [VERSION])
     _texto(m["id"], "id")
@@ -174,6 +174,9 @@ def leer_modelo_comun(dato):
 
     if m["estudio"] is not None:
         _leer_estudio(m["estudio"], lec)
+
+    if "restricciones" in m:
+        _leer_restricciones(m)
 
     motores = _obj(m["motores"], "motores")
     for nombre, cfg in motores.items():
@@ -316,6 +319,21 @@ def _leer_estudio(e, lec):
         _opcion(esp["frontera"], "estudio.espacial.frontera", ["periodica", "valores", "sin_flujo", ""])
     if "cierreMasico" in o:
         _opcion(o["cierreMasico"], "estudio.cierreMasico", ["densidad", "volumen", ""])
+
+
+def _leer_restricciones(m):
+    """Dominio de las variables del modelo matemático: el cálculo se detiene
+    en el instante en que una variable lo abandonaría (agotamiento)."""
+    if m["matematico"] is None:
+        _fallo("restricciones", "las restricciones se declaran sobre variables del modelo matemático")
+    campos = {s["id"] for s in m["matematico"]["simbolos"] if s["rol"] == "campo"}
+    rs = _lista(m["restricciones"], "restricciones")
+    _unicos(rs, "restricciones", "simboloId")
+    for i, x in enumerate(rs):
+        r = f"restricciones[{i}]"
+        o = _claves(x, r, ["simboloId", "tipo"])
+        _ref(o["simboloId"], campos, r + ".simboloId", "variable del modelo matemático")
+        _opcion(o["tipo"], r + ".tipo", ["no_negativo"])
 
 
 def _leer_adim(cfg, m):

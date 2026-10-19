@@ -52,6 +52,8 @@ type Modelo = {
   - temporal: `tipo: "temporal"`, `tiempoId`, `metodoSolicitado`, `muestras`, `rtol`, `atol: {cantidad, energia?}`;
   - opcionales: `espacial?: {celdas, frontera}` y `cierreMasico?`.
 - **`motores`**: configuración de cada motor bajo su nombre. Hoy solo `adimensionalizacion: {formas, activaId, exploracion?}`. Un motor nunca escribe fuera de su espacio.
+- **`restricciones?`** (opcional, 18 de octubre de 2026): `[{simboloId, tipo: "no_negativo"}]` sobre variables de campo de `matematico`. El cálculo se detiene en el instante en que una lo abandonaría (código `agotamiento`); nunca se recorta. Sin restricción declarada, la ecuación sigue: el dominio es del modelo, no una regla escondida del solver.
+- **Valores de `matematico`**: cada parámetro o constante del árbol toma su valor de `datos["matematico.<id>"]` (`funcion: "parametro"`, `origen: {propietarioId: "matematico", ruta: "matematico.simbolos.<id>"}`), en cualquier unidad compatible con la dimensión del símbolo. Antes viajaban en `procedencia.valoresMatematico`, que ya no existe.
 - **`Procedencia`**: `{tipo: "documento_adimensional" | "ensamblaje_v2" | "hoja_motor_materia" | "nuevo", ...}` con los identificadores del origen (`solicitudId`, `hojaId`, `documentoId`), su `version` y lo que no es física pero debe conservarse (`derivacion`, pasos del recorrido).
 
 ## 2. La termodinámica siempre presente

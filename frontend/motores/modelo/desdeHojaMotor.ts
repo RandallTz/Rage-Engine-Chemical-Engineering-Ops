@@ -19,6 +19,8 @@ import { VERSION_MODELO } from "./contrato";
 
 export const VOLUMEN_HOJA = "dominio";
 const RUTA_DATOS = "config.datos.";
+/** Clave en `datos` del valor de cada parámetro de `matematico` (contrato §1). */
+export const PREFIJO_MATEMATICO = "matematico.";
 
 export function modeloDesdeHojaMotor(hoja: HojaMotor): ModeloComun {
   if (hoja.ensamblaje || hoja.redTermodinamica) throw new Error("Solo hojas de materia de un dominio; los ensamblajes viajan como solicitud v2.");
@@ -49,6 +51,10 @@ export function modeloDesdeHojaMotor(hoja: HojaMotor): ModeloComun {
   });
   const supuestos = Object.fromEntries(Object.entries(f).filter(([k]) => k !== "componentes" && k !== "fronteras")) as Omit<FormulacionMateria, "componentes" | "fronteras">;
   const lectura = leerHojaMotor(hoja);
+  // Valores SI de los parámetros de las ecuaciones ejecutadas: datos del modelo,
+  // como cualquier otro valor físico (el compilador no lee la procedencia).
+  for (const [id, v] of Object.entries(lectura.importacion?.valores ?? {}))
+    datos[`${PREFIJO_MATEMATICO}${id}`] = { magnitud: "parametro_matematico", funcion: "parametro", declaracion: { texto: v.valor, unidad: v.unidad }, origen: { propietarioId: "matematico", ruta: `matematico.simbolos.${id}` } };
   return {
     formato: "rage.modelo", version: VERSION_MODELO, id: hoja.id, nombre: hoja.nombre,
     componentes: structuredClone(cs),
@@ -64,6 +70,8 @@ export function modeloDesdeHojaMotor(hoja: HojaMotor): ModeloComun {
     intercambios: [],
     datos,
     matematico: lectura.importacion?.documento.modelo ?? null,
+    // El solver de materia declara no negativo cada estado (masa, densidad o volumen).
+    ...(lectura.importacion ? { restricciones: lectura.importacion.origen.componentes.map(c => ({ simboloId: c.campoId, tipo: "no_negativo" as const })) } : {}),
     estudio: {
       tipo: "temporal", tiempoId: "estudio.tf", metodoSolicitado: cfg.metodo, muestras: cfg.muestras, rtol: cfg.rtol, atol: { cantidad: cfg.atol },
       espacial: { celdas: cfg.celdas, frontera: cfg.frontera }, ...(cfg.cierre !== undefined ? { cierreMasico: cfg.cierre } : {}),
@@ -72,7 +80,7 @@ export function modeloDesdeHojaMotor(hoja: HojaMotor): ModeloComun {
     procedencia: {
       tipo: "hoja_motor_materia", hojaId: hoja.id, firmaHoja: firmaHoja(hoja),
       pasos: hoja.historial.pasos.map(p => ({ titulo: p.titulo, operacion: p.operacion })),
-      ...(lectura.importacion ? { valoresMatematico: lectura.importacion.valores } : { sinMatematico: lectura.motivo }),
+      ...(lectura.importacion ? {} : { sinMatematico: lectura.motivo }),
     },
   };
 }

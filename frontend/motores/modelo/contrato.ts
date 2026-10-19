@@ -58,6 +58,7 @@ export type ConfigAdimensionalizacion = { version: 1 | 2; formas: Forma[]; activ
 
 export type Procedencia = { tipo: "documento_adimensional" | "ensamblaje_v2" | "hoja_motor_materia" | "nuevo"; [clave: string]: unknown };
 
+export type Restriccion = { simboloId: string; tipo: "no_negativo" };
 export type ModeloComun = {
   formato: "rage.modelo"; version: typeof VERSION_MODELO;
   id: string; nombre: string;
@@ -68,6 +69,9 @@ export type ModeloComun = {
   intercambios: IntercambioTermicoV2[];
   datos: Record<string, Dato>;
   matematico: ModeloMatematico | null;
+  /** Dominio de las variables de `matematico`: el cálculo se detiene en el
+   * instante en que una de ellas lo abandonaría (agotamiento). */
+  restricciones?: Restriccion[];
   estudio: Estudio | null;
   motores: { adimensionalizacion?: ConfigAdimensionalizacion };
   procedencia: Procedencia;

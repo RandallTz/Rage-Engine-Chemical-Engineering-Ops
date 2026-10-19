@@ -159,10 +159,58 @@
     "propietarioId": "estudio",
     "ruta": "config.tiempo"
    }
+  },
+  "matematico.k_A": {
+   "magnitud": "parametro_matematico",
+   "funcion": "parametro",
+   "declaracion": {
+    "texto": "0.2",
+    "unidad": "s^-1"
+   },
+   "origen": {
+    "propietarioId": "matematico",
+    "ruta": "matematico.simbolos.k_A"
+   }
+  },
+  "matematico.m_A0": {
+   "magnitud": "parametro_matematico",
+   "funcion": "parametro",
+   "declaracion": {
+    "texto": "1",
+    "unidad": "kg"
+   },
+   "origen": {
+    "propietarioId": "matematico",
+    "ruta": "matematico.simbolos.m_A0"
+   }
+  },
+  "matematico.g_B": {
+   "magnitud": "parametro_matematico",
+   "funcion": "parametro",
+   "declaracion": {
+    "texto": "0.2",
+    "unidad": "s^-1"
+   },
+   "origen": {
+    "propietarioId": "matematico",
+    "ruta": "matematico.simbolos.g_B"
+   }
+  },
+  "matematico.tf": {
+   "magnitud": "parametro_matematico",
+   "funcion": "parametro",
+   "declaracion": {
+    "texto": "20",
+    "unidad": "s"
+   },
+   "origen": {
+    "propietarioId": "matematico",
+    "ruta": "matematico.simbolos.tf"
+   }
   }
  },
  "matematico": {
-  "id": "b365963a-69be-4d79-af56-0ca322decc9d",
+  "id": "19a9bba9-5b77-43bc-a8c0-85c43bc9adf2",
   "revision": 1,
   "simbolos": [
    {
@@ -381,6 +429,16 @@
    }
   ]
  },
+ "restricciones": [
+  {
+   "simboloId": "m_A",
+   "tipo": "no_negativo"
+  },
+  {
+   "simboloId": "m_B",
+   "tipo": "no_negativo"
+  }
+ ],
  "estudio": {
   "tipo": "temporal",
   "tiempoId": "estudio.tf",
@@ -442,24 +500,6 @@
      }
     }
    }
-  ],
-  "valoresMatematico": {
-   "k_A": {
-    "valor": "0.2",
-    "unidad": "s^-1"
-   },
-   "m_A0": {
-    "valor": "1",
-    "unidad": "kg"
-   },
-   "g_B": {
-    "valor": "0.2",
-    "unidad": "s^-1"
-   },
-   "tf": {
-    "valor": "20",
-    "unidad": "s"
-   }
-  }
+  ]
  }
 }
