@@ -1,7 +1,7 @@
 // Structural preparation only. These tests do not certify thermophysical initialization or dynamics.
 import fs from 'node:fs';import ts from 'typescript';import assert from 'node:assert/strict';
 const cache=new Map();function cargar(n){if(cache.has(n))return cache.get(n);const m={exports:{}};cache.set(n,m.exports);new Function('exports','module','require',ts.transpileModule(fs.readFileSync(`app/motor/${n}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(m.exports,m,r=>cargar(r.slice(2)));return m.exports;}
-const prep=cargar('prepararEnsamblajeTermodinamico'),hoja=cargar('modeloHojaMotor'),estado=cargar('estadoTermodinamicoHoja'),ener=cargar('estadoEnergiaHoja'),rec=cargar('recorridoEnergia'),vol=cargar('volumenControl'),red=cargar('ensamblajeMateria');
+const prep=cargar('prepararEnsamblajeTermodinamico'),hoja=cargar('modeloHojaMotor'),estado=cargar('estadoTermodinamicoHoja'),ener=cargar('estadoEnergiaHoja'),rec=cargar('recorridoEnergia'),termo=cargar('recorridoTermodinamico'),vol=cargar('volumenControl'),red=cargar('ensamblajeMateria');
 let checks=0;const check=(v,m)=>{checks++;assert.ok(v,m);},rechaza=(f,m)=>{checks++;assert.throws(f,undefined,m);};
 const casos=cargar('hojasPruebaEnergia').crearHojasPruebaEnergia(),cierre={modelo:{id:'agua-iapws95',version:'1'},politica:{cantidad:'monofasico',cambioInterno:'prohibido',evaluacion:'equilibrio_estable'}};
 const original=casos[0],originalTexto=JSON.stringify(original),identificada=structuredClone(estado.identificarComponenteEstado(original,1,'7732-18-5'));
@@ -11,7 +11,7 @@ await assert.rejects(()=>hoja.resolverHoja(seleccionada));checks++;
 check(hoja.firmaHoja(seleccionada)!==hoja.firmaHoja(identificada),'El cierre dinámico participa en la identidad');check(hoja.firmaHoja(prep.declararCierreDinamico(seleccionada,'dominio',null))===hoja.firmaHoja(identificada),'Retirar elección recupera identidad manual');
 check(prep.prepararEnsamblajeTermodinamico(seleccionada,'p').diagnosticos.some(d=>d.codigo==='MOTOR_ENS_DOS_CIERRES'),'No oculta relación afín heredada');
 const h=vol.guardarGeometria(vol.elegirVolumenControl(seleccionada,'dominio','rigido'),'dominio',{texto:'10',unidad:'L'});
-h.energia.historial=rec.operarEnergia(h.energia.historial,'Retirar cierre manual explícitamente',{modelo:'sin_declarar'});h.energia.inicial='U';h.energia.datos.energia_U0={texto:'1000',unidad:'kJ'};
+h.recorridoTermodinamico=termo.operarTermo(termo.recorridoTermoHoja(h),'Retirar cierre manual explícitamente',{modelo:'sin_declarar'});h.energia.inicial='U';h.energia.datos.energia_U0={texto:'1000',unidad:'kJ'};
 const antes=JSON.stringify(h),p=prep.prepararEnsamblajeTermodinamico(h,'p'),s=p.solicitud;
 check(JSON.stringify(h)===antes&&JSON.stringify(original)===originalTexto,'Preparar no edita hojas ni datos');
 check(!p.diagnosticos.length,'Sin problemas de preparación no implica inicialización física certificada');
@@ -31,7 +31,7 @@ check(prep.prepararEnsamblajeTermodinamico(sinV,'p').diagnosticos.some(d=>d.vari
 const T0=structuredClone(h);T0.energia.inicial='T';const st=prep.prepararEnsamblajeTermodinamico(T0,'p').solicitud;
 check(st.volumen.inicial.energia.tipo==='T'&&!Object.hasOwn(st.datos,'volumen.dominio.U0'),'T inicial no se duplica con U inicial');
 const abierta=structuredClone(prep.declararCierreDinamico(estado.identificarComponenteEstado(casos[3],1,'7732-18-5'),'dominio',cierre));
-abierta.energia.historial=rec.operarEnergia(abierta.energia.historial,'Retirar cierre manual y densidad',{modelo:'sin_declarar',densidadConstante:false});
+abierta.recorridoTermodinamico=termo.operarTermo(termo.recorridoTermoHoja(abierta),'Retirar cierre manual y densidad',{modelo:'sin_declarar',densidadConstante:false});
 let pa=prep.prepararEnsamblajeTermodinamico(abierta,'p');
 check(pa.solicitud.volumen.frontera.tipo==='presion_prescrita','Presión exterior y geometría son alternativas');
 check(pa.diagnosticos.some(d=>d.variableIds.includes('corriente.1.Pext')),'La presión de entrada no se hereda del tanque');
@@ -65,7 +65,7 @@ normalizado.config.datos.s1__total={texto:'11',unidad:'mol/s'};check(prep.prepar
 const dos={...graph,ensamblaje:red.agregarVolumen(graph.ensamblaje)};check(prep.prepararEnsamblajeTermodinamico(dos,'p').solicitud===null,'No exporta solo el primero de varios volúmenes');
 const poli=structuredClone(abierta);poli.cierresDinamicos.dominio.politica.cantidad='sin_restriccion';poli.cierresDinamicos.dominio.politica.cambioInterno='permitido';
 check(prep.prepararEnsamblajeTermodinamico(poli,'p').diagnosticos.some(d=>d.codigo==='MOTOR_ENS_POLITICA'),'No hace OR de hipótesis incompatibles');
-poli.energia.historial=rec.operarEnergia(poli.energia.historial,'Permitir fases',{monofasico:false,sinCambioFase:false});
+poli.recorridoTermodinamico=termo.operarTermo(termo.recorridoTermoHoja(poli),'Permitir fases',{monofasico:false,sinCambioFase:false});
 check(prep.prepararEnsamblajeTermodinamico(poli,'p').diagnosticos.some(d=>d.codigo==='MOTOR_ENS_EXTRACCION'),'Multifase requiere extracción explícita');
 poli.cierresDinamicos.dominio.extracciones={1:{tipo:'mezcla_homogenea'},2:{tipo:'fase',fase:'liquido'}};
 check(prep.prepararEnsamblajeTermodinamico(poli,'p').solicitud.corrientes[1].extraccion.fase==='liquido','Extracción es restricción de transporte, no asignación de fase al catálogo');

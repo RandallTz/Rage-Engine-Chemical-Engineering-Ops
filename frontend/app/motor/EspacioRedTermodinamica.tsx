@@ -2,6 +2,9 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {useRouter} from 'next/navigation';
 import Link from 'next/link';
+import {panelDeEcuacion,TITULO_PANEL} from './ubicacionEcuaciones';
+import type {VistaHoja} from './familiasBalance';
+import DerivacionVolumenRed from './DerivacionVolumenRed';
 import type {HojaMotor} from './hojasMotor';
 import {guardarHoja,leerHojas} from './hojasMotor';
 import type {CapacidadesEnsamblajeV2,RespuestaValidacionV2,VolumenV2,CorrienteV2,IntercambioTermicoV2} from './contratoEnsamblajeV2';
@@ -29,7 +32,11 @@ import {destinoDiagnosticoRed,enfoqueVigenteRed,idEnfoqueRed,urlEnfoqueRed} from
 import type {EnfoqueRed} from './destinoDiagnosticoRed';
 import styles from './trabajoMotor.module.css';
 
-export default function EspacioRedTermodinamica({h,vista,enfoque}:{h:HojaMotor;vista:'ecuaciones'|'estado'|'resolver';enfoque?:EnfoqueRed}){
+export default function EspacioRedTermodinamica({h,vista,enfoque,incrustada=false,panel}:{h:HojaMotor;vista:'ecuaciones'|'estado'|'resolver';enfoque?:EnfoqueRed;
+  /** Dentro de la hoja (paneles de balances): la navegación ya la pone la hoja. */
+  incrustada?:boolean;
+  /** Panel de la hoja: solo las ecuaciones de su familia (ubicacionEcuaciones.ts). Sin panel, todas. */
+  panel?:VistaHoja}){
   const router=useRouter(),s=h.redTermodinamica!.solicitud,firma=firmaHoja(h),peticion=useMemo(()=>solicitudRed(h,crypto.randomUUID()),[h]);
   const [cap,setCap]=useState<CapacidadesEnsamblajeV2|null>(null),[prop,setProp]=useState<CapacidadesEstado|null>(null),[error,setError]=useState(''),[validada,setValidada]=useState<{firma:string;r:RespuestaValidacionV2}|null>(null),[seleccion,setSeleccion]=useState({contexto:'',id:''}),[firmaOcupada,setFirmaOcupada]=useState<string|null>(null),[reintento,setReintento]=useState(0);
   const ocupado=firmaOcupada===firma;
@@ -44,10 +51,13 @@ export default function EspacioRedTermodinamica({h,vista,enfoque}:{h:HojaMotor;v
   useEffect(()=>{historial.sincronizar(h.redTermodinamica!);},[historial,h.redTermodinamica]);
   const r=validada?.firma===firma?validada.r:undefined;
   const resolucion=estadoResolucionRed(r);
-  const owners=[...s.volumenes.map(v=>`volumen:${v.id}`),...s.corrientes.map(c=>`corriente:${c.id}`),...s.intercambiosTermicos.map(q=>`calor:${q.id}`),...(vista==='estado'?['componentes']:[])];
+  const enPanel=(e:{id:string;familia:string})=>!panel||panelDeEcuacion(e)===panel;
+  const todos=[...s.volumenes.map(v=>`volumen:${v.id}`),...s.corrientes.map(c=>`corriente:${c.id}`),...s.intercambiosTermicos.map(q=>`calor:${q.id}`),...(vista==='estado'?['componentes']:[])];
+  // Con panel: solo las secciones que tienen ecuaciones de esa familia, y el sistema completo para sus comprobaciones globales.
+  const owners=panel&&vista==='ecuaciones'&&r?[...todos,'red'].filter(o=>r.ecuaciones.some(e=>e.propietarioId===o&&enPanel(e))):todos;
   const destino=enfoqueVigenteRed(s,enfoque),contexto=JSON.stringify([h.id,destino??null]),activo=seleccion.contexto===contexto?seleccion.id:destino?.propietarioId;
   const setActivo=(id:string)=>setSeleccion({contexto,id});
-  const owner=owners.includes(activo??'')?activo!:owners[0],nombre=(id:string)=>h.redTermodinamica!.nombres[id]??id.replace(':',' · ');
+  const owner=owners.includes(activo??'')?activo!:owners[0]??todos[0],nombre=(id:string)=>id==='red'?'Sistema completo':h.redTermodinamica!.nombres[id]??id.replace(':',' · ');
   const foco=salto?.contexto===contexto?enfoqueVigenteRed(s,salto.enfoque):destino;
   const objetivo=foco&&(vista==='resolver'||!foco.datoId)?idEnfoqueRed(foco):undefined;
   useEffect(()=>{
@@ -75,7 +85,7 @@ export default function EspacioRedTermodinamica({h,vista,enfoque}:{h:HojaMotor;v
   }
   const modelo=vol?s.paquetes.find(p=>p.id===vol.paqueteId)?.modelo:undefined,puntual=prop?.modelos.find(p=>p.id===modelo?.id&&p.version===modelo?.version),paqueteCap=cap?.paquetes.find(p=>p.modelo.id===modelo?.id&&p.modelo.version===modelo?.version),dominio=paqueteCap?.dominio??puntual?.dominio;
   const listaDatos=<>{datos.map(([id])=>entrada(id))}{!datos.length&&<p className={styles.muted}>Sin datos numéricos en esta sección.</p>}</>;
-  return <div className={`${styles.page} ${styles.redPage}`} onBlurCapture={()=>historial.terminarGrupo()}><NavegacionHoja id={h.id} actual={vista} propietarioId={owner}/><header className={styles.heading}><div><span className={styles.eyebrow}>{h.nombre} · {s.volumenes.length} volúmenes · {s.componentes.length} componentes</span><h1>{vista==='resolver'?'Completar y resolver':vista==='estado'?'Definir el sistema':'Ecuaciones del sistema'}</h1></div>{vista!=='estado'&&<Link href={urlEnfoqueRed(h.id,'estado',{propietarioId:owner})}>Configurar sistema →</Link>}</header>
+  return <div className={`${styles.page} ${styles.redPage}`} onBlurCapture={()=>historial.terminarGrupo()}>{!incrustada&&<NavegacionHoja id={h.id} actual={vista} propietarioId={owner}/>}<header className={styles.heading}><div><span className={styles.eyebrow}>{h.nombre} · {s.volumenes.length} volúmenes · {s.componentes.length} componentes</span><h1>{vista==='resolver'?'Completar y resolver':vista==='estado'?'Definir el sistema':panel?TITULO_PANEL[panel]:'Ecuaciones del sistema'}</h1></div>{vista!=='estado'&&<Link href={urlEnfoqueRed(h.id,'estado',{propietarioId:owner})}>Configurar sistema →</Link>}</header>
     <div className={styles.historyTools} aria-label="Historial de configuración"><button disabled={!historial.vigente(h.redTermodinamica!)||!historial.puedeDeshacer} onClick={()=>recuperar('deshacer')}>Deshacer</button><button disabled={!historial.vigente(h.redTermodinamica!)||!historial.puedeRehacer} onClick={()=>recuperar('rehacer')}>Rehacer</button></div>
     {error&&<div role="alert" className={styles.error}>{error}<button onClick={()=>{setError('');setReintento(n=>n+1);}}>Reintentar</button></div>}
     {!cap?.disponible&&<p role="status">{cap?.motivo??'Conectando con el motor multifásico…'}</p>}
@@ -83,7 +93,7 @@ export default function EspacioRedTermodinamica({h,vista,enfoque}:{h:HojaMotor;v
       {vista==='estado'&&<div className={styles.boundaries}><button disabled={!cap||s.volumenes.length>=cap.volumenesMaximos} onClick={()=>nuevo('volumen')}>+ Volumen</button><button onClick={()=>nuevo('corriente')}>+ Corriente</button><button onClick={()=>nuevo('calor')}>+ Calor</button></div>}
       <h2 className={styles.compactTitle}>{owner==='componentes'?'Componentes':nombre(owner)}</h2>
       {vista==='resolver'&&listaDatos}
-      {vista==='ecuaciones'&&<>{!r?<p role="status">Ensamblando ecuaciones…</p>:r.ecuaciones.filter(e=>e.propietarioId===owner).map(e=><article className={styles.equations} key={e.id}><h2>{e.familia} · {e.id}</h2><FormulaMateria latex={e.latex} lectura={e.id} bloque/></article>)}<details className={styles.settings}><summary>Procedencia e hipótesis efectivas</summary><pre>{JSON.stringify({volumen:vol,ecuaciones:r?.ecuaciones.filter(e=>e.propietarioId===owner)},null,2)}</pre></details></>}
+      {vista==='ecuaciones'&&<>{vol&&(panel==='materia'||panel==='energia')&&<DerivacionVolumenRed key={`${vol.id}:${panel}`} s={s} v={vol} panel={panel}/>}{!r?<p role="status">Ensamblando ecuaciones…</p>:r.ecuaciones.filter(e=>e.propietarioId===owner&&enPanel(e)).map(e=><article className={styles.equations} key={e.id}><h2>{e.familia} · {e.id}</h2><FormulaMateria latex={e.latex} lectura={e.id} bloque/></article>)}<details className={styles.settings}><summary>Procedencia e hipótesis efectivas</summary><pre>{JSON.stringify({volumen:vol,ecuaciones:r?.ecuaciones.filter(e=>e.propietarioId===owner&&enPanel(e))},null,2)}</pre></details></>}
       {vista==='estado'&&<>
         {owner!=='componentes'&&<label className={styles.ownerName}>Nombre<input aria-label="Nombre del elemento" value={nombre(owner)} onChange={e=>editar(red=>{red.nombres[owner]=e.target.value;},`nombre:${owner}`)}/></label>}
         {owner==='componentes'&&<EditorComponentesRed red={h.redTermodinamica!} maximo={cap?.componentesMaximos} paquetes={cap?.paquetes} cambiar={editar}/>}

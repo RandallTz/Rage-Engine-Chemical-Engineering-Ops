@@ -1,4 +1,8 @@
 export type FamiliaBalance='materia'|'energia'|'momento';
+/** Vista de la hoja: un balance o la termodinámica, que no es un balance que se activa:
+ * es el cierre de estado de cada volumen y está siempre presente (ARQUITECTURA_MOTOR.md §3). */
+export type VistaHoja=FamiliaBalance|'termodinamica';
+export const PANEL_TERMODINAMICA={id:'termodinamica' as const,nombre:'Termodinámica',descripcion:'Estado, fases y equilibrio de cada volumen.'};
 export const FAMILIAS_BALANCE=[
   {id:'materia' as const,nombre:'Materia',descripcion:'Composición, transporte y transformación.'},
   {id:'energia' as const,nombre:'Energía',descripcion:'Calor, trabajo y energía almacenada.'},

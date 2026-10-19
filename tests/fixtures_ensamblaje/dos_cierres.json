@@ -306,27 +306,6 @@
           "relaciones": [
             "T(\\mathbf x,t)=T(t),\\quad u(\\mathbf x,t)=\\bar u(t),\\quad U=m\\bar u"
           ]
-        },
-        {
-          "titulo": "Asumir una fase",
-          "ecuacion": "\\frac{dU}{dt}=\\dot Q",
-          "relaciones": [
-            "N_{\\mathrm{fases}}=1"
-          ]
-        },
-        {
-          "titulo": "Excluir cambio de fase",
-          "ecuacion": "\\frac{dU}{dt}=\\dot Q",
-          "relaciones": [
-            "\\text{régimen sin transición de fase}"
-          ]
-        },
-        {
-          "titulo": "Declarar relación u(T) lineal",
-          "ecuacion": "\\frac{dU}{dt}=\\dot Q",
-          "relaciones": [
-            "u=u_{\\mathrm{ref}}+c_u(T-T_{\\mathrm{ref}})"
-          ]
         }
       ]
     }
@@ -354,5 +333,97 @@
         "ruta": "/config/datos/geometria_V"
       }
     }
-  ]
+  ],
+  "estructura": {
+    "revision": 1,
+    "alcance": "conservacion_simbolica",
+    "ejecutable": false,
+    "recuento": null,
+    "transferencias": [
+      {
+        "id": "calor:calor",
+        "desde": null,
+        "hasta": "dominio",
+        "familia": "energia",
+        "unidad": "W",
+        "mecanismo": "calor",
+        "relacion": "impuesta"
+      }
+    ],
+    "balances": [
+      {
+        "id": "materia.dominio.1",
+        "propietarioId": "dominio",
+        "familia": "materia",
+        "componenteId": 1,
+        "variableId": "volumen.dominio.m.1",
+        "unidad": "kg/s",
+        "terminos": []
+      },
+      {
+        "id": "energia.dominio",
+        "propietarioId": "dominio",
+        "familia": "energia",
+        "variableId": "volumen.dominio.U",
+        "unidad": "W",
+        "terminos": [
+          {
+            "transferenciaId": "calor:calor",
+            "coeficiente": 1
+          }
+        ]
+      }
+    ],
+    "globales": [
+      {
+        "id": "global.materia.1",
+        "familia": "materia",
+        "componenteId": 1,
+        "variableIds": [
+          "volumen.dominio.m.1"
+        ],
+        "terminos": [],
+        "transferenciasInternasCanceladas": []
+      },
+      {
+        "id": "global.energia",
+        "familia": "energia",
+        "variableIds": [
+          "volumen.dominio.U"
+        ],
+        "terminos": [
+          {
+            "transferenciaId": "calor:calor",
+            "coeficiente": 1
+          }
+        ],
+        "transferenciasInternasCanceladas": []
+      }
+    ],
+    "cierres": [
+      {
+        "volumenId": "dominio",
+        "modelo": {
+          "id": "agua-iapws95",
+          "version": "1"
+        },
+        "politica": {
+          "cantidad": "monofasico",
+          "cambioInterno": "prohibido",
+          "evaluacion": "equilibrio_estable"
+        },
+        "topologiaFases": "por_determinar",
+        "reconstruccion": "UV",
+        "estabilidad": "maximo_S_UVn",
+        "requisitos": [
+          "cantidades_por_componente",
+          "identidad_quimica",
+          "referencia_compatible",
+          "propiedades_consistentes",
+          "estabilidad_multifasica"
+        ]
+      }
+    ],
+    "diagnosticos": []
+  }
 }

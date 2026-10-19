@@ -24,7 +24,7 @@ function cargar(n) {
   return m.exports;
 }
 const prep = cargar('prepararEnsamblajeTermodinamico'), estado = cargar('estadoTermodinamicoHoja');
-const rec = cargar('recorridoEnergia'), vol = cargar('volumenControl');
+const rec = cargar('recorridoEnergia'), vol = cargar('volumenControl'), termo = cargar('recorridoTermodinamico');
 const casos = cargar('hojasPruebaEnergia').crearHojasPruebaEnergia();
 const destino = path.join(raiz, 'tests', 'fixtures_ensamblaje');
 fs.mkdirSync(destino, {recursive: true});
@@ -39,7 +39,7 @@ const monofasico = {modelo: {id: 'agua-iapws95', version: '1'},
 // 1. Volumen rigido cerrado, U inicial (la hoja de energia 0 de Codex).
 const base = prep.declararCierreDinamico(estado.identificarComponenteEstado(casos[0], 1, '7732-18-5'), 'dominio', monofasico);
 const rigida = vol.guardarGeometria(vol.elegirVolumenControl(base, 'dominio', 'rigido'), 'dominio', {texto: '10', unidad: 'L'});
-rigida.energia.historial = rec.operarEnergia(rigida.energia.historial, 'Retirar cierre manual explicitamente', {modelo: 'sin_declarar'});
+rigida.recorridoTermodinamico = termo.operarTermo(termo.recorridoTermoHoja(rigida), 'Retirar cierre manual explicitamente', {modelo: 'sin_declarar'});
 rigida.energia.inicial = 'U';
 rigida.energia.datos.energia_U0 = {texto: '1000', unidad: 'kJ'};
 escribir('rigida_cerrada_U0', prep.prepararEnsamblajeTermodinamico(rigida, 'rigida-U0'));
@@ -51,7 +51,7 @@ escribir('rigida_cerrada_T0', prep.prepararEnsamblajeTermodinamico(rigidaT, 'rig
 
 // 3. Abierta a presion prescrita (hoja 3), con el cierre manual retirado.
 const abierta = structuredClone(prep.declararCierreDinamico(estado.identificarComponenteEstado(casos[3], 1, '7732-18-5'), 'dominio', monofasico));
-abierta.energia.historial = rec.operarEnergia(abierta.energia.historial, 'Retirar cierre manual y densidad', {modelo: 'sin_declarar', densidadConstante: false});
+abierta.recorridoTermodinamico = termo.operarTermo(termo.recorridoTermoHoja(abierta), 'Retirar cierre manual y densidad', {modelo: 'sin_declarar', densidadConstante: false});
 abierta.config.datos.corriente_1_P = {texto: '2', unidad: 'bar'};
 escribir('abierta_presion', prep.prepararEnsamblajeTermodinamico(abierta, 'abierta-P'));
 

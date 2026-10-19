@@ -1,3 +1,4 @@
+import {actualTermo} from './recorridoTermodinamico';
 import type {HojaMotor} from './hojasMotor';
 import {formulacionVolumen,datosEnsamblaje,actualizarDatosEnsamblaje,normalizarEnsamblaje,claveCorriente,claveTotalCorriente} from './ensamblajeMateria';
 import type {ConfiguracionMotor} from './modeloNumerico';
@@ -20,7 +21,9 @@ export function historialEnergiaHoja(h:HojaMotor){
   // The old full-stress exclusion is not equated to the weaker viscous-only hypothesis.
   return r;
 }
-export const formulacionEnergiaHoja=(h:HojaMotor)=>actualEnergia(historialEnergiaHoja(h)).formulacion;
+/** Formulación efectiva del balance de energía: la de su derivación más los supuestos termodinámicos, que se
+ * declaran en la derivación termodinámica de la hoja (recorridoTermodinamico.ts). */
+export const formulacionEnergiaHoja=(h:HojaMotor)=>({...actualEnergia(historialEnergiaHoja(h)).formulacion,...(h.recorridoTermodinamico?actualTermo(h.recorridoTermodinamico).supuestos:{})});
 /** Rebind the existing first law to the edited boundary; no hypotheses or data
  * are added. Keep the former equation as a journal step for audit/undo. */
 export function actualizarContextoDinamico(h:HojaMotor):HojaMotor{

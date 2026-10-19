@@ -1,3 +1,4 @@
+import {migrarTermoHoja} from './recorridoTermodinamico';
 import type {RecorridoEnergia} from './recorridoEnergia';
 import type {TermodinamicaHoja} from './contratoTermodinamica';
 import type {CierreDinamico} from './contratoEnsamblajeTermodinamico';
@@ -10,12 +11,14 @@ import type { ConfiguracionMotor, ResultadoMotor } from './modeloNumerico';
 import type {EnsamblajeMateria} from './ensamblajeMateria';
 import {normalizarEnsamblaje} from './ensamblajeMateria';
 export type GraficaMotor={id:string;nombre:string;tipo:'tiempo'|'perfil';x:string;y:string[];ancha:boolean;altura:number;instante:number};
-export type HojaMotor={vistaEquilibrio?:{volumenId:string;indice:number;ejeId:number;unidadT:'K'|'degC';unidadP:'Pa'|'kPa'|'bar'};version:1;id:string;nombre:string;actualizada:string;historial:RecorridoMateria;config:ConfiguracionMotor;resultado?:ResultadoMotor;resultadoRef?:{firma:string;estado:'resuelto'|'parcial';fecha:string};graficas:GraficaMotor[];tableroIniciado?:boolean;columnas:1|2;archivada?:boolean;ensamblaje?:EnsamblajeMateria;volumenActivo?:string;revisionMateriaExterna?:number;energia?:{historial:RecorridoEnergia;datos:Record<string,import('./modeloNumerico').DatoMotor>;inicial?:'T'|'U';atol?:number};balances?:SeleccionBalances;vistaBalance?:FamiliaBalance;supuestosBalances?:Partial<Record<'energia'|'momento',SupuestosFundamentales>>;termodinamica?:TermodinamicaHoja;cierresDinamicos?:Record<string,CierreDinamico>;redTermodinamica?:import('./redTermodinamica').RedTermodinamica;presionesExterioresInactivas?:Record<string,import('./modeloNumerico').DatoMotor>};
+export type HojaMotor={vistaEquilibrio?:{volumenId:string;indice:number;ejeId:number;unidadT:'K'|'degC';unidadP:'Pa'|'kPa'|'bar'};version:1;id:string;nombre:string;actualizada:string;historial:RecorridoMateria;config:ConfiguracionMotor;resultado?:ResultadoMotor;resultadoRef?:{firma:string;estado:'resuelto'|'parcial';fecha:string};graficas:GraficaMotor[];tableroIniciado?:boolean;columnas:1|2;archivada?:boolean;ensamblaje?:EnsamblajeMateria;volumenActivo?:string;revisionMateriaExterna?:number;energia?:{historial:RecorridoEnergia;datos:Record<string,import('./modeloNumerico').DatoMotor>;inicial?:'T'|'U';atol?:number};balances?:SeleccionBalances;vistaBalance?:import('./familiasBalance').VistaHoja;recorridoTermodinamico?:import('./recorridoTermodinamico').RecorridoTermodinamico;supuestosBalances?:Partial<Record<'energia'|'momento',SupuestosFundamentales>>;termodinamica?:TermodinamicaHoja;cierresDinamicos?:Record<string,CierreDinamico>;redTermodinamica?:import('./redTermodinamica').RedTermodinamica;presionesExterioresInactivas?:Record<string,import('./modeloNumerico').DatoMotor>};
 export const CLAVE_HOJAS='rage.motor.hojas.v1';
 export function nuevaHoja(nombre:string,historial=iniciarRecorrido()):HojaMotor {return {version:1,id:crypto.randomUUID(),nombre:nombre.trim()||'Hoja sin nombre',actualizada:new Date().toISOString(),historial:structuredClone(historial),config:iniciarConfiguracion(),graficas:[],columnas:2};}
 let textoCache:string|null=null,cache:HojaMotor[]=[];
 export const hojasServidor:HojaMotor[]=[];
-export const normalizarHoja=(h:HojaMotor):HojaMotor=>h.redTermodinamica?h:h.ensamblaje?{...h,...normalizarEnsamblaje(h.ensamblaje,h.config)}:h;
+/** Una derivación de energía anterior que declaraba supuestos termodinámicos se separa, sin pérdida, en su
+ * derivación termodinámica (recorridoTermodinamico.ts): cada ecuación en su lugar. */
+export const normalizarHoja=(h:HojaMotor):HojaMotor=>h.redTermodinamica?h:migrarTermoHoja(h.ensamblaje?{...h,...normalizarEnsamblaje(h.ensamblaje,h.config)}:h);
 export function leerHojas():HojaMotor[] {
   if(typeof window==='undefined')return hojasServidor;
   const raw=localStorage.getItem(CLAVE_HOJAS);if(raw===textoCache)return cache;

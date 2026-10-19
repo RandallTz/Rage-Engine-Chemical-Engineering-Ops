@@ -416,48 +416,195 @@
           ]
         },
         {
-          "titulo": "Asumir una fase",
-          "ecuacion": "\\frac{dU}{dt}=\\dot m_{1}\\left(\\bar h_{1}\\right)-\\dot m_{2}\\left(\\bar h_{2}\\right)+\\dot Q-\\dot W_b",
-          "relaciones": [
-            "N_{\\mathrm{fases}}=1"
-          ]
-        },
-        {
-          "titulo": "Excluir cambio de fase",
-          "ecuacion": "\\frac{dU}{dt}=\\dot m_{1}\\left(\\bar h_{1}\\right)-\\dot m_{2}\\left(\\bar h_{2}\\right)+\\dot Q-\\dot W_b",
-          "relaciones": [
-            "\\text{régimen sin transición de fase}"
-          ]
-        },
-        {
-          "titulo": "Declarar relación u(T) lineal",
-          "ecuacion": "\\frac{dU}{dt}=\\dot m_{1}\\left(\\bar h_{1}\\right)-\\dot m_{2}\\left(\\bar h_{2}\\right)+\\dot Q-\\dot W_b",
-          "relaciones": [
-            "u=u_{\\mathrm{ref}}+c_u(T-T_{\\mathrm{ref}})"
-          ]
-        },
-        {
-          "titulo": "Declarar densidad de mezcla constante",
-          "ecuacion": "\\frac{dU}{dt}=\\dot m_{1}\\left(\\bar h_{1}\\right)-\\dot m_{2}\\left(\\bar h_{2}\\right)+\\dot Q-\\dot W_b",
-          "relaciones": [
-            "V=m/\\rho_*"
-          ]
-        },
-        {
           "titulo": "Declarar presión uniforme e impuesta",
           "ecuacion": "\\frac{dU}{dt}=\\dot m_{1}\\left(\\bar h_{1}\\right)-\\dot m_{2}\\left(\\bar h_{2}\\right)+\\dot Q-\\dot W_b",
           "relaciones": [
             "P=P_{\\mathrm{ext}}(t)",
             "\\dot W_b=p\\,dm/dt/\\rho_*"
           ]
-        },
-        {
-          "titulo": "Retirar cierre manual y densidad",
-          "ecuacion": "\\frac{dU}{dt}=\\dot m_{1}\\left(\\bar h_{1}\\right)-\\dot m_{2}\\left(\\bar h_{2}\\right)+\\dot Q-\\dot W_b",
-          "relaciones": []
         }
       ]
     }
   },
-  "diagnosticos": []
+  "diagnosticos": [],
+  "estructura": {
+    "revision": 1,
+    "alcance": "conservacion_simbolica",
+    "ejecutable": false,
+    "recuento": null,
+    "transferencias": [
+      {
+        "id": "corriente:1:materia:1",
+        "desde": null,
+        "hasta": "dominio",
+        "familia": "materia",
+        "componenteId": 1,
+        "unidad": "kg/s",
+        "mecanismo": "materia_corriente",
+        "corrienteId": "1"
+      },
+      {
+        "id": "corriente:1:energia",
+        "desde": null,
+        "hasta": "dominio",
+        "familia": "energia",
+        "unidad": "W",
+        "mecanismo": "entalpia_donante",
+        "corrienteId": "1"
+      },
+      {
+        "id": "corriente:2:materia:1",
+        "desde": "dominio",
+        "hasta": null,
+        "familia": "materia",
+        "componenteId": 1,
+        "unidad": "kg/s",
+        "mecanismo": "materia_corriente",
+        "corrienteId": "2"
+      },
+      {
+        "id": "corriente:2:energia",
+        "desde": "dominio",
+        "hasta": null,
+        "familia": "energia",
+        "unidad": "W",
+        "mecanismo": "entalpia_donante",
+        "corrienteId": "2"
+      },
+      {
+        "id": "calor:calor",
+        "desde": null,
+        "hasta": "dominio",
+        "familia": "energia",
+        "unidad": "W",
+        "mecanismo": "calor",
+        "relacion": "impuesta"
+      },
+      {
+        "id": "trabajo:dominio",
+        "desde": "dominio",
+        "hasta": null,
+        "familia": "energia",
+        "unidad": "W",
+        "mecanismo": "trabajo_frontera"
+      }
+    ],
+    "balances": [
+      {
+        "id": "materia.dominio.1",
+        "propietarioId": "dominio",
+        "familia": "materia",
+        "componenteId": 1,
+        "variableId": "volumen.dominio.m.1",
+        "unidad": "kg/s",
+        "terminos": [
+          {
+            "transferenciaId": "corriente:1:materia:1",
+            "coeficiente": 1
+          },
+          {
+            "transferenciaId": "corriente:2:materia:1",
+            "coeficiente": -1
+          }
+        ]
+      },
+      {
+        "id": "energia.dominio",
+        "propietarioId": "dominio",
+        "familia": "energia",
+        "variableId": "volumen.dominio.U",
+        "unidad": "W",
+        "terminos": [
+          {
+            "transferenciaId": "corriente:1:energia",
+            "coeficiente": 1
+          },
+          {
+            "transferenciaId": "corriente:2:energia",
+            "coeficiente": -1
+          },
+          {
+            "transferenciaId": "calor:calor",
+            "coeficiente": 1
+          },
+          {
+            "transferenciaId": "trabajo:dominio",
+            "coeficiente": -1
+          }
+        ]
+      }
+    ],
+    "globales": [
+      {
+        "id": "global.materia.1",
+        "familia": "materia",
+        "componenteId": 1,
+        "variableIds": [
+          "volumen.dominio.m.1"
+        ],
+        "terminos": [
+          {
+            "transferenciaId": "corriente:1:materia:1",
+            "coeficiente": 1
+          },
+          {
+            "transferenciaId": "corriente:2:materia:1",
+            "coeficiente": -1
+          }
+        ],
+        "transferenciasInternasCanceladas": []
+      },
+      {
+        "id": "global.energia",
+        "familia": "energia",
+        "variableIds": [
+          "volumen.dominio.U"
+        ],
+        "terminos": [
+          {
+            "transferenciaId": "corriente:1:energia",
+            "coeficiente": 1
+          },
+          {
+            "transferenciaId": "corriente:2:energia",
+            "coeficiente": -1
+          },
+          {
+            "transferenciaId": "calor:calor",
+            "coeficiente": 1
+          },
+          {
+            "transferenciaId": "trabajo:dominio",
+            "coeficiente": -1
+          }
+        ],
+        "transferenciasInternasCanceladas": []
+      }
+    ],
+    "cierres": [
+      {
+        "volumenId": "dominio",
+        "modelo": {
+          "id": "agua-iapws95",
+          "version": "1"
+        },
+        "politica": {
+          "cantidad": "monofasico",
+          "cambioInterno": "prohibido",
+          "evaluacion": "equilibrio_estable"
+        },
+        "topologiaFases": "por_determinar",
+        "reconstruccion": "PH",
+        "estabilidad": "estable_a_TP_reconstruidos",
+        "requisitos": [
+          "cantidades_por_componente",
+          "identidad_quimica",
+          "referencia_compatible",
+          "propiedades_consistentes",
+          "estabilidad_multifasica"
+        ]
+      }
+    ],
+    "diagnosticos": []
+  }
 }

@@ -47,14 +47,14 @@ export function analizarEnergia(h:HojaMotor):AnalisisMotor{
   if(!e.sinCinetica)bloqueos.push('Declara la energía cinética despreciable o aporta su modelo; este primer solver conserva U.');
   if(!e.separarPresion)bloqueos.push('Descompón los esfuerzos en presión y esfuerzo viscoso antes de ensamblar energía.');
   if(!e.uniforme)bloqueos.push('Declara estado térmico uniforme para reducir U a m u(T).');
-  if(!e.monofasico||!e.sinCambioFase)bloqueos.push('Declara el régimen monofásico sin cambio de fase para esta relación u(T).');
-  if(e.modelo!=='u_lineal')bloqueos.push('Declara una relación u(T); no se puede obtener T únicamente con el balance.');
+  if(!e.monofasico||!e.sinCambioFase)bloqueos.push('Declara en Termodinámica el régimen monofásico sin cambio de fase para esta relación u(T).');
+  if(e.modelo!=='u_lineal')bloqueos.push('Declara en Termodinámica una relación u(T); no se puede obtener T únicamente con el balance.');
   if(!ctx.restoCerrado)bloqueos.push('El intercambio material por la superficie restante sigue pendiente.');
-  if(ctx.puertos.length&&(!e.densidadConstante||!e.presionUniforme))bloqueos.push('Para corrientes abiertas, declara densidad constante y presión uniforme.');
+  if(ctx.puertos.length&&(!e.densidadConstante||!e.presionUniforme))bloqueos.push('Para corrientes abiertas, declara densidad constante (Termodinámica) y presión uniforme.');
   if(!ctx.fija&&!e.presionUniforme)bloqueos.push('La frontera móvil necesita una relación de trabajo de presión; declara presión uniforme.');
   if((ctx.puertos.length||!ctx.fija)&&!tienePresionPrescrita(e,ctx))bloqueos.push('Declara la presión impuesta o un cierre que permita calcularla; la uniformidad espacial no determina P(t).');
   if(tienePresionPrescrita(e,ctx)&&!e.presionUniforme)bloqueos.push('La reducción de presión impuesta requiere equilibrio mecánico con presión espacialmente uniforme.');
-  if(!ctx.fija&&!e.densidadConstante)bloqueos.push('Declara densidad constante para obtener dV/dt de dm/dt en esta primera relación.');
+  if(!ctx.fija&&!e.densidadConstante)bloqueos.push('Declara densidad constante en Termodinámica para obtener dV/dt de dm/dt en esta primera relación.');
   if(!balancesHoja(h).materia&&ctx.puertos.length)bloqueos.push('Activa materia para resolver cantidades variables con corrientes. Energía sola admite masa constante en un volumen cerrado.');
   if(h.ensamblaje?.corrientes.some(s=>s.mecanismo==='selectivo'))bloqueos.push('La transferencia energética selectiva requiere otra relación y no se ejecuta como convección.');
   if(e.trabajoTotalHeredado)bloqueos.push('La antigua exclusión de todos los esfuerzos necesita reformularse explícitamente en el nuevo desglose.');

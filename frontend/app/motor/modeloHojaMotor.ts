@@ -1,3 +1,4 @@
+import {actualTermo} from './recorridoTermodinamico';
 import {analizarEnergia,compilarEnergia} from './modeloEnergia';
 import {configuracionConEnergia} from './estadoEnergiaHoja';
 import {balancesHoja,bloqueosBalances,BALANCES_LEGADOS} from './seleccionBalances';
@@ -33,7 +34,7 @@ export const firmaHoja=(h:HojaMotor)=>{
   if(Object.keys(h.cierresDinamicos??{}).length)return JSON.stringify([base,'ensamblaje-termodinamico-borrador-1',balances,h.energia,h.cierresDinamicos]);
   const cierres=Object.entries(h.termodinamica?.estados??{}).filter(([,e])=>e.uso==='cierre').map(([id,e])=>[id,e.declaracion]);
   if(cierres.length)return JSON.stringify([base,'cierre-termodinamico-1',balances,h.energia,cierres]);
-  if(balances.energia)return JSON.stringify([base,'energia-fundamental-1',balances,h.energia,h.supuestosBalances?.energia]);
+  if(balances.energia)return JSON.stringify([base,'energia-fundamental-1',balances,h.energia,h.supuestosBalances?.energia,...(h.recorridoTermodinamico?[actualTermo(h.recorridoTermodinamico).supuestos]:[])]);
   // Preserve legacy material result identities; navigation and inactive assumptions are not physics.
   return JSON.stringify(balances)===JSON.stringify(BALANCES_LEGADOS)?base:JSON.stringify([base,balances]);
 };

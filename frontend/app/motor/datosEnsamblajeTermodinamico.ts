@@ -1,3 +1,4 @@
+import {cambiarTermoHoja} from './recorridoTermodinamico';
 import type {HojaMotor} from './hojasMotor';
 import type {DatoMotor} from './modeloNumerico';
 import type {SolicitudEnsamblajeDinamico} from './contratoEnsamblajeTermodinamico';
@@ -41,7 +42,8 @@ function cambiarMateria(h:HojaMotor,titulo:string,cambios:Partial<FormulacionMat
 export function elegirCierreReal(h:HojaMotor,modelo:{id:string;version:string}):HojaMotor{
   const id=contextoEnergiaHoja(h).volumenId,f=h.ensamblaje?h.ensamblaje.volumenes[0].historial.pasos[h.ensamblaje.volumenes[0].historial.activo].formulacion:h.historial.pasos[h.historial.activo].formulacion;
   let nuevo=cambiarMateria(h,'Sustituir cierre manual por propiedades reales',{densidadMediaConstante:false,densidadComunPuertos:false,...(f.reglasEstado?.densidades?{reglasEstado:{...f.reglasEstado,densidades:f.reglasEstado.densidades.map(r=>({...r,constanciaTemporal:'sin_restriccion' as const}))}}:{})});
-  nuevo={...nuevo,energia:{...h.energia,datos:h.energia?.datos??{},historial:operarEnergia(historialEnergiaHoja(h),'Sustituir u(T) lineal y densidad constante por el cierre real',{modelo:'sin_declarar',densidadConstante:false},[String.raw`U=m\,u_{\mathrm{eq}},\quad V=m\,v_{\mathrm{eq}}`],contextoEnergiaHoja(nuevo))}};
+  // Supuestos termodinámicos: en la derivación termodinámica, no en la de energía.
+  nuevo=cambiarTermoHoja(nuevo,'Sustituir u(T) lineal y densidad constante por el cierre real',{modelo:'sin_declarar',densidadConstante:false},[String.raw`U=m\,u_{\mathrm{eq}},\quad V=m\,v_{\mathrm{eq}}`]);
   const e=formulacionEnergiaHoja(nuevo),politica:Politica={cantidad:e.monofasico?'monofasico':'sin_restriccion',cambioInterno:e.sinCambioFase?'prohibido':'permitido',evaluacion:'equilibrio_estable'};
   return aplicarPoliticaDinamica(declararCierreDinamico(nuevo,id,{modelo,politica}),politica);
 }
@@ -49,13 +51,13 @@ export function aplicarPoliticaDinamica(h:HojaMotor,politica:Politica):HojaMotor
   const id=contextoEnergiaHoja(h).volumenId,cierre=h.cierresDinamicos?.[id];if(!cierre)throw new Error('Cierre dinámico sin seleccionar.');
   const f=h.ensamblaje?h.ensamblaje.volumenes[0].historial.pasos[h.ensamblaje.volumenes[0].historial.activo].formulacion:h.historial.pasos[h.historial.activo].formulacion;
   let nuevo=cambiarMateria(h,'Declarar política de fases compartida',{reglasEstado:{...f.reglasEstado,fases:{cantidad:politica.cantidad,cambioInterno:politica.cambioInterno==='prohibido'?'sin_cambio_de_fase':'sin_restriccion',evaluacion:'termodinamica'}}});
-  nuevo={...nuevo,energia:{...h.energia,datos:h.energia?.datos??{},historial:operarEnergia(historialEnergiaHoja(h),'Declarar política de fases compartida',{monofasico:politica.cantidad==='monofasico',sinCambioFase:politica.cambioInterno==='prohibido'},[],contextoEnergiaHoja(nuevo))}};
+  nuevo=cambiarTermoHoja(nuevo,'Declarar política de fases compartida',{monofasico:politica.cantidad==='monofasico',sinCambioFase:politica.cambioInterno==='prohibido'});
   return declararCierreDinamico(nuevo,id,{...cierre,politica});
 }
 /** Return to a manual relation explicitly; keep declared parameters and phase hypotheses. */
 export function elegirCierreManual(h:HojaMotor):HojaMotor{
   const id=contextoEnergiaHoja(h).volumenId,nuevo=declararCierreDinamico(h,id,null);
-  return {...nuevo,energia:{...h.energia,datos:h.energia?.datos??{},historial:operarEnergia(historialEnergiaHoja(h),'Elegir relación manual u(T)',{modelo:'u_lineal'})}};
+  return cambiarTermoHoja(nuevo,'Elegir relación manual u(T)',{modelo:'u_lineal'});
 }
 export function editarDatoDinamico(h:HojaMotor,datoId:string,dato:DatoMotor):HojaMotor{
   const s=prepararEnsamblajeTermodinamico(h,'editar').solicitud,origen=s?.datos[datoId]?.origen;if(!origen)throw new Error('El dato ya no pertenece al ensamblaje actual.');

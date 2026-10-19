@@ -1,11 +1,12 @@
 'use client';
 import {useEffect,useId,useRef} from 'react';
-import type {FamiliaBalance} from './familiasBalance';
+import type {VistaHoja} from './familiasBalance';
 import styles from './balances.module.css';
 
 const VERTEX='attribute vec2 position; void main(){gl_Position=vec4(position,0.0,1.0);}';
 /** Decorative ray-marched shape, following the organic study on the home page.
- * One geometry, three treatments. It does not represent a computed state. */
+ * One geometry, four treatments. It does not represent a computed state.
+ * Termodinámica: two phases separated by an undulating interface, with rising bubbles. */
 const FRAGMENT=`precision highp float;
 uniform vec2 resolution;
 uniform float time;
@@ -44,6 +45,15 @@ void main(){
       float heat=0.5+0.5*sin(p.x*6.0+p.y*3.0-time*1.4)*sin(p.z*7.0-p.y*5.0+time*1.1);
       float veins=pow(heat,2.5);color=mix(vec3(0.69,0.08,0.035),vec3(1.0,0.53,0.13),heat*0.7+light*0.25);
       color+=veins*vec3(0.30,0.29,0.09);color=mix(color,vec3(1.0,0.68,0.28),fresnel*0.45);alpha=1.0;
+    }else if(mode>2.5){
+      float interfaz=0.08*sin(p.x*5.0+time*0.9)+0.05*sin(p.z*6.0-time*0.7);
+      float liquido=smoothstep(0.02,-0.02,p.y-interfaz);
+      vec3 q=p*7.0;q.y-=time*1.6;
+      float burbuja=smoothstep(0.32,0.12,length(fract(q)-0.5))*liquido;
+      vec3 bajo=mix(vec3(0.27,0.17,0.45),vec3(0.55,0.42,0.76),light);
+      vec3 alto=mix(vec3(0.70,0.62,0.85),vec3(0.93,0.90,0.98),light);
+      color=mix(alto,bajo,liquido)+burbuja*vec3(0.25,0.22,0.30);
+      color=mix(color,vec3(0.86,0.80,0.95),fresnel*0.5);alpha=mix(0.72,1.0,liquido);
     }else{
       vec3 w=p;w.xz=rotate(time*0.17+0.55)*w.xz;
       float azimuth=atan(w.z,w.x),polar=acos(clamp(w.y/max(length(w),0.001),-1.0,1.0));
@@ -59,7 +69,7 @@ void main(){
   gl_FragColor=vec4(color,alpha);
 }`;
 const SILUETA='M136 184C103 121 169 72 228 93C294 54 337 99 341 151C409 174 415 263 363 295C368 372 293 413 235 371C168 399 108 349 131 287C91 250 99 211 136 184Z';
-export default function FormaBalance({familia,pausado=false}:{familia:FamiliaBalance;pausado?:boolean}){
+export default function FormaBalance({familia,pausado=false}:{familia:VistaHoja;pausado?:boolean}){
   const host=useRef<HTMLDivElement>(null),canvas=useRef<HTMLCanvasElement>(null),elapsedRef=useRef(2.4),id=useId().replaceAll(':','');
   useEffect(()=>{
     const el=canvas.current,parent=host.current;if(!el||!parent)return;
@@ -74,7 +84,7 @@ export default function FormaBalance({familia,pausado=false}:{familia:FamiliaBal
     gl.attachShader(program,vertex);gl.attachShader(program,fragment);gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS)){dispose();return;}
     gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
     const position=gl.getAttribLocation(program,'position');gl.enableVertexAttribArray(position);gl.vertexAttribPointer(position,2,gl.FLOAT,false,0,0);
-    const resolution=gl.getUniformLocation(program,'resolution'),time=gl.getUniformLocation(program,'time');gl.uniform1f(gl.getUniformLocation(program,'mode'),familia==='materia'?0:familia==='energia'?1:2);
+    const resolution=gl.getUniformLocation(program,'resolution'),time=gl.getUniformLocation(program,'time');gl.uniform1f(gl.getUniformLocation(program,'mode'),familia==='materia'?0:familia==='energia'?1:familia==='momento'?2:3);
     const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');let frame=0,last=0,visible=true,contextLost=false;
     const draw=(now:number)=>{frame=0;if(!visible||document.hidden||contextLost){last=0;return;}if(last&&now-last<42&&!pausado&&!reduced.matches){frame=requestAnimationFrame(draw);return;}
       if(last&&!pausado&&!reduced.matches)elapsedRef.current+=Math.min((now-last)/1000,.1);last=now;

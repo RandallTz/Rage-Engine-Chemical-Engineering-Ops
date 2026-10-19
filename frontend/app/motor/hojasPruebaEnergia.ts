@@ -3,6 +3,7 @@ import {nuevaHoja} from './hojasMotor';
 import {iniciarRecorrido,recorridoMateria} from './recorridoMateria';
 import {iniciarEnergia,contextoEnergia,operarEnergia,transformarEnergia} from './recorridoEnergia';
 import {iniciarConfiguracion} from './modeloNumerico';
+import {iniciarTermo,operarTermo} from './recorridoTermodinamico';
 const dato=(valor:number|string,unidad:string)=>({texto:String(valor),unidad});
 /** Documents for verification, compiled by the same generic term evaluator as user-created sheets. */
 export function crearHojaPruebaEnergia(nombre:string,m0:number,entrada:number,salida:number,T0:number,Tin:number,Q:number|string,tiempo:number,abierto:boolean):HojaMotor{
@@ -25,12 +26,15 @@ export function crearHojaPruebaEnergia(nombre:string,m0:number,entrada:number,sa
   e=operarEnergia(e,'Retirar trabajo de fuerzas de volumen',{sinFuerzasVolumen:true},[String.raw`\dot W_{\mathbf b}=0`]);
   e=operarEnergia(e,'Retirar aportes volumétricos',{sinFuenteVolumetrica:true},['R=0']);
   e=operarEnergia(e,'Declarar temperatura y energía específica uniformes',{uniforme:true},[String.raw`T(\mathbf x,t)=T(t),\quad u(\mathbf x,t)=\bar u(t),\quad U=m\bar u`]);
-  e=operarEnergia(e,'Asumir una fase',{monofasico:true},[String.raw`N_{\mathrm{fases}}=1`]);
-  e=operarEnergia(e,'Excluir cambio de fase',{sinCambioFase:true},[String.raw`\text{régimen sin transición de fase}`]);
-  e=operarEnergia(e,'Declarar relación u(T) lineal',{modelo:'u_lineal'},[String.raw`u=u_{\mathrm{ref}}+c_u(T-T_{\mathrm{ref}})`]);
-  if(abierto){e=operarEnergia(e,'Declarar densidad de mezcla constante',{densidadConstante:true},[String.raw`V=m/\rho_*`]);e=operarEnergia(e,'Declarar presión uniforme e impuesta',{presionUniforme:true,presionPrescrita:true},[String.raw`P=P_{\mathrm{ext}}(t)`,String.raw`\dot W_b=p\,dm/dt/\rho_*`]);}
+  // Los supuestos termodinámicos van en su propia derivación (cada ecuación en su lugar); el balance de energía los usa.
+  let t=iniciarTermo();
+  t=operarTermo(t,'Asumir una fase',{monofasico:true},[String.raw`N_{\mathrm{fases}}=1`]);
+  t=operarTermo(t,'Excluir cambio de fase',{sinCambioFase:true},[String.raw`\text{régimen sin transición de fase}`]);
+  t=operarTermo(t,'Declarar relación u(T) lineal',{modelo:'u_lineal'},[String.raw`u=u_{\mathrm{ref}}+c_u(T-T_{\mathrm{ref}})`]);
+  if(abierto)t=operarTermo(t,'Declarar densidad de mezcla constante',{densidadConstante:true},[String.raw`V=m/\rho_*`]);
+  if(abierto){e=operarEnergia(e,'Declarar presión uniforme e impuesta',{presionUniforme:true,presionPrescrita:true},[String.raw`P=P_{\mathrm{ext}}(t)`,String.raw`\dot W_b=p\,dm/dt/\rho_*`]);}
   const h=nuevaHoja(nombre,m);
-  return {...h,vistaBalance:'energia',balances:{materia:true,energia:true,momento:false},config:{...iniciarConfiguracion(),rtol:1e-8,atol:1e-11,tiempo:dato(tiempo,'s'),datos:{inicial_1:dato(m0,'kg'),...(abierto?{entrada_1_1:dato(entrada,'kg/s'),salida_1_2:dato(salida,'kg/s')}: {})}},energia:{historial:e,atol:1e-6,datos:{energia_c:dato(4000,'J/(kg K)'),energia_u_ref:dato(0,'J/kg'),energia_T_ref:dato(293.15,'K'),energia_T0:dato(T0,'K'),energia_T_min:dato(273.15,'K'),energia_T_max:dato(373.15,'K'),energia_Q:dato(Q,'W'),...(abierto?{energia_rho:dato(1000,'kg/m3'),energia_p:dato(100000,'Pa'),energia_T_1:dato(Tin,'K')}: {})}}};
+  return {...h,recorridoTermodinamico:t,vistaBalance:'energia',balances:{materia:true,energia:true,momento:false},config:{...iniciarConfiguracion(),rtol:1e-8,atol:1e-11,tiempo:dato(tiempo,'s'),datos:{inicial_1:dato(m0,'kg'),...(abierto?{entrada_1_1:dato(entrada,'kg/s'),salida_1_2:dato(salida,'kg/s')}: {})}},energia:{historial:e,atol:1e-6,datos:{energia_c:dato(4000,'J/(kg K)'),energia_u_ref:dato(0,'J/kg'),energia_T_ref:dato(293.15,'K'),energia_T0:dato(T0,'K'),energia_T_min:dato(273.15,'K'),energia_T_max:dato(373.15,'K'),energia_Q:dato(Q,'W'),...(abierto?{energia_rho:dato(1000,'kg/m3'),energia_p:dato(100000,'Pa'),energia_T_1:dato(Tin,'K')}: {})}}};
 }
 export function crearHojasPruebaEnergia():HojaMotor[]{
   const llenado=crearHojaPruebaEnergia('Materia + energía · Llenado con entrada caliente',100,2,1,293.15,333.15,0,100,true);

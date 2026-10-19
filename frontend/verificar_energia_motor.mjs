@@ -17,7 +17,10 @@ for(const h of ej.crearHojasPruebaEnergia()){
 
 const unidades=cargar('unidadesMotor'),materia=cargar('recorridoMateria'),red=cargar('ensamblajeMateria'),almacen=cargar('hojasMotor'),seleccion=cargar('seleccionBalances'),graficas=cargar('datosGraficasMotor');
 const casos=ej.crearHojasPruebaEnergia(),param=(h,id,v,u)=>{h.energia.datos[`energia_${id}`]={texto:String(v),unidad:u};return h;};
-function hip(h,titulo,cambios){h.energia.historial=rec.operarEnergia(h.energia.historial,titulo,cambios);return h;}
+// Los supuestos termodinámicos (fases, cambio de fase, densidad, u(T)) se declaran en la derivación termodinámica
+// de la hoja, no en la de energía (cada ecuación en su lugar); el resto, en la de energía.
+const termo=cargar('recorridoTermodinamico'),CLAVES_TERMO=new Set(termo.CLAVES_TERMO);
+function hip(h,titulo,cambios){const t=Object.fromEntries(Object.entries(cambios).filter(([k])=>CLAVES_TERMO.has(k))),e=Object.fromEntries(Object.entries(cambios).filter(([k])=>!CLAVES_TERMO.has(k)));if(Object.keys(t).length)h.recorridoTermodinamico=termo.operarTermo(termo.recorridoTermoHoja(h),titulo,t);if(Object.keys(e).length)h.energia.historial=rec.operarEnergia(h.energia.historial,titulo,e);return h;}
 function serie(r,id){return r.seriesEvaluadas.find(q=>q.id===id).valores;}
 const referencia=(j,t)=>j===0?{m:10,T:293.15+1000*t/(10*4000)}:j===1?{m:10,T:293.15+30*Math.exp(-100*t/(10*4000))}:j===2?{m:100,T:333.15+(293.15-333.15)*Math.exp(-2*t/100)}:j===3?{m:100+t,T:313.15+8000/(3*4000)+(293.15-313.15-8000/(3*4000))*(100/(100+t))**3}:j===4?{m:100-t,T:283.15+(323.15-283.15)*(100-t)/100}:{m:100+t,T:333.15-40*(100/(100+t))**2};
 for(let j=0;j<casos.length;j++)for(const metodo of ['rk45','euler_implicito']){
