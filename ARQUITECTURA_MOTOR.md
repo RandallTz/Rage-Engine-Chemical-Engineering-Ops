@@ -225,9 +225,20 @@ La migración es incremental (§10): ningún módulo actual se reescribe de golp
 - **Edición:** `backend/main.py` tiene fines de línea mixtos; edítalo con un script que abra con `newline=''`. No uses heredocs para scripts con barras invertidas.
 - **Ciencia:** toda fórmula o API que venga de otra fuente (incluido otro LLM) se implementa y se comprueba numéricamente contra una referencia antes de darla por buena.
 
-## 9. Decisiones abiertas (del usuario)
+## 9. Decisiones del usuario
 
-1. **Dónde vive el cálculo.** Propuesta: todo en Python, migrando el solver TS del motor. Alternativa: conservar un solver ligero en el navegador para respuesta inmediata.
+### 9.1 Tomadas (18 de octubre de 2026)
+
+1. **UNIFAC tiene prioridad completa; NRTL no se trata.** Los paquetes NRTL siguen publicados y sus suites deben seguir pasando, pero no se amplían, no se contrastan más y no se usan como caso guía de piezas nuevas. Toda prueba nueva de mezclas no ideales usa UNIFAC (`unifac-original-public`, `unifac-dortmund-public`, `unifac-original-lle-public`).
+2. **Prioridad a pulir la termodinámica** (§10, bloque A).
+3. **Discretización y mallado no son adimensionalización.** Pertenecen al motor de transformación/solvers y son un paso **posterior** al escalado en el recorrido de la hoja (§5, §11). El método de líneas que hoy vive en `core/adimensionalizacion/simulacion.py` se trasladará a un motor de discretización propio (`core/discretizacion/`); la adimensionalización conserva escalas, grupos, formulaciones certificadas y estudios.
+4. **Pulir los balances** según lo pendiente del checklist (`/checklist`, `frontend/app/checklist/datos.ts`) (§10, bloque B).
+5. **Unificar Ecuaciones y Adimensionalización** en un recorrido único de la hoja, para que el usuario vea cómo funciona el motor (§11).
+6. **Dónde vive el cálculo:** en Python (aprobado con el paso 5). El solver TS del motor se sustituye por el compilador y los solvers comunes cuando haya paridad demostrada.
+
+### 9.2 Abiertas
+
+1. **Dónde vive el cálculo.** *(Resuelta en 9.1.6; se conserva el texto original.)* Propuesta: todo en Python, migrando el solver TS del motor. Alternativa: conservar un solver ligero en el navegador para respuesta inmediata.
 2. **Qué entra en el motor.** ¿`/laboratorio`, `/columna`, `/flowsheet` y `/termodinamica` se rehacen como plantillas y estudios del motor, o quedan como legado?
 3. **Reparto de trabajo.** Hoy trabaja solo Claude. Con motores separados, cada agente puede tomar motores concretos sin pisar a otro.
 
@@ -254,6 +265,69 @@ La migración es incremental (§10): ningún módulo actual se reescribe de golp
    - El mismo código, sin ramas por caso, reproduce la prueba guía, el agua que hierve y los cuatro ensamblajes del motor, entre 1e-7 y 1e-16 del motor existente.
    - Las pantallas actuales siguen funcionando.
 5. **Migración por motor:** balances y supuestos al backend; solver TS sustituido por el compilador y los solvers comunes; la adimensionalización y los estudios consumen el modelo común.
-6. **Reorganización del frontend** según §7, con el recorrido de la hoja como única navegación.
+   - **5.1 hecho en su núcleo el 18 de octubre de 2026:** el compilador tiene una segunda entrada que ejecuta ecuaciones escritas (`core/compilador/explicito.py`); el solver admite BDF y eventos de dominio (detiene en el instante exacto en que una variable no negativa se agotaría). Contrato: `restricciones` y valores `datos["matematico.<id>"]` ([docs/CONTRATO_MODELO_COMUN.md](docs/CONTRATO_MODELO_COMUN.md)). Evidencia en [docs/CORTE_VERTICAL.md](docs/CORTE_VERTICAL.md) §5: `tests/validar_compilador_explicito.py` (27, contra analíticas) y `frontend/verificar_compilador_explicito.mjs` (76: las seis hojas de materia sin campo espacial, con RK45 y con el método implícito, iguales al solver TS y a la analítica).
+   - **Pendiente de 5.1:** que el Resolver de `/motor` llame a `POST /modelo/resolver` para esas hojas y retire su solver TS (va con §11).
+   - **Resto del paso 5, reordenado por §9.1:** queda detrás de los bloques A y B. 5.2 discretización (motor propio, §9.1.3); 5.3 redes de volúmenes de masa; 5.4 energía con u(T) como supuesto explícito; 5.5 balances y supuestos generados en el backend; 5.6 adimensionalización y estudios sobre el modelo común.
+6. **Reorganización del frontend** según §7, con el recorrido de la hoja como única navegación (§11).
+
+### Orden vigente (18 de octubre de 2026, decisiones §9.1)
+
+**A. Termodinámica (primero), solo UNIFAC para mezclas no ideales.**
+
+1. Capa termodinámica y compilador común probados con los tres paquetes UNIFAC — **hecho el 18 de octubre de 2026:** `tests/validar_capa_unifac.py` (82), [docs/CAPA_TERMODINAMICA.md](docs/CAPA_TERMODINAMICA.md) §4.
+   - Las siete solicitudes dinámicas UNIFAC del motor dan el mismo estado y los mismos eventos que el motor. Las apariciones de fase coinciden con referencias independientes (`thermo`): burbuja γ-φ, binodal ELL y plano tangente.
+   - El compilador honra ahora la política de fases (evento `politica_incumplida`).
+   - **Hallazgo, corregido el mismo día:** el motor existente publicaba 28 s tarde la segunda fase líquida de la red de cinco especies, porque aceptaba un paso sin evento al no reencontrar el cambio en el estado reintegrado. Corregido en `core/ensamblaje_red.py` y ejemplo regenerado; motor, compilador común y referencia independiente coinciden (`frontend/MAPA_MOTOR.md` §6).
+   - **Siguiente dentro de A:** el rendimiento de la capa con UNIFAC (la red de cinco especies tarda ~255 s) y los pendientes del punto 2.
+2. Pendientes del checklist de termodinámica que aplican: mayor contraste experimental de UNIFAC (datos publicados de ELV y ELL, no otra implementación con las mismas tablas); corrientes materiales entre IAPWS y paquetes de mezcla; diagramas completos L–L y L–L–V (hoy el L–L se detecta pero no se traza); continuación de curvas con pliegues; cortes multicomponente.
+3. Aplazados por alcance físico (cada uno pide un modelo nuevo, no pulido): vapor no ideal y alta presión, regiones críticas, equilibrio sólido-líquido de mezclas, equilibrio químico acoplado a reacciones.
+4. Fuera por decisión: «parámetros completos y contrastes NRTL con 5 o más componentes».
+
+**B. Balances: lo pendiente del checklist.**
+
+| Pendiente | Clase | Va con |
+|---|---|---|
+| Transferencia selectiva acoplada a termodinámica en /motor | pulido de balances | A + red v2 |
+| Cinética reactiva acoplada a la termodinámica real | pulido de balances (constitutivas) | con energía de reacción |
+| Energía de reacción con referencias termodinámicas coherentes | pulido de balances | con la anterior |
+| Cambio de fase sólido durante la dinámica | balances + termodinámica | hielo Ih ya existe en estático |
+| Transferencia de calor y materia fuera del equilibrio | constitutivas | después de las dos primeras |
+| Detección de transiciones no capturadas por el muestreo de pasos | solver | eventos de firma del solver común |
+| Presiones discontinuas con regla física de salto | balances | — |
+| Caudales y trabajo acoplados al balance de momento | balances (momento) | después |
+| Resolución inversa general de sistemas ensamblados | estructura + solvers | después |
+| Resolución espacial en otras geometrías y dimensiones; transporte energético espacial | **discretización** (§9.1.3) | 5.2, paso posterior |
+
+**C. Hoja única** (§11), empezando por el puente de solo lectura.
+
+**D. Resto del paso 5 y el paso 6.**
 
 Cada paso se cierra con sus pruebas y con la actualización de este documento.
+
+## 11. Hoja única: Ecuaciones y Adimensionalización en un solo recorrido
+
+Hoy son dos páginas con dos almacenes: `/motor/hojas/[id]` (derivación de balances, estado, resolver, gráficos) y `/adimensionalizacion` (cuaderno de documentos de ecuaciones, escalado, grupos, estudios, simulación). El usuario no ve que son **el mismo modelo** en pasos distintos. La propuesta es que haya **un documento, la hoja (modelo común), y un recorrido**; cada paso es la vista de un motor:
+
+| Paso | Motor | Hoy está en | Qué ve el usuario |
+|---|---|---|---|
+| 1. Formular | balances + supuestos (o ecuaciones escritas) | Ecuaciones de `/motor`; editor de la adimensionalización | La ecuación local, cada supuesto aplicado y la ecuación final. Una hoja «de ecuaciones escritas» entra por aquí sin derivación |
+| 2. Estado | termodinámica | Estado de `/motor` | Componentes, paquete (UNIFAC), fases candidatas, muestra de equilibrio, diagramas |
+| 3. Datos y estructura | unidades + estructura | parte del Resolver de `/motor` | Datos con unidad, recuento de variables y ecuaciones, grados de libertad |
+| 4. Escalar (opcional) | adimensionalización | `/adimensionalizacion` | Escalas, grupos adimensionales, formulaciones certificadas, régimen dominante, estudios. **No integra ni malla** |
+| 5. Discretizar (solo con campos espaciales) | discretización | Opciones avanzadas del Resolver; método de líneas de la adimensionalización | Malla, esquema, diagnóstico de Péclet y de celdas |
+| 6. Resolver | compilador + solvers | solver TS; simulación de la adimensionalización; ensamblaje v2 | Método, tolerancias, estado y eventos |
+| 7. Resultados | resultados + gráficas | Gráficos de `/motor`; vistas de la adimensionalización | Un solo tablero; las mismas series en variables físicas o escaladas con las escalas del paso 4 |
+
+**Reglas.**
+
+- El paso 4 lee y escribe `motores.adimensionalizacion` del mismo modelo común; nunca copia el modelo. Las escalas no cambian las ecuaciones del paso 1: son una vista y una transformación registrada.
+- La simulación deja de ser una vista de la adimensionalización: es el paso 6 sobre el mismo modelo (compilador explícito, §10 paso 5.1), con discretización del paso 5 cuando haya campos espaciales.
+- Un almacén de hojas (§6, Documento). Los documentos actuales de la adimensionalización se migran a hojas de ecuaciones escritas, sin pérdida (`desde_documento_adimensional`, ya probado ida y vuelta).
+- La biblioteca muestra plantillas, no ejemplos con código propio.
+
+**Orden incremental** (cada etapa deja ambas páginas funcionando y sus suites en verde):
+
+1. *Puente de solo lectura:* en la hoja del motor, una pestaña «Escalar» que monta las vistas de la adimensionalización sobre `modeloDesdeHojaMotor(hoja)`; desaparece la importación manual («Del motor»).
+2. *Resolver común:* el Resolver de la hoja usa `POST /modelo/resolver` (cierra 5.1) y la vista de simulación de la adimensionalización usa el mismo resultado.
+3. *Almacén único:* las hojas de la adimensionalización pasan a ser hojas del motor de tipo «ecuaciones escritas».
+4. *Rutas:* `/hojas/[id]/<paso>` (§7); `/motor` y `/adimensionalizacion` quedan como redirecciones.
