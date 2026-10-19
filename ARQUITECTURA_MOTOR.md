@@ -33,6 +33,10 @@ Analogía de trabajo: cada motor es un engranaje en su eje. Un engranaje nuevo (
 7. **Nada se publica como demostrado si no se demostró.** Un resultado incierto se marca `no_demostrada`, `pendiente` o `requiere_datos`; un modelo que el motor no sabe tratar se rechaza con el motivo, no se aproxima en silencio.
 8. **Toda pieza tiene su prueba contra una referencia independiente** (analítica, publicada o de otro método), no solo contra sí misma.
 9. **Sin sesgo hacia ninguna operación.** Las ecuaciones fundamentales dan lo que deben dar para cualquier componente, mezcla o configuración.
+10. **Todo modelo parte SIEMPRE de las ecuaciones fundamentales** (regla del usuario, 19 de octubre de 2026). Con los supuestos, uno a uno y registrados, se llega al modelo que se necesita. Nunca se plantea directamente el modelo.
+    - Vale para cada familia, cada una en su panel: la conservación local de materia, el primer principio de la energía, el momento y las relaciones termodinámicas fundamentales.
+    - **Termodinámica:** los supuestos de estado (número de fases, cambio de fase, densidad constante, u(T) declarada, paquete) se declaran en la derivación termodinámica (`frontend/app/motor/recorridoTermodinamico.ts`), no en la de energía. El balance de energía los usa a través de su formulación efectiva (`formulacionEnergiaHoja`).
+    - **Redes termodinámicas:** cada volumen muestra su derivación desde la ecuación fundamental con los supuestos que declara (`DerivacionVolumenRed.tsx`), y después las ecuaciones que ensambla el Engine.
    - Ningún motor tiene ramas por tipo de equipo («tanque», «columna», «reactor») ni por nombre de escenario.
    - Las magnitudes se definen por su dimensión, no por una lista de unidades.
    - Las fases candidatas las fija el paquete, no el caso.
@@ -170,7 +174,7 @@ Lo que existe funciona y está probado, pero repartido y duplicado. Esta tabla e
 |---|---|---|
 | Modelo común | `core/modelo/`, `frontend/motores/modelo/` | v0: representación, lector y relaciones; todavía no la consume ningún solver ni pantalla |
 | Capa termodinámica | `core/termodinamica/` | Fases candidatas fijas y complementariedad sobre `core/mezclas` y `core/agua_iapws95` |
-| Balances + Supuestos | `frontend/app/motor/recorridoMateria.ts`, `operadores.ts`, `recorridoEnergia.ts`, `materiaEstado.ts` | En TypeScript, con LaTeX y estructura juntos. Momento solo simbólico |
+| Balances + Supuestos | **Motor de balances en el servidor: `core/balances/`** ([docs/MOTOR_BALANCES.md](docs/MOTOR_BALANCES.md)): genera las ecuaciones de materia (redes de volúmenes) y de energía con u(T) supuesta desde los supuestos de cada volumen. Sigue en el cliente la derivación que se muestra: `frontend/app/motor/recorridoMateria.ts`, `operadores.ts`, `recorridoEnergia.ts` | La derivación visible y la generación ejecutable conviven; momento solo simbólico |
 | Topología | `frontend/app/motor/ensamblajeMateria.ts` (masa, TS); `backend/motor_ensamblaje_v2.py` + `core/ensamblaje_red.py` (red termodinámica) | Dos implementaciones |
 | Termodinámica | `core/agua_iapws95.py`, `core/mezclas.py`, `core/unifac.py`, `core/hielo_ih.py`, `core/coexistencia_lv.py`, `core/catalogo.py`, `backend/motor_termodinamica.py` | Correcta y contrastada (miles de comprobaciones). Base para §3 |
 | Unidades | **Servicio único `core/unidades/`** (`/unidades/*`, [docs/SERVICIO_UNIDADES.md](docs/SERVICIO_UNIDADES.md)). Siguen en uso, por migrar: `frontend/app/motor/unidadesMotor.ts`, `backend/motor_ensamblaje.UNIDADES`, `core/adimensionalizacion/dimensional.py`, `core/dimensiones.py` | Equivalencia comprobada unidad por unidad con los cuatro |
@@ -223,6 +227,13 @@ La migración es incremental (§10): ningún módulo actual se reescribe de golp
 - **Git:** sin commit ni push salvo petición. Al commitear, archivo por archivo, nunca `git add -A`: el árbol tiene cambios de varios autores. Rama de trabajo: `fase-a-adopcion`.
 - **Procesos:** los backends del usuario corren en 8004 (general) y 8005 (adimensionalización) y el frontend en 3000. Para probar, usa otro puerto. No detengas procesos ajenos y, si hay que detener uno propio, hazlo por PID, nunca por nombre.
 - **Edición:** `backend/main.py` tiene fines de línea mixtos; edítalo con un script que abra con `newline=''`. No uses heredocs para scripts con barras invertidas.
+- **Cada ecuación va en su lugar** (regla del usuario, 19 de octubre de 2026). Un panel de la hoja muestra solo las ecuaciones de su familia física, nunca «todas las del sistema»:
+  - **Materia:** conservación por componente, caudal y composición de cada corriente, comprobación global de materia.
+  - **Energía:** primera ley, entalpía de las corrientes, calor entre volúmenes, trabajo de frontera, comprobación global de energía.
+  - **Momento:** cantidad de movimiento.
+  - **Termodinámica:** cierre de estado y equilibrio entre fases, con su estabilidad.
+  - La clasificación vive en un solo sitio, `frontend/app/motor/ubicacionEcuaciones.ts`. Una ecuación sin lugar es un error del motor. `frontend/verificar_ubicacion_ecuaciones.mjs` comprueba que cada ecuación publicada por el Engine en los ejemplos tiene exactamente un lugar.
+  - Una familia nueva de ecuaciones se clasifica ahí antes de mostrarse.
 - **Ciencia:** toda fórmula o API que venga de otra fuente (incluido otro LLM) se implementa y se comprueba numéricamente contra una referencia antes de darla por buena.
 
 ## 9. Decisiones del usuario
@@ -235,6 +246,9 @@ La migración es incremental (§10): ningún módulo actual se reescribe de golp
 4. **Pulir los balances** según lo pendiente del checklist (`/checklist`, `frontend/app/checklist/datos.ts`) (§10, bloque B).
 5. **Unificar Ecuaciones y Adimensionalización** en un recorrido único de la hoja, para que el usuario vea cómo funciona el motor (§11).
 6. **Dónde vive el cálculo:** en Python (aprobado con el paso 5). El solver TS del motor se sustituye por el compilador y los solvers comunes cuando haya paridad demostrada.
+7. **El objetivo final es simular multifísica, no tener UNIFAC al 100 %.** El contraste experimental de UNIFAC (y de cualquier paquete) se hace **al final**. Ahora importa que el Engine funcione de punta a punta: se parte de las ecuaciones fundamentales, se simplifican con supuestos y se resuelve. El modelo es general: nada se sesga para que resuelva un tipo de modelo.
+8. **Nombre visible:** la página que la barra llamaba «Ecuaciones» (`/motor`) se llama **Engine**. Las rutas y el código conservan `motor`; el paso «Ecuaciones» dentro de cada hoja sigue siendo el paso de las ecuaciones.
+9. **Batería multifísica:** `frontend/verificar_bateria_multifisica.mjs` pasa todas las hojas de prueba por el camino común y escribe `docs/BATERIA_MULTIFISICA.md`, con lo que resuelve y lo que falta por motivo. Es la lista de trabajo del Engine común.
 
 ### 9.2 Abiertas
 
@@ -266,8 +280,13 @@ La migración es incremental (§10): ningún módulo actual se reescribe de golp
    - Las pantallas actuales siguen funcionando.
 5. **Migración por motor:** balances y supuestos al backend; solver TS sustituido por el compilador y los solvers comunes; la adimensionalización y los estudios consumen el modelo común.
    - **5.1 hecho en su núcleo el 18 de octubre de 2026:** el compilador tiene una segunda entrada que ejecuta ecuaciones escritas (`core/compilador/explicito.py`); el solver admite BDF y eventos de dominio (detiene en el instante exacto en que una variable no negativa se agotaría). Contrato: `restricciones` y valores `datos["matematico.<id>"]` ([docs/CONTRATO_MODELO_COMUN.md](docs/CONTRATO_MODELO_COMUN.md)). Evidencia en [docs/CORTE_VERTICAL.md](docs/CORTE_VERTICAL.md) §5: `tests/validar_compilador_explicito.py` (27, contra analíticas) y `frontend/verificar_compilador_explicito.mjs` (76: las seis hojas de materia sin campo espacial, con RK45 y con el método implícito, iguales al solver TS y a la analítica).
-   - **Pendiente de 5.1:** que el Resolver de `/motor` llame a `POST /modelo/resolver` para esas hojas y retire su solver TS (va con §11).
-   - **Resto del paso 5, reordenado por §9.1:** queda detrás de los bloques A y B. 5.2 discretización (motor propio, §9.1.3); 5.3 redes de volúmenes de masa; 5.4 energía con u(T) como supuesto explícito; 5.5 balances y supuestos generados en el backend; 5.6 adimensionalización y estudios sobre el modelo común.
+   - **5.1 cerrado el 18 de octubre de 2026:** el Resolver del Engine (`frontend/app/motor/resolverEngine.ts`, `resolverHojaEngine`) calcula en el servidor (`POST /modelo/resolver`) toda hoja que llega al Engine común: 21 hojas de prueba (materia de un dominio, redes de volúmenes y energía con u(T)).
+     - El resultado común se traduce al `ResultadoMotor` que ya leen las vistas. Estados, magnitudes derivadas (`observables`) y cierres de presupuesto (`verificaciones`) los publica el servidor.
+     - `frontend/verificar_resolver_engine.mjs` (178) comprueba, campo por campo, que es igual al cálculo anterior del navegador. Se probó también en el navegador.
+     - El solver del navegador queda solo para los campos 1D y la sustitución por volumen. `resolverHoja`, el solver local, sigue existiendo para esas formas y para las suites que lo prueban.
+     - **Requisito:** el backend que usa la interfaz (8004) debe tener cargadas las rutas `/modelo/*` y `core/balances`; si es anterior, el Resolver responde «Servicio del Engine no disponible (HTTP 404)».
+   - **5.3, 5.4 y el núcleo de 5.5, hechos el 18 de octubre de 2026:** el motor de balances (`core/balances`, [docs/MOTOR_BALANCES.md](docs/MOTOR_BALANCES.md)) genera en el servidor las ecuaciones de las redes de volúmenes y de la energía con u(T) supuesta, desde los supuestos de cada volumen. `tests/validar_motor_balances.py` (27, contra analíticas) y la batería multifísica: las 10 redes y las 6 hojas de energía iguales al Engine actual.
+   - **Resto del paso 5:** 5.2 discretización (motor propio, §9.1.3); el resto de 5.5 (sustitución por volumen, reglas de estado, momento); 5.6 adimensionalización y estudios sobre el modelo común.
 6. **Reorganización del frontend** según §7, con el recorrido de la hoja como única navegación (§11).
 
 ### Orden vigente (18 de octubre de 2026, decisiones §9.1)
@@ -279,7 +298,7 @@ La migración es incremental (§10): ningún módulo actual se reescribe de golp
    - El compilador honra ahora la política de fases (evento `politica_incumplida`).
    - **Hallazgo, corregido el mismo día:** el motor existente publicaba 28 s tarde la segunda fase líquida de la red de cinco especies, porque aceptaba un paso sin evento al no reencontrar el cambio en el estado reintegrado. Corregido en `core/ensamblaje_red.py` y ejemplo regenerado; motor, compilador común y referencia independiente coinciden (`frontend/MAPA_MOTOR.md` §6).
    - **Siguiente dentro de A:** el rendimiento de la capa con UNIFAC (la red de cinco especies tarda ~255 s) y los pendientes del punto 2.
-2. Pendientes del checklist de termodinámica que aplican: mayor contraste experimental de UNIFAC (datos publicados de ELV y ELL, no otra implementación con las mismas tablas); corrientes materiales entre IAPWS y paquetes de mezcla; diagramas completos L–L y L–L–V (hoy el L–L se detecta pero no se traza); continuación de curvas con pliegues; cortes multicomponente.
+2. Pendientes del checklist de termodinámica que aplican: corrientes materiales entre IAPWS y paquetes de mezcla; diagramas completos L–L y L–L–V (hoy el L–L se detecta pero no se traza); continuación de curvas con pliegues; cortes multicomponente. El contraste experimental de UNIFAC queda **aplazado al final** (§9.1.7).
 3. Aplazados por alcance físico (cada uno pide un modelo nuevo, no pulido): vapor no ideal y alta presión, regiones críticas, equilibrio sólido-líquido de mezclas, equilibrio químico acoplado a reacciones.
 4. Fuera por decisión: «parámetros completos y contrastes NRTL con 5 o más componentes».
 
@@ -300,6 +319,8 @@ La migración es incremental (§10): ningún módulo actual se reescribe de golp
 
 **C. Hoja única** (§11), empezando por el puente de solo lectura.
 
+**Transversal a A, B y C: que el Engine funcione** (§9.1.7). Cada bloque se prueba con la batería multifísica (§9.1.9), y lo que la batería no resuelve por el camino común se ataca primero, si es general.
+
 **D. Resto del paso 5 y el paso 6.**
 
 Cada paso se cierra con sus pruebas y con la actualización de este documento.
@@ -310,7 +331,7 @@ Hoy son dos páginas con dos almacenes: `/motor/hojas/[id]` (derivación de bala
 
 | Paso | Motor | Hoy está en | Qué ve el usuario |
 |---|---|---|---|
-| 1. Formular | balances + supuestos (o ecuaciones escritas) | Ecuaciones de `/motor`; editor de la adimensionalización | La ecuación local, cada supuesto aplicado y la ecuación final. Una hoja «de ecuaciones escritas» entra por aquí sin derivación |
+| 1. Formular | balances + supuestos, y la derivación termodinámica | Ecuaciones de `/motor` | La ecuación local, cada supuesto aplicado y la ecuación final, por familia. **No hay hojas de «ecuaciones escritas»** (principio 10): todo modelo se deriva de las ecuaciones fundamentales |
 | 2. Estado | termodinámica | Estado de `/motor` | Componentes, paquete (UNIFAC), fases candidatas, muestra de equilibrio, diagramas |
 | 3. Datos y estructura | unidades + estructura | parte del Resolver de `/motor` | Datos con unidad, recuento de variables y ecuaciones, grados de libertad |
 | 4. Escalar (opcional) | adimensionalización | `/adimensionalizacion` | Escalas, grupos adimensionales, formulaciones certificadas, régimen dominante, estudios. **No integra ni malla** |
@@ -322,12 +343,23 @@ Hoy son dos páginas con dos almacenes: `/motor/hojas/[id]` (derivación de bala
 
 - El paso 4 lee y escribe `motores.adimensionalizacion` del mismo modelo común; nunca copia el modelo. Las escalas no cambian las ecuaciones del paso 1: son una vista y una transformación registrada.
 - La simulación deja de ser una vista de la adimensionalización: es el paso 6 sobre el mismo modelo (compilador explícito, §10 paso 5.1), con discretización del paso 5 cuando haya campos espaciales.
-- Un almacén de hojas (§6, Documento). Los documentos actuales de la adimensionalización se migran a hojas de ecuaciones escritas, sin pérdida (`desde_documento_adimensional`, ya probado ida y vuelta).
+- Un almacén de hojas (§6, Documento). La adimensionalización trabaja sobre las ecuaciones que deriva la hoja, nunca sobre un modelo escrito a mano (principio 10).
+  - **Decidido (19 de octubre de 2026):** la adimensionalización trabaja solo sobre ecuaciones derivadas en una hoja del Engine.
+    - Su única entrada es importar una hoja; las ecuaciones de un documento derivado no se editan allí.
+    - Los documentos escritos directamente quedan retirados (se conservan para exportarlos). Detalle en [frontend/ADIMENSIONALIZACION_ALCANCE.md](frontend/ADIMENSIONALIZACION_ALCANCE.md).
+    - Lo que hoy no llega por esta vía (reacción con su termodinámica, energía en 1D, sistemas no materiales) llegará cuando el Engine sepa derivarlo.
+  - La entrada de ecuaciones escritas del compilador (`core/compilador/explicito.py`) se queda: es como el Engine ejecuta lo que genera el motor de balances, no una forma de plantear modelos.
 - La biblioteca muestra plantillas, no ejemplos con código propio.
+
+**Hecho (18 de octubre de 2026):**
+
+- Toda hoja, incluidas las de red termodinámica de los ejemplos, muestra los mismos cuatro paneles: Materia, Energía, Momento y Termodinámica (§3; [docs/CAPA_TERMODINAMICA.md](docs/CAPA_TERMODINAMICA.md) §4 bis).
+- El panel Termodinámica muestra las relaciones siempre presentes, el cierre de cada volumen (desde `POST /modelo/termodinamica`) y los supuestos termodinámicos posibles.
+- El Resolver calcula en el Engine común (§10, 5.1).
 
 **Orden incremental** (cada etapa deja ambas páginas funcionando y sus suites en verde):
 
 1. *Puente de solo lectura:* en la hoja del motor, una pestaña «Escalar» que monta las vistas de la adimensionalización sobre `modeloDesdeHojaMotor(hoja)`; desaparece la importación manual («Del motor»).
 2. *Resolver común:* el Resolver de la hoja usa `POST /modelo/resolver` (cierra 5.1) y la vista de simulación de la adimensionalización usa el mismo resultado.
-3. *Almacén único:* las hojas de la adimensionalización pasan a ser hojas del motor de tipo «ecuaciones escritas».
+3. *Almacén único:* la adimensionalización usa el almacén de hojas del Engine. Sus documentos escritos a mano se tratan según la decisión pendiente de arriba.
 4. *Rutas:* `/hojas/[id]/<paso>` (§7); `/motor` y `/adimensionalizacion` quedan como redirecciones.

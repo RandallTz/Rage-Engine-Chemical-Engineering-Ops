@@ -24,7 +24,7 @@ flowchart LR
 | Pantalla | Ruta | Qué hace |
 |---|---|---|
 | Biblioteca | `/motor/hojas` | Crear, abrir, duplicar, archivar hojas; añadir conjuntos de prueba (demostración, materia, energía, acoplamiento, multicomponente, multifásico, N componentes, UNIFAC) |
-| Ecuaciones | `/motor/hojas/[id]` | Derivación desde la ecuación local: forma diferencial → integral → total; supuestos (fijo, invariancias, sin convección/difusión, fuentes uniformes, puertos, densidad media…); tres balances (materia, energía, momento) con su propia vista |
+| Ecuaciones | `/motor/hojas/[id]` | Derivación desde la ecuación local: forma diferencial → integral → total; supuestos (fijo, invariancias, sin convección/difusión, fuentes uniformes, puertos, densidad media…); cuatro paneles con su propia vista: tres balances (materia, energía, momento) y la **termodinámica**, siempre presente (relaciones, cierre de cada volumen y supuestos termodinámicos). Las hojas de red termodinámica muestran los mismos paneles |
 | Estado | `/motor/hojas/[id]/estado` | Catálogo de componentes (por nombre o CAS), paquete termodinámico por volumen, datos puros y sustituciones, equilibrio de una muestra, diagramas |
 | Resolver | `/motor/hojas/[id]/resolver` | Ecuaciones finales, datos por grupo con unidad, iniciales, horizonte, fronteras 1D; recuento (variables/ecuaciones, GL estructural, datos e iniciales definidos); Opciones avanzadas (método, celdas, muestras, tolerancias) |
 | Gráficos | `/motor/hojas/[id]/resultados` | Tablero de gráficas configurable, tabla, CSV y detalles técnicos (residuos, certificados, eventos) |
