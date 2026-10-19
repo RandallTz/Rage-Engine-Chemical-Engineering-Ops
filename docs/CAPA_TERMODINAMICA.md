@@ -87,7 +87,32 @@ Por encima de T_c solo hay una rama de fluido: el líquido no puede aparecer y s
 | Trayectoria | Hierve a la T_sat de IF97 (5 mK). Calor de la meseta Q·Δt = m·h_fg (1e-3). T constante en la meseta (1e-6 K). β_vapor = Q(t − t_b)/(m·h_fg) (1e-3). H(t) = H(0) + Q t. La T de la capa coincide con la del motor (1e-6 K) |
 | Fronteras | T(H) continua y pendiente nula en la meseta. Por encima de T_c el líquido figura como candidata que no puede aparecer |
 
-## 4. Límites
+## 4. UNIFAC (bloque A de ARQUITECTURA_MOTOR.md §10, 18 de octubre de 2026)
+
+Los tres paquetes UNIFAC (`unifac-original-public`, `unifac-dortmund-public`, `unifac-original-lle-public`) pasan por la capa y por el compilador común sin ninguna rama propia. Prueba: `python tests/validar_capa_unifac.py` (82 comprobaciones, ~5 min). Usa las siete solicitudes dinámicas UNIFAC publicadas por el motor (`docs/ejemplos/motor-unifac/`), llevadas al modelo común.
+
+| Caso | Paquete | Contra el motor existente | Contra una referencia independiente (UNIFAC de `thermo`, otra implementación) |
+|---|---|---|---|
+| Etanol-agua calentado hasta hervir | original | estado 1e-8; evento en el mismo instante | el vapor aparece a la T de burbuja γ-φ (1e-4 K) |
+| Agua, etanol, acetato de etilo, metanol calentados | original | ídem | ídem |
+| Las mismas cuatro especies | Dortmund | ídem | ídem |
+| Agua con entrada de butanol a 298 K | ELL | ídem | la segunda fase líquida aparece cuando la carga llega a la binodal por isoactividad (1e-8 en fracción molar), con la fase conjugada (1e-5) |
+| Etanol-agua con política «monofásico» | original | se detiene en el instante del motor (1e-6 s) | — |
+| Red de dos volúmenes, cinco especies, agua que entra en A | original | estado igual hasta la aparición | la segunda fase líquida aparece donde el plano tangente LL cruza cero: 113,58602 s frente a la referencia, entre 113,5860 y 113,5861 s |
+
+En todos los casos:
+
+- las tres candidatas (vapor-1, liquido-1, liquido-2) se publican en cada muestra, con β = 0 antes de aparecer;
+- la conservación global de materia y energía queda por debajo de 1e-12;
+- la complementariedad β·tm queda por debajo de 1e-8.
+
+**Hallazgo y corrección.** Esta prueba descubrió que, en la red de cinco especies, el motor existente publicaba la segunda fase líquida a 141,41 s, 28 s tarde. Tras localizarla, aceptaba el paso entero sin evento cuando no la reencontraba en el estado reintegrado. Se corrigió el 18 de octubre de 2026 (`core/ensamblaje_red.py`); ahora el motor y el compilador común coinciden con el límite independiente. Detalle en `frontend/MAPA_MOTOR.md` §6.
+
+**Política de fases.** `politica.cantidad = "monofasico"`, `cambioInterno = "prohibido"` y `tiposPermitidos` son supuestos declarados. El compilador detiene el cálculo en el instante en que el conjunto de fases los incumple (evento `politica_incumplida`) y rechaza un estado inicial que ya los incumple.
+
+**Rendimiento.** La red de cinco especies tarda ~255 s en el compilador común. Es un pendiente de pulido de la termodinámica: los flashes rápidos con semilla se repiten en cada etapa.
+
+## 5. Límites
 - **Sólidos:** ningún paquete dinámico los tiene.
 - **Volumen con estado supuesto:** no tiene cierre que evaluar (`NoSoportado`). Es el caso de las hojas del solver TS.
-- **Solver:** la trayectoria la integra todavía el motor de ensamblaje existente (camino B). El compilador y los solvers propios del modelo común son el paso 4.
+- **Solver:** desde el paso 4 la trayectoria la integra el compilador común (`core/compilador`, `core/solvers`, [CORTE_VERTICAL.md](CORTE_VERTICAL.md)); el motor de ensamblaje existente (camino B) queda como referencia de comparación.

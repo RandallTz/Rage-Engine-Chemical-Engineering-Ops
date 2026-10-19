@@ -39,6 +39,7 @@ Dormand-Prince 5(4) con tolerancias por componente. El sistema le ofrece `rhs(t,
 - **Si la firma cambia dentro de un paso:** biseca sobre la salida densa, re-integra hasta el instante del cambio y reinicia allí, para no promediar a través de la arista de las propiedades.
 - **Si una etapa falla:** reintenta con un paso menor.
 - **Si el sistema lanza `Detencion`** (agotamiento, fase extraída ausente…): la trayectoria se detiene con su código.
+- **Si el sistema no admite el nuevo régimen** (`admite(firma)` devuelve un motivo, por ejemplo una política de fases monofásica y aparece otra fase): se detiene en el instante del cambio con código `politica_incumplida`.
 
 ## 3. Evidencia
 

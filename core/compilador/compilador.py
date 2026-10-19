@@ -111,6 +111,23 @@ class SistemaCompilado:
             if s["materia"]["base"] == "volumetrica":
                 raise NoSoportado(f"corriente {s['id']}: caudal volumétrico: pendiente")
         self._ultimo_estado = {}
+        self.politicas = {v["id"]: v["termodinamica"]["politica"] for v in m["volumenes"]}
+        self.firma_inicial = None
+
+    def admite(self, firma):
+        """La política de fases de cada volumen es un supuesto declarado: un
+        conjunto de fases que la incumple detiene el cálculo, no se ignora."""
+        for vid, fases in firma:
+            pol = self.politicas[vid]
+            tipos = [f.rsplit("-", 1)[0] for f in fases]
+            if pol["cantidad"] == "monofasico" and len(fases) > 1:
+                return f"volumen {vid}: la política es monofásica y el estado tiene {len(fases)} fases ({', '.join(fases)})"
+            if pol["cambioInterno"] == "prohibido" and self.firma_inicial is not None and fases != dict(self.firma_inicial)[vid]:
+                return f"volumen {vid}: el cambio interno de fases está prohibido y el conjunto pasa a ({', '.join(fases)})"
+            tp = pol.get("tiposPermitidos")
+            if tp is not None and any(x not in tp for x in tipos):
+                return f"volumen {vid}: aparece una fase fuera de los tipos permitidos ({', '.join(tp)})"
+        return None
 
     def dato(self, id_):
         if id_ not in self._cache_dato:
@@ -273,6 +290,10 @@ def resolver(modelo):
     tf = sis.dato(est["tiempoId"])(0.0)
     muestras = int(est["muestras"])
     y0 = sis.inicial()
+    sis.firma_inicial = sis.firma(0.0, y0)
+    motivo = sis.admite(sis.firma_inicial)
+    if motivo:
+        raise NoSoportado(f"el estado inicial incumple la política de fases: {motivo}")
     atol = np.full(sis.tam, est["atol"]["cantidad"])
     for v in sis.vols:
         atol[v.i_E] = est["atol"].get("energia", 1e-6)

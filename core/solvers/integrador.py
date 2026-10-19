@@ -11,6 +11,10 @@ y, opcionalmente,
 
     dominio(t, y) -> valores que deben ser >= 0 (por ejemplo, cantidades que no
                     pueden ser negativas); describir_dominio(k) -> texto
+    admite(firma) -> None, o el motivo por el que el modelo no admite ese
+                    régimen (un supuesto declarado deja de cumplirse): la
+                    trayectoria se detiene en el instante del cambio, con
+                    código `politica_incumplida`
 
 y nada más: el integrador no sabe qué significa la firma. Si cambia dentro de
 un paso, se localiza el instante por bisección sobre la salida densa, se
@@ -181,6 +185,12 @@ def integrar(sistema, y0, t_final, rtol=1e-8, atol=1e-10, max_step=np.inf, h_min
         y_e = sub.y.copy()
         nueva = sistema.firma(hi, y_e)
         tray.eventos.append(("cambio_firma", hi, firma, nueva, ""))
+        motivo = sistema.admite(nueva) if hasattr(sistema, "admite") else None
+        if motivo:
+            tray.detenida = Detencion("politica_incumplida", motivo)
+            tray.eventos.append(("politica_incumplida", hi, nueva, None, motivo))
+            tray.t_fin, tray.y_fin = hi, y_e
+            return tray
         firma = nueva
         r = _rk(sistema, hi, y_e, t_final, rtol, atol, max_step, metodo)
     tray.t_fin, tray.y_fin = r.t, r.y.copy()
