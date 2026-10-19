@@ -44,8 +44,10 @@ _NOMBRE_METODO = {"RK45": "RK45 adaptativo (Dormand-Prince 5/4, core/solvers)",
 
 
 def es_explicito(modelo):
-    """Un modelo sin volúmenes con cierre de equilibrio y con ecuaciones escritas."""
-    return modelo.get("matematico") is not None and all(v["termodinamica"]["tipo"] == "supuesto" for v in modelo["volumenes"])
+    """Un modelo sin volúmenes con cierre de equilibrio: trae sus ecuaciones escritas o las genera
+    el motor de balances desde los supuestos de sus volúmenes."""
+    return all(v["termodinamica"]["tipo"] == "supuesto" for v in modelo["volumenes"]) and (
+        modelo.get("matematico") is not None or bool(modelo["volumenes"]))
 
 
 def _dim_de_simbolo(s):
@@ -142,7 +144,15 @@ class SistemaExplicito:
         faltan = [c for c, g in zip(self.campos, self.g) if g is None]
         if faltan:
             raise NoSoportado("falta la condición inicial de " + ", ".join(faltan))
-        self.restringidas = [self.indice[r["simboloId"]] for r in self.modelo.get("restricciones", [])]
+        # Dominio: variables no negativas y expresiones que deben mantenerse >= 0 (validez de un supuesto).
+        self.dominios = []
+        for r in self.modelo.get("restricciones", []):
+            if "simboloId" in r:
+                k = self.indice[r["simboloId"]]
+                self.dominios.append((lambda tt, y, k=k: y[k], r["simboloId"]))
+            else:
+                self.dominios.append((self._compilar(r["expresion"], "restricción"), r["descripcion"]))
+        self.restringidas = [self.indice[r["simboloId"]] for r in self.modelo.get("restricciones", []) if "simboloId" in r]
         est = self.modelo["estudio"]
         if est is None or est["tipo"] != "temporal":
             raise NoSoportado("el modelo no pide un estudio temporal")
@@ -157,6 +167,16 @@ class SistemaExplicito:
         self.metodo = _METODOS[est["metodoSolicitado"]]
         self.unidades = {c: un.unidad_SI(self.dims[c]) for c in self.campos}
         self.unidad_t = un.unidad_SI(dim_t)
+        # Magnitudes derivadas que se publican como series y comprobaciones que deben ser ~0 en cada muestra.
+        self.observables = [(o["id"], o["nombre"], o["unidadSI"], self._compilar(o["expresion"], f"observable {o['id']}"))
+                            for o in self.modelo.get("observables", [])]
+        self.verificaciones = [(v["id"], v["descripcion"], self._compilar(v["expresion"], f"verificación {v['id']}"),
+                                self._compilar(v["escala"], f"verificación {v['id']}"), v.get("tolerancia", 1e-9))
+                               for v in self.modelo.get("verificaciones", [])]
+        ENERGIA = {"M": 1, "L": 2, "T": -2}
+        a = self.modelo["estudio"]["atol"]
+        self.atol = np.array([a.get("energia", a["cantidad"]) if {k: int(v) for k, v in self.dims[c].items()} == ENERGIA else a["cantidad"]
+                              for c in self.campos])
 
     # --- árbol -> función ---------------------------------------------------------------
     def _compilar(self, e, donde):
@@ -219,27 +239,39 @@ class SistemaExplicito:
         return None
 
     def dominio(self, t, y):
-        return np.array([y[k] for k in self.restringidas], dtype=float)
+        return np.array([f(t, y) for f, _ in self.dominios], dtype=float)
 
     def describir_dominio(self, k):
-        return self.campos[self.restringidas[k]]
+        return self.dominios[k][1]
 
 
 def resolver_explicito(modelo):
+    if modelo.get("matematico") is None:
+        from core.balances import NoGenerable, generar
+        try:
+            modelo = generar(modelo)
+        except NoGenerable as e:
+            raise NoSoportado(f"motor de balances: {e}") from e
     sis = SistemaExplicito(modelo)
     m, est = sis.modelo, sis.modelo["estudio"]
     muestras = int(est["muestras"])
     y0 = sis.inicial()
-    for k in sis.restringidas:
-        if y0[k] < 0:
-            raise NoSoportado(f"condición inicial de {sis.campos[k]}: fuera de su dominio (no negativo)")
-    tray = integrar(sis, y0, sis.tf, rtol=est["rtol"], atol=est["atol"]["cantidad"], max_step=sis.tf / (muestras - 1), metodo=sis.metodo)
+    for f, que in sis.dominios:
+        if f(0.0, y0) < 0:
+            raise NoSoportado(f"estado inicial fuera de su dominio: {que}")
+    tray = integrar(sis, y0, sis.tf, rtol=est["rtol"], atol=sis.atol, max_step=sis.tf / (muestras - 1), metodo=sis.metodo)
     t_fin = tray.t_fin
     ts = [x for x in np.linspace(0.0, sis.tf, muestras) if x <= t_fin * (1 + 1e-12)]
     ts = sorted(set(ts) | {t_fin})
     filas = [tray.y(t) for t in ts]
     series = [serie(f"campo.{c}", c, sis.unidades[c], ["t"], [float(y[k]) for y in filas], propietarioId=f"campo:{c}")
               for k, c in enumerate(sis.campos)]
+    for oid, nombre, unidad, f in sis.observables:
+        series.append(serie(f"observable.{oid}", nombre, unidad, ["t"], [float(f(t, y)) for t, y in zip(ts, filas)], propietarioId=f"observable:{oid}"))
+    verif = []
+    for vid, desc, f, esc, tol in sis.verificaciones:
+        escala = max(max(abs(float(esc(t, y))) for t, y in zip(ts, filas)), 1e-300)
+        verif.append({"id": vid, "valor": max(abs(float(f(t, y))) for t, y in zip(ts, filas)) / escala, "tolerancia": tol, "descripcion": desc})
     eventos = []
     for codigo, t, _a, _d, msg in tray.eventos:
         eventos.append(evento(codigo, "t", t, msg))
@@ -247,7 +279,7 @@ def resolver_explicito(modelo):
                     {"motor": "rage.compilador.explicito", "metodo": _NOMBRE_METODO[sis.metodo], "firma": None,
                      "pasos": tray.pasos, "rechazos": tray.rechazos,
                      **({"mensaje": tray.detenida.mensaje} if tray.detenida else {})},
-                    [eje("t", "tiempo", "tiempo", sis.unidad_t, ts)], series, eventos, [], modeloId=m["id"])
+                    [eje("t", "tiempo", "tiempo", sis.unidad_t, ts)], series, eventos, verif, modeloId=m["id"])
 
 
 def _simbolos(e, acc):
