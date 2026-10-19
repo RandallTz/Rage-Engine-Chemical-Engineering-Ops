@@ -21,6 +21,9 @@ por el servicio único de unidades; expresiones con core/expresiones_motor.
 
 Fuera de esta versión (NoSoportado con motivo): fuentes materiales
 (reacción), caudal volumétrico, volúmenes con estado supuesto, momento.
+
+Un modelo cuyos volúmenes declaran su estado como supuesto y que trae sus
+ecuaciones escritas (`matematico`) lo ejecuta la otra entrada, explicito.py.
 """
 
 from dataclasses import dataclass
@@ -256,7 +259,13 @@ def compilar(modelo):
 
 
 def resolver(modelo):
-    """Modelo común -> conjunto de resultados en el formato común (core/resultados)."""
+    """Modelo común -> conjunto de resultados en el formato común (core/resultados).
+
+    Dos entradas: la estructural (volúmenes con cierre de equilibrio, este
+    archivo) y la de ecuaciones explícitas (`matematico`, explicito.py)."""
+    from .explicito import es_explicito, resolver_explicito
+    if es_explicito(leer_modelo_comun(modelo)):
+        return resolver_explicito(modelo)
     sis = compilar(modelo)
     est = modelo["estudio"]
     if est is None or est["tipo"] != "temporal":

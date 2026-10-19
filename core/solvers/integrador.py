@@ -7,6 +7,11 @@ El sistema que se integra ofrece:
     firma(t, y)  -> valor hashable que describe su régimen discreto
                     (por ejemplo, el conjunto de fases presentes de cada volumen)
 
+y, opcionalmente,
+
+    dominio(t, y) -> valores que deben ser >= 0 (por ejemplo, cantidades que no
+                    pueden ser negativas); describir_dominio(k) -> texto
+
 y nada más: el integrador no sabe qué significa la firma. Si cambia dentro de
 un paso, se localiza el instante por bisección sobre la salida densa, se
 re-integra desde el último estado aceptado hasta ese instante con un
@@ -16,13 +21,21 @@ su código (por ejemplo, una fase que se extrae y ya no existe); cualquier
 otro error en una etapa se reintenta con un paso menor y, si persiste, también
 detiene.
 
-Método: Dormand-Prince 5(4) (scipy RK45) con tolerancias por componente.
+Si un valor de dominio se vuelve negativo dentro de un paso, el instante se
+localiza por bisección sobre la salida densa y la trayectoria se DETIENE ahí
+(código `agotamiento`): nunca se recorta ni se sigue con valores fuera de
+dominio. Un valor nulo en t = 0 con derivada negativa detiene en t = 0.
+
+Métodos: Dormand-Prince 5(4) (scipy RK45, por omisión) o BDF implícito de
+orden variable (scipy BDF, para sistemas rígidos), con tolerancias por componente.
 """
 
 from dataclasses import dataclass, field
 
 import numpy as np
-from scipy.integrate import RK45
+from scipy.integrate import BDF, RK45
+
+METODOS = {"RK45": RK45, "BDF": BDF}
 
 
 class Detencion(Exception):
@@ -45,16 +58,32 @@ class Trayectoria:
         for t0, t1, d in self.tramos:
             if t0 <= t <= t1 + 1e-15 * max(1.0, abs(t1)):
                 return d(min(t, t1))
-        if self.tramos and abs(t - self.t_fin) <= 1e-12 * max(1.0, abs(t)):
+        if self.y_fin is not None and abs(t - self.t_fin) <= 1e-12 * max(1.0, abs(t)):
             return self.y_fin
         raise ValueError(f"t = {t} fuera de la trayectoria [0, {self.t_fin}]")
 
 
-def _rk(sistema, t0, y0, tf, rtol, atol, max_step):
-    return RK45(sistema.rhs, t0, np.array(y0, dtype=float), tf, rtol=rtol, atol=atol, max_step=max_step)
+def _rk(sistema, t0, y0, tf, rtol, atol, max_step, metodo="RK45"):
+    return METODOS[metodo](sistema.rhs, t0, np.array(y0, dtype=float), tf, rtol=rtol, atol=atol, max_step=max_step)
 
 
-def integrar(sistema, y0, t_final, rtol=1e-8, atol=1e-10, max_step=np.inf, h_min=1e-10, max_pasos=200000):
+def _fuera(sistema, t, y):
+    """Índices de dominio con valor negativo, o [] (sin dominio declarado: nunca)."""
+    if not hasattr(sistema, "dominio"):
+        return []
+    d = sistema.dominio(t, y)
+    return [k for k, v in enumerate(d) if not v >= 0]
+
+
+def _detener_dominio(sistema, tray, k, t):
+    nombre = sistema.describir_dominio(k) if hasattr(sistema, "describir_dominio") else f"variable {k}"
+    tray.detenida = Detencion("agotamiento", f"{nombre} abandonaría su dominio (no negativo) en t = {t:.12g}: la trayectoria se detiene antes")
+    tray.eventos.append(("agotamiento", t, None, None, tray.detenida.mensaje))
+
+
+def integrar(sistema, y0, t_final, rtol=1e-8, atol=1e-10, max_step=np.inf, h_min=1e-10, max_pasos=200000, metodo="RK45"):
+    if metodo not in METODOS:
+        raise ValueError(f"método no admitido: {metodo}")
     tray = Trayectoria()
     t, y = 0.0, np.array(y0, dtype=float)
     try:
@@ -63,8 +92,22 @@ def integrar(sistema, y0, t_final, rtol=1e-8, atol=1e-10, max_step=np.inf, h_min
         tray.detenida, tray.t_fin, tray.y_fin = d, t, y
         tray.eventos.append((d.codigo, t, None, None, d.mensaje))
         return tray
+    if hasattr(sistema, "dominio"):
+        d0 = sistema.dominio(t, y)
+        if any(v < 0 for v in d0):
+            raise ValueError("estado inicial fuera de dominio")
+        nulos = [k for k, v in enumerate(d0) if v == 0]
+        if nulos:
+            f0 = np.asarray(sistema.rhs(t, y), dtype=float)
+            h = 1e-7 * max(t_final, 1e-300)
+            d1 = sistema.dominio(t + h, y + h * f0)
+            for k in nulos:
+                if d1[k] < 0:
+                    _detener_dominio(sistema, tray, k, t)
+                    tray.t_fin, tray.y_fin = t, y
+                    return tray
     paso_max = max_step
-    r = _rk(sistema, t, y, t_final, rtol, atol, paso_max)
+    r = _rk(sistema, t, y, t_final, rtol, atol, paso_max, metodo)
     while r.status == "running" and tray.pasos < max_pasos:
         t_a, y_a = r.t, r.y.copy()
         try:
@@ -82,13 +125,31 @@ def integrar(sistema, y0, t_final, rtol=1e-8, atol=1e-10, max_step=np.inf, h_min
                 tray.eventos.append(("no_convergente", t_a, firma, None, str(e)))
                 tray.t_fin, tray.y_fin = t_a, y_a
                 return tray
-            r = _rk(sistema, t_a, y_a, t_final, rtol, atol, paso_max)
+            r = _rk(sistema, t_a, y_a, t_final, rtol, atol, paso_max, metodo)
             continue
         if r.status == "failed":
             tray.detenida = Detencion("no_convergente", "el integrador no pudo avanzar")
             break
         tray.pasos += 1
         paso_max = max_step
+        fuera = _fuera(sistema, r.t, r.y)
+        if fuera:
+            # Primer instante en que algún valor de dominio se vuelve negativo.
+            d = r.dense_output()
+            lo, hi = t_a, r.t
+            for _ in range(200):
+                if hi - lo <= 1e-14 * max(1.0, abs(hi)):
+                    break
+                m = 0.5 * (lo + hi)
+                if _fuera(sistema, m, d(m)):
+                    hi = m
+                else:
+                    lo = m
+            k = _fuera(sistema, hi, d(hi))
+            tray.tramos.append((t_a, lo, d))
+            tray.t_fin, tray.y_fin = lo, d(lo)
+            _detener_dominio(sistema, tray, (k or fuera)[0], lo)
+            return tray
         try:
             nueva = sistema.firma(r.t, r.y)
         except Detencion as d:
@@ -112,7 +173,7 @@ def integrar(sistema, y0, t_final, rtol=1e-8, atol=1e-10, max_step=np.inf, h_min
             else:
                 hi = m
         # Re-integración limpia hasta el instante del cambio (lado nuevo) y reinicio.
-        sub = _rk(sistema, t_a, y_a, hi, rtol, atol, max_step)
+        sub = _rk(sistema, t_a, y_a, hi, rtol, atol, max_step, metodo)
         while sub.status == "running":
             t_s = sub.t
             sub.step()
@@ -121,6 +182,6 @@ def integrar(sistema, y0, t_final, rtol=1e-8, atol=1e-10, max_step=np.inf, h_min
         nueva = sistema.firma(hi, y_e)
         tray.eventos.append(("cambio_firma", hi, firma, nueva, ""))
         firma = nueva
-        r = _rk(sistema, hi, y_e, t_final, rtol, atol, max_step)
+        r = _rk(sistema, hi, y_e, t_final, rtol, atol, max_step, metodo)
     tray.t_fin, tray.y_fin = r.t, r.y.copy()
     return tray

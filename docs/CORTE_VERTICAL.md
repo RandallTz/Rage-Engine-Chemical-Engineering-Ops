@@ -63,7 +63,26 @@ Una comprobación estática verifica que el compilador, el solver, la capa, las 
 
 `node verificar_corte_vertical.mjs` (14 comprobaciones): la ruta HTTP devuelve el mismo conjunto, y el motor de gráficas lo dibuja, incluida la β de todas las candidatas frente al tiempo.
 
-## 4. Fuera de esta versión
+## 4. Segunda entrada: ecuaciones escritas (paso 5.1)
+
+`core/compilador/explicito.py`. Un modelo cuyos volúmenes declaran su estado como supuesto y que trae `matematico` se ejecuta tal como está escrito: una ecuación d u/dt = f(t, u, parámetros) por variable de campo y una condición inicial por variable. `resolver()` elige la entrada; la estructural no cambia.
+
+- Valores en SI desde `datos["matematico.<id>"]`, con comprobación de que la unidad corresponde a la dimensión del símbolo.
+- Métodos: RK45 (`rk45`) o BDF implícito (`euler_implicito`, `bdf`).
+- Dominio: `restricciones` no negativas → evento `agotamiento` en el instante exacto, por bisección sobre la salida densa (`core/solvers/integrador.py`, `dominio(t, y)`); un cero en t = 0 con derivada negativa detiene en t = 0.
+- Rechaza con motivo: coordenadas espaciales y operadores diferenciales (motor de discretización, 5.2), ecuaciones algebraicas (DAE), orden mayor que uno, funciones declaradas sin definición, condición inicial que depende de variables, unidad incompatible, dato pendiente.
+
+## 5. Evidencia de la segunda entrada
+
+- `python tests/validar_compilador_explicito.py` (27 comprobaciones), con modelos escritos a mano, sin volúmenes ni componentes:
+  - logístico con la tasa en 1/min, contra la analítica (1e-7);
+  - oscilador como sistema de primer orden (1e-8);
+  - agotamiento detenido en m0/k exacto (1e-6 s) y, sin restricción, la recta que sigue;
+  - rígido y' = −a(y − cos t), a = 1e4: BDF igual a la analítica y con menos de 1/20 de los pasos de RK45;
+  - ocho rechazos con motivo, la ruta HTTP y la comprobación estática (ningún equipo ni sustancia en el código).
+- `node verificar_compilador_explicito.mjs` (76 comprobaciones): las seis hojas de materia de prueba sin campo espacial, llevadas al modelo común por `modeloDesdeHojaMotor` y resueltas por `POST /modelo/resolver`, con RK45 y con el método implícito. Mismo estado y tiempo final que el solver TS; frente a la analítica y al solver TS, entre 1e-16 y 1e-11 (RK45). Con el implícito, el compilador queda a 4e-9 de la analítica y el Euler implícito del solver TS a 1.3e-5. Las dos hojas 1D se rechazan con su motivo.
+
+## 6. Fuera de esta versión
 
 El compilador responde `NoSoportado` con motivo en estos casos:
 
