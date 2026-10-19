@@ -54,6 +54,18 @@ type Modelo = {
 - **`motores`**: configuración de cada motor bajo su nombre. Hoy solo `adimensionalizacion: {formas, activaId, exploracion?}`. Un motor nunca escribe fuera de su espacio.
 - **`restricciones?`** (opcional, 18 de octubre de 2026): `[{simboloId, tipo: "no_negativo"}]` sobre variables de campo de `matematico`. El cálculo se detiene en el instante en que una lo abandonaría (código `agotamiento`); nunca se recorta. Sin restricción declarada, la ecuación sigue: el dominio es del modelo, no una regla escondida del solver.
 - **Valores de `matematico`**: cada parámetro o constante del árbol toma su valor de `datos["matematico.<id>"]` (`funcion: "parametro"`, `origen: {propietarioId: "matematico", ruta: "matematico.simbolos.<id>"}`), en cualquier unidad compatible con la dimensión del símbolo. Antes viajaban en `procedencia.valoresMatematico`, que ya no existe.
+- **Motor de balances** (campos opcionales, 18 de octubre de 2026; ver [MOTOR_BALANCES.md](MOTOR_BALANCES.md)):
+  - volumen: `terminos` (`"generacion.<id>"`, `"consumo.<id>"`, `"resto.<id>"`, `"calor"`, `"trabajo_viscoso"`, `"fuerzas"`, `"fuente"` → dato);
+  - volumen: `volumenDatoId`;
+  - volumen: `inicial.energia`, opcional sin balance de energía;
+  - cierre supuesto `u_lineal`: `parametros: {cId, uRefId, TRefId, TMinId, TMaxId, rhoId?}`;
+  - corriente: `materia.modo = "total_y_composicion"` con `caudalId` y `fracciones`;
+  - `restricciones`: además de `{simboloId, tipo}`, la forma `{expresion, tipo: "no_negativo", descripcion}`, una expresión de las variables que debe mantenerse ≥ 0 (dominio de validez de un supuesto).
+  - Un modelo con volúmenes de estado supuesto y `matematico: null` lo resuelve `POST /modelo/resolver` generando antes sus ecuaciones con el motor de balances.
+- **`observables?`** y **`verificaciones?`** (opcionales, sobre las variables de `matematico`):
+  - `observables: [{id, nombre, unidadSI, expresion}]` se publican como series `observable.<id>`;
+  - `verificaciones: [{id, descripcion, expresion, escala, tolerancia?}]` se publican en `verificaciones` del resultado, con valor max|expresion| / max|escala| sobre las muestras;
+  - el motor de balances genera ambas: temperatura, caudales y entalpías del donante; cierres de presupuesto por estado y globales.
 - **`Procedencia`**: `{tipo: "documento_adimensional" | "ensamblaje_v2" | "hoja_motor_materia" | "nuevo", ...}` con los identificadores del origen (`solicitudId`, `hojaId`, `documentoId`), su `version` y lo que no es física pero debe conservarse (`derivacion`, pasos del recorrido).
 
 ## 2. La termodinámica siempre presente

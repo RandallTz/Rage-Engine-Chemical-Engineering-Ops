@@ -31,7 +31,7 @@ function unicos(items: unknown[], ruta: string): Set<unknown> {
 const ref = (v: unknown, conjunto: Set<unknown>, ruta: string, que: string) => { if (!conjunto.has(v)) fallo(ruta, `referencia inexistente (${que} ${String(v)})`); };
 
 export function leerModeloComun(dato: unknown): ModeloComun {
-  const m = claves(dato, "modelo", CLAVES, ["restricciones"]);
+  const m = claves(dato, "modelo", CLAVES, ["restricciones", "observables", "verificaciones"]);
   if (m.formato !== "rage.modelo") fallo("formato", "valor no admitido");
   if (m.version !== VERSION_MODELO) fallo("version", "valor no admitido");
   const datos = new Set(Object.keys(obj(m.datos, "datos")));
@@ -46,7 +46,7 @@ export function leerModeloComun(dato: unknown): ModeloComun {
   const paqs = unicos(lista(claves(m.termodinamica, "termodinamica", ["paquetes"]).paquetes, "termodinamica.paquetes"), "termodinamica.paquetes");
   const volsL = lista(m.volumenes, "volumenes"), vols = unicos(volsL, "volumenes");
   volsL.forEach((v, i) => {
-    const r = `volumenes[${i}]`, o = claves(v, r, ["id", "componenteIds", "balances", "supuestos", "frontera", "inicial", "termodinamica"]);
+    const r = `volumenes[${i}]`, o = claves(v, r, ["id", "componenteIds", "balances", "supuestos", "frontera", "inicial", "termodinamica"], ["terminos", "volumenDatoId"]);
     lista(o.componenteIds, r + ".componenteIds").forEach((c, j) => ref(c, comps, `${r}.componenteIds[${j}]`, "componente"));
     const f = obj(o.frontera, r + ".frontera");
     if (f.tipo === "rigida") dato_(f.datoId, r + ".frontera.datoId");
@@ -55,7 +55,7 @@ export function leerModeloComun(dato: unknown): ModeloComun {
     const t = o.termodinamica as Obj | null;
     if (!t || typeof t !== "object" || !("tipo" in t)) fallo(r + ".termodinamica", "todo volumen declara su cierre termodinámico (equilibrio con un paquete, o un supuesto explícito con su motivo)");
     if (t!.tipo === "equilibrio") { claves(t, r + ".termodinamica", ["tipo", "paqueteId", "politica"]); ref(t!.paqueteId, paqs, r + ".termodinamica.paqueteId", "paquete"); }
-    else if (t!.tipo === "supuesto") { const s = claves(t, r + ".termodinamica", ["tipo", "supuesto", "motivo"]); if (typeof s.motivo !== "string" || !s.motivo.trim()) fallo(r + ".termodinamica.motivo", "texto requerido"); }
+    else if (t!.tipo === "supuesto") { const s = claves(t, r + ".termodinamica", ["tipo", "supuesto", "motivo"], ["parametros"]); if (typeof s.motivo !== "string" || !s.motivo.trim()) fallo(r + ".termodinamica.motivo", "texto requerido"); }
     else fallo(r + ".termodinamica.tipo", "valor no admitido");
   });
   lista(m.corrientes, "corrientes").forEach((c, i) => {
@@ -75,11 +75,17 @@ export function leerModeloComun(dato: unknown): ModeloComun {
     const campos = new Set((m.matematico as { simbolos: { id: string; rol: string }[] }).simbolos.filter(s => s.rol === "campo").map(s => s.id));
     const vistos = new Set<string>();
     lista(m.restricciones, "restricciones").forEach((x, i) => {
-      const o = claves(x, `restricciones[${i}]`, ["simboloId", "tipo"]);
-      ref(o.simboloId, campos, `restricciones[${i}].simboloId`, "variable del modelo matemático");
-      if (vistos.has(o.simboloId as string)) fallo(`restricciones[${i}].simboloId`, "identidad repetida");
-      vistos.add(o.simboloId as string);
-      if (o.tipo !== "no_negativo") fallo(`restricciones[${i}].tipo`, "valor no admitido");
+      if ("simboloId" in obj(x, `restricciones[${i}]`)) {
+        const o = claves(x, `restricciones[${i}]`, ["simboloId", "tipo"]);
+        ref(o.simboloId, campos, `restricciones[${i}].simboloId`, "variable del modelo matemático");
+        if (vistos.has(o.simboloId as string)) fallo(`restricciones[${i}].simboloId`, "identidad repetida");
+        vistos.add(o.simboloId as string);
+        if (o.tipo !== "no_negativo") fallo(`restricciones[${i}].tipo`, "valor no admitido");
+      } else {
+        const o = claves(x, `restricciones[${i}]`, ["expresion", "tipo", "descripcion"]);
+        obj(o.expresion, `restricciones[${i}].expresion`);
+        if (o.tipo !== "no_negativo") fallo(`restricciones[${i}].tipo`, "valor no admitido");
+      }
     });
   }
   for (const k of Object.keys(obj(m.motores, "motores"))) if (k !== "adimensionalizacion") fallo(`motores.${k}`, "motor desconocido");

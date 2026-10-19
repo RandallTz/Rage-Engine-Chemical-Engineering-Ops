@@ -13,7 +13,7 @@ export type Evento = { codigo: string; ejeId: string; valor: number; descripcion
 export type ConjuntoResultados = {
   formato: "rage.resultados"; version: 0; id: string; nombre: string; modeloId: string | null;
   estado: "resuelto" | "parcial" | "fallido";
-  procedencia: { motor: string; metodo: string | null; firma: string | null; mensaje?: string };
+  procedencia: { motor: string; metodo: string | null; firma: string | null; mensaje?: string; pasos?: number; rechazos?: number };
   ejes: Eje[]; series: Serie[]; eventos: Evento[];
   verificaciones: { id: string; valor: number; tolerancia: number; descripcion: string }[];
 };

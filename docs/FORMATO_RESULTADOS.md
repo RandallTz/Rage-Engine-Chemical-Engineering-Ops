@@ -7,7 +7,7 @@
 ```ts
 { formato: "rage.resultados", version: 0, id, nombre, modeloId | null,
   estado: "resuelto" | "parcial" | "fallido",
-  procedencia: { motor, metodo | null, firma | null, mensaje? },
+  procedencia: { motor, metodo | null, firma | null, mensaje?, pasos?, rechazos? },
   ejes:   [{ id, nombre, rol: "tiempo" | "coordenada" | "parametro" | "otro", unidadSI, dimension, valores }],
   series: [{ id, nombre, unidadSI, dimension, magnitudes, ejes: [ejeId…], valores,
              propietarioId?, componenteId?, faseId? }],

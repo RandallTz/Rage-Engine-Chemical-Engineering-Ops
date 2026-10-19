@@ -106,7 +106,7 @@ class _Lectura:
 def leer_modelo_comun(dato):
     if len(json.dumps(dato, ensure_ascii=False).encode("utf-8")) > LIMITE_BYTES:
         _fallo("modelo", "el modelo supera 8 MB")
-    m = _claves(dato, "modelo", CLAVES, ["restricciones"])
+    m = _claves(dato, "modelo", CLAVES, ["restricciones", "observables", "verificaciones"])
     _opcion(m["formato"], "formato", ["rage.modelo"])
     _opcion(m["version"], "version", [VERSION])
     _texto(m["id"], "id")
@@ -177,6 +177,15 @@ def leer_modelo_comun(dato):
 
     if "restricciones" in m:
         _leer_restricciones(m)
+    for clave, campos in (("observables", ["id", "nombre", "unidadSI", "expresion"]), ("verificaciones", ["id", "descripcion", "expresion", "escala"])):
+        if clave in m:
+            if m["matematico"] is None:
+                _fallo(clave, "se declaran sobre variables del modelo matemático")
+            xs = _lista(m[clave], clave)
+            _unicos(xs, clave)
+            for i, x in enumerate(xs):
+                o = _claves(x, f"{clave}[{i}]", campos, ["tolerancia"])
+                _obj(o["expresion"], f"{clave}[{i}].expresion")
 
     motores = _obj(m["motores"], "motores")
     for nombre, cfg in motores.items():
@@ -190,7 +199,15 @@ def leer_modelo_comun(dato):
 
 
 def _leer_volumen(v, r, ids_comp, ids_paq, lec):
-    o = _claves(v, r, ["id", "componenteIds", "balances", "supuestos", "frontera", "inicial", "termodinamica"])
+    o = _claves(v, r, ["id", "componenteIds", "balances", "supuestos", "frontera", "inicial", "termodinamica"],
+                ["terminos", "volumenDatoId"])
+    # Datos de los términos que conservan los supuestos (motor de balances): "<rol>.<componenteId>" o un término de energía.
+    for k, d in _obj(o.get("terminos", {}), r + ".terminos").items():
+        rol = k.split(".")[0]
+        _opcion(rol, f"{r}.terminos.{k}", ["generacion", "consumo", "resto", "calor", "trabajo_viscoso", "fuerzas", "fuente"])
+        lec.dato(d, f"{r}.terminos.{k}")
+    if "volumenDatoId" in o:
+        lec.dato(o["volumenDatoId"], r + ".volumenDatoId")
     _texto(o["id"], r + ".id")
     for j, c in enumerate(_lista(o["componenteIds"], r + ".componenteIds")):
         _ref(c, ids_comp, f"{r}.componenteIds[{j}]", "componente")
@@ -215,14 +232,17 @@ def _leer_volumen(v, r, ids_comp, ids_paq, lec):
     if ini.get("tipo") == "por_datos":
         _claves(ini, r + ".inicial", ["tipo"])
     else:
-        _claves(ini, r + ".inicial", ["cantidades", "energia"])
+        _claves(ini, r + ".inicial", ["cantidades"], ["energia"])
         cant = _claves(ini["cantidades"], r + ".inicial.cantidades", ["base", "datoIds"])
         _opcion(cant["base"], r + ".inicial.cantidades.base", ["masica", "molar"])
         for k, d in _obj(cant["datoIds"], r + ".inicial.cantidades.datoIds").items():
             lec.dato(d, f"{r}.inicial.cantidades.datoIds.{k}")
-        en = _claves(ini["energia"], r + ".inicial.energia", ["tipo", "datoId"])
-        _opcion(en["tipo"], r + ".inicial.energia.tipo", ["U", "T"])
-        lec.dato(en["datoId"], r + ".inicial.energia.datoId")
+        if "energia" in ini:
+            en = _claves(ini["energia"], r + ".inicial.energia", ["tipo", "datoId"])
+            _opcion(en["tipo"], r + ".inicial.energia.tipo", ["U", "T"])
+            lec.dato(en["datoId"], r + ".inicial.energia.datoId")
+        elif t_tipo(o) == "equilibrio":
+            _fallo(r + ".inicial", "faltan energia")
     # La termodinámica siempre presente: ningún volumen sin cierre declarado.
     t = o["termodinamica"]
     if not isinstance(t, dict) or "tipo" not in t:
@@ -240,9 +260,20 @@ def _leer_volumen(v, r, ids_comp, ids_paq, lec):
         if f["tipo"] not in ("rigida", "presion_prescrita"):
             _fallo(r + ".frontera", "un cierre de equilibrio necesita frontera rígida (UV) o presión prescrita (PH)")
     else:
-        _claves(t, r + ".termodinamica", ["tipo", "supuesto", "motivo"])
+        _claves(t, r + ".termodinamica", ["tipo", "supuesto", "motivo"], ["parametros"])
         _opcion(t["supuesto"], r + ".termodinamica.supuesto", SUPUESTOS_CIERRE)
         _texto(t["motivo"], r + ".termodinamica.motivo")
+        if "parametros" in t:
+            if t["supuesto"] != "u_lineal":
+                _fallo(r + ".termodinamica.parametros", "solo u_lineal declara parámetros")
+            par = _claves(t["parametros"], r + ".termodinamica.parametros", ["cId", "uRefId", "TRefId", "TMinId", "TMaxId"], ["rhoId"])
+            for k, d in par.items():
+                lec.dato(d, f"{r}.termodinamica.parametros.{k}")
+
+
+def t_tipo(o):
+    t = o.get("termodinamica")
+    return t.get("tipo") if isinstance(t, dict) else None
 
 
 def _extremo(v, ids_vol, ruta):
@@ -261,8 +292,17 @@ def _leer_corriente(c, r, ids_comp, ids_vol, lec):
         _ref(k, ids_comp, f"{r}.componenteIds[{j}]", "componente")
     _opcion(o["mecanismo"], r + ".mecanismo", ["convectivo", "selectivo", None])
     mat = _obj(o["materia"], r + ".materia")
-    _opcion(mat.get("modo"), r + ".materia.modo", ["por_componente", "total_desde_donante"])
-    if mat["modo"] == "por_componente":
+    _opcion(mat.get("modo"), r + ".materia.modo", ["por_componente", "total_desde_donante", "total_y_composicion"])
+    if mat["modo"] == "total_y_composicion":
+        _claves(mat, r + ".materia", ["modo", "base", "caudalId", "fracciones"])
+        lec.dato(mat["caudalId"], r + ".materia.caudalId")
+        fr = _obj(mat["fracciones"], r + ".materia.fracciones")
+        for k, x in fr.items():
+            _ref(int(k) if str(k).lstrip("-").isdigit() else k, ids_comp, f"{r}.materia.fracciones.{k}", "componente")
+            _numero(x, f"{r}.materia.fracciones.{k}")
+        if abs(sum(fr.values()) - 1) > 1e-12 or any(x < 0 for x in fr.values()):
+            _fallo(r + ".materia.fracciones", "fracciones no negativas que suman uno")
+    elif mat["modo"] == "por_componente":
         _claves(mat, r + ".materia", ["modo", "base", "caudalIds"])
         for k, d in _obj(mat["caudalIds"], r + ".materia.caudalIds").items():
             _ref(int(k) if str(k).lstrip("-").isdigit() else k, ids_comp, f"{r}.materia.caudalIds.{k}", "componente")
@@ -328,11 +368,20 @@ def _leer_restricciones(m):
         _fallo("restricciones", "las restricciones se declaran sobre variables del modelo matemático")
     campos = {s["id"] for s in m["matematico"]["simbolos"] if s["rol"] == "campo"}
     rs = _lista(m["restricciones"], "restricciones")
-    _unicos(rs, "restricciones", "simboloId")
+    vistos = set()
     for i, x in enumerate(rs):
         r = f"restricciones[{i}]"
-        o = _claves(x, r, ["simboloId", "tipo"])
-        _ref(o["simboloId"], campos, r + ".simboloId", "variable del modelo matemático")
+        if "simboloId" in _obj(x, r):
+            o = _claves(x, r, ["simboloId", "tipo"])
+            _ref(o["simboloId"], campos, r + ".simboloId", "variable del modelo matemático")
+            if o["simboloId"] in vistos:
+                _fallo(r + ".simboloId", f"identidad repetida: {o['simboloId']!r}")
+            vistos.add(o["simboloId"])
+        else:
+            # Una expresión de las variables que debe mantenerse >= 0 (dominio de validez de un supuesto).
+            o = _claves(x, r, ["expresion", "tipo", "descripcion"])
+            _obj(o["expresion"], r + ".expresion")
+            _texto(o["descripcion"], r + ".descripcion")
         _opcion(o["tipo"], r + ".tipo", ["no_negativo"])
 
 
