@@ -37,7 +37,7 @@ export default function MateriaFundamental({hojaId,nombreHoja='Nueva hoja',histo
   function seleccionPaso(indice: number) { setCoordenadaPendiente(null); dispatch({ tipo: 'ir', indice }); }
   return <div className={styles.page}>
     {!enEnsamblaje&&!integrado&&<BarraHojaMotor id={hojaId} nombre={nombreHoja} historial={historial} onNombre={onNombre}/>}
-    <header className={styles.header}><span className={styles.eyebrow}>Motor / Ecuaciones fundamentales</span>{integrado?<h2 className={styles.tituloBalance}>Balance de materia</h2>:<h1>Balance de materia</h1>}<span className={styles.scope}>Hoja de derivación simbólica · por componente · base másica</span></header>
+    <header className={styles.header}><span className={styles.eyebrow}>Engine / Ecuaciones fundamentales</span>{integrado?<h2 className={styles.tituloBalance}>Balance de materia</h2>:<h1>Balance de materia</h1>}<span className={styles.scope}>Hoja de derivación simbólica · por componente · base másica</span></header>
     <div className={styles.layout}>
       <section className={styles.equations} aria-label="Ecuaciones de materia">
         <article className={styles.equation}><header><h2>Balance fundamental</h2></header><div className={styles.wordBalance} aria-label="Acumulación = Entrada − Salida + Generación − Consumo"><span>Acumulación</span><b>=</b><span>Entrada</span><b>−</b><span>Salida</span><b>+</b><span>Generación</span><b>−</b><span>Consumo</span></div></article>

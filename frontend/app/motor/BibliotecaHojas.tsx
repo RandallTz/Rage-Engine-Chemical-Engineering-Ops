@@ -17,7 +17,7 @@ export default function BibliotecaHojas(){
   const router=useRouter();
   const hojas=useHojasMotor(),[creando,setCreando]=useState(false),[nombre,setNombre]=useState(''),[error,setError]=useState(''),[aviso,setAviso]=useState(''),[archivadas,setArchivadas]=useState(false);
   return <div className={styles.page}>
-    <header className={styles.heading}><div><span className={styles.eyebrow}>Motor / Sistemas</span><h1>Mis sistemas</h1></div><button className={styles.primary} onClick={()=>{setCreando(true);setError('');}}>Nueva hoja</button></header>
+    <header className={styles.heading}><div><span className={styles.eyebrow}>Engine / Sistemas</span><h1>Mis sistemas</h1></div><button className={styles.primary} onClick={()=>{setCreando(true);setError('');}}>Nueva hoja</button></header>
     {error&&<div role="alert" className={styles.error}>{error}<button aria-label="Cerrar aviso" onClick={()=>setError('')}>×</button></div>}
     {aviso&&<div role="status" className={styles.notice}>{aviso}<button aria-label="Cerrar confirmación" onClick={()=>setAviso('')}>×</button></div>}
     {creando?<form className={styles.newSheet} onSubmit={e=>{e.preventDefault();if(!nombre.trim()){setError('Escribe un nombre.');return;}try{const h=guardarHoja(nuevaHoja(nombre));router.push(`/motor/hojas/${h.id}`);}catch(e){setError((e as Error).message);}}}><h2>Nueva hoja</h2><label>Nombre<input autoFocus value={nombre} onChange={e=>setNombre(e.target.value)} maxLength={100} placeholder="Mi sistema"/></label><footer><button type="button" onClick={()=>setCreando(false)}>Cancelar</button><button className={styles.primary}>Crear hoja</button></footer></form>:<>
