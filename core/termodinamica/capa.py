@@ -71,11 +71,13 @@ def _sistema(modelo, v, paq):
         raise NoSoportado(f"el paquete {pid} todavía no está envuelto por la capa (solo paquetes de mezcla)")
     comps = {c["id"]: c for c in modelo["componentes"]}
     cas = [comps[i]["identidadQuimica"]["cas"] for i in v["componenteIds"]]
-    sust = None
-    if paq.get("datosPuros"):
-        from core import catalogo
-        sust = catalogo.leer_sustituciones(paq["datosPuros"], "datosPuros", set(cas))
-    return mz.Sistema(pid, cas, sustituciones=sust)
+    from core import catalogo, unifac
+    try:
+        sust = catalogo.leer_sustituciones(paq["datosPuros"], "datosPuros", set(cas)) if paq.get("datosPuros") else None
+        return mz.Sistema(pid, cas, sustituciones=sust)
+    except (mz.FaltaParametro, mz.FueraDeAlcance, unifac.FaltaDatoUNIFAC, catalogo.SustitucionRechazada) as e:
+        # Un dato que el paquete no tiene es un rechazo con su motivo, nunca un valor por omisión.
+        raise NoSoportado(f"paquete {pid} en el volumen {v['id']}: {e}") from e
 
 
 def candidatas(modelo, vid):

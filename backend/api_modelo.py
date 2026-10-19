@@ -2,6 +2,8 @@
 
   POST /modelo/validar   {modelo} -> lectura estricta, relaciones siempre presentes y variables de la capa
   POST /modelo/resolver  {modelo} -> conjunto de resultados en el formato común (compilador + solvers propios)
+  POST /modelo/termodinamica {modelo} | {solicitudV2} -> por volumen: cierre, fases candidatas, modelo de estado y
+                         relaciones siempre presentes (panel Termodinámica del Engine; no calcula estados)
 """
 from typing import Any
 
@@ -9,7 +11,9 @@ from fastapi import APIRouter, Body, HTTPException
 
 from core.compilador import NoSoportado, resolver
 from core.modelo import ErrorModelo, leer_modelo_comun, relaciones
+from core.modelo import desde_ensamblaje_v2
 from core.termodinamica import NoSoportado as CapaNoSoportada, variables
+from core.termodinamica.descripcion import describir
 
 router = APIRouter(prefix="/modelo", tags=["modelo"])
 
@@ -43,3 +47,15 @@ def resolver_modelo(cuerpo: Any = Body(...)):
         return resolver(m)
     except (NoSoportado, CapaNoSoportada) as e:
         raise HTTPException(422, {"codigo": "no_soportado", "mensaje": str(e)}) from e
+
+
+@router.post("/termodinamica")
+def termodinamica(cuerpo: Any = Body(...)):
+    if isinstance(cuerpo, dict) and "solicitudV2" in cuerpo:
+        try:
+            m = leer_modelo_comun(desde_ensamblaje_v2(cuerpo["solicitudV2"]))
+        except (ErrorModelo, KeyError, TypeError, ValueError) as e:
+            raise HTTPException(422, {"codigo": "solicitud_invalida", "mensaje": str(e)}) from e
+    else:
+        m = _modelo(cuerpo)
+    return describir(m)

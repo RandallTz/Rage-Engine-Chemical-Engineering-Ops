@@ -112,6 +112,45 @@ En todos los casos:
 
 **Rendimiento.** La red de cinco especies tarda ~255 s en el compilador común. Es un pendiente de pulido de la termodinámica: los flashes rápidos con semilla se repiten en cada etapa.
 
+## 4 bis. Panel Termodinámica de la hoja (18 de octubre de 2026)
+
+Toda hoja del Engine muestra cuatro paneles: Materia, Energía, Momento y **Termodinámica**. La termodinámica no se activa ni se desactiva: es el cierre de estado de cada volumen, «siempre presente». Su vista (`frontend/app/motor/TermodinamicaHoja.tsx`) muestra:
+
+1. **Relaciones siempre presentes:**
+   - relación fundamental;
+   - cierre de estado UV o PH, según la frontera;
+   - reparto entre las fases candidatas;
+   - propiedades de la mezcla;
+   - equilibrio entre las fases presentes;
+   - estabilidad por plano tangente;
+   - complementariedad β·tm = 0.
+2. **El cierre de cada volumen**, que publica el servidor en `POST /modelo/termodinamica` (`core/termodinamica/descripcion.py`, sin calcular estados):
+   - el paquete y su política de fases, o el supuesto con su motivo;
+   - las fases candidatas, las mismas que usa la capa;
+   - la familia del modelo de estado, con sus ecuaciones: ideal (Raoult con Poynting), actividad (γ_i con UNIFAC o NRTL) o IAPWS-95 (Helmholtz);
+   - las relaciones que ensambla el Engine.
+3. **Los supuestos termodinámicos posibles**, con su efecto sobre las ecuaciones, en qué volúmenes están activos y dónde se declaran:
+   - equilibrio con un paquete;
+   - solución ideal;
+   - coeficientes de actividad;
+   - vapor ideal;
+   - líquido incompresible;
+   - restringir a una fase;
+   - prohibir cambio de fase;
+   - u(T) lineal;
+   - estado no evaluado.
+
+**La vista es una derivación** (19 de octubre de 2026, principio 10 de la arquitectura):
+
+- Empieza en las relaciones termodinámicas fundamentales (paso 01). Cada supuesto de estado es un paso con su relación, con deshacer y rehacer: una fase, sin cambio de fase, densidad constante, u(T) lineal.
+- Esos supuestos se declaran **solo aquí**: `frontend/app/motor/recorridoTermodinamico.ts`, guardado en `recorridoTermodinamico` de la hoja. La derivación de energía conserva únicamente sus pasos y usa la formulación efectiva (`formulacionEnergiaHoja` añade los supuestos termodinámicos).
+- Con un cierre real (IAPWS-95, elegido en Estado), «una fase» y «sin cambio de fase» son su política de fases.
+- Las hojas guardadas antes se migran al leerlas (`migrarTermoHoja`): los pasos termodinámicos de su derivación de energía pasan, en orden y con sus relaciones, a la termodinámica. La formulación efectiva no cambia; la firma sí, así que conviene volver a resolver.
+
+Las hojas de red termodinámica (los ejemplos multifásicos, UNIFAC y de N componentes) ya no abren otra página: muestran los mismos paneles. Materia y energía presentan las ecuaciones que ensambla el Engine para la red; los interruptores informan («Lo fija la red»).
+
+Prueba: `python tests/validar_descripcion_termodinamica.py` (23): ideal, UNIFAC original y ELL, agua IAPWS-95 y un volumen con u(T) supuesta; las candidatas son iguales a las de la capa.
+
 ## 5. Límites
 - **Sólidos:** ningún paquete dinámico los tiene.
 - **Volumen con estado supuesto:** no tiene cierre que evaluar (`NoSoportado`). Es el caso de las hojas del solver TS.
