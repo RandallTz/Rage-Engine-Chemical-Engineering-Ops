@@ -96,6 +96,16 @@ Suites ejecutadas el 18 de octubre de 2026, sin cambios en el motor:
 - **Expresiones libres**: AST seguro sin certificación dimensional interna; `step` y pulsos requieren resolución temporal suficiente.
 - **Incidencias abiertas (F9)**: R1, criterios de fase inconsistentes entre búsqueda y publicación al cambiar la semilla; R2, candidatos fuera de dominio.
 - **Pruebas**: la referencia de F1 de `validar_motor_catalogo.py` quedó sobrescrita (ver §5).
+- **Aparición tardía de una fase (ensamblaje v2): corregida el 18 de octubre de 2026.**
+  - **Síntoma.** En el ejemplo `motor-ensamblaje-v2-resolver-unifac-red-5-especie-entrante`, el motor publicaba la segunda fase líquida de A a 141,41 s. El límite de estabilidad independiente (plano tangente LL con `thermo`) está entre 113,5860 y 113,5861 s.
+  - **Causa.**
+    - La vigilancia sí detectaba el cambio y la bisección lo localizaba en 113,5860 s.
+    - Pero el estado reintegrado hasta ese instante seguía siendo monofásico, porque difiere del interpolante en ~rtol justo en la arista.
+    - La búsqueda posterior por pasos que se duplican terminaba con un subintegrado fallido, y el paso entero (111 → 142 s) se aceptaba **sin evento**.
+  - **Corrección** (`core/ensamblaje_red.py`, `integrar`): si esa búsqueda no encuentra el cambio, el evento se toma en el instante de la bisección con el estado del interpolante, que la bisección ya demostró que cambia de conjunto de fases. El paso solo se acepta sin evento si tampoco ese estado cambia.
+  - **Resultado.** Aparición a 113,58592 s (frente al compilador común, 113,58602 s); trayectoria igual a la del compilador común a 3e-7, antes 6e-5. Se regeneró el ejemplo (solo cambió ese archivo; los diagramas cambiaron únicamente su campo `segundos` y se restauraron).
+  - **Suites.** `validar_motor_ensamblaje_v2` 114, `validar_motor_consolidacion_v2` 128, `validar_motor_n_componentes` 82, `validar_motor_unifac` 136, `verificar_contrato_unifac`, `npm run test:motor-fundamental`, `validar_corte_vertical` 71 y `validar_capa_unifac` 82: todas pasan.
+  - **Alcance.** No cierra el pendiente general del checklist «Detección de transiciones no capturadas por el muestreo de pasos»: una fase que aparece y desaparece entre dos puntos vigilados sigue sin verse. El integrador v1 (`core/ensamblaje_dinamico.py`) no tenía este camino.
 - **Interfaz**: un botón verde sin texto en la fila de acciones de `/motor/hojas`, observado durante la integración con adimensionalización.
 
 ## 7. Dónde se acopla la adimensionalización

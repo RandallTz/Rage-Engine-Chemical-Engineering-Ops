@@ -401,6 +401,8 @@ dominio, por el mismo mecanismo que el paquete NRTL-LLE. Fuera de ese intervalo 
 
 ## 13. Cambios publicados y comparación con los ejemplos anteriores
 
+**18 de octubre de 2026.** Se regeneró `motor-ensamblaje-v2-resolver-unifac-red-5-especie-entrante-respuesta.json`. La segunda fase líquida de A pasa de 141,41 s a 113,58592 s, el límite de estabilidad independiente, tras corregir la aceptación de un paso sin evento en `core/ensamblaje_red.py` (`frontend/MAPA_MOTOR.md` §6). No cambió ningún otro ejemplo UNIFAC.
+
 Se copió `docs/ejemplos/` antes de los cambios y se regeneró con los cuatro generadores del motor:
 
 - `generar_ejemplos_motor_termodinamica`;

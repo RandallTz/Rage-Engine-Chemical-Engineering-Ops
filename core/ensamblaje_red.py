@@ -28,7 +28,10 @@ Integrales auxiliares (y[k] despues de los estados):
 Eventos, reintentos y muestras como core/ensamblaje_dinamico.py (v1):
 vigilancia del conjunto de fases de cada volumen en 3 puntos interiores y el
 extremo de cada paso aceptado, biseccion, re-integracion hasta el evento y
-reinicio; un flash que falla no reutiliza propiedades anteriores.
+reinicio; un flash que falla no reutiliza propiedades anteriores. Si el estado
+reintegrado no muestra el cambio que la biseccion localizo, el evento se toma
+con el estado del interpolante en ese instante (nunca se acepta el paso sin
+evento a traves de una transicion localizada; corregido el 18-10-2026).
 """
 
 import math
@@ -490,6 +493,7 @@ def integrar(red, y0):
                     else:
                         lo = mid
                 t_e = hi
+                t_biseccion = hi
                 sis.semillas = list(sem_a)
                 sub = (RK45(sis, t_a, y_a, t_e, rtol=red.rtol, atol=atol, max_step=paso_max,
                             first_step=min(t_e - t_a, paso_max)) if t_e > t_a else None)
@@ -543,6 +547,24 @@ def integrar(red, y0):
                             tray.tramos.extend(tramos2)
                             t_e, y_e, nuevos, hallado = t_c, y_c, cand, True
                             break
+                    if not hallado:
+                        # La busqueda no encontro el cambio en el estado reintegrado (o un subintegrado fallo al
+                        # cruzar la arista). Antes se aceptaba entonces el paso ENTERO sin evento y la fase nueva
+                        # no se publicaba hasta pasos despues: en la red de 5 especies UNIFAC la segunda fase
+                        # liquida salia 28 s tarde (141,41 s frente al limite de estabilidad independiente,
+                        # 113,586 s; hallado el 18-10-2026, tests/validar_capa_unifac.py). La biseccion ya
+                        # demostro que el estado del interpolante cambia de conjunto de fases en t_biseccion: el
+                        # evento se toma ahi, con ese estado (error ~rtol, como cualquier punto de la salida densa).
+                        y_c = interp(t_biseccion)
+                        try:
+                            cand = [sis.estado_vol(t_biseccion, y_c, j, semilla=sem_a[j]) for j in range(nv)]
+                        except mz.FueraDeAlcance:
+                            cand = None
+                        if cand is not None and any(firma(cand[j]) != firmas[j] for j in range(nv)):
+                            while tray.tramos and tray.tramos[-1].t0 >= t_a and tray.tramos[-1].interp is not None:
+                                tray.tramos.pop()
+                            tray.tramos.append(Tramo(t_a, t_biseccion, interp))
+                            t_e, y_e, nuevos, hallado = t_biseccion, y_c, cand, True
                     if not hallado:
                         sis.semillas = sem_b
                         tray.tramos.append(Tramo(t_a, t_b, interp))
