@@ -56,8 +56,10 @@ function EntradaEscala({ escala, cambiar }: { escala: Escala; cambiar: (e: Escal
   </div>;
 }
 
-export default function Editor({ inicial, guardar, textoInicial, guardarTexto, volver, barra }: {
+export default function Editor({ inicial, guardar, textoInicial, guardarTexto, volver, barra, derivadaDe }: {
   inicial?: Documento; guardar?: (doc: Documento) => void; textoInicial?: string | null; guardarTexto?: (texto: string) => void; volver?: () => void; barra?: ReactNode;
+  /** Hoja del Engine de la que se derivaron las ecuaciones: el modelo no se edita aquí (principio 10). */
+  derivadaDe?: { hojaId: string; nombre: string };
 }) {
   const [h, dispatch] = useReducer(historial, { contador: 0, actual: inicial ?? null, antes: [], despues: [] });
   const [error, setError] = useState("");
@@ -136,7 +138,7 @@ export default function Editor({ inicial, guardar, textoInicial, guardarTexto, v
         {doc.modelo.condiciones.map(c => {
           const dom = doc.modelo.dominios.find(d => d.id === c.dominioId);
           return <div key={c.id} className="adim-condicion">
-            <p className="adim-etiqueta">{c.tipo}{dom && c.tipo !== "inicial" && <> · <select aria-label={`Extremo de ${c.id}`} value={c.ubicacion?.extremo ?? ""} onChange={e => {
+            <p className="adim-etiqueta">{c.tipo}{dom && c.tipo !== "inicial" && <> · <select aria-label={`Extremo de ${c.id}`} disabled={!!derivadaDe} value={c.ubicacion?.extremo ?? ""} onChange={e => {
               const ext = e.target.value as "desde" | "hasta" | "";
               ejecutar(() => editarModelo(doc, { ...doc.modelo, condiciones: doc.modelo.condiciones.map(item => item.id === c.id ? { ...item, ubicacion: ext ? { variableId: dom.variableId, extremo: ext } : undefined } : item) }));
             }}><option value="">extremo sin indicar</option><option value="desde">en {expresar(dom.desde)}</option><option value="hasta">en {expresar(dom.hasta)}</option></select></>}</p>
@@ -148,7 +150,7 @@ export default function Editor({ inicial, guardar, textoInicial, guardarTexto, v
       <details><summary>Edición estructurada (JSON)</summary>
         <p>Para declarar dominios, condiciones, objetivos o cambios de variable no lineales. Guardar el modelo incrementa su revisión.</p>
         <div className="adim-avanzado-acciones">
-          <button type="button" onClick={() => setEditor(JSON.stringify(doc.modelo, null, 2))}>Editar el modelo</button>
+          {!derivadaDe && <button type="button" onClick={() => setEditor(JSON.stringify(doc.modelo, null, 2))}>Editar el modelo</button>}
           <button type="button" onClick={() => setEditor(JSON.stringify({ ...forma, transformaciones: forma.transformaciones ?? [] }, null, 2))}>Editar objetivos y mapas</button>
         </div>
         {editor !== null && <>
@@ -164,7 +166,7 @@ export default function Editor({ inicial, guardar, textoInicial, guardarTexto, v
 
   return <div className="adim adim-hoja">
     {error && <div role="alert" className={styles.error}>{error}<button aria-label="Cerrar aviso" onClick={() => setError("")}>×</button></div>}
-    {doc && <EntradaSimple key={`${doc.id}:${doc.modelo.id}`} documento={doc} revisionVista={h.contador} textoInicial={textoInicial} guardarTexto={guardarTexto} volver={volver} barra={barra} avanzado={avanzado}
+    {doc && <EntradaSimple key={`${doc.id}:${doc.modelo.id}`} documento={doc} revisionVista={h.contador} textoInicial={textoInicial} guardarTexto={guardarTexto} volver={volver} barra={barra} avanzado={avanzado} derivadaDe={derivadaDe}
       procesar={modelo => {
         try {
           if (igualdadProfunda(modelo, doc.modelo)) return doc;

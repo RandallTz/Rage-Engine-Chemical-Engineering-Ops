@@ -29,7 +29,9 @@ function descargar(nombre: string, texto: string, tipo = "application/json") {
   const a = document.createElement("a"); a.href = url; a.download = nombre; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export default function EntradaSimple({ documento, procesar, revisionVista, textoInicial, guardarTexto, volver, barra, avanzado }: {
+export default function EntradaSimple({ documento, procesar, revisionVista, textoInicial, guardarTexto, volver, barra, avanzado, derivadaDe }: {
+  /** Ecuaciones derivadas en una hoja del Engine: se leen, no se escriben (principio 10). */
+  derivadaDe?: { hojaId: string; nombre: string };
   documento: Documento; revisionVista: number; procesar: (modelo: Modelo) => Documento | null; textoInicial?: string | null; guardarTexto?: (texto: string) => void;
   volver?: () => void; barra?: ReactNode; avanzado?: ReactNode;
 }) {
@@ -136,14 +138,15 @@ export default function EntradaSimple({ documento, procesar, revisionVista, text
     <div className={styles.solveLayout}>
       <section className="adim-pagina">
         <form id="adim-form-ecuaciones" className="adim-simple" onSubmit={e => { e.preventDefault(); enviar(); }}>
-          <label htmlFor="adim-ecuacion" className="adim-input-label">Ecuación o sistema</label>
-          <details className="adim-insertar">
+          <label htmlFor="adim-ecuacion" className="adim-input-label">{derivadaDe ? `Ecuaciones derivadas en la hoja del Engine «${derivadaDe.nombre}»` : "Ecuación o sistema"}</label>
+          {derivadaDe && <p className="adim-input-hint">Vienen de las ecuaciones fundamentales y los supuestos de esa hoja; aquí no se escriben. Para cambiarlas, edita la hoja en el Engine y vuelve a importarla. <a href={`/motor/hojas/${derivadaDe.hojaId}`}>Abrir la hoja del Engine ↗</a></p>}
+          {!derivadaDe && <details className="adim-insertar">
             <summary>Insertar operador</summary>
             <div className="adim-quick-toolbar" aria-label="Operadores">
               {OPERADORES.map(([snippet, etiqueta, ayuda]) => <button key={snippet} type="button" className="adim-chip-btn" onClick={() => insertar(snippet)} title={ayuda}>{etiqueta}</button>)}
             </div>
-          </details>
-          <textarea id="adim-ecuacion" aria-describedby="adim-sintaxis" spellCheck={false} value={texto}
+          </details>}
+          <textarea id="adim-ecuacion" aria-describedby="adim-sintaxis" spellCheck={false} value={texto} readOnly={!!derivadaDe}
             placeholder="d(c_A,t) = D*lap(c_A,x) - k_1*c_A*c_B + k_2*c_C"
             onChange={e => { control.current?.abort(); setBorrador({ base, texto: e.target.value }); guardarTexto?.(e.target.value); setMensaje(""); setEnviado(false); }}
             onBlur={() => { const norm = normalizarSubindicesEntrada(texto); if (norm !== texto) { setBorrador({ base, texto: norm }); guardarTexto?.(norm); } }} />

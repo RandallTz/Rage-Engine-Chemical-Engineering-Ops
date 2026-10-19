@@ -20,3 +20,13 @@ export function leerOrigen(documentoId: string): OrigenMotor | null {
     return o && o.version === VERSION_IMPORTACION && typeof o.hojaId === "string" && Array.isArray(o.componentes) ? o : null;
   } catch { return null; }
 }
+
+/** Una copia de una hoja importada sigue viniendo de la misma hoja del Engine. */
+export function copiarOrigen(deDocumentoId: string, aDocumentoId: string) {
+  try {
+    for (const prefijo of ["adim.motor.", "adim.valores."]) {
+      const t = localStorage.getItem(prefijo + deDocumentoId);
+      if (t !== null) localStorage.setItem(prefijo + aDocumentoId, t);
+    }
+  } catch { /* sin almacenamiento */ }
+}

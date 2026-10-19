@@ -31,7 +31,13 @@ La adimensionalización es una extensión del motor (`/motor`). Lee sus hojas de
 
 **Interfaz** (`frontend/app/adimensionalizacion`):
 
-- **Cuaderno:** Mis hojas · Del motor · Catálogo (21 modelos) · Archivadas. Exportar e importar el cuaderno.
+- **Cuaderno (desde el 19 de octubre de 2026):** Desde el Engine · Adimensionalizadas · Archivadas · Retiradas. Exportar e importar el cuaderno.
+  - **Única entrada:** una hoja del Engine. La adimensionalización trabaja solo sobre ecuaciones derivadas de las fundamentales con supuestos (ARQUITECTURA_MOTOR.md §2, principio 10).
+  - Ya no se escriben modelos aquí: desaparecieron «Nueva hoja», el «Catálogo» y «Añadir modelos de partida».
+  - En un documento derivado, las ecuaciones se muestran solo para leer, con el enlace a su hoja del Engine. Para cambiarlas, se edita la hoja y se vuelve a importar.
+  - La edición del modelo en JSON y la ubicación de las condiciones quedan cerradas. Sí se trabaja lo propio de la adimensionalización: escalas, objetivos, mapas, signo de las variables y estudios.
+  - **Retiradas:** al abrir el cuaderno, o al importarlo, todo documento sin origen en el Engine (`adim.motor.<id>`) queda retirado (`hojas.ts`, `retirarEscritas`). Se conserva, con su motivo y su fecha, para exportarlo; no se abre para trabajar.
+  - `ejemplos.ts` y los `docs/ejemplos/adimensionalizacion-*` siguen como fixtures de prueba del núcleo y del formato; no se ofrecen en la interfaz.
 - **Hoja**, con el recorrido del motor (← Hojas · Ecuaciones · Formulaciones · Estudio · Desarrollo · Comparar). Cada página tiene tarjeta, panel con cifras y un botón principal:
   - Ecuaciones: texto, vista previa, unidades y «Opciones avanzadas» (búsqueda, escalas fijadas, signos, dominios y condiciones, JSON, importar o exportar el documento);
   - Formulaciones: ecuaciones adimensionales, grupos y detalles técnicos plegados;

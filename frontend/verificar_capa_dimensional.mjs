@@ -40,7 +40,12 @@ c.hojas.push(copia); c.activaId = copia.id;
 assert.deepEqual(hojas.leerCuaderno(JSON.stringify(c)), c); n++;
 const archivado = hojas.archivarHoja(c, copia.id);
 assert.equal(archivado.activaId, c.hojas[0].id); assert(archivado.hojas[1].archivada); n++;
-assert.throws(() => hojas.archivarHoja(archivado, c.hojas[0].id)); n++;
+// Archivar la última hoja abierta deja el cuaderno sin activa (válido), y retirar las escritas las conserva.
+const sinAbiertas = hojas.archivarHoja(archivado, c.hojas[0].id);
+assert.equal(sinAbiertas.activaId, ""); assert.deepEqual(hojas.leerCuaderno(JSON.stringify(sinAbiertas)), sinAbiertas); n++;
+const retirado = hojas.retirarEscritas(c, () => false, "2026-10-19T00:00:00.000Z");
+assert(retirado.hojas.every(h => h.retirada?.motivo === hojas.MOTIVO_RETIRO) && retirado.activaId === "" && retirado.hojas.length === c.hojas.length);
+assert.deepEqual(hojas.retirarEscritas(retirado, () => false), retirado); assert.deepEqual(hojas.leerCuaderno(JSON.stringify(retirado)), retirado); n++;
 for (const alterar of [r => r.version++, r => r.hojas.push(r.hojas[0]), r => r.activaId = "ausente", r => r.hojas[0].borrador = "x".repeat(20001), r => r.hojas[0].documento.version = 99]) {
   const mala = structuredClone(c); alterar(mala); assert.throws(() => hojas.leerCuaderno(JSON.stringify(mala))); n++;
 }
