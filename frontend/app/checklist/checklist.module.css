@@ -1,0 +1,21 @@
+.page { flex:1; padding:40px clamp(24px,5.5vw,88px) 64px; background:#f6f4ef; color:#293222; color-scheme:light; }
+.header { max-width:1400px; margin:0 auto 38px; display:flex; align-items:baseline; justify-content:space-between; gap:20px; }
+.header h1 { font-size:clamp(26px,3vw,36px); font-weight:500; letter-spacing:-.045em; line-height:1.2; }
+.header a { font-size:12px; color:#60695a; text-decoration:underline; text-underline-offset:4px; }
+.header a:hover { color:#293222; }
+.header a:focus-visible { outline:2px solid #536844; outline-offset:5px; }
+.grid { max-width:1400px; margin:auto; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:clamp(24px,3vw,48px); }
+.section { --accent:#416647; min-width:0; border-top:3px solid var(--accent); }
+.section[data-area=termodinamica] { --accent:#8a693a; }
+.section[data-area=energia] { --accent:#b34635; }
+.section h2 { font-size:24px; font-weight:500; letter-spacing:-.035em; color:var(--accent); padding:21px 0 26px; }
+.group + .group { margin-top:30px; }
+.group h3 { display:flex; align-items:baseline; justify-content:space-between; padding-bottom:10px; border-bottom:1px solid #d6dbd0; font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:.06em; color:#687060; }
+.group h3 span { font-variant-numeric:tabular-nums; letter-spacing:0; }
+.group ul { list-style:none; padding:0; margin:0; }
+.group li { display:grid; grid-template-columns:15px minmax(0,1fr); align-items:start; gap:11px; padding:11px 0; font-size:13px; line-height:1.55; border-bottom:1px solid #e5e6de; }
+.check { display:block; position:relative; width:15px; height:15px; margin-top:3px; border:1px solid #aab1a2; border-radius:3px; }
+.group li[data-done=true] .check { border-color:var(--accent); background:var(--accent); }
+.group li[data-done=true] .check::after { content:''; position:absolute; left:4px; top:1px; width:5px; height:9px; border:solid #fff; border-width:0 1.5px 1.5px 0; transform:rotate(45deg); }
+@media(max-width:900px) { .grid { grid-template-columns:1fr; gap:42px; } .header { margin-bottom:28px; flex-wrap:wrap; } .section h2 { padding-bottom:18px; } }
+@media print { .header a { display:none; } .page { padding:0; } .grid { gap:22px; } .group li { break-inside:avoid; font-size:10px; padding:6px 0; } }
