@@ -18,6 +18,8 @@ Antes de cambiar nada en este repositorio, lee en este orden:
 
 **Prioridades vigentes** (decisiones del usuario, ARQUITECTURA_MOTOR.md §9.1 y §10 «Orden vigente»): UNIFAC con prioridad completa y NRTL sin tratar; primero pulir la termodinámica, después los balances pendientes del checklist; la discretización y el mallado son del motor de solvers y transformación, un paso posterior a la adimensionalización; Ecuaciones y Adimensionalización se unificarán en una hoja única (§11).
 
+**Project board** (user decision, 22 October 2026): before planning or implementing any new feature or change, run `node tools/roadmap_board/build_board.mjs --check` and locate the request in the project board registries (`docs/engine/project-board.json` for milestones, gates, decisions and risks; the Checklist registry for capabilities). State which milestone or capability it advances, any unfinished dependency, scope conflict with M1, file ownership or open decision it touches, and follow the user's decision before starting out-of-scope work. In the same change that delivers work, update those registries and make the check pass; Claude sessions then refresh the user's board, while Codex reports "board refresh pending". The procedure is in [tools/roadmap_board/README.md](tools/roadmap_board/README.md).
+
 Reglas mínimas (detalle en ARQUITECTURA_MOTOR.md §8):
 
 - Sin commit ni push salvo que el usuario lo pida; al commitear, archivo por archivo, nunca `git add -A`.
