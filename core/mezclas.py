@@ -437,17 +437,27 @@ class Sistema:
             w1 = 1 / (1 + np.exp(-u))
             tm = self._tm_liquido_lote(T, P, np.column_stack([w1, 1 - w1]), mu_ref, idx)
             kmin = int(np.argmin(tm))
+            from scipy.optimize import minimize_scalar
             for k in range(1, len(u) - 1):
                 # Un minimo local de la malla (paso 0.05 en logit) con tm > 1e-4 no baja de -TOL_TM
                 # dentro de su celda para estas funciones suaves; se refinan los cercanos a 0 y el global.
                 if tm[k] <= tm[k - 1] and tm[k] <= tm[k + 1] and (tm[k] < 1e-4 or k == kmin):
-                    from scipy.optimize import minimize_scalar
                     f = lambda uu: self._tm_liquido(T, P, [1 / (1 + math.exp(-uu)), 1 - 1 / (1 + math.exp(-uu))],
                                                     mu_ref, idx)
                     r = minimize_scalar(f, bounds=(u[k - 1], u[k + 1]), method="bounded",
                                         options={"xatol": 1e-12})
                     a = 1 / (1 + math.exp(-r.x))
                     sal.append(("liquido", np.array([a, 1 - a]), float(min(r.fun, tm[k]))))
+            # A minimum at the grid edge (|u| = 34, fraction < 2e-15: a near-pure phase with a trace) is
+            # refined beyond the edge. Both fractions are evaluated without cancellation, so neither rounds to
+            # 0, which is outside the logarithm's domain; |u| <= 690 keeps exp(|u|) finite.
+            for k, neighbor, limit in ((0, 1, -690.0), (len(u) - 1, len(u) - 2, 690.0)):
+                if tm[k] <= tm[neighbor] and (tm[k] < 1e-4 or k == kmin):
+                    pair = lambda uu: [1 / (1 + math.exp(-uu)), 1 / (1 + math.exp(uu))]
+                    f = lambda uu: self._tm_liquido(T, P, pair(uu), mu_ref, idx)
+                    r = minimize_scalar(f, bounds=tuple(sorted((limit, u[neighbor]))), method="bounded",
+                                        options={"xatol": 1e-12})
+                    sal.append(("liquido", np.array(pair(r.x)), float(min(r.fun, tm[k]))))
             return sal
         if n == 3:
             N = 60
@@ -875,16 +885,72 @@ class Sistema:
             return self._recalificar(ult[T_hi], espec)
         # Brent: la propiedad de equilibrio es creciente y continua en T salvo en una meseta (componente
         # puro o azeotropo exacto), donde salta; ahi Brent converge al salto y se aplica la palanca.
-        T = brentq(Y, T_lo, T_hi, xtol=1e-300, rtol=4.5e-16 * 4, maxiter=500)
+        try:
+            T = brentq(Y, T_lo, T_hi, xtol=1e-300, rtol=4.5e-16 * 4, maxiter=500)
+        except FueraDeAlcance as x:
+            # A two-phase band narrower than the stability-test resolution (near-pure mixture) can prevent
+            # certifying an intermediate TP state; the target state is then sought in phase amounts.
+            if x.motivo != "no_convergente":
+                raise
+            e = self._isobaric_by_phase_amounts(P, n, y_nombre, objetivo, espec, ult)
+            if e is None:
+                raise
+            return self._recalificar(e, espec)
         e = ult.get(T) or self._TP_seguro(T, P, n)
-        if abs((e.H if y_nombre == "h" else e.U) - objetivo) <= 1e-10 * max(abs(objetivo), R * T * n.sum()):
+        tolerancia = 1e-10 * max(abs(objetivo), R * T * n.sum())
+        if abs((e.H if y_nombre == "h" else e.U) - objetivo) <= tolerancia:
             return self._recalificar(e, espec)
         e = self._mesetas(T, P, n, "h" if y_nombre == "h" else "u", objetivo)
         if e is None:
             e = self._meseta_general(T, P, n, "T", y_nombre, objetivo)
         if e is None:
+            e = self._isobaric_by_phase_amounts(P, n, y_nombre, objetivo, espec, ult)
+        if e is None:
             raise FueraDeAlcance("no_convergente", f"{espec}: la búsqueda en T no converge ni es una meseta.")
         return self._recalificar(e, espec)
+
+    def _isobaric_by_phase_amounts(self, P, n, y_name, target, spec, evaluated):
+        """PH/UP when T is ill-conditioned. For a near-pure mixture the two-phase band is about trace x K wide
+        and dY/dT grows without bound: two adjacent floating-point temperatures bracket the root while neither
+        meets the tolerance. With T and the phase amounts as unknowns (the flash_rapido Newton: equal chemical
+        potentials plus the energy constraint) the problem is well conditioned. The seed uses the phases of
+        the evaluated states on both sides of the root. Only a state that passes all of its verifications and
+        meets the target with the T-search tolerance is accepted; otherwise None, and the caller keeps its
+        diagnostic."""
+        idx = [i for i in range(len(n)) if n[i] > 0]
+        if len(idx) < 2:
+            return None
+        offset = lambda e: (e.H if y_name == "h" else e.U) - target
+        below = [T for T, e in evaluated.items() if offset(e) < 0]
+        above = [T for T, e in evaluated.items() if offset(e) > 0]
+        if not below or not above:
+            return None
+        sides = (evaluated[max(below)], evaluated[min(above)])
+        phases = []
+        for e in sides:
+            for f in e.fases:
+                x = f.x[idx]
+                if not any(t == f.tipo and np.max(np.abs(x - x0)) < 1e-5 for t, x0 in phases):
+                    phases.append((f.tipo, x))
+        if len(phases) < 2 or len(phases) > MAX_FASES:
+            return None
+        nz = n[idx]
+        T0 = 0.5 * (sides[0].T + sides[1].T)
+        seed = self._semilla_de(T0, P, n, idx, [(t, x * nz.sum() / len(phases)) for t, x in phases])
+        e = None
+        for _ in range(3):
+            try:
+                e = self._newton(spec, P, target, n, seed)
+                break
+            except _NuevaSemilla as retry:
+                seed = retry.semilla
+            except (_Completo, FueraDeAlcance, np.linalg.LinAlgError, FloatingPointError, OverflowError, ValueError):
+                return None
+        if e is None or abs(offset(e)) > 1e-10 * max(abs(target), R * e.T * n.sum()):
+            return None
+        if any(not (residual <= tolerance) for residual, tolerance, _ in e.verificaciones.values()):
+            return None
+        return e
 
     def _recalificar(self, e, espec):
         e.especificacion = espec
@@ -1077,7 +1143,7 @@ def _newton(self, espec, a, b, n, semilla):
         # composiciones de la semilla escaladas a las cantidades actuales
         part = [np.maximum(f.n * f.x[idx], 1e-300) for f in fs_sem]
         tot = np.sum(part, axis=0)
-        part = [p * nz / tot for p in part]
+        part = [p * (nz / tot) for p in part]          # ratio ~1: p * nz underflows for traces (1e-200 * 1e-200)
         T = semilla.T
         P = semilla.P if espec in ("TP", "UV") else a
         if espec == "TP":
