@@ -1,33 +1,52 @@
-# Guía para agentes (Claude, Codex, Gemini u otros)
+# Guide for agents (Claude, Codex, Gemini or others)
 
-Antes de cambiar nada en este repositorio, lee en este orden:
+Before changing anything in this repository, read in this order:
 
-1. [ARQUITECTURA_MOTOR.md](ARQUITECTURA_MOTOR.md): qué es el simulador, el motor de motores, el modelo común, la termodinámica siempre presente, dónde vive hoy cada pieza, las reglas de trabajo y el orden de migración.
-2. Los contratos comunes:
-   - [docs/CONTRATO_MODELO_COMUN.md](docs/CONTRATO_MODELO_COMUN.md): el modelo;
-   - [docs/CAPA_TERMODINAMICA.md](docs/CAPA_TERMODINAMICA.md): la termodinámica siempre presente;
-   - [docs/SERVICIO_UNIDADES.md](docs/SERVICIO_UNIDADES.md): unidades;
-   - [docs/FORMATO_RESULTADOS.md](docs/FORMATO_RESULTADOS.md): resultados y gráficas;
-   - [docs/CORTE_VERTICAL.md](docs/CORTE_VERTICAL.md): compilador y solver propios, de punta a punta.
-   - [docs/MOTOR_BALANCES.md](docs/MOTOR_BALANCES.md): ecuaciones generadas en el servidor desde los supuestos de cada volumen;
-   - [docs/BATERIA_MULTIFISICA.md](docs/BATERIA_MULTIFISICA.md) (generado): qué hojas resuelve el Engine común y qué falta.
-3. [frontend/MAPA_MOTOR.md](frontend/MAPA_MOTOR.md): inventario funcional del motor actual (`/motor`), su alcance y su verificación.
-4. El documento de continuidad o de alcance de la pieza que vayas a tocar:
-   - adimensionalización: [frontend/ADIMENSIONALIZACION_ALCANCE.md](frontend/ADIMENSIONALIZACION_ALCANCE.md) y [frontend/CONTINUIDAD_CLAUDE_ADIMENSIONALIZACION.md](frontend/CONTINUIDAD_CLAUDE_ADIMENSIONALIZACION.md);
-   - motor: [frontend/ROADMAP_MOTOR_MULTIFISICO.md](frontend/ROADMAP_MOTOR_MULTIFISICO.md).
+1. [ARCHITECTURE.md](ARCHITECTURE.md): what the simulator is, the engine of engines, the common model, the always-present thermodynamics, where each piece lives today, the working rules and the migration order.
+2. The common contracts:
+   - [docs/contracts/common-model.md](docs/contracts/common-model.md): the model;
+   - [docs/contracts/thermodynamic-layer.md](docs/contracts/thermodynamic-layer.md): the always-present thermodynamics;
+   - [docs/contracts/units-service.md](docs/contracts/units-service.md): units;
+   - [docs/contracts/results-format.md](docs/contracts/results-format.md): results and charts;
+   - [docs/engine/vertical-slice.md](docs/engine/vertical-slice.md): the project's own compiler and solver, end to end;
+   - [docs/engine/balance-engine.md](docs/engine/balance-engine.md): equations generated on the server from each volume's assumptions;
+   - [docs/engine/multiphysics-battery.md](docs/engine/multiphysics-battery.md) (generated): which sheets the common Engine solves and what is missing.
+3. [docs/engine/engine-map.md](docs/engine/engine-map.md): functional inventory of the current engine (`/motor`), its scope and its verification.
+4. The continuity or scope document of the piece you are about to touch:
+   - nondimensionalization: [docs/nondimensionalization/scope.md](docs/nondimensionalization/scope.md) and [docs/nondimensionalization/continuity.md](docs/nondimensionalization/continuity.md);
+   - engine: [docs/engine/multiphysics-roadmap.md](docs/engine/multiphysics-roadmap.md).
 
-**Prioridades vigentes** (decisiones del usuario, ARQUITECTURA_MOTOR.md §9.1 y §10 «Orden vigente»): UNIFAC con prioridad completa y NRTL sin tratar; primero pulir la termodinámica, después los balances pendientes del checklist; la discretización y el mallado son del motor de solvers y transformación, un paso posterior a la adimensionalización; Ecuaciones y Adimensionalización se unificarán en una hoja única (§11).
+The documentation index is [docs/README.md](docs/README.md). The repository is being cleaned up and moved to English in phases: [docs/repository-cleanup/README.md](docs/repository-cleanup/README.md).
 
-**Project board** (user decision, 22 October 2026): before planning or implementing any new feature or change, run `node tools/roadmap_board/build_board.mjs --check` and locate the request in the project board registries (`docs/engine/project-board.json` for milestones, gates, decisions and risks; the Checklist registry for capabilities). State which milestone or capability it advances, any unfinished dependency, scope conflict with M1, file ownership or open decision it touches, and follow the user's decision before starting out-of-scope work. In the same change that delivers work, update those registries and make the check pass; Claude sessions then refresh the user's board, while Codex reports "board refresh pending". The procedure is in [tools/roadmap_board/README.md](tools/roadmap_board/README.md).
+**Documentation maintenance** (user decision, 19 October 2026): update the existing canonical documents in place. Do not create a new plan, handoff, continuation guide or report for each change, session or agent. Follow the [documentation maintenance standard](docs/README.md#documentation-maintenance-standard); use the existing workspace specification for product behavior and the existing roadmap for priorities. This applies to all future work, including Claude.
 
-Reglas mínimas (detalle en ARQUITECTURA_MOTOR.md §8):
+**Capability maintenance** (user decision, 19 October 2026): `/checklist` is the visible inventory of what the Engine can do. Update its existing English registry and generated canonical snapshot whenever a delivered capability changes; distinguish verified scope, pending extensions and deferred work. See [the workspace specification](docs/engine/model-workspaces.md#model-derivation-standard-and-audit). Do not create another capability report or mark a contract-only feature complete.
 
-- Sin commit ni push salvo que el usuario lo pida; al commitear, archivo por archivo, nunca `git add -A`.
-- No modificar `/motor`, `/laboratorio` ni sus backends sin encargo expreso.
-- La interfaz no calcula: ciencia, unidades y solvers en Python.
-- Todo modelo parte de las ecuaciones fundamentales y llega al modelo con supuestos registrados; nunca se plantea el modelo directamente (ARQUITECTURA_MOTOR.md §2, principio 10).
-- Cada ecuación va en su lugar: un panel (materia, energía, momento, termodinámica) muestra solo su familia; la clasificación está en `frontend/app/motor/ubicacionEcuaciones.ts` (ARQUITECTURA_MOTOR.md §8).
-- Toda fórmula se comprueba numéricamente contra una referencia antes de darla por buena.
-- No detener procesos ajenos (frontend en 3000, backends en 8004 y 8005); los propios, por PID.
+**Project board** (user decision, 22 October 2026): before planning or implementing any new feature or change, run `node tools/roadmap_board/build_board.mjs --check` and locate the request in the project board registries (`docs/engine/project-board.json` for milestones, gates, decisions and risks; the Checklist registry for capabilities). State which milestone or capability it advances, any unfinished dependency, scope conflict with M1, file ownership or open decision it touches, and follow the user's decision before starting out-of-scope work. Claim the milestone and the files you will edit before editing them, and release the claim when the work stops; never edit paths the other agent claims or owns (see "Working in parallel" in the procedure). In the same change that delivers work, update those registries and make the check pass; Claude sessions then refresh the user's board, while Codex reports "board refresh pending". The procedure is in [tools/roadmap_board/README.md](tools/roadmap_board/README.md).
 
-`frontend/AGENTS.md` añade las notas propias de Next.js para el código del frontend.
+**Mandatory framework for future work** (user decision, 19 October 2026): **Model → Transform → Solve → Results**, connected through one common model and one versioned sheet. Before implementing any request, identify its primary workspace, inputs, outputs, affected consumers and invalidation rules. Cross-cutting services remain shared. See [ARCHITECTURE.md §12](ARCHITECTURE.md#12-four-workspace-framework-user-decision-19-october-2026), which governs workspace boundaries and supersedes the older navigation in §5 and §11.
+
+**Product terminology and implementation:** the user creates a **model**, not a sheet. The canonical frontend entry is `/models`, with four guided workspaces. Model contains equations and assumptions without run controls; Transform contains any supported mathematical technique, including nondimensionalization and discretization; Solve contains numerical data, DOF and methods; Results contains charts, tables and verification. Read [the workspace implementation and continuation guide](docs/engine/model-workspaces.md) before changing this flow. Every future simulation must use it. Existing persisted keys and protocol names remain compatible.
+
+**Stable Model interface** (user clarification, 20 October 2026): `frontend/app/models/ModelWorksheet.tsx` is the sole owner of the Model layout: mathematical development and variables on the left, one assumptions panel on the right on desktop. All families, ordinary/coupled/network documents, blank models, legacy saved models and examples use it. Physical-system configuration and topology tools belong inside that same right panel; `/model/state` opens those controls without replacing the worksheet. Storage adapters supply content and persistence, never another layout. `ModelLibrary.tsx` is the only model library. A request for an example authorizes data and recorded deductions, not another editor, page, card or deduction-dropdown workflow. Do not add an example-specific renderer or restore the retired `BibliotecaHojas`, `BarraHojaMotor`, `EditorBalanceModular` or `DerivacionVolumenRed` components. Reuse `ModelAssumptions.tsx`; retain the narrow-screen stacked adaptation. Any future UI redesign requires an explicit UI request. Run `frontend/verificar_physical_journals.mjs` to enforce the shared layout across all registered templates and families.
+
+**Model and example derivation standard** (user clarification, 19 October 2026): every model, including every user-facing test example, must expose its assumptions and start from the fundamental laws. Construct examples through the same available deduction operations as user models; do not introduce a final request or equation directly and then describe it as a derivation. Apply this per volume and per physical family, including thermodynamic assumptions and closure choices. If the tools cannot express a required step, record that as a capability finding in the existing specification/roadmap. Do not bypass it with an example-specific implementation. Do not invent missing historical steps from final flags. Read the [derivation audit and current gaps](docs/engine/model-workspaces.md#model-derivation-standard-and-audit); new templates must pass the audit before publication in the model library. The current provenance audit is structural and does not certify the mathematical derivation or physical accuracy.
+
+**Current physical priorities** (ARCHITECTURE.md §9.1 and §10 "Current order"): UNIFAC has full priority and NRTL is not extended; complete the pending thermodynamics and balances through the common path. Nondimensionalization and spatial discretization belong to Transform; time integration and solver-dependent assembly belong to Solve. Scaling is optional. Equations and Nondimensionalization will be unified into a single sheet. The framework does not imply that all of these integrations are already implemented.
+
+**Clean library and current priority** (user decision, 20 October 2026): remove the old product examples and start new examples only when requested. The library offers blank creation, not bulk demo/template loading. Internal numerical regression fixtures remain under `frontend/testing/modelFixtures.ts` and must never be imported into the product library. All previously saved models, including manual models, were removed from the library through recoverable removal in the existing store. Never silently repopulate them. Every new equation, relation or assumption extends the existing family content and right-hand controls of `ModelWorksheet`; missing thermodynamic relations do not authorize another UI. Consolidate nonspatial thermodynamics first. Defer spatial development, meshes and discretization until the user resumes that work; retain existing spatial behavior and tests.
+
+**Equation-authoring acceptance rule** (user clarification, 20 October 2026): apply [model-equation-deduction](.agents/skills/model-equation-deduction/SKILL.md) for Model deductions and examples. The personal copy is installed under the same skill name. Operate on typed expressions with input equation identities, actual before/after algebra, conditions, units and reversible history. A flag history beside a completed formula is insufficient. Separate balances, definitions, constitutive relations and conditions; use generic indices; derive dependent total mass balances from component equations. Missing operations or numerical lowering are Engine findings: extend the shared tools and replay from the relevant fundamental law. Never insert terminal formulas or silently run the earlier model. Maintain current implementation scope in the workspace specification and roadmap.
+
+Minimum rules (details in ARCHITECTURE.md §8):
+
+- No commit or push unless the user asks; when committing, file by file, never `git add -A`.
+- Do not modify `/motor` or its backends without an explicit request.
+- The interface does not calculate: science, units and solvers live in Python.
+- Every model starts from the fundamental equations and reaches the needed model through recorded assumptions; the model is never posed directly (ARCHITECTURE.md §2, principle 10).
+- Each equation goes in its place: a panel (matter, energy, momentum, thermodynamics) shows only its family; the classification is in `frontend/app/motor/ubicacionEcuaciones.ts` (ARCHITECTURE.md §8).
+- Every formula is checked numerically against a reference before it is accepted.
+- All new and changed documentation, code, identifiers and interface text are in English (user decision, 19 October 2026). Existing published contracts and persisted documents require explicit versioning/migration before identifiers are renamed; never break compatibility by translating keys in place.
+- Do not stop other people's processes (frontend on 3000, backends on 8004 and 8005); stop your own by PID.
+
+`frontend/AGENTS.md` adds the Next.js notes for the frontend code.

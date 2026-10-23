@@ -1,1 +1,9 @@
 @AGENTS.md
+
+Apply [model-equation-deduction](.agents/skills/model-equation-deduction/SKILL.md) when changing Model equations, assumptions, coupling or examples. The user prioritizes the shared equation-manipulation engine. A finished formula with a descriptive flag history does not satisfy the deduction requirement. The maintained [workspace specification](docs/engine/model-workspaces.md#granular-equation-authoring) records current expression-graph scope and pending adapters.
+
+Before resuming the Engine, read [Model workspaces](docs/engine/model-workspaces.md). The user creates models through Model → Transform → Solve → Results. This governs every future simulation; Transform includes mathematical techniques beyond nondimensionalization. All new work is in English.
+
+Current decision (20 October 2026): consolidate nonspatial thermodynamics; spatial work is deferred. The product library was cleared and the old template loader removed. Do not reinstall examples. Create new examples only when requested, through the fundamental-law tools. New equations and assumptions extend `ModelWorksheet` and its existing right-hand panel, never another UI. Maintain the canonical documents in place.
+
+For the independent mathematical-kernel review requested on 22 October, follow the [audit assignment and starting prompt](docs/engine/multiphysics-roadmap.md#independent-mathematical-kernel-audit). This assignment reviews the current working tree against the finite [M1 deduction-readiness and usability gates](docs/engine/multiphysics-roadmap.md#m1--minimum-usable-multiphysics-engine). Once D1 passes, prioritize Transform/Solve; exhaustive coefficient-case extensions are not a prerequisite. Its implementation scope is read-only; record reproducible findings in that existing roadmap section. Do not interpret older implementation priorities as authorization to start a parallel rewrite during this review.
