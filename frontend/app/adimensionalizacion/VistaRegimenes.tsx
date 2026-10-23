@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import type { FormulacionNucleo } from "./contratoNucleo";
 import type { EstudioAsintotica, EstudioEscalas } from "./contratoEstudio";
 import { latexExpresion } from "./exportar";
-import FormulaLatex from "../flowsheet/FormulaLatex";
+import FormulaLatex from "../components/FormulaLatex";
 import { Estado, Simbolo, TerminoLatex, numero } from "./presentacionEstudio";
 
 const LADO: Record<string, string> = { desde: "en el extremo inicial", hasta: "en el extremo final", ambos: "en ambos extremos (según las condiciones)", ninguno: "no forma capa (balance oscilatorio)" };

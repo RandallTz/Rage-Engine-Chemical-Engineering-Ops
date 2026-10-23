@@ -1,6 +1,6 @@
 """
 Servicio de diagramas de equilibrio (protocolo propio, revision 1). Tipos:
-docs/contratos/contratoDiagramasEquilibrio.ts. Documento: docs/MOTOR_DIAGRAMAS_EQUILIBRIO.md.
+docs/contratos/contratoDiagramasEquilibrio.ts. Documento: docs/engine/equilibrium-diagrams.md.
 
 Valida la solicitud (todo rechazo conocido es una respuesta estructurada con ruta), construye el MISMO
 paquete que usan los estados (backend/motor_mezclas -> core/mezclas.Sistema), traza con

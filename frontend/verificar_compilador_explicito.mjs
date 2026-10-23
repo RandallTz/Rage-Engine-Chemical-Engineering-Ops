@@ -1,4 +1,4 @@
-// Paso 5.1 (ARQUITECTURA_MOTOR.md §10): las hojas de materia del motor, llevadas al
+// Paso 5.1 (ARCHITECTURE.md §10): las hojas de materia del motor, llevadas al
 // modelo común (motores/modelo/desdeHojaMotor.ts) y resueltas por el compilador
 // común en Python (core/compilador/explicito.py, ruta POST /modelo/resolver).
 // Para cada hoja de prueba sin campo espacial: el mismo resultado que el solver TS

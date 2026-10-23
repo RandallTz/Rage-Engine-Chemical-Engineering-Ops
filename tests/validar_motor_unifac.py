@@ -1,5 +1,5 @@
 """
-UNIFAC en el motor generico (frontend/CONTRATO_CLAUDE_UNIFAC_MOTOR.md, hitos U0-U6).
+UNIFAC en el motor generico (docs/history/frontend/contract-claude-unifac-engine.md, hitos U0-U6).
 
 Referencias independientes del motor:
   * thermo.unifac.UNIFAC.from_subgroups (otra implementacion, con las MISMAS tablas fijadas) para ln gamma, h^E

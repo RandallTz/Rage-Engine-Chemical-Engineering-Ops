@@ -11,7 +11,7 @@ nombre con los de FUG (mismos nombres como arrays de n componentes) --
 el problema es mas general. DOS columnas del MISMO metodo en un futuro
 flowsheet tambien chocarian en nombres como "D"/"R"/"x_D" si compartieran
 un solo pool. La solucion que sí escala a un flowsheet con operaciones
-conectadas por flechas (pendiente, ver roadmap.md) es que cada operacion
+conectadas por flechas (pendiente, ver docs/history/build-log.md) es que cada operacion
 unitaria sea AUTOCONTENIDA: su Orquestador interno es un detalle de
 implementacion privado de esta clase, no algo que se comparte por
 nombre con otras columnas. Cuando se construya la abstraccion de

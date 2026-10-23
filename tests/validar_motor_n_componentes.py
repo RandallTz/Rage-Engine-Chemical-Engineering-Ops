@@ -1,5 +1,5 @@
 """
-Termodinamica de N componentes y ensamblaje dinamico (frontend/ENCARGO_CLAUDE_TERMODINAMICA_N_COMPONENTES.md).
+Termodinamica de N componentes y ensamblaje dinamico (docs/history/frontend/assignment-claude-thermodynamics-n-components.md).
 
 Referencias independientes del motor (que minimiza G con su prueba de plano tangente):
   * mezcla ideal: Raoult con Poynting y Rachford-Rice escritos aqui;

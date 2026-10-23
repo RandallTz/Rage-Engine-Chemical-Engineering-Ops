@@ -1,5 +1,5 @@
 """
-Consolidacion de la entrega multifasica (frontend/ENCARGO_CLAUDE_CONSOLIDACION_MULTIFASICA_2026_10_15.md).
+Consolidacion de la entrega multifasica (docs/history/frontend/assignment-claude-consolidation-multiphase-2026-10-15.md).
 
   C0  capacidades coherentes con lo que ejecutan los ejemplos reales y con los modelos estaticos;
   C1  certificacion fisica separada del resultado numerico: controles negativos de materia, energia y

@@ -27,4 +27,4 @@ node qa_calentamiento_2026_10_15/verificar.mjs
 
 Comprueba el lector de producción, masa/volumen, presupuesto energético, crecimiento de T/P, transición y estado final. Las referencias TV/saturación usan la misma EOS por otro camino y la primera ley, no otra formulación termodinámica independiente. Reproducir el archivo guardado no vuelve a ejecutar el servicio.
 
-Al preparar la hoja se detectó y corrigió, con autorización del usuario, un `else` mal asociado en la guarda de frontera de `backend/motor_ensamblaje.py`. Ver `../INCIDENCIA_CLAUDE_GUARDA_FRONTERA_2026_10_15.md`. Se conservó el resto del trabajo en curso de Claude. No se flexibilizó ningún lector ni se cambiaron ecuaciones.
+Al preparar la hoja se detectó y corrigió, con autorización del usuario, un `else` mal asociado en la guarda de frontera de `backend/motor_ensamblaje.py`. Ver `../../docs/history/frontend/incident-claude-guard-boundary-2026-10-15.md`. Se conservó el resto del trabajo en curso de Claude. No se flexibilizó ningún lector ni se cambiaron ecuaciones.

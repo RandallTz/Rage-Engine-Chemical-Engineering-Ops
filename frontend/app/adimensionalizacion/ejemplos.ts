@@ -1,6 +1,6 @@
 /** FIXTURES DE PRUEBA del núcleo y del formato de documento (verificar_capa_dimensional.mjs,
  * verificar_estudio_adimensionalizacion.mjs). No se ofrecen en la interfaz: son modelos escritos directamente y la
- * adimensionalización solo trabaja sobre ecuaciones derivadas en una hoja del Engine (ARQUITECTURA_MOTOR.md §2,
+ * adimensionalización solo trabaja sobre ecuaciones derivadas en una hoja del Engine (ARCHITECTURE.md §2,
  * principio 10). No volver a mostrarlos como catálogo ni como «modelos de partida». */
 import type { Documento, Modelo } from "./contrato";
 import { crearDocumento, crearEntrada } from "./documento";

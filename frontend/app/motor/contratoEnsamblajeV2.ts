@@ -1,7 +1,7 @@
 // Revision 2 del protocolo de ensamblaje del motor independiente (aditiva y discriminada).
 // Rutas: las mismas de la revision 1 (/motor/ensamblajes/{capacidades,validar,resolver});
 // el backend despacha por `revision`. La revision 1 sigue igual y funcional.
-// Documento: docs/MOTOR_EQUILIBRIO_MULTIFASICO.md. Ejemplos compilados contra este archivo:
+// Documento: docs/engine/multiphase-equilibrium.md. Ejemplos compilados contra este archivo:
 // docs/ejemplos/motor-v2/motor-ensamblaje-v2-*.json (tests/verificar_contrato_ensamblaje_v2.mjs).
 import type {Componente} from './materiaEstado';
 import type {ModeloEstado, PoliticaEstado, EvaluacionEstado, FaseEstado} from './contratoTermodinamica';

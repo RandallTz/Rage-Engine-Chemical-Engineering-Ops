@@ -327,7 +327,7 @@ check("4.8 Un balance algebraico no trae residuo: se cumple por construcción",
 # Se monta contra el MOTOR y no contra la API porque el decantador no
 # esta expuesto como tipo de operacion en el esquema de la peticion:
 # existe en core/diagrama_corrientes.py y no se puede pedir por HTTP.
-# Esa es una laguna real del backend, anotada en roadmap.md; lo que aqui
+# Esa es una laguna real del backend, anotada en docs/history/build-log.md; lo que aqui
 # se valida es que cuando el bloque corre, reporta lo que midio.
 from core.diagrama_corrientes import DiagramaCorrientes
 from thermodynamics.proveedor import ProveedorTermodinamico

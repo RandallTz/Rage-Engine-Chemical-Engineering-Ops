@@ -10,7 +10,7 @@ Sistema de prueba: propano/n-butano/n-pentano/n-hexano a 5 atm -- una
 serie de alcanos, ejemplo clasico de FUG.
 
 Hallazgos reales durante la construccion (documentados aqui y en
-roadmap.md):
+docs/history/build-log.md):
     - Hueco de la directiva resuelto con bootstrap estandar: T_D/T_B
       (necesarios para el alfa promedio de 3 puntos) necesitan una
       composicion de producto que todavia no existe -- se construye una

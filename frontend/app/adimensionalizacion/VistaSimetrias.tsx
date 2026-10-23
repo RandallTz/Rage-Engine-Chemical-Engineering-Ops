@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import type { EstudioSimetrias } from "./contratoEstudio";
 import { latexExpresion, nombreLatex } from "./exportar";
-import FormulaLatex from "../flowsheet/FormulaLatex";
+import FormulaLatex from "../components/FormulaLatex";
 import { Estado, Simbolo, racional, racionalLatex } from "./presentacionEstudio";
 
 export default function VistaSimetrias({ simetrias }: { simetrias?: EstudioSimetrias }) {

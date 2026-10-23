@@ -1,5 +1,5 @@
 """
-UNIFAC como modelo de energia de Gibbs de exceso del liquido (frontend/CONTRATO_CLAUDE_UNIFAC_MOTOR.md).
+UNIFAC como modelo de energia de Gibbs de exceso del liquido (docs/history/frontend/contract-claude-unifac-engine.md).
 
 Implementacion propia, vectorizada y valida con T compleja (paso complejo para d(g^E)/dT), sobre DATOS
 FIJADOS que distribuye thermo 0.6.1 (no sobre sus objetos UNIFAC, que mutan T y x y no son seguros entre

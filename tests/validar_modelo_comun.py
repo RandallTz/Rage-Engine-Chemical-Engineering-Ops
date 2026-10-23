@@ -1,5 +1,5 @@
 """
-Validación del modelo común v0 (docs/CONTRATO_MODELO_COMUN.md).
+Validación del modelo común v0 (docs/contracts/common-model.md).
 
   1. Documentos de adimensionalización: documento -> modelo -> documento idéntico.
   2. Solicitudes de ensamblaje v2: solicitud -> modelo -> solicitud idéntica, y

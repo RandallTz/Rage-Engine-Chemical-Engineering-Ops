@@ -14,7 +14,7 @@
 #    ruido: un dia falla y no se sabe si se rompio algo aqui o cambio una
 #    correlacion afuera.
 #
-# Entorno con el que estan tomados TODOS los numeros de docs/ y roadmap.md:
+# Entorno con el que estan tomados TODOS los numeros de docs/ y docs/history/build-log.md:
 #   Python 3.12.10 en Windows
 #
 # Para actualizar una version: subirla a mano, correr `python run_tests.py`,

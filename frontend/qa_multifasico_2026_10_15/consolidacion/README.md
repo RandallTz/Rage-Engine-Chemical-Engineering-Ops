@@ -18,4 +18,4 @@ npm run test:consolidacion
 
 237 comprobaciones de lectura e integración. Incluye certificados reales que cumplen, incumplen o no pueden evaluarse; catálogo completo, unidades y papeles; eventos; identidad del líquido superviviente; datos históricos; y controles sintéticos de metadatos corruptos. Los controles sintéticos están identificados en el script y no se presentan como nuevas validaciones físicas del proveedor.
 
-Informe: `../../INTEGRACION_CONSOLIDACION_MULTIFASICA.md`.
+Informe: `../../../docs/history/frontend/integration-consolidation-multiphase.md`.

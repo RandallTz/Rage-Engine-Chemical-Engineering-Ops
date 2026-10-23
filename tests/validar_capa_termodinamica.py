@@ -1,5 +1,5 @@
 """
-Prueba guía de la capa termodinámica (ARQUITECTURA_MOTOR.md §10, paso 2):
+Prueba guía de la capa termodinámica (ARCHITECTURE.md §10, paso 2):
 una mezcla en un recipiente que se calienta hasta hervir, con las mismas
 ecuaciones de principio a fin y la aparición del vapor como RESULTADO.
 

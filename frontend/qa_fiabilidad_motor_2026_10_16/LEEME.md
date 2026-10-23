@@ -21,7 +21,7 @@ Frontend: el aviso usa «verificación no superada» en lugar de atribuir todo `
 
 Verificación ejecutada: 40 comprobaciones del aviso, 237 de consolidación, TypeScript y ESLint sobre el archivo modificado; todos con código 0. Se resolvieron también los tres casos por HTTP y el caso NRTL desde la UI. No se repitió toda la batería física del backend ni se modificó ese backend.
 
-Incidencias F9-R1/R2: [anexo de eventos y dominios](../CONTRATO_CLAUDE_FIABILIDAD_EVENTOS_Y_DOMINIOS.md). No cambia la tarea en curso de Claude ni la prioridad del [roadmap principal](../ROADMAP_MOTOR_MULTIFISICO.md). Avisos numéricos previos: [log preservado](../qa_integracion_unifac_2026_10_16/avisos-backend.txt); su causa sigue pendiente de diagnóstico.
+Incidencias F9-R1/R2: [anexo de eventos y dominios](../../docs/history/frontend/contract-claude-reliability-events-and-domains.md). No cambia la tarea en curso de Claude ni la prioridad del [roadmap principal](../../docs/engine/multiphysics-roadmap.md). Avisos numéricos previos: [log preservado](../qa_integracion_unifac_2026_10_16/avisos-backend.txt); su causa sigue pendiente de diagnóstico.
 
 Reproducir desde `frontend`:
 

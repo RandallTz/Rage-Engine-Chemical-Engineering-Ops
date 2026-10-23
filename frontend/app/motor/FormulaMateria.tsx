@@ -1,4 +1,4 @@
-import FormulaLatex from '../flowsheet/FormulaLatex';
+import FormulaLatex from '../components/FormulaLatex';
 import styles from './motor.module.css';
 
 /** KaTeX inline breaks only between top-level terms when available width runs out.

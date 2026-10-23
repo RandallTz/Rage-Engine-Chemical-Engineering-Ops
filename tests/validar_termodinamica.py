@@ -272,7 +272,7 @@ def validar_azeotropos():
         calculadora_elv=calc_elv, espacio_reactivo=espacio, Da=5.0,
     )
 
-    # (a) azeotropo CINETICO -- converge de forma robusta (ver roadmap.md)
+    # (a) azeotropo CINETICO -- converge de forma robusta (ver docs/history/build-log.md)
     r_cinetico = buscador.encontrar_azeotropo_cinetico(x_guess=x0, Da=5.0)
     r_cinetico["etiqueta"] = "Azeótropo cinético (Da=5)"
     print(
@@ -283,14 +283,14 @@ def validar_azeotropos():
 
     # (b) busqueda de equilibrio quimico -- se muestra aunque NO convergio,
     # a proposito: es un resultado real (no existe raiz interior para este
-    # K_eq/estequiometria, ver roadmap.md), no un error a esconder.
+    # K_eq/estequiometria, ver docs/history/build-log.md), no un error a esconder.
     X0 = espacio.transformar(x0)
     r_equilibrio = buscador.encontrar_azeotropo_equilibrio(X_guess=X0, P_sistema=P_ISOBARA)
     r_equilibrio["etiqueta"] = "Búsqueda equilibrio químico"
     print(
         f"Búsqueda de equilibrio: convergió={r_equilibrio['convergio']}  "
         f"residual_max={r_equilibrio['residual_max']:.4g}  "
-        "(no convergio es el resultado esperado para este sistema -- ver roadmap.md)"
+        "(no convergio es el resultado esperado para este sistema -- ver docs/history/build-log.md)"
     )
 
     buscador.graficar_azeotropos(

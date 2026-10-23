@@ -6,7 +6,7 @@ import type { ConfigExploracion, Documento, Escala } from "./contrato";
 import { CLAVE_ALMACEN, LIMITE_BYTES, crearDocumento, duplicarForma, editarModelo, expresar, leerDocumento, migrarDocumentoV2 } from "./documento";
 import { dimensionLatex, escalaLatex, exportarLatex, latexExpresion, nombreLatex } from "./exportar";
 import { CONFIG_EXPLORACION, validarConfigExploracion } from "./exploracion";
-import FormulaLatex from "../flowsheet/FormulaLatex";
+import FormulaLatex from "../components/FormulaLatex";
 import EntradaSimple from "./EntradaSimple";
 import { igualdadProfunda } from "./lecturaNucleo";
 import styles from "../motor/trabajoMotor.module.css";

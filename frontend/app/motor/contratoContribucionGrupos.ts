@@ -1,6 +1,6 @@
 // Metadata de contribucion de grupos (UNIFAC), especifica de esa familia de modelos: los paquetes que no son
 // de contribucion de grupos NO publican este campo y no tienen que aportar grupos.
-// Contrato: frontend/CONTRATO_CLAUDE_UNIFAC_MOTOR.md. Informe: docs/MOTOR_UNIFAC.md.
+// Contrato: docs/history/frontend/contract-claude-unifac-engine.md. Informe: docs/engine/unifac.md.
 // Se publica (aditivo, sin revision nueva) como `coberturaGrupos` en:
 //   - CapacidadesEnsamblajeV2.paquetes[]  (GET /motor/ensamblajes/capacidades, contratoEnsamblajeV2.ts)
 //   - CapacidadesDiagramas.paquetes[]     (GET /motor/termodinamica/diagramas/capacidades)

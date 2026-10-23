@@ -3,7 +3,7 @@ import { crearDocumento, leerDocumento, migrarDocumentoV2 } from "./documento";
 
 export const CLAVE_HOJAS = "rage.adimensionalizacion.hojas.v1";
 /** `retirada`: un documento escrito directamente, sin derivarse de una hoja del Engine. La adimensionalización
- * solo trabaja sobre ecuaciones derivadas de las fundamentales en una hoja del Engine (ARQUITECTURA_MOTOR.md §2,
+ * solo trabaja sobre ecuaciones derivadas de las fundamentales en una hoja del Engine (ARCHITECTURE.md §2,
  * principio 10); el documento retirado se conserva para exportarlo, pero no se abre para trabajar. */
 export type Hoja = { id: string; documento: Documento; borrador: string | null; actualizada: string; archivada: boolean; retirada?: { fecha: string; motivo: string } };
 export type Cuaderno = { formato: "adimensionalizacion.hojas"; version: 1; hojas: Hoja[]; activaId: string };

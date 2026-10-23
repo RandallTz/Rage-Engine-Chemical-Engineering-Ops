@@ -1,6 +1,6 @@
 """
-Solvers del motor (ARQUITECTURA_MOTOR.md §5): integran sistemas numéricos sin
-saber de física. Ver docs/CORTE_VERTICAL.md.
+Solvers del motor (ARCHITECTURE.md §5): integran sistemas numéricos sin
+saber de física. Ver docs/engine/vertical-slice.md.
 
   integrador.integrar(sistema, y0, t_final, ...) -> Trayectoria
 """

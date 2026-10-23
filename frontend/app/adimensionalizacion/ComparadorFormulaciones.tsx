@@ -7,7 +7,7 @@ import type { EstudioEscalas } from "./contratoEstudio";
 import { latexExpresion } from "./exportar";
 
 type CoordenadaCalculada = Extract<NonNullable<EstudioEscalas["coordenadas"]>[number], { estado: "calculado" }>;
-import FormulaLatex from "../flowsheet/FormulaLatex";
+import FormulaLatex from "../components/FormulaLatex";
 import { Estado, NOMBRE_TIPO, TerminoLatex, numero } from "./presentacionEstudio";
 import { simbolosConValor, useConsulta, valoresParaNucleo, type MapaValores } from "./usoEstudio";
 

@@ -1,6 +1,6 @@
 """
 Compilador del modelo común, entrada de ecuaciones explícitas (paso 5.1 de
-ARQUITECTURA_MOTOR.md §10; core/compilador/explicito.py).
+ARCHITECTURE.md §10; core/compilador/explicito.py).
 
 Modelos escritos a mano, sin volúmenes ni componentes ni nada del motor: el
 compilador ejecuta lo que dicen sus ecuaciones. Contra soluciones analíticas

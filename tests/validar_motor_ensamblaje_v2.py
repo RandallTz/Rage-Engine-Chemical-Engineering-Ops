@@ -1,6 +1,6 @@
 """
 Validacion del motor de equilibrio multifasico y del ensamblaje v2 (M0-M6,
-frontend/CONTRATO_CLAUDE_MOTOR_EQUILIBRIO_MULTIFASICO.md).
+docs/history/frontend/contract-claude-engine-equilibrium-multiphase.md).
 
 Referencias independientes del codigo que se prueba:
   * M1 (mezcla ideal): Raoult con Poynting escrito aqui, K_i = Psat_i exp(vL_i (P - Psat_i)/RT)/P;
@@ -101,7 +101,7 @@ if activa("0"):
     ids_paq = [p["modelo"]["id"] for p in c2["paquetes"]]
     check({"agua-iapws95", "mezcla-ideal", "nrtl-chemsep", "nrtl-lle-agua-butanol"} <= set(ids_paq),
           f"capacidades v2: paquetes {ids_paq}")
-    # ampliacion N (docs/MOTOR_TERMODINAMICA_N_COMPONENTES.md): 7 componentes declarados por volumen; los tamanos
+    # ampliacion N (docs/engine/thermodynamics-n-components.md): 7 componentes declarados por volumen; los tamanos
     # contrastados por paquete estan en `tamanos`
     check(c2["volumenesMaximos"] == 3 and c2["componentesMaximos"] == 7 == c2["tamanos"]["componentesMaximosPorVolumen"],
           "capacidades v2: limites verificados")

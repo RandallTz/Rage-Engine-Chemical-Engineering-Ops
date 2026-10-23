@@ -1,6 +1,6 @@
 "use client";
 
-/** Cuaderno de la adimensionalización. Regla (ARQUITECTURA_MOTOR.md §2, principio 10): la adimensionalización
+/** Cuaderno de la adimensionalización. Regla (ARCHITECTURE.md §2, principio 10): la adimensionalización
  * trabaja SOLO sobre ecuaciones derivadas de las fundamentales en una hoja del Engine. No se escriben modelos
  * aquí: se importan de una hoja del Engine. Un documento escrito directamente (de versiones anteriores o de un
  * cuaderno importado) queda retirado: se conserva para exportarlo, pero no se abre para trabajar. */

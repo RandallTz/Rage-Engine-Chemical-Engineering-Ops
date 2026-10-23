@@ -6,7 +6,7 @@ import type { AuditoriaDimensional } from "./dimensiones";
 import { consultarDimensiones } from "./clienteNucleo";
 import { prepararSolicitud } from "./lecturaNucleo";
 import { dimensionLatex, latexExpresion, nombreLatex } from "./exportar";
-import FormulaLatex from "../flowsheet/FormulaLatex";
+import FormulaLatex from "../components/FormulaLatex";
 
 const roles = { tiempo: "Tiempo independiente", coordenada: "Variable independiente", campo: "Campo / variable dependiente", parametro: "Parámetro constante", constante: "Constante" };
 const etiquetas = { compatible: "Compatible", incompatible: "Incompatible", pendiente: "Sin determinar", cero: "Cero compatible" };

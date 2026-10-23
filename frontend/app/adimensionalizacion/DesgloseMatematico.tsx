@@ -1,6 +1,6 @@
 import type { ExpresionDePaso, ResultadoNucleo } from "./contrato";
 import { latexExpresion, nombreLatex } from "./exportar";
-import FormulaLatex from "../flowsheet/FormulaLatex";
+import FormulaLatex from "../components/FormulaLatex";
 
 function latexPaso(e: ExpresionDePaso): string {
   return e.tipo === "expresion" ? latexExpresion(e.expresion) : `${latexExpresion(e.igualdad.izquierda)} = ${latexExpresion(e.igualdad.derecha)}`;

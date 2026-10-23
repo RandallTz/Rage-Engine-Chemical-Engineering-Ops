@@ -1,133 +1,65 @@
-# Simulador de destilación reactiva
+# Reactive distillation simulator
 
-> **Estructura del proyecto y reglas de trabajo:** [ARQUITECTURA_MOTOR.md](ARQUITECTURA_MOTOR.md) (motor de motores, modelo común, termodinámica siempre presente). Agentes: empezar por [AGENTS.md](AGENTS.md).
+An **equation-oriented** simulator of chemical processes, now growing into a general **multiphysics engine**: every model starts from the fundamental conservation laws, is reduced with recorded assumptions to the model that is needed, and is solved with thermodynamics always present.
 
-Simulador de procesos **orientado a ecuaciones** (EO) para destilación,
-reacción y separación líquido-vapor. No es un script que calcula en una
-dirección fija: cada equipo aporta ecuaciones a un pool compartido y el
-orquestador decide qué se despeja según los datos disponibles, como hace
-un simulador comercial.
+> **Project structure and working rules:** [ARCHITECTURE.md](ARCHITECTURE.md) (engine of engines, common model, always-present thermodynamics). Agents start with [AGENTS.md](AGENTS.md). Documentation index: [docs/README.md](docs/README.md).
 
-```
-fresca ──► mezclador ──► intercambiador ──► flash ──┬──► vapor
-              ▲                                      │
-              │                                      └──► líquido ──► divisor ──┬──► purga
-              └──────────────── reciclo ─────────────────────────────────────────┘
-```
+The user interface is in Spanish; documents, file names and new code are in English. The repository is being tidied up and moved to English in phases ([docs/repository-cleanup/README.md](docs/repository-cleanup/README.md)).
 
 ---
 
-## Qué hay dentro
+## The Engine (`/motor`)
 
-| Capa | Contenido |
+The Engine is where current work happens. A **sheet** is a model built step by step:
+
+1. **Formulate.** Four panels — Matter, Energy, Momentum and Thermodynamics. Each starts at its fundamental equation (local conservation, the first law, momentum, the fundamental thermodynamic relations), and each assumption is applied one at a time, with undo and redo. The model is never written directly.
+2. **State.** Components from a catalog, a thermodynamic package per volume (ideal, NRTL, UNIFAC, IAPWS-95 water), candidate phases and equilibrium samples.
+3. **Solve.** The server generates the balance equations from the sheet's assumptions (`core/balances`), compiles them with the common compiler (`core/compilador`) and integrates them (`core/solvers`). The thermodynamic closure is evaluated at every step, so boiling, condensation or a second liquid phase appear without switching models.
+4. **Results.** One results format (`rage.resultados`) and one charting engine for every calculation.
+
+Where things stand and what comes next: [docs/engine/engine-map.md](docs/engine/engine-map.md), [docs/engine/multiphysics-roadmap.md](docs/engine/multiphysics-roadmap.md) and the generated [multiphysics battery](docs/engine/multiphysics-battery.md).
+
+---
+
+## Repository layout
+
+| Folder | Content |
 |---|---|
-| `thermodynamics/` | UNIFAC predictivo vía `thermo`, ELV (puntos de burbuja y de rocío), entalpía unificada $h(T,x,\text{fase})$, equilibrio y cinética de reacción |
-| `core/` | McCabe-Thiele, Ponchon-Savarit, FUG, **flash**, CSTR con balance de energía, topología reactiva (RCM/RRCM, azeótropos), orquestador y flowsheet |
-| `backend/`, `api/` | FastAPI sobre el núcleo; frontera de unidades con `pint` |
-| `frontend/` | Next.js: diagramas McCabe-Thiele, Ponchon-Savarit, ternarios y editor de flowsheet |
-| `docs/` | **La matemática**: qué ecuaciones se resuelven, con qué método, bajo qué suposiciones y hasta dónde son válidas |
-| `roadmap.md` | **La bitácora**: qué se construyó, qué se rompió y cómo se arregló |
+| `core/` | The science, in pure SI (`float`/NumPy): the common model, balance engine, compiler, solvers, thermodynamic layer, units service, results format, nondimensionalization, and the classic unit operations |
+| `thermodynamics/` | Providers built on `thermo`: VLE (bubble and dew points), unified enthalpy $h(T,x,\text{phase})$, reaction equilibrium and kinetics |
+| `backend/` | FastAPI over the core; one route per engine, no physics logic |
+| `frontend/` | Next.js: the Engine, nondimensionalization, flowsheet, columns, lab |
+| `docs/` | Contracts, engine documents, method guides, examples and history ([index](docs/README.md)) |
+| `tests/` | Python validation suites, each against an independent reference |
+| `tools/` | Repository tooling (inventory, link checker) |
+| `api/`, `archive/` | The first simulator and the Yaws data ETL, kept for reference |
+| `empaquetado/` | The offline desktop build (SimuladorDR.exe) |
 
-El núcleo opera en **SI puro** (`float`/NumPy). `pint` vive solo en la
-frontera, nunca dentro de los bucles numéricos.
-
----
-
-## Equipos disponibles
-
-**Separación** — columna binaria (McCabe-Thiele / Ponchon-Savarit),
-columna multicomponente (FUG), flash L-V, separador de componentes,
-absorbedor/desorbedor (Kremser), decantador líquido-líquido.
-
-**Reacción** — CSTR con cinética y balance de energía, reactor de
-equilibrio químico, reactor de flujo pistón (PFR).
-
-**Térmicos** — intercambiador de calor, intercambiador de dos corrientes
-(integración energética), válvula de expansión isentálpica.
-
-**Transporte y mezcla** — bomba, compresor/turbina, mezclador, divisor.
-
-El flowsheet detecta **reciclos** automáticamente, los corta (*tearing*)
-y los converge con Wegstein.
+`pint` lives only at the boundary, never inside the numerical loops.
 
 ---
 
-## Diseñar, no solo calcular
-
-Lo anterior contesta *"con estos datos, ¿cuánto da?"*. Las dos
-herramientas siguientes contestan las preguntas que de verdad se hacen al
-diseñar.
-
-**Especificaciones de diseño.** En vez de dar el reflujo y obtener la
-pureza, se pide la pureza y el simulador busca el reflujo:
-
-```python
-from core.especificaciones import Especificacion
-
-resultado = diagrama.resolver_con_especificaciones(
-    [Especificacion(objetivo="producto.x2", valor=0.9055,
-                    manipulada="r1.T_salida", minimo=330.0, maximo=370.0)],
-    **datos,   # sin r1.T_salida: la especificación la convierte en incógnita
-)
-```
-
-El objetivo y la variable que se mueve **pueden estar en equipos
-distintos, con un reciclo en medio**: cada evaluación resuelve el diagrama
-completo, reciclos convergidos. El rango no es decoración — acota la
-búsqueda a la zona donde el diagrama se puede resolver.
-
-Y el conteo de grados de libertad lo tiene en cuenta: cada
-especificación suma **una ecuación**, así que un problema al que le
-faltaba un dato (GL = 1) queda cerrado (GL = 0). La variable manipulada ya
-era incógnita; sumarla otra vez es el error fácil de cometer aquí.
-
-**Barridos de sensibilidad.** Mover una variable y ver cómo responde el
-resto:
-
-```python
-filas = diagrama.barrido("col1.R", [1.6, 2.0, 3.0, 5.0, 10.0],
-                         seguir=["col1.N", "col1.Q_c"], **datos)
-```
-
-Un punto que falle **no tumba el barrido**: se anota el motivo y sigue,
-que es lo que se quiere al explorar un rango con sus bordes. El
-compromiso clásico sale solo: de $R=1.6$ a $R=10$, $N$ baja de 19.5 a 7.5
-y $Q_c$ sube de 3.1 a 13.2 MW.
-
-Las dos están también en la API (`POST /diagrama/resolver` acepta
-`especificaciones`; `POST /diagrama/barrido` es nuevo) y en la interfaz, en
-la pestaña **«Diseño»** del flowsheet. El detalle completo, incluidas las
-decisiones que no son obvias, en
-[`docs/13-especificaciones.md`](docs/13-especificaciones.md).
-
----
-
-## Instalación y uso
+## Installation and use
 
 ```bash
 pip install -r requirements.txt
-python run_tests.py          # las 19 suites del núcleo y la API, ~285 s
+python run_tests.py          # every Python suite of the core and the API
 ```
 
-Y las de la interfaz, que comprueban lo que ninguna suite de Python puede
-ver —que el número correcto llegue a la pantalla— necesitan los dos
-servidores vivos y un navegador:
+The interface suites check what no Python suite can see — that the right number reaches the screen — and need both servers running and a browser:
 
 ```bash
-python -m uvicorn backend.main:app --port 8001 --reload   # en una terminal
-cd frontend && npm run dev                                 # en otra
-cd frontend && node verificar_todo.mjs                     # las 18 suites
+python -m uvicorn backend.main:app --port 8001 --reload   # in one terminal
+cd frontend && npm run dev                                 # in another
+cd frontend && node verificar_todo.mjs                     # the interface suites
+cd frontend && npm run test:motor-fundamental              # the Engine's suites
 ```
 
-El lanzador mira el **código de salida** de cada suite, no su salida de
-texto: cada una termina con un mensaje distinto, así que buscar «TODO OK»
-daba por buena una suite que acababa de reventar con otra frase.
+The runner looks at each suite's **exit code**, not its text output: every suite ends with a different message, so searching for "TODO OK" once passed a suite that had just crashed with another sentence.
 
-Las versiones de `requirements.txt` están **fijas a propósito**: las
-validaciones comparan contra valores exactos (`365.515693 K, idéntico bit
-a bit`), y eso solo significa algo contra una versión fija de `thermo`.
+The versions in `requirements.txt` are **pinned on purpose**: the validations compare against exact values (`365.515693 K, bit-for-bit identical`), and that only means something against a fixed version of `thermo`.
 
-Un ejemplo mínimo:
+A minimal example of the classic core:
 
 ```python
 from thermodynamics.proveedor import ProveedorTermodinamico
@@ -141,170 +73,107 @@ r = flash.isotermico(T=368.0, P=101325.0, z=[0.5, 0.5])
 print(r["beta"], r["x"], r["y"])
 ```
 
-Ver también `ejemplo_columna_destilacion.py`, `ejemplo_orquestador.py` y
-las plantillas de `backend/ejemplos_flowsheet.py`.
+See also `ejemplo_columna_destilacion.py`, `ejemplo_orquestador.py` and the templates in `backend/ejemplos_flowsheet.py`.
 
 ---
 
-## Cómo se valida
+## The classic simulator: flowsheets and columns
 
-Una sola regla, aplicada en todo el proyecto:
+It is not a script that calculates in a fixed direction: each unit contributes equations to a shared pool and the orchestrator decides what is solved for according to the available data, as a commercial simulator does.
 
-> **Que un método corra no es que funcione.** Se valida contra algo
-> independiente: una fórmula cerrada, un balance que debe cerrar, un
-> valor de literatura, o una propiedad física que debe cumplirse.
+```
+fresh ──► mixer ──► exchanger ──► flash ──┬──► vapor
+            ▲                             │
+            │                             └──► liquid ──► splitter ──┬──► purge
+            └──────────────── recycle ──────────────────────────────┘
+```
 
-No cuenta como validación *"devuelve un array de la forma correcta"* ni
-*"el número parece razonable"*. Sí cuentan, y son reales:
+**Separation** — binary column (McCabe-Thiele / Ponchon-Savarit), multicomponent column (FUG), L-V flash, component separator, absorber/stripper (Kremser), liquid-liquid decanter.
 
-- El balance de energía de una planta con reciclo cierra a
-  $4\times10^{-12}$ relativo.
-- El azeótropo etanol/agua aparece en $x = 0.894$ (literatura: 0.894).
-- La solubilidad del MIBK en agua a 25 °C sale 1.41 % en peso contra el
-  1.55 % de Perry's tabla 15-8, y el reparto del ácido acético se queda
-  entre un 17 % y un 26 % corto — **el error está medido y escrito**, no
-  escondido tras una tolerancia holgada.
-- El líquido que sale de un flash está en su punto de burbuja a
-  $10^{-9}$ K, comprobado contra una rutina independiente.
-- Un reactor adiabático con volumen grande alcanza el equilibrio químico
-  *a la temperatura que el propio balance de energía produjo*
-  ($\prod a_i^{\nu_i}/K_{eq} \to 0.987$).
-- Una especificación de diseño se comprueba **contra el camino directo**:
-  pedir $N = 12$ devuelve $R = 2.241647$, y evaluar McCabe-Thiele con ese
-  $R$ —sin pasar por el lazo— devuelve $N = 12.00000000$.
-- Una bomba con $P_1 = 101325$, factor $= 3$ y $P_2 = 100000$ dados a la
-  vez **se rechaza**: son tres condiciones sobre dos variables y
-  $3 \times 101325 \neq 100000$. Antes respondía «resuelto por completo».
-- Dos volúmenes térmicos en serie dan $\dot Q_1 + \dot Q_2 = F\,\Delta h$ con
-  residuo medido por debajo de $10^{-12}$, y **el calentador del laboratorio
-  da el mismo número por los dos servicios**: 147842.851474 W.
-- Una reacción reversible en equilibrio ($r^+ = r^- = 5$ mol/s) da **fuente
-  neta cero con generación y consumo brutos positivos**, y una
-  estequiometría que no conserva los elementos se rechaza diciendo qué
-  elemento descuadra y en cuánto.
-- Una cinética de primer orden reproduce su **solución analítica**
-  $\xi = kF_{A0}/(F_0+k)$ a $10^{-12}$, y un reactor adiabático se verifica
-  por dos caminos: imponer la temperatura que salió da el mismo avance, y
-  el calor liberado iguala al calentamiento sensible.
-- Un lote transitorio reproduce las soluciones analíticas de las redes
-  consecutiva, paralela y reversible a $10^{-7}$ mol sobre 100, y **el
-  final de la trayectoria coincide con el equilibrio calculado a
-  $5.6\times10^{-17}$** — integrar una ODE y resolver $\ln Q = \ln K$ son
-  dos caminos sin nada en común.
+**Reaction** — CSTR with kinetics and an energy balance, chemical-equilibrium reactor, plug-flow reactor (PFR).
 
-El detalle completo, y **los límites**, en
-[`docs/12-validacion.md`](docs/12-validacion.md).
+**Thermal** — heat exchanger, two-stream exchanger (heat integration), isenthalpic expansion valve.
 
----
+**Transport and mixing** — pump, compressor/turbine, mixer, splitter.
 
-## De dónde sale cada número
+The flowsheet detects **recycles** automatically, tears them and converges them with Wegstein.
 
-Cada respuesta de `/diagrama/resolver` puede decir con qué se calculó, qué
-le pasa y cuánto se puede fiar uno de ella:
+### Design, not only calculate
 
-- **`calculo`** — versión del motor y commit de git (con sufijo `-sucio`
-  si el árbol tenía cambios), versiones de `thermo`/`chemicals`/`fluids`
-  —que son la versión *real* del proveedor termodinámico— y una **huella
-  SHA-256 determinista de las entradas físicas**. Dos peticiones con la
-  misma huella deben dar el mismo resultado; si dan otro, el cambio está
-  en el motor o en sus dependencias.
-- **`diagnosticos`** — las incidencias con **código estable**, categoría
-  (datos / física / numérica / modelo) y severidad. La categoría viene de
-  donde se generó el problema, **nunca de buscar palabras en el mensaje**.
-  Y `hay_errores` separa «se calculó todo» de «el resultado es válido»:
-  no son lo mismo.
-- **`convergencia`** — por bloque, el método, la tolerancia y el residuo
-  **cuando el algoritmo de verdad evalúa uno**. Una construcción de
-  McCabe-Thiele no trae residuo y dice por qué; inventarle uno sería una
-  mentira con cara de precisión.
+**Design specifications.** Instead of giving the reflux and getting the purity, you ask for the purity and the simulator finds the reflux:
 
-Los tres son opcionales y aditivos. Detalle en
-[`docs/14-trazabilidad.md`](docs/14-trazabilidad.md).
+```python
+from core.especificaciones import Especificacion
+
+resultado = diagrama.resolver_con_especificaciones(
+    [Especificacion(objetivo="producto.x2", valor=0.9055,
+                    manipulada="r1.T_salida", minimo=330.0, maximo=370.0)],
+    **datos,   # without r1.T_salida: the specification turns it into an unknown
+)
+```
+
+The target and the manipulated variable **can be in different units, with a recycle in between**: each evaluation solves the whole flowsheet, recycles converged. The range is not decoration — it bounds the search to the region where the flowsheet can be solved. The degrees-of-freedom count takes it into account: each specification adds **one equation**, so a problem that lacked one datum (DOF = 1) is closed (DOF = 0).
+
+**Sensitivity sweeps.** Move one variable and see how the rest responds:
+
+```python
+filas = diagrama.barrido("col1.R", [1.6, 2.0, 3.0, 5.0, 10.0],
+                         seguir=["col1.N", "col1.Q_c"], **datos)
+```
+
+A point that fails **does not bring down the sweep**: the reason is recorded and it continues. The classic trade-off appears by itself: from $R=1.6$ to $R=10$, $N$ falls from 19.5 to 7.5 and $Q_c$ rises from 3.1 to 13.2 MW.
+
+Both are also in the API (`POST /diagrama/resolver` accepts `especificaciones`; `POST /diagrama/barrido`) and in the interface, in the flowsheet's **"Diseño"** tab. Details in [docs/13-especificaciones.md](docs/13-especificaciones.md).
+
+### Where each number comes from
+
+Each `/diagrama/resolver` response can say what it was calculated with, what is wrong with it and how far it can be trusted:
+
+- **`calculo`** — engine version and git commit (with a `-sucio` suffix if the tree had changes), versions of `thermo`/`chemicals`/`fluids` — the *real* version of the thermodynamic provider — and a **deterministic SHA-256 fingerprint of the physical inputs**.
+- **`diagnosticos`** — incidents with a **stable code**, category (data / physics / numerical / model) and severity. The category comes from where the problem was generated, **never from searching words in the message**.
+- **`convergencia`** — per block, the method, the tolerance and the residual **when the algorithm really evaluates one**. A McCabe-Thiele construction has no residual and says why; inventing one would be a lie that looks like precision.
+
+Details in [docs/14-trazabilidad.md](docs/14-trazabilidad.md).
 
 ---
 
-## El laboratorio: montar un sistema por piezas
+## How it is validated
 
-`/laboratorio/*` toma un grafo de piezas físicas —alimentación, volúmenes
-de control, fuentes de calor, corrientes intermedias, salida— y lo
-resuelve como un sistema, en vez de reconocer dos montajes concretos.
+One rule, applied across the project:
 
-Lo que lo distingue de dibujar un diagrama de flujo: **la corriente
-intermedia es un único estado**, compartido por los dos volúmenes, así que
-no hay ecuaciones de continuidad que escribir ni dos copias que igualar. Y
-el motor devuelve el sistema que de verdad ejecutó —qué cuenta como
-ecuación y qué no, qué término cayó por qué supuesto, y con qué algoritmo
-se resolvió— en lugar de un resultado sin procedencia.
+> **A method that runs is not a method that works.** It is validated against something independent: a closed formula, a balance that must close, a literature value, or a physical property that must hold.
 
-Resuelve balances molares **por especie** con transformación
-estequiométrica, y ahí está la distinción que más cuesta: **la fuente neta
-no determina la generación y el consumo brutos.** Una reacción reversible
-en equilibrio tiene la fuente neta a cero y las brutas positivas —las
-moléculas no están quietas, están yendo y viniendo a la misma velocidad—
-así que cuando solo se conoce la tasa neta, el motor devuelve las brutas
-como «no disponibles» en vez de inventarlas con `max(neto, 0)`.
+"Returns an array of the right shape" and "the number looks reasonable" do not count. These do, and they are real:
 
-Detalle en [`docs/15-laboratorio.md`](docs/15-laboratorio.md); el contrato
-de la API, en
-[`docs/ENTREGA_LABORATORIO_CODEX.md`](docs/ENTREGA_LABORATORIO_CODEX.md).
+- The energy balance of a plant with a recycle closes to $4\times10^{-12}$ relative.
+- The ethanol/water azeotrope appears at $x = 0.894$ (literature: 0.894).
+- The solubility of MIBK in water at 25 °C comes out at 1.41 wt % against 1.55 % in Perry's table 15-8, and the distribution of acetic acid falls 17 % to 26 % short — **the error is measured and written down**, not hidden behind a loose tolerance.
+- The liquid leaving a flash is at its bubble point to $10^{-9}$ K, checked against an independent routine.
+- In the Engine, benzene and toluene heated until fully vaporized go through the same equations from start to end; bubble and dew points match Raoult in closed form to $10^{-4}$ K, and boiling water matches IAPWS-IF97 to 5 mK.
+- A first-order kinetics reproduces its **analytical solution** to $10^{-12}$, and a transient batch ends at the calculated equilibrium to $5.6\times10^{-17}$ — integrating an ODE and solving $\ln Q = \ln K$ are two paths with nothing in common.
+
+The full detail, and **the limits**, in [docs/12-validacion.md](docs/12-validacion.md).
 
 ---
 
-## Qué NO hace
+## What it does NOT do
 
-Esto es tan importante como lo anterior y está documentado equipo por
-equipo:
+This is as important as the above, and it is documented unit by unit:
 
-- **Sin columna rigurosa MESH todavía** — solo el andamiaje.
-- Sin dinámica: todo es estado estacionario.
-- **Equilibrio líquido-líquido: sirve para explorar, no para dimensionar.**
-  Medido contra Perry's tabla 15-8 (agua/ácido acético/MIBK a 25 °C),
-  UNIFAC-LLE subestima la razón de reparto entre un 17 % y un 26 %, de
-  forma sistemática, y su punto de pliegue queda más adentro que el real.
-  Acierta la tendencia, que es lo que decide si un disolvente sirve; la
-  magnitud no basta para dimensionar. Perry's lo dice igual: «UNIFAC and
-  other estimation methods are not sufficiently accurate». Sin extracción
-  multietapa (necesita plato a plato) y sin forma de ajustar los
-  parámetros binarios a datos del sistema.
-- Caída de presión **por equipo**, no un perfil interno: una columna de
-  atajo no puede llevarlo (su curva de equilibrio está precalculada a una
-  sola presión).
-- **Dimensionado parcial**: diámetro de columna de platos por la
-  correlación de Fair (los dos extremos, manda el mayor) y área del
-  intercambiador de dos corrientes por U·A·LMTD, validados contra el
-  Ejemplo 9 de Perry's. Sin platos reales desde las teóricas, sin columnas
-  de relleno, sin área de condensador ni rehervidor (haría falta modelar
-  los servicios para tener su temperatura), y **sin costes** — un diámetro
-  y un área no son un precio.
+- **No rigorous MESH column yet** — only the scaffolding.
+- The classic flowsheet is steady state only; dynamics live in the Engine.
+- **Liquid-liquid equilibrium is for exploring, not for sizing.** Against Perry's table 15-8, UNIFAC-LLE underestimates the distribution ratio by 17 % to 26 %, systematically. It gets the trend right, which is what decides whether a solvent is useful; the magnitude is not enough for sizing.
+- Pressure drop **per unit**, not an internal profile.
+- **Partial sizing:** tray column diameter by the Fair correlation and two-stream exchanger area by U·A·LMTD, validated against Perry's Example 9. No real trays from theoretical ones, no packed columns, and **no costs** — a diameter and an area are not a price.
 
 ---
 
-## Compartir una simulación
+## Sharing a simulation
 
-Cada simulación cabe dentro de un enlace. «Copiar enlace» en la lista de
-simulaciones genera una URL que lleva el diagrama entero —componentes,
-unidades, equipos y datos— y que se abre en cualquier navegador sin
-instalar ni registrar nada.
-
-Detalles que importan:
-
-- Va en el **fragmento** (`#`) de la URL, así que no se envía al servidor
-  ni aparece en sus registros.
-- **No viajan los resultados, solo el planteamiento.** Quien abra el
-  enlace los recalcula con el mismo núcleo validado — un enlace no puede
-  transportar cifras que el simulador no produzca.
-- No hay base de datos detrás: el enlace no caduca porque no depende de
-  que se conserve nada.
-- Un diagrama que no quepa (8000 caracteres) se rechaza explicándolo y
-  remite al archivo `.simproc.json`.
+Each flowsheet simulation fits inside a link. "Copiar enlace" in the simulations list generates a URL that carries the whole flowsheet — components, units, equipment and data — and opens in any browser without installing or registering anything. It goes in the URL **fragment** (`#`), so it is not sent to the server; **results do not travel, only the setup**, and whoever opens the link recalculates them with the same validated core.
 
 ---
 
-## Documentación
+## Documentation
 
-Empezar por [`docs/README.md`](docs/README.md). Los documentos se leen en
-orden y cada uno enlaza al siguiente.
-
-La matemática va en Markdown con LaTeX, versionada junto al código y
-actualizada en el mismo commit que el cambio que la motiva — que es la
-única forma de que no se quede obsoleta.
+Start with [docs/README.md](docs/README.md). The mathematics is written in Markdown with LaTeX, versioned together with the code and updated in the same commit as the change that prompts it — the only way it does not go stale.

@@ -9,7 +9,7 @@ de ensamblaje (independiente de la revision 1 de la API puntual).
 Esquema: frontend/app/motor/contratoEnsamblajeTermodinamico.ts
 (SolicitudEnsamblajeDinamico, RespuestaValidacionDinamica,
 RespuestaResolucionDinamica). Decisiones, ecuaciones, metodos y limites:
-docs/MOTOR_ENSAMBLAJE_DINAMICO.md.
+docs/engine/dynamic-assembly.md.
 
 El cuerpo se lee como JSON libre, igual que la API puntual: todo problema
 conocido sale como diagnostico con su origen (propietario y ruta) en vez

@@ -4,7 +4,7 @@ import type { Expresion } from "./contrato";
 import type { FormulacionNucleo } from "./contratoNucleo";
 import type { EstadoEstudio, Racional, TipoTermino } from "./contratoEstudio";
 import { latexExpresion, nombreLatex } from "./exportar";
-import FormulaLatex from "../flowsheet/FormulaLatex";
+import FormulaLatex from "../components/FormulaLatex";
 
 export const NOMBRE_TIPO: Record<TipoTermino, string> = {
   acumulacion: "acumulación", inercia_temporal: "inercia temporal", difusion: "difusión", conveccion: "convección",

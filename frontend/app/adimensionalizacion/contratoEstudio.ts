@@ -81,7 +81,7 @@ export type EstudioSimulacion = Base & {
   verificacionMalla?: { nodosRefinados?: number; diferenciaMaxima?: number; diferenciaRelativa?: number | null; nota?: string; estado?: string; motivo?: string };
   fisico?: { tiempo: { variableId: string | null; valoresSI: number[] | null }; coordenada?: { variableId: string; valoresSI: number[] | null }; campos: Record<string, number[][] | null>; faltan: string[]; nota: string };
   codigoPython?: string | null; codigoMotivo?: string;
-  /** La misma trayectoria en el formato común de resultados (docs/FORMATO_RESULTADOS.md). */
+  /** La misma trayectoria en el formato común de resultados (docs/contracts/results-format.md). */
   resultados?: import("../../motores/resultados/contrato").ConjuntoResultados;
 };
 export type ResultadosEstudio = Partial<{

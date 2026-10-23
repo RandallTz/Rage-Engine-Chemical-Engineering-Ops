@@ -22,7 +22,7 @@ Estados de rechazo, por prioridad cuando hay varios problemas:
 Un rechazo siempre lleva evaluacion = null.
 
 Decisiones fisicas y definiciones de residuos:
-docs/MOTOR_TERMODINAMICA_H0_H1.md.
+docs/engine/thermodynamics-h0-h1.md.
 """
 
 import math

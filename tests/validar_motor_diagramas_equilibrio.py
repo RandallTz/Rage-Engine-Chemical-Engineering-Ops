@@ -1,5 +1,5 @@
 """
-Diagramas de equilibrio T-xy / P-xy (frontend/PLAN_DIAGRAMAS_EQUILIBRIO_MOTOR.md, D1-D3 y parte fisica de D5).
+Diagramas de equilibrio T-xy / P-xy (docs/history/frontend/plan-diagrams-equilibrium-engine.md, D1-D3 y parte fisica de D5).
 
 Referencias independientes del trazador:
   * mezcla ideal: Raoult con Poynting escrito aqui (K_i = Psat_i exp(v_L,i (P - Psat_i)/RT)/P), resuelto con
@@ -319,7 +319,7 @@ async def http():
         viejo = (await cl.get("/motor/termodinamica/diagrama")).json()
         return cap, mal, viejo
 cap, mal, viejo = asyncio.run(http())
-# UNIFAC (frontend/CONTRATO_CLAUDE_UNIFAC_MOTOR.md) amplia el catalogo de forma aditiva.
+# UNIFAC (docs/history/frontend/contract-claude-unifac-engine.md) amplia el catalogo de forma aditiva.
 check(cap["revision"] == 1 and {p["modelo"]["id"] for p in cap["paquetes"]} == {
           "mezcla-ideal", "nrtl-chemsep", "nrtl-lle-agua-butanol", "unifac-original-public", "unifac-dortmund-public",
           "unifac-original-lle-public"},

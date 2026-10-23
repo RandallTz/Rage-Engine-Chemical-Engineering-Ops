@@ -512,7 +512,7 @@
      "nombre": "liquido-vapor",
      "publicada": true,
      "evidencia": "cualitativa",
-     "motivo": "prediccion por contribucion de grupos; azeotropo etanol-agua a 1 atm 78.04 C, x 0.896 frente a 78.15 C, 0.894 de la literatura (docs/MOTOR_UNIFAC.md)"
+     "motivo": "prediccion por contribucion de grupos; azeotropo etanol-agua a 1 atm 78.04 C, x 0.896 frente a 78.15 C, 0.894 de la literatura (docs/engine/unifac.md)"
     },
     {
      "id": "liquido_liquido",
@@ -753,14 +753,14 @@
      "nombre": "liquido-vapor",
      "publicada": true,
      "evidencia": "cualitativa",
-     "motivo": "prediccion por contribucion de grupos; azeotropo etanol-agua a 1 atm 78.13 C, x 0.899 frente a 78.15 C, 0.894 de la literatura (docs/MOTOR_UNIFAC.md)"
+     "motivo": "prediccion por contribucion de grupos; azeotropo etanol-agua a 1 atm 78.13 C, x 0.899 frente a 78.15 C, 0.894 de la literatura (docs/engine/unifac.md)"
     },
     {
      "id": "liquido_liquido",
      "nombre": "liquido-liquido y liquido-liquido-vapor",
      "publicada": true,
      "evidencia": "cualitativa",
-     "motivo": "prediccion pobre para agua/1-butanol: solubilidades mutuas 11.2 y 11.7 g/100 g a 293 K frente a 7.8 y 20.0 de IUPAC-NIST SDS-15 (docs/MOTOR_UNIFAC.md)"
+     "motivo": "prediccion pobre para agua/1-butanol: solubilidades mutuas 11.2 y 11.7 g/100 g a 293 K frente a 7.8 y 20.0 de IUPAC-NIST SDS-15 (docs/engine/unifac.md)"
     },
     {
      "id": "liquido_rigido_lleno",
@@ -994,14 +994,14 @@
      "nombre": "liquido-vapor",
      "publicada": true,
      "evidencia": "cualitativa",
-     "motivo": "sin contraste experimental en su dominio (10-40 C); Pxy etanol-agua a 298.15 K entre 3 y 8 % por debajo de UNIFAC original y sin el azeotropo que predicen la original y NRTL (docs/MOTOR_UNIFAC.md)"
+     "motivo": "sin contraste experimental en su dominio (10-40 C); Pxy etanol-agua a 298.15 K entre 3 y 8 % por debajo de UNIFAC original y sin el azeotropo que predicen la original y NRTL (docs/engine/unifac.md)"
     },
     {
      "id": "liquido_liquido",
      "nombre": "liquido-liquido y liquido-liquido-vapor",
      "publicada": true,
      "evidencia": "cualitativa",
-     "motivo": "tabla ajustada a ELL (Magnussen 1981); agua/1-butanol a 293 K: 6.9 y 21.6 g/100 g frente a 7.8 y 20.0 de IUPAC-NIST SDS-15 (prediccion: el par no se reajusto; docs/MOTOR_UNIFAC.md)"
+     "motivo": "tabla ajustada a ELL (Magnussen 1981); agua/1-butanol a 293 K: 6.9 y 21.6 g/100 g frente a 7.8 y 20.0 de IUPAC-NIST SDS-15 (prediccion: el par no se reajusto; docs/engine/unifac.md)"
     },
     {
      "id": "liquido_rigido_lleno",

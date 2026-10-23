@@ -1,103 +1,142 @@
-# Documentación técnica del simulador
+# Documentation
 
-Esta carpeta documenta **la matemática** que hay detrás del simulador: qué
-ecuaciones se resuelven, con qué método, bajo qué suposiciones y hasta
-dónde son válidas.
+This folder documents the simulator: what it is made of, which contracts its engines share, and **the mathematics** behind it — which equations are solved, with which method, under which assumptions and how far they are valid.
 
-No es un manual de uso ni una referencia de la API. Es el documento al que
-hay que ir para responder *"¿de dónde sale este número?"* y, sobre todo,
-*"¿cuándo NO debo fiarme de él?"*.
+It is the place to go to answer *"where does this number come from?"* and, above all, *"when should I NOT trust it?"*.
 
----
+Start with [ARCHITECTURE.md](../ARCHITECTURE.md) at the repository root; agents also read [AGENTS.md](../AGENTS.md).
 
-## Por qué Markdown y no LaTeX
+## Documentation maintenance standard
 
-Las fórmulas van en LaTeX (`$...$` y `$$...$$`), pero el documento es
-Markdown por tres razones prácticas:
+User decision, 19 October 2026: documentation is maintained by topic, not by change, date, session or agent. Update the existing authoritative document instead of creating another plan, delivery, handoff or continuation file. This applies to every future contributor, including Claude.
 
-- Se versiona y se *diffea* junto al código, en el mismo repositorio.
-- Se lee directamente en el editor y en GitHub, sin compilar nada.
-- Se actualiza en el mismo commit que el cambio de código que lo motiva,
-  que es la única forma de que no se quede obsoleto.
+| Information | Authoritative location |
+|---|---|
+| Global architecture and workspace boundaries | [ARCHITECTURE.md](../ARCHITECTURE.md) |
+| Interface fields, versions, errors and compatibility | The relevant document in `contracts/` |
+| Model workflow, frontend behavior and integration limits | [Model workspace specification](engine/model-workspaces.md) |
+| Physical capabilities, priorities and remaining milestones | [Multiphysics roadmap](engine/multiphysics-roadmap.md), or the existing module scope/plan |
+| Reproducible verification | Existing tests and generated reports; concise evidence in the owning document |
 
-Si en algún momento hace falta un PDF, `pandoc` convierte estos archivos
-sin tocarlos.
+For a module specification, maintain the applicable sections in a consistent order: **Scope and responsibility; Current behavior; Contracts and dependencies; Limits; Verification; Pending work**. Existing documents can be aligned incrementally; this rule does not require creating replacement files or reorganizing unrelated documentation.
 
----
-
-## Índice
-
-| # | Documento | Contenido |
-|---|-----------|-----------|
-| 1 | [Arquitectura](01-arquitectura.md) | Capas del sistema, núcleo en SI puro, frontera de unidades, filosofía orientada a ecuaciones |
-| 2 | [El solver](02-solver.md) | Bloques de ecuaciones, punto fijo, grados de libertad, redundancias, consistencia, **reciclos y tearing** |
-| 3 | [Termodinámica](03-termodinamica.md) | UNIFAC, Raoult modificada, puntos de burbuja y de rocío, equilibrio y cinética de reacción |
-| 4 | [Entalpía](04-entalpia.md) | $h(T,x,\text{fase})$: una sola definición para todo el simulador, tabulación, inversión $h \to T$ |
-| 5 | [Flash y equipos térmicos](05-flash.md) | Rachford-Rice, diagnóstico de fase, flash P-H, **intercambiador y válvula** |
-| 6 | [McCabe-Thiele](06-mccabe-thiele.md) | Construcción y–x, reflujo mínimo, eficiencia de Murphree, cargas térmicas por CMO |
-| 7 | [Ponchon-Savarit](07-ponchon-savarit.md) | Diagrama entalpía-composición, polos Δ, colinearidad, $Q_c/D$ mínimo |
-| 8 | [FUG](08-fug.md) | Fenske, Underwood, Gilliland para mezclas multicomponente |
-| 9 | [Reactor CSTR](09-reactor-cstr.md) | Balance por componente, avance de reacción, cinética, dimensionado |
-| 10 | [Destilación reactiva](10-destilacion-reactiva.md) | Curvas residuales, mapeo discreto, transformación de Barbosa-Doherty, azeótropos reactivos |
-| 11 | [Unidades](11-unidades.md) | Tabla afín generada con `pint`, y por qué el caudal másico **no** es una unidad |
-| 12 | [Validación y límites](12-validacion.md) | Qué está comprobado, contra qué, y qué **no** hace el simulador |
-| 13 | [Especificaciones de diseño y barridos](13-especificaciones.md) | La pregunta inversa: pedir el resultado y obtener el dato. Grados de libertad con especificaciones, barridos de sensibilidad |
-| 14 | [Trazabilidad](14-trazabilidad.md) | De dónde sale este número: versión del motor y del proveedor, huella determinista de las entradas, diagnósticos con código estable, y **por qué no se fabrican residuos** |
-| 15 | [El laboratorio](15-laboratorio.md) | De un grafo de piezas a un sistema resuelto: identidad única de la corriente intermedia, qué cuenta como ecuación y qué no, cinética con el solver implícito declarado, lote transitorio y equilibrio calculado, y **por qué la fuente neta no determina la generación bruta** |
-
-Y, fuera de la numeración, el contrato de la API del laboratorio para quien conecte la interfaz: [ENTREGA_LABORATORIO_CODEX.md](ENTREGA_LABORATORIO_CODEX.md). Los ejemplos exactos de petición y respuesta están en [ejemplos/](ejemplos/), **generados ejecutando el endpoint** y no escritos a mano: uno copiado a mano se queda obsoleto en silencio.
+- Read this index and search existing documentation before adding a file. A new document is justified only by a distinct, enduring topic that has no existing owner; register it here. Routine changes stay in the owning document.
+- Replace outdated descriptions and update status in place. Distinguish proposed, implemented and verified behavior; do not append a new narrative for every session.
+- Record the primary Model/Transform/Solve/Results workspace, affected contracts/consumers, relevant verification and remaining limitations where that information belongs. Link to other authoritative documents instead of repeating their contents.
+- Keep detailed command output, screenshots and temporary notes in ignored `.tmp/` directories. Do not create root-level scratch plans or duplicate reports.
+- Keep historical documents recoverable. Consolidate them only as a deliberate cleanup task with references preserved; this policy does not authorize deleting earlier work.
 
 ---
 
-## Convenciones de notación
+## Layout
 
-Salvo que se diga lo contrario, todo está en **unidades SI**.
+| Folder | What it holds |
+|---|---|
+| [`contracts/`](contracts/) | The contracts every engine shares: the common model, the thermodynamic layer, units, results, the nondimensionalization core |
+| [`engine/`](engine/) | The multiphysics Engine (`/motor`): its map, roadmap, checklist, balance engine, vertical slice, battery, and the documents of each thermodynamic piece |
+| [`nondimensionalization/`](nondimensionalization/) | Scope and continuity of the nondimensionalization module |
+| [`papers/`](papers/) | The nondimensionalization paper (`.md`, `.tex`) |
+| `01-…15-*.md` (this folder) | The method guides of the classic simulator (see below); they move to `guides/` in a later phase |
+| [`history/`](history/) | Dated deliveries, integrations, incidents, plans, audits and archived code. Read-only; kept in their original language |
+| [`ejemplos/`](ejemplos/) | Exact request and response examples, **generated by running the endpoints**, never written by hand. They move to `examples/` in phase 4 |
+| [`contratos/`](contratos/) | Canonical TypeScript copies of some contracts, compared with the frontend's by the verifiers |
+| [`repository-cleanup/`](repository-cleanup/) | The plan for tidying the repository and moving it to English |
 
-| Símbolo | Significado | Unidad |
-|---------|-------------|--------|
-| $F, D, B$ | Caudal molar de alimentación, destilado, fondos | mol/s |
-| $z_i, x_i, y_i$ | Fracción molar del componente $i$ en alimentación, líquido, vapor | — |
-| $n$ | Número de componentes | — |
-| $T, P$ | Temperatura, presión | K, Pa |
-| $\gamma_i$ | Coeficiente de actividad del componente $i$ | — |
-| $P_i^{sat}$ | Presión de vapor del componente puro $i$ | Pa |
-| $\alpha_{ij}$ | Volatilidad relativa de $i$ respecto de $j$ | — |
-| $q$ | Condición térmica de la alimentación | — |
-| $R$ | Relación de reflujo externa, $L_0/D$ | — |
-| $N$ | Número de etapas teóricas | — |
-| $H_L, H_V$ | Entalpía molar de líquido y vapor saturados | J/mol |
-| $h_L, h_V$ | Entalpía molar de corriente, referencia puros líquidos a 298.15 K | J/mol |
-| $\beta$ | Fracción vaporizada de una corriente, $V/F$ | — |
-| $K_i$ | Constante de equilibrio del componente $i$, $y_i/x_i$ | — |
-| $Q_c, Q_R$ | Carga térmica de condensador y rehervidor | W |
-| $\nu_i$ | Coeficiente estequiométrico del componente $i$ | — |
-| $\xi$ | Avance de reacción | mol/s |
-| $Da$ | Número de Damköhler | — |
+## Contracts
 
-**Convención de signos estequiométricos:** $\nu_i < 0$ para reactivos,
-$\nu_i > 0$ para productos, y $\nu_{tot} = \sum_i \nu_i$.
+| Document | Content |
+|---|---|
+| [Common model](contracts/common-model.md) | `rage.modelo` v0: the one representation every engine speaks |
+| [Thermodynamic layer](contracts/thermodynamic-layer.md) | Always-present thermodynamics: fixed candidate phases, complementarity, the sheet's Thermodynamics panel |
+| [Units service](contracts/units-service.md) | The only place that interprets a unit |
+| [Results format](contracts/results-format.md) | `rage.resultados` v0 and the single charting engine |
+| [Nondimensionalization core](contracts/nondimensionalization-core.md) | Requests, responses and certificates of the core |
 
-**Convención de componentes:** el índice 0 es, por convención, el
-componente *ligero* en los métodos binarios. En un diagrama, la corriente
-`s1` aporta al sistema las variables escalares `s1.F`, `s1.T`, `s1.P`,
-`s1.x0`, …, `s1.x{n-1}`.
+## Engine
 
----
+| Document | Content |
+|---|---|
+| [Model workspaces](engine/model-workspaces.md) | Mandatory Model → Transform → Solve → Results workflow, frontend routes, implemented scope and continuation for Claude |
+| [Engine map](engine/engine-map.md) | What the current engine does, how far it goes, and its verification |
+| [Multiphysics roadmap](engine/multiphysics-roadmap.md) | Phases F0–F10, dependencies and closing criteria |
+| [Engine checklist](engine/engine-checklist.md) | Item-by-item list (the live one is `/checklist`) |
+| [Balance engine](engine/balance-engine.md) | Equations generated on the server from each volume's assumptions |
+| [Vertical slice](engine/vertical-slice.md) | The common model solved by its own compiler and solver |
+| [Multiphysics battery](engine/multiphysics-battery.md) | Generated: which sheets the common Engine solves and what is missing |
+| [Dynamic assembly](engine/dynamic-assembly.md), [multiphase equilibrium](engine/multiphase-equilibrium.md), [multiphase consolidation](engine/multiphase-consolidation.md) | The thermodynamic network assembly (v1 and v2) |
+| [Thermodynamics H0–H1](engine/thermodynamics-h0-h1.md), [H3](engine/thermodynamics-h3.md), [N components](engine/thermodynamics-n-components.md), [UNIFAC](engine/unifac.md), [property catalog](engine/property-catalog.md), [equilibrium diagrams](engine/equilibrium-diagrams.md) | The thermodynamic services and packages |
+| [Fundamental equations](engine/fundamental-equations.md), [energy foundation](engine/energy-foundation.md), [energy equations refinement](engine/energy-equations-refinement.md), [control volume definition](engine/control-volume-definition.md), [matter coupling](engine/matter-coupling.md), [sheet solver](engine/sheet-solver.md), [balances UI](engine/balances-ui.md), [matter test sheets](engine/matter-test-sheets.md), [multicomponent test sheets](engine/multicomponent-test-sheets.md), [components, ports and sources decision](engine/decision-components-ports-sources.md), [open boundary design](engine/open-boundary-water-air-design.md) | Foundations and design notes of the engine's pieces |
 
-## Cómo está escrito
+## Method guides of the classic simulator
 
-Cada documento sigue el mismo patrón:
+These guides describe the earlier, equation-oriented simulator (columns, flowsheets, lab). They are still in Spanish and keep their names for now, because the app's method cards and home page link to them by name; they move to `guides/` and to English with that page.
 
-1. **Qué resuelve** y con qué variables.
-2. **Las ecuaciones**, con su origen.
-3. **Cómo se resuelven numéricamente** (qué algoritmo, qué bracket, qué
-   tolerancia) — porque en un simulador el método numérico *es* parte del
-   resultado.
-4. **Suposiciones y límites**, explícitos. Esta sección no es opcional:
-   la mayoría de los errores de un simulador no son de programación sino
-   de usar un método fuera de su rango.
-5. **Qué está verificado y contra qué.**
+| # | Document | Content |
+|---|---|---|
+| 1 | [Architecture](01-arquitectura.md) | System layers, pure SI core, units boundary, equation-oriented philosophy |
+| 2 | [The solver](02-solver.md) | Equation blocks, fixed point, degrees of freedom, redundancies, consistency, **recycles and tearing** |
+| 3 | [Thermodynamics](03-termodinamica.md) | UNIFAC, modified Raoult, bubble and dew points, reaction equilibrium and kinetics |
+| 4 | [Enthalpy](04-entalpia.md) | $h(T,x,\text{phase})$: one definition for the whole simulator, tabulation, inversion $h \to T$ |
+| 5 | [Flash and thermal equipment](05-flash.md) | Rachford-Rice, phase diagnosis, P-H flash, **heat exchanger and valve** |
+| 6 | [McCabe-Thiele](06-mccabe-thiele.md) | y–x construction, minimum reflux, Murphree efficiency, heat duties by CMO |
+| 7 | [Ponchon-Savarit](07-ponchon-savarit.md) | Enthalpy–composition diagram, Δ poles, collinearity, minimum $Q_c/D$ |
+| 8 | [FUG](08-fug.md) | Fenske, Underwood, Gilliland for multicomponent mixtures |
+| 9 | [CSTR reactor](09-reactor-cstr.md) | Balance per component, reaction extent, kinetics, sizing |
+| 10 | [Reactive distillation](10-destilacion-reactiva.md) | Residue curves, discrete mapping, Barbosa-Doherty transformation, reactive azeotropes |
+| 11 | [Units](11-unidades.md) | Affine table generated with `pint`, and why mass flow is **not** a unit |
+| 12 | [Validation and limits](12-validacion.md) | What is checked, against what, and what the simulator does **not** do |
+| 13 | [Design specifications and sweeps](13-especificaciones.md) | The inverse question: ask for the result and get the datum. Degrees of freedom with specifications, sensitivity sweeps |
+| 14 | [Traceability](14-trazabilidad.md) | Where this number comes from: engine and provider version, deterministic fingerprint of the inputs, diagnostics with stable codes, and **why residuals are not fabricated** |
 
-Cuando algo es una aproximación, se dice que lo es. Cuando algo se
-descubrió estando mal, queda anotado en [`roadmap.md`](../roadmap.md) con
-el número que lo destapó.
+The laboratory was deleted on 22 October 2026 (user decision). Its former guide and API contract are kept only as historical records; see the [cleanup plan](repository-cleanup/README.md#7-decisions).
+
+## Why Markdown and not LaTeX
+
+Formulas are written in LaTeX (`$...$` and `$$...$$`), but the documents are Markdown for three practical reasons:
+
+- They are versioned and diffed together with the code, in the same repository.
+- They can be read directly in the editor and on GitHub, without compiling anything.
+- They are updated in the same commit as the code change that prompts them, which is the only way they do not go stale.
+
+If a PDF is ever needed, `pandoc` converts these files without touching them.
+
+## Notation conventions
+
+Unless stated otherwise, everything is in **SI units**.
+
+| Symbol | Meaning | Unit |
+|---|---|---|
+| $F, D, B$ | Molar flow of feed, distillate, bottoms | mol/s |
+| $z_i, x_i, y_i$ | Mole fraction of component $i$ in the feed, liquid, vapor | — |
+| $n$ | Number of components | — |
+| $T, P$ | Temperature, pressure | K, Pa |
+| $\gamma_i$ | Activity coefficient of component $i$ | — |
+| $P_i^{sat}$ | Vapor pressure of pure component $i$ | Pa |
+| $\alpha_{ij}$ | Relative volatility of $i$ with respect to $j$ | — |
+| $q$ | Thermal condition of the feed | — |
+| $R$ | External reflux ratio, $L_0/D$ | — |
+| $N$ | Number of theoretical stages | — |
+| $H_L, H_V$ | Molar enthalpy of saturated liquid and vapor | J/mol |
+| $h_L, h_V$ | Molar enthalpy of a stream, reference pure liquids at 298.15 K | J/mol |
+| $\beta$ | Vaporized fraction of a stream, $V/F$ | — |
+| $K_i$ | Equilibrium constant of component $i$, $y_i/x_i$ | — |
+| $Q_c, Q_R$ | Condenser and reboiler heat duty | W |
+| $\nu_i$ | Stoichiometric coefficient of component $i$ | — |
+| $\xi$ | Reaction extent | mol/s |
+| $Da$ | Damköhler number | — |
+
+**Stoichiometric sign convention:** $\nu_i < 0$ for reactants, $\nu_i > 0$ for products, and $\nu_{tot} = \sum_i \nu_i$.
+
+**Component convention:** index 0 is, by convention, the *light* component in the binary methods. In a flowsheet, stream `s1` contributes the scalar variables `s1.F`, `s1.T`, `s1.P`, `s1.x0`, …, `s1.x{n-1}` to the system.
+
+## How the documents are written
+
+Each document follows the same pattern:
+
+1. **What it solves** and with which variables.
+2. **The equations**, with their origin.
+3. **How they are solved numerically** (which algorithm, which bracket, which tolerance) — because in a simulator the numerical method *is* part of the result.
+4. **Assumptions and limits**, explicit. This section is not optional: most errors in a simulator are not programming errors but using a method outside its range.
+5. **What is verified, and against what.**
+
+When something is an approximation, the document says so. When something was found to be wrong, it is recorded in [the build log](history/build-log.md) with the number that exposed it.

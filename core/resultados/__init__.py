@@ -1,5 +1,5 @@
 """
-Formato común de resultados (docs/FORMATO_RESULTADOS.md): lo que todo motor
+Formato común de resultados (docs/contracts/results-format.md): lo que todo motor
 de cálculo publica y lo que consume el motor de gráficas.
 
   formato.conjunto(...), formato.eje(...), formato.serie(...)  -> construir

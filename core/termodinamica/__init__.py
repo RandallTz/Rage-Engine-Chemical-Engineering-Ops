@@ -1,5 +1,5 @@
 """
-Capa termodinámica del modelo común (ARQUITECTURA_MOTOR.md §3, docs/CAPA_TERMODINAMICA.md).
+Capa termodinámica del modelo común (ARCHITECTURE.md §3, docs/contracts/thermodynamic-layer.md).
 
   capa.candidatas(modelo, volumen_id)          -> fases candidatas, siempre las mismas
   capa.variables(modelo)                       -> variables de estado siempre presentes

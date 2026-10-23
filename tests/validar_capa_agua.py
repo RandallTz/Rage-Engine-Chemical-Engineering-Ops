@@ -1,5 +1,5 @@
 """
-Prueba de ebullición del agua pura en la capa termodinámica (docs/CAPA_TERMODINAMICA.md).
+Prueba de ebullición del agua pura en la capa termodinámica (docs/contracts/thermodynamic-layer.md).
 
 Sistema: 1 mol de agua (paquete agua-iapws95), presión prescrita 101325 Pa,
 100 W desde 330 K durante 600 s: líquido, ebullición a T constante, vapor.

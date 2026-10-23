@@ -1,5 +1,5 @@
 // Protocolo de diagramas de equilibrio del motor (revision 1, independiente del ensamblaje).
-// Plan: frontend/PLAN_DIAGRAMAS_EQUILIBRIO_MOTOR.md. Documento: docs/MOTOR_DIAGRAMAS_EQUILIBRIO.md.
+// Plan: docs/history/frontend/plan-diagrams-equilibrium-engine.md. Documento: docs/engine/equilibrium-diagrams.md.
 // Rutas: GET /motor/termodinamica/diagramas/capacidades, POST /motor/termodinamica/diagramas/trazar.
 // La ruta existente GET /motor/termodinamica/diagrama (P-T del agua con hielo) no cambia.
 // Ejemplos compilados contra este archivo: docs/ejemplos/motor-diagramas/ (tests/verificar_contrato_diagramas.mjs).

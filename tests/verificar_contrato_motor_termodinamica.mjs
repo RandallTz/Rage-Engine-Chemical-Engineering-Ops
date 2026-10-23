@@ -57,7 +57,7 @@ for (const [nombre, mutar] of [
   ['h incompatible', x => { x.evaluacion.mezcla.h += 1; }],
   ['T distinta', x => { x.evaluacion.T += 0.01; }],
   // Sin masa molar declarada en la solicitud, el validador del cliente no
-  // contrasta masaMolarKgMol (ver docs/MOTOR_TERMODINAMICA_H0_H1.md, hallazgos).
+  // contrasta masaMolarKgMol (ver docs/engine/thermodynamics-h0-h1.md, hallazgos).
   ['fracción de volumen falsa', x => { x.evaluacion.fases[0].fraccionVolumen = 0.5; }],
   ['estabilidad no certificada', x => { x.evaluacion.estabilidad.estado = 'no_evaluada'; }],
 ]) { const x = structuredClone(r); mutar(x); assert.throws(() => contrato.validarRespuestaEstado(x, s, cap), undefined, nombre); checks++; }

@@ -1,5 +1,5 @@
 """
-Corte vertical (ARQUITECTURA_MOTOR.md §10, paso 4; docs/CORTE_VERTICAL.md).
+Corte vertical (ARCHITECTURE.md §10, paso 4; docs/engine/vertical-slice.md).
 
     modelo común -> relaciones -> capa termodinámica -> compilador -> solver propio
                  -> resultados en el formato común

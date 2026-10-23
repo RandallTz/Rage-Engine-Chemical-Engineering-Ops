@@ -15,7 +15,7 @@ de McCabe-Thiele con el R equivalente (Qc_D/Hvap_D - 1) -- es la
 validacion cruzada mas fuerte que se puede hacer sin datos externos.
 
 Hallazgos reales durante la construccion (documentados aqui y en
-roadmap.md):
+docs/history/build-log.md):
     - La tolerancia de colinealidad de los polos (1e-6 ABSOLUTO, pedida
       originalmente) esta mal calibrada: las entalpias aqui son de orden
       10^4-10^5 J/mol, asi que se uso una tolerancia RELATIVA en su lugar.

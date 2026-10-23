@@ -2,7 +2,7 @@
 Validacion del nucleo de adimensionalizacion (A0-A3 y exploracion).
 
 Cubre las pruebas de aceptacion del plan
-(frontend/PLAN_ADIMENSIONALIZACION_ECUACIONES.md, secciones 3 y 8) que
+(docs/history/frontend/plan-nondimensionalization-equations.md, secciones 3 y 8) que
 corresponden al alcance implementado: contrato, analisis dimensional,
 transformacion por escalas dadas, objetivos y formas multiples, signos,
 ceros, condiciones, sistemas de varios campos, grupos Pi y exploracion.

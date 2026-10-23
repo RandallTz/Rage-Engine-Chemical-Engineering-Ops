@@ -1,5 +1,5 @@
 // BORRADOR (diseño C4), NO PUBLICADO: frontera abierta con caudal calculado y paquete agua + gases no
-// condensables. Documento: docs/DISENO_FRONTERA_ABIERTA_AGUA_AIRE.md. El servicio actual rechaza estos
+// condensables. Documento: docs/engine/open-boundary-water-air-design.md. El servicio actual rechaza estos
 // campos (MOTOR_ENS_CAMPO_NO_ADMITIDO); se publicarán, si se aprueban, como revisión explícita o como
 // campos opcionales de la revisión 2 anunciados en capacidades, nunca como migración silenciosa.
 // Compila contra la revisión 2 (tests/verificar_contrato_ensamblaje_v2.mjs lo comprueba).

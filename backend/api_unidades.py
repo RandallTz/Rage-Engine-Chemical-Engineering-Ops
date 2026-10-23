@@ -1,4 +1,4 @@
-"""Rutas del servicio único de unidades (core/unidades, docs/SERVICIO_UNIDADES.md)."""
+"""Rutas del servicio único de unidades (core/unidades, docs/contracts/units-service.md)."""
 from typing import Any
 
 from fastapi import APIRouter, Body, HTTPException

@@ -1,4 +1,4 @@
-// Corte vertical, último eslabón (docs/CORTE_VERTICAL.md): el resultado del compilador
+// Corte vertical, último eslabón (docs/engine/vertical-slice.md): el resultado del compilador
 // propio (tests/validar_corte_vertical.py lo escribe en docs/ejemplos/modelo-comun/) sale
 // por la ruta HTTP y se grafica con el motor de gráficas único, sin código propio.
 import assert from "node:assert/strict";

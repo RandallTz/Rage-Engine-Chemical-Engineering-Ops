@@ -1,4 +1,4 @@
-// Formato común de resultados y motor de gráficas único (docs/FORMATO_RESULTADOS.md).
+// Formato común de resultados y motor de gráficas único (docs/contracts/results-format.md).
 // Tres motores distintos -> el mismo formato -> la misma función de gráficas:
 //   1. solver TS del motor (hojas de prueba de materia), con dimensiones del servicio de unidades;
 //   2. ensamblaje v2 del backend (adaptador Python), con sus ejemplos;

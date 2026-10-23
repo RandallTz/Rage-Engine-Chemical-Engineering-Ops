@@ -1,5 +1,5 @@
 """
-Benchmark de la ampliacion a N componentes (docs/MOTOR_TERMODINAMICA_N_COMPONENTES.md, N4).
+Benchmark de la ampliacion a N componentes (docs/engine/thermodynamics-n-components.md, N4).
 
   * N = 2 y 3: prueba de estabilidad especializada (malla) frente a la general (Michelsen), mismos estados;
   * N = 4, 5 y 7: TP una fase, TP L-V, TP junto a la burbuja (+1e-6 K), PH, UV, con evaluaciones de la

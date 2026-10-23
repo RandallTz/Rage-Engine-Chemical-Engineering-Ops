@@ -1,5 +1,5 @@
 """
-Bloque A de ARQUITECTURA_MOTOR.md §10 (orden vigente): la capa termodinámica y
+Bloque A de ARCHITECTURE.md §10 (orden vigente): la capa termodinámica y
 el compilador común con los tres paquetes UNIFAC (decisión §9.1: UNIFAC con
 prioridad completa; NRTL no se trata).
 

@@ -59,7 +59,7 @@ resultados sí. La versión real del proveedor **es** la de `thermo`,
 es un detalle administrativo: es la razón de que `requirements.txt` tenga
 las versiones fijas, y **ya pasó una vez** — los atributos `Hfl`/`Gfl` de
 `thermo` cambiaron río arriba y movieron los números sin que nadie tocara
-una línea de este repositorio (registrado en `roadmap.md`).
+una línea de este repositorio (registrado en `docs/history/build-log.md`).
 
 ### La fecha es la del servidor
 

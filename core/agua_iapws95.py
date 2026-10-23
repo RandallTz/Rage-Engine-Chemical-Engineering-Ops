@@ -30,7 +30,7 @@ evaluacion pueda dejar cambiados para la siguiente.
 Lo que NO es este modulo: no hay hielo (el dominio lo excluye), no hay
 flash bifasico (un T/P en saturacion se rechaza como indeterminado) y no
 hay especificaciones inversas (PH, UV, UP). Ver
-docs/MOTOR_TERMODINAMICA_H0_H1.md.
+docs/engine/thermodynamics-h0-h1.md.
 """
 
 import math

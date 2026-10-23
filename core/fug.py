@@ -28,7 +28,7 @@ menos estandar que el caso de una sola raiz -- se implemento la
 estructura que pide la directiva (un theta por cada intervalo entre
 volatilidades adyacentes de componentes distribuidos, sistema lineal
 para R_min + los d_i intermedios desconocidos) y se verifico con un
-caso sintetico de 2 raices antes de confiar en ella (ver roadmap.md).
+caso sintetico de 2 raices antes de confiar en ella (ver docs/history/build-log.md).
 """
 
 import numpy as np

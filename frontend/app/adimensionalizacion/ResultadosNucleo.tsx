@@ -6,7 +6,7 @@ import type { FormulacionNucleo, RespuestaNucleo, SolicitudNucleo } from "./cont
 import type { ResultadosEstudio } from "./contratoEstudio";
 import { formulacionesDe } from "./lecturaNucleo";
 import { latexExpresion, nombreLatex } from "./exportar";
-import FormulaLatex from "../flowsheet/FormulaLatex";
+import FormulaLatex from "../components/FormulaLatex";
 import DesgloseMatematico from "./DesgloseMatematico";
 import EstudioFormulacion from "./EstudioFormulacion";
 import ComparadorFormulaciones from "./ComparadorFormulaciones";

@@ -1,5 +1,5 @@
 """
-Servicio único de unidades (core/unidades, docs/SERVICIO_UNIDADES.md).
+Servicio único de unidades (core/unidades, docs/contracts/units-service.md).
 
   1. Equivalencia con los sistemas existentes: la tabla del backend del
      motor (backend/motor_ensamblaje.UNIDADES, copia de unidadesMotor.ts, más

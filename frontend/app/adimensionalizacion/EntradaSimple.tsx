@@ -9,7 +9,7 @@ import { latexExpresion } from "./exportar";
 import { consultarNucleo } from "./clienteNucleo";
 import { formulacionesDe, prepararSolicitud } from "./lecturaNucleo";
 import { exportarDesarrollo } from "./exportarDesarrollo";
-import FormulaLatex from "../flowsheet/FormulaLatex";
+import FormulaLatex from "../components/FormulaLatex";
 import ResultadosNucleo, { type VistaResultado } from "./ResultadosNucleo";
 import DimensionesModelo from "./DimensionesModelo";
 import { claveCalculo, guardarCalculo, leerCalculo } from "./resultadosAdim";

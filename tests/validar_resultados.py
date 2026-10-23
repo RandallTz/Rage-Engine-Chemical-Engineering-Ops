@@ -1,5 +1,5 @@
 """
-Formato común de resultados (core/resultados, docs/FORMATO_RESULTADOS.md).
+Formato común de resultados (core/resultados, docs/contracts/results-format.md).
 
   1. Ensamblaje v2 del motor -> formato común sin pérdida: mismos tiempos,
      mismos valores, metadatos de cada variable, eventos y residuos.

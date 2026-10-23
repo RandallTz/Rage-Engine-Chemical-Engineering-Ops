@@ -1,4 +1,4 @@
-// Modelo común v0 desde las hojas reales del motor (docs/CONTRATO_MODELO_COMUN.md §3).
+// Modelo común v0 desde las hojas reales del motor (docs/contracts/common-model.md §3).
 //   - Hojas de materia (solver TS): hoja -> modelo -> formulación + configuración idénticas;
 //     el lector TS y el lector Python aceptan el modelo; `matematico` son las mismas
 //     ecuaciones que importa la adimensionalización; el volumen declara su cierre supuesto.

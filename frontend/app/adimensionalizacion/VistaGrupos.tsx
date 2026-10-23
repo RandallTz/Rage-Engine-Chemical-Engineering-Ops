@@ -3,7 +3,7 @@
 import type { FormulacionNucleo } from "./contratoNucleo";
 import type { EstudioEstructura, EstudioSensibilidad, EstudioValores } from "./contratoEstudio";
 import { latexExpresion, nombreLatex } from "./exportar";
-import FormulaLatex from "../flowsheet/FormulaLatex";
+import FormulaLatex from "../components/FormulaLatex";
 import { Estado, NOMBRE_TIPO, Simbolo, TerminoLatex, numero, racional } from "./presentacionEstudio";
 
 export default function VistaGrupos({ f, estructura, sensibilidad, valores }: {

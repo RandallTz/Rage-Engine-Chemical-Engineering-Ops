@@ -1,5 +1,5 @@
 """
-Compilador del modelo común (ARQUITECTURA_MOTOR.md §5, docs/CORTE_VERTICAL.md):
+Compilador del modelo común (ARCHITECTURE.md §5, docs/engine/vertical-slice.md):
 modelo + datos -> sistema numérico (rhs, firma, estado inicial, observables).
 
   compilar(modelo)            -> SistemaCompilado (entrada estructural)

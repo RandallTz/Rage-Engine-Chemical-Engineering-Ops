@@ -1,6 +1,6 @@
 """
-Modelo común v0 (docs/CONTRATO_MODELO_COMUN.md): la representación única que
-comparten los motores del simulador (ARQUITECTURA_MOTOR.md §4).
+Modelo común v0 (docs/contracts/common-model.md): la representación única que
+comparten los motores del simulador (ARCHITECTURE.md §4).
 
   lector.leer_modelo_comun(dato)      -> dict validado (o ErrorModelo)
   relaciones.relaciones(modelo)       -> relaciones estructurales siempre presentes

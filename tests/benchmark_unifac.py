@@ -1,5 +1,5 @@
 """
-Benchmark de UNIFAC en el motor (frontend/CONTRATO_CLAUDE_UNIFAC_MOTOR.md, U8): arranque en frio, TP, PH, UV,
+Benchmark de UNIFAC en el motor (docs/history/frontend/contract-claude-unifac-engine.md, U8): arranque en frio, TP, PH, UV,
 estabilidad y trayectoria, por N y conjunto de fases, frente a NRTL e ideal en los mismos estados cuando hay
 parametros. Tiempos de pared en el equipo que lo ejecuta (mediana de las repeticiones indicadas).
 

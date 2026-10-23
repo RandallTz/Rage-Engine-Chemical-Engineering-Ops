@@ -26,4 +26,4 @@ Se comprueban contratos, reconstrucciones, conservación global de especies en r
 
 Otros recorridos observados: inicial ausente → Falta 1 y Resolver deshabilitado; volumen nuevo sin valores; agregar/retirar volumen y componente → red de nuevo lista; recarga de resultados; composición de butanol por cada líquido; movimiento de gráficas y persistencia del orden.
 
-El informe de alcance y los límites del contrato están en `../INTEGRACION_MULTIFASICA_V2.md`.
+El informe de alcance y los límites del contrato están en `../../docs/history/frontend/integration-multiphase-v2.md`.

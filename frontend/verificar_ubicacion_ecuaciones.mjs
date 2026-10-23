@@ -1,4 +1,4 @@
-// Regla: cada ecuación va en su lugar (ARQUITECTURA_MOTOR.md §8; app/motor/ubicacionEcuaciones.ts).
+// Regla: cada ecuación va en su lugar (ARCHITECTURE.md §8; app/motor/ubicacionEcuaciones.ts).
 // Para TODAS las ecuaciones que publica el Engine en los ejemplos de redes (respuestas de validación y
 // resolución v2 en docs/ejemplos): cada una tiene exactamente un panel; el de materia no contiene
 // ecuaciones de estado, equilibrio ni energía; el de energía no contiene de materia ni termodinámicas;

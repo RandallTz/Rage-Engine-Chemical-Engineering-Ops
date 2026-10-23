@@ -1,5 +1,5 @@
 """
-Registro unico de sustancias del motor y regla unica de admision por paquete (F2.1, frontend/ROADMAP_MOTOR_MULTIFISICO.md).
+Registro unico de sustancias del motor y regla unica de admision por paquete (F2.1, docs/engine/multiphysics-roadmap.md).
 
 Separa tres cosas que antes estaban mezcladas en una lista fija:
   1. IDENTIDAD de la sustancia (CAS, nombre, masa molar con su fuente): `REGISTRO`, inmutable.
@@ -43,7 +43,7 @@ _REGISTROS = (
                       "DIPPR_PERRY_8E"),
     RegistroSustancia("67-56-1", "metanol", 32.04186e-3, _M, "WagnerPoling", 4.0747926182915573e-05, "HEOS_FIT"),
     # F2.6 (16/10/2026): incorporada solo por registro, con las mismas tablas (chemicals 1.5.2, thermo 0.6.1) y el
-    # mismo metodo de v_L que la mayoria; contraste en docs/MOTOR_CATALOGO_PROPIEDADES.md
+    # mismo metodo de v_L que la mayoria; contraste en docs/engine/property-catalog.md
     RegistroSustancia("67-64-1", "acetona", 58.07914e-3, _M, "WagnerPoling", 7.401429647338668e-05, "HEOS_FIT"),
 )
 # Los v_L son valores FIJADOS al registrar (no se recalculan al arrancar): una nueva version de thermo puede dar
