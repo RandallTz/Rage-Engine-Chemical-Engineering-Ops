@@ -109,3 +109,5 @@ resultados/
 # Los servicios de resultados del motor son codigo, no salidas.
 !core/resultados/
 !frontend/motores/resultados/
+# Generated project-board datasets (tools/roadmap_board/README.md)
+tools/roadmap_board/out/
