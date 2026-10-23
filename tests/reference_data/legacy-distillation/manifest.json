@@ -1,0 +1,13 @@
+{
+ "format": "rage.legacy-reference.manifest",
+ "version": 1,
+ "frozenOn": "2026-10-22",
+ "files": {
+  "mccabe-thiele-benzene-toluene.json": "a3fdae469c511076577252dcd6de5980e92b11d0ecb4d761a2fe298607e42cc0",
+  "ponchon-savarit-benzene-toluene.json": "5a56b39ac7bdabe4a2e50b541cf809f7b769bb6ff8b4ba2d6ca40cba1be308d7",
+  "fug-alkanes.json": "57304ab22334d6889fb198a9c57aa33ee63462399f45ab306d0145c35d0f3eab",
+  "column-flowsheet-fug-pump.json": "97fce45d36d3a197a87603ec14418d185e06d3a0a9de40c10a260edcd313382b",
+  "http-column-presets.json": "c893013b255cad8ea8f91ef0b9e78eba8ad5fe67a84fbeec094526e2c71eee65"
+ },
+ "note": "Frozen before deleting the legacy Process Simulation side (clean-4). Do not regenerate after deletion."
+}

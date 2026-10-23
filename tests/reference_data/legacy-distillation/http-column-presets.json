@@ -1,0 +1,579 @@
+{
+ "format": "rage.legacy-reference",
+ "version": 1,
+ "frozenOn": "2026-10-22",
+ "id": "http-column-presets",
+ "method": "POST /columna/resolver with the /ejemplos presets",
+ "legacy": {
+  "module": "backend/nucleo.py",
+  "routes": [
+   "/ejemplos",
+   "/ejemplos/{id}",
+   "/columna/resolver"
+  ],
+  "validationScript": "tests/validar_api.py"
+ },
+ "inputs": {
+  "presets": [
+   "mccabe_thiele_benceno_tolueno",
+   "ponchon_savarit_benceno_tolueno",
+   "fug_alcanos"
+  ]
+ },
+ "assumptions": [
+  "Same thermodynamics and methods as the method files; this file freezes the HTTP contract shape and values"
+ ],
+ "thermodynamics": {
+  "provider": {
+   "library": "thermo",
+   "version": "0.6.1",
+   "objects": "thermo.chemical.Chemical per species; thermo.unifac.UNIFAC (the library implementation, not the engine layer)",
+   "vapor": "ideal gas",
+   "liquid": "UNIFAC activity coefficients with Chemical vapor pressures (modified Raoult)",
+   "enthalpy": "ideal mixing: liquid Cp integrated from T_ref = 298.15 K, vapor = liquid path + composition-weighted H_vap; no excess enthalpy",
+   "note": "The Engine thermodynamic layer uses its own UNIFAC packages; compare methods against these tables before attributing differences to a method."
+  }
+ },
+ "outputs": {
+  "pairs": [
+   {
+    "preset": "mccabe_thiele_benceno_tolueno",
+    "request": {
+     "metodo": "mccabe_thiele",
+     "nombres": [
+      "benzene",
+      "toluene"
+     ],
+     "feed": {
+      "composicion": [
+       0.4,
+       0.6
+      ],
+      "flujo_molar": 100.0,
+      "T": null,
+      "P": 101325.0
+     },
+     "parametros": {
+      "x_D": 0.95,
+      "x_B": 0.05,
+      "q": 1.0,
+      "R": 3.0597377228491056
+     },
+     "indice_LK": null,
+     "indice_HK": null
+    },
+    "status": 200,
+    "response": {
+     "completo": true,
+     "incognitas_restantes": [],
+     "escalares": {
+      "N": 9.999994694004284,
+      "R": 3.0597377228491056,
+      "Q_c": 4879247.590605126,
+      "Q_R": 5233925.417959391,
+      "R_int": 3.0597377228491056,
+      "V_barra": 157.87868922190964
+     },
+     "T_feed_usada": 368.57695440000583,
+     "D": {
+      "nombres": [
+       "benzene",
+       "toluene"
+      ],
+      "composicion": [
+       0.95,
+       0.050000000000000044
+      ],
+      "flujo_molar": 38.888888888888886,
+      "T": 354.2591052321813,
+      "P": 101325.0
+     },
+     "B": {
+      "nombres": [
+       "benzene",
+       "toluene"
+      ],
+      "composicion": [
+       0.05,
+       0.95
+      ],
+      "flujo_molar": 61.111111111111114,
+      "T": 381.54020172956365,
+      "P": 101325.0
+     },
+     "diagrama": {
+      "tipo": "mccabe_thiele",
+      "x_equilibrio": [
+       0.0,
+       0.012658227848101266,
+       0.02531645569620253,
+       0.0379746835443038,
+       0.05063291139240506,
+       0.06329113924050633,
+       0.0759493670886076,
+       0.08860759493670886,
+       0.10126582278481013,
+       0.11392405063291139,
+       0.12658227848101267,
+       0.13924050632911392,
+       0.1518987341772152,
+       0.16455696202531644,
+       0.17721518987341772,
+       0.18987341772151897,
+       0.20253164556962025,
+       0.21518987341772153,
+       0.22784810126582278,
+       0.24050632911392406,
+       0.25316455696202533,
+       0.26582278481012656,
+       0.27848101265822783,
+       0.2911392405063291,
+       0.3037974683544304,
+       0.31645569620253167,
+       0.3291139240506329,
+       0.34177215189873417,
+       0.35443037974683544,
+       0.3670886075949367,
+       0.37974683544303794,
+       0.3924050632911392,
+       0.4050632911392405,
+       0.4177215189873418,
+       0.43037974683544306,
+       0.4430379746835443,
+       0.45569620253164556,
+       0.46835443037974683,
+       0.4810126582278481,
+       0.49367088607594933,
+       0.5063291139240507,
+       0.5189873417721519,
+       0.5316455696202531,
+       0.5443037974683544,
+       0.5569620253164557,
+       0.569620253164557,
+       0.5822784810126582,
+       0.5949367088607594,
+       0.6075949367088608,
+       0.620253164556962,
+       0.6329113924050633,
+       0.6455696202531646,
+       0.6582278481012658,
+       0.6708860759493671,
+       0.6835443037974683,
+       0.6962025316455696,
+       0.7088607594936709,
+       0.7215189873417721,
+       0.7341772151898734,
+       0.7468354430379747,
+       0.7594936708860759,
+       0.7721518987341772,
+       0.7848101265822784,
+       0.7974683544303798,
+       0.810126582278481,
+       0.8227848101265822,
+       0.8354430379746836,
+       0.8481012658227848,
+       0.8607594936708861,
+       0.8734177215189873,
+       0.8860759493670886,
+       0.8987341772151899,
+       0.9113924050632911,
+       0.9240506329113924,
+       0.9367088607594937,
+       0.9493670886075949,
+       0.9620253164556962,
+       0.9746835443037974,
+       0.9873417721518987,
+       1.0
+      ],
+      "y_equilibrio": [
+       0.0,
+       0.02849560007516343,
+       0.05621171463167048,
+       0.08317423237144637,
+       0.1094080388318227,
+       0.1349372335354987,
+       0.15978496760407981,
+       0.18397334593825845,
+       0.20752363639964078,
+       0.23045646251884022,
+       0.25279162181616055,
+       0.2745480456842023,
+       0.2957439626801272,
+       0.3163970714441041,
+       0.33652435159311783,
+       0.3561420633663519,
+       0.3752658762221041,
+       0.3939110222783564,
+       0.4120921076182422,
+       0.42982313887416207,
+       0.44711762554881546,
+       0.4639887148509585,
+       0.4804490084776799,
+       0.49651060697731714,
+       0.5121851921549305,
+       0.5274841444564874,
+       0.5424183683966857,
+       0.5569983481657259,
+       0.5712342149472838,
+       0.5851358481068847,
+       0.5987127111497502,
+       0.611973913917091,
+       0.6249282685009588,
+       0.6375843754861809,
+       0.6499504714648008,
+       0.6620344945142425,
+       0.6738441315372858,
+       0.6853868907365263,
+       0.6966699611503212,
+       0.7077002790684425,
+       0.7184845689825251,
+       0.7290294033668244,
+       0.7393410743440142,
+       0.7494256593814428,
+       0.7592890575532208,
+       0.7689370375795986,
+       0.7783751215157926,
+       0.7876086485608089,
+       0.7966428079666047,
+       0.8054826761623171,
+       0.8141331122409827,
+       0.8225988190583897,
+       0.8308843738477443,
+       0.8389942551312622,
+       0.8469327497270774,
+       0.854704010557528,
+       0.862312085817337,
+       0.8697609362578785,
+       0.8770543534279789,
+       0.8841960137781056,
+       0.8911895070697238,
+       0.898038344509165,
+       0.9047458879562102,
+       0.9113154000235391,
+       0.9177500722921815,
+       0.924053024673699,
+       0.9302272453585979,
+       0.9362756366841914,
+       0.9422010436264583,
+       0.9480062446819757,
+       0.9536939023766268,
+       0.9592666047207636,
+       0.9647268943739349,
+       0.9700772512624406,
+       0.9753200535216539,
+       0.9804576143832695,
+       0.9854922123504019,
+       0.990426065703714,
+       0.9952613038033347,
+       1.0
+      ],
+      "escalones": [
+       [
+        0.95,
+        0.95
+       ],
+       [
+        0.8778255493179584,
+        0.95
+       ],
+       [
+        0.8778255493179584,
+        0.8956036560847647
+       ],
+       [
+        0.7676216979259655,
+        0.8956036560847647
+       ],
+       [
+        0.7676216979259655,
+        0.8125453640651767
+       ],
+       [
+        0.6305674518005139,
+        0.8125453640651767
+       ],
+       [
+        0.6305674518005139,
+        0.7092505022846989
+       ],
+       [
+        0.4954730543529102,
+        0.7092505022846989
+       ],
+       [
+        0.4954730543529102,
+        0.6074327366468948
+       ],
+       [
+        0.38803687434063827,
+        0.6074327366468948
+       ],
+       [
+        0.38803687434063827,
+        0.5188829631275007
+       ],
+       [
+        0.3093014733973494,
+        0.5188829631275007
+       ],
+       [
+        0.3093014733973494,
+        0.40967094840475393
+       ],
+       [
+        0.22614396423929353,
+        0.40967094840475393
+       ],
+       [
+        0.22614396423929353,
+        0.29432513183848097
+       ],
+       [
+        0.1510410392503958,
+        0.29432513183848097
+       ],
+       [
+        0.1510410392503958,
+        0.19015163870396773
+       ],
+       [
+        0.09189592288922822,
+        0.19015163870396773
+       ],
+       [
+        0.09189592288922822,
+        0.10811284495391217
+       ],
+       [
+        0.049999777699233104,
+        0.10811284495391217
+       ],
+       [
+        0.05,
+        0.05
+       ]
+      ],
+      "interseccion_rol_q": [
+       0.4,
+       0.535476732130866
+      ],
+      "z_F": 0.4,
+      "q": 1.0,
+      "x_D": 0.95,
+      "x_B": 0.05,
+      "R": 3.0597377228491056,
+      "R_min": 1.5024706166400104,
+      "N": 9.999994694004284
+     }
+    }
+   },
+   {
+    "preset": "ponchon_savarit_benceno_tolueno",
+    "request": {
+     "metodo": "ponchon_savarit",
+     "nombres": [
+      "benzene",
+      "toluene"
+     ],
+     "feed": {
+      "composicion": [
+       0.4,
+       0.6
+      ],
+      "flujo_molar": 100.0,
+      "T": null,
+      "P": 101325.0
+     },
+     "parametros": {
+      "x_D": 0.95,
+      "x_B": 0.05,
+      "Qc_D": 131942.94936979646
+     },
+     "indice_LK": null,
+     "indice_HK": null
+    },
+    "status": 200,
+    "response": {
+     "completo": true,
+     "incognitas_restantes": [],
+     "escalares": {
+      "N": 9.999994640258222,
+      "Qc_D": 131942.94936979646
+     },
+     "T_feed_usada": 368.57695440000583,
+     "D": {
+      "nombres": [
+       "benzene",
+       "toluene"
+      ],
+      "composicion": [
+       0.95,
+       0.050000000000000044
+      ],
+      "flujo_molar": 38.888888888888886,
+      "T": 354.2591052321813,
+      "P": 101325.0
+     },
+     "B": {
+      "nombres": [
+       "benzene",
+       "toluene"
+      ],
+      "composicion": [
+       0.05,
+       0.95
+      ],
+      "flujo_molar": 61.111111111111114,
+      "T": 381.54020172956365,
+      "P": 101325.0
+     },
+     "diagrama": null
+    }
+   },
+   {
+    "preset": "fug_alcanos",
+    "request": {
+     "metodo": "fug",
+     "nombres": [
+      "propane",
+      "n-butane",
+      "n-pentane",
+      "n-hexane"
+     ],
+     "feed": {
+      "composicion": [
+       0.1,
+       0.3,
+       0.3,
+       0.3
+      ],
+      "flujo_molar": 100.0,
+      "T": null,
+      "P": 506625.0
+     },
+     "parametros": {
+      "recuperacion_LK_D": 0.98,
+      "recuperacion_HK_B": 0.98,
+      "R": 3.0
+     },
+     "indice_LK": 1,
+     "indice_HK": 2
+    },
+    "status": 200,
+    "response": {
+     "completo": true,
+     "incognitas_restantes": [],
+     "escalares": {
+      "N": 9.434906966491038,
+      "N_min": 7.2567313778280225,
+      "R_min": 0.7502216312813224,
+      "R": 3.0,
+      "Q_c": 3048745.4977872362,
+      "Q_R": 3739656.383094089
+     },
+     "T_feed_usada": 335.85326040704746,
+     "D": {
+      "nombres": [
+       "propane",
+       "n-butane",
+       "n-pentane",
+       "n-hexane"
+      ],
+      "composicion": [
+       0.2499971326425871,
+       0.7349950149718291,
+       0.01499989826473122,
+       7.954120852598882e-06
+      ],
+      "flujo_molar": 40.00027129589014,
+      "T": 305.55143761365366,
+      "P": 506625.0
+     },
+     "B": {
+      "nombres": [
+       "propane",
+       "n-butane",
+       "n-pentane",
+       "n-hexane"
+      ],
+      "composicion": [
+       7.811885636282658e-07,
+       0.01000004521618615,
+       0.49000221559312085,
+       0.4999969580021294
+      ],
+      "flujo_molar": 59.999728704109856,
+      "T": 380.617851933005,
+      "P": 506625.0
+     },
+     "diagrama": null
+    }
+   }
+  ]
+ },
+ "validation": {
+  "grade": "legacy-output-only",
+  "checks": [
+   {
+    "id": "serializes",
+    "kind": "self-consistency",
+    "statement": "Every preset resolves with status 200 and valid JSON",
+    "source": "tests/validar_api.py",
+    "holdsInFrozenData": true
+   }
+  ]
+ },
+ "comparison": {
+  "N": {
+   "abs": 1e-06
+  }
+ },
+ "units": {
+  "T": "K",
+  "P": "Pa",
+  "P_sat": "Pa",
+  "H_vap": "J/mol",
+  "Cp_liquid": "J/(mol K)",
+  "Cp_ideal_gas": "J/(mol K)",
+  "H_L": "J/mol",
+  "H_V": "J/mol",
+  "Qc_D": "J/mol of distillate",
+  "QR_B": "J/mol of bottoms",
+  "Q_c": "W (flows in mol/s)",
+  "Q_R": "W (flows in mol/s)",
+  "F": "mol/s",
+  "D": "mol/s",
+  "B": "mol/s",
+  "N": "theoretical stages including the reboiler (and the condenser when partial)",
+  "R": "1 (external reflux ratio L/D)",
+  "q": "1 (liquid fraction of the feed)",
+  "fractions": "1 (mole fraction of the light component in binaries)"
+ },
+ "provenance": {
+  "generator": "tools/legacy_reference/freeze_legacy_distillation.py",
+  "commit": "b09517a3d05b30ecd5b10c225680bf929e3cb89c",
+  "legacySourcesModifiedInWorkingTree": true,
+  "legacySourceSha256": {
+   "core/mccabe_thiele.py": "2a2f3a9b32806a54a7c54c5766f5b4a6e0ae685e437c14b9974a45b8020389ee",
+   "core/ponchon_savarit.py": "391378d0d6fec47701a3ae74bc46f509da7b5ed82e2e5226099ce363f4347ca8",
+   "core/fug.py": "2ade1a7e40cf9850e4a4720aab3b07ed152aa01f10b8dc874a99e313a58d171b",
+   "core/columna_destilacion.py": "603e4a67d76cbdce6163e4fd11e90f602b444bd3bf0616af34aef996f0370bd2",
+   "core/balance_materia.py": "e7b7fa7dfc5dc3ffd1e978a5048aeba641118967fface76811f34017172fc989",
+   "core/orquestador.py": "4e4a3ef7ae0d4b1dbcfbc6e27f7cc60c733ba2da680bfa94ae2aaf04cd81be68",
+   "core/corriente.py": "7cf61f5e5c25aee4fe045b46f43c92995c9d408f43b28469b1b08a853a7765d8",
+   "core/diagrama_flujo.py": "c33213c583fc2ee95a7d625b4c7904818d8dc8d0d5574d654c65ac8e719a0d26",
+   "thermodynamics/proveedor.py": "ff60457d5ba515436adc96d1260a073ce0d1756cb92a8293bd12066dfa42aef6",
+   "thermodynamics/elv.py": "be5d352d8ffbdc59612984bc3744d29242e019643bc0f21b6d8a1e4172ebc379",
+   "thermodynamics/entalpia.py": "1d009eee30745a9556da4c7320691fd6bf8c8e219d9d4cc5a82763ebfb663522",
+   "backend/nucleo.py": "7f02185b0702315d88e954a5677d1a6893532e9a33a4dba22f962165fe35043e",
+   "backend/ejemplos.py": "ba74a8b174f03c173618d2dd03a607f78c88af28d94a9aa9970db27dafa6511f",
+   "backend/schemas.py": "64c342de983148f74ca0123933fe877bffb3b9b86e8c4683009d45b8aff0da5b"
+  },
+  "environment": {
+   "python": "3.12.10",
+   "numpy": "1.26.4",
+   "scipy": "1.16.2",
+   "thermo": "0.6.1"
+  }
+ }
+}

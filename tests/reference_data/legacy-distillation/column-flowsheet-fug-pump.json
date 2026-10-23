@@ -1,0 +1,238 @@
+{
+ "format": "rage.legacy-reference",
+ "version": 1,
+ "frozenOn": "2026-10-22",
+ "id": "column-flowsheet-fug-pump",
+ "method": "ColumnaDestilacion (FUG) chained to a pump in DiagramaFlujo",
+ "legacy": {
+  "module": "core/columna_destilacion.py",
+  "classes": [
+   "ColumnaDestilacion",
+   "DiagramaFlujo",
+   "OperacionUnitaria"
+  ],
+  "validationScript": "tests/validar_diagrama_flujo.py"
+ },
+ "inputs": {
+  "components": [
+   "propane",
+   "n-butane",
+   "n-pentane",
+   "n-hexane"
+  ],
+  "P": 506625.0,
+  "feed": {
+   "components": [
+    "propane",
+    "n-butane",
+    "n-pentane",
+    "n-hexane"
+   ],
+   "composition": [
+    0.1,
+    0.3,
+    0.3,
+    0.3
+   ],
+   "molar_flow": 100.0,
+   "T": 335.85326040704746,
+   "P": 506625.0
+  },
+  "recovery_LK_D": 0.98,
+  "recovery_HK_B": 0.98,
+  "R": 3.0,
+  "pump_pressure_factor": 2.0
+ },
+ "assumptions": [
+  "Feed at its bubble point",
+  "The pump changes only pressure"
+ ],
+ "thermodynamics": {
+  "provider": {
+   "library": "thermo",
+   "version": "0.6.1",
+   "objects": "thermo.chemical.Chemical per species; thermo.unifac.UNIFAC (the library implementation, not the engine layer)",
+   "vapor": "ideal gas",
+   "liquid": "UNIFAC activity coefficients with Chemical vapor pressures (modified Raoult)",
+   "enthalpy": "ideal mixing: liquid Cp integrated from T_ref = 298.15 K, vapor = liquid path + composition-weighted H_vap; no excess enthalpy",
+   "note": "The Engine thermodynamic layer uses its own UNIFAC packages; compare methods against these tables before attributing differences to a method."
+  },
+  "feed_bubble_T": 335.85326040704746
+ },
+ "outputs": {
+  "complete": true,
+  "pool": {
+   "columna.F": {
+    "components": [
+     "propane",
+     "n-butane",
+     "n-pentane",
+     "n-hexane"
+    ],
+    "composition": [
+     0.1,
+     0.3,
+     0.3,
+     0.3
+    ],
+    "molar_flow": 100.0,
+    "T": 335.85326040704746,
+    "P": 506625.0
+   },
+   "columna.recuperacion_LK_D": 0.98,
+   "columna.recuperacion_HK_B": 0.98,
+   "columna.R": 3.0,
+   "bomba.factor_P": 2.0,
+   "columna.D": {
+    "components": [
+     "propane",
+     "n-butane",
+     "n-pentane",
+     "n-hexane"
+    ],
+    "composition": [
+     0.2499971326425871,
+     0.7349950149718291,
+     0.01499989826473122,
+     7.954120852598882e-06
+    ],
+    "molar_flow": 40.00027129589014,
+    "T": 305.55143761365366,
+    "P": 506625.0
+   },
+   "columna.B": {
+    "components": [
+     "propane",
+     "n-butane",
+     "n-pentane",
+     "n-hexane"
+    ],
+    "composition": [
+     7.811885636282658e-07,
+     0.01000004521618615,
+     0.49000221559312085,
+     0.4999969580021294
+    ],
+    "molar_flow": 59.999728704109856,
+    "T": 380.617851933005,
+    "P": 506625.0
+   },
+   "columna.N": 9.434906966491038,
+   "columna.R_min": 0.7502216312813224,
+   "bomba.entrada": {
+    "components": [
+     "propane",
+     "n-butane",
+     "n-pentane",
+     "n-hexane"
+    ],
+    "composition": [
+     0.2499971326425871,
+     0.7349950149718291,
+     0.01499989826473122,
+     7.954120852598882e-06
+    ],
+    "molar_flow": 40.00027129589014,
+    "T": 305.55143761365366,
+    "P": 506625.0
+   },
+   "bomba.salida": {
+    "components": [
+     "propane",
+     "n-butane",
+     "n-pentane",
+     "n-hexane"
+    ],
+    "composition": [
+     0.2499971326425871,
+     0.7349950149718291,
+     0.01499989826473122,
+     7.954120852598882e-06
+    ],
+    "molar_flow": 40.00027129589014,
+    "T": 305.55143761365366,
+    "P": 1013250.0
+   }
+  },
+  "resolved_by": {
+   "columna.D": "columna",
+   "columna.B": "columna",
+   "columna.N": "columna",
+   "columna.R_min": "columna",
+   "bomba.entrada": "Cable columna.D -> bomba.entrada",
+   "bomba.salida": "bomba"
+  }
+ },
+ "validation": {
+  "grade": "cross-checked",
+  "checks": [
+   {
+    "id": "same-as-fug",
+    "kind": "cross-method",
+    "statement": "Column N equals the FUG base case (pinned 9.434906966491038 in tests/validar_diagrama_flujo.py)",
+    "source": "fug-alkanes.json",
+    "holdsInFrozenData": true
+   },
+   {
+    "id": "pump-preserves-state",
+    "kind": "independent",
+    "statement": "Pump keeps flow, T and composition and doubles P",
+    "source": "hand-derived",
+    "holdsInFrozenData": true
+   }
+  ]
+ },
+ "comparison": {
+  "N": {
+   "abs": 1e-06
+  }
+ },
+ "units": {
+  "T": "K",
+  "P": "Pa",
+  "P_sat": "Pa",
+  "H_vap": "J/mol",
+  "Cp_liquid": "J/(mol K)",
+  "Cp_ideal_gas": "J/(mol K)",
+  "H_L": "J/mol",
+  "H_V": "J/mol",
+  "Qc_D": "J/mol of distillate",
+  "QR_B": "J/mol of bottoms",
+  "Q_c": "W (flows in mol/s)",
+  "Q_R": "W (flows in mol/s)",
+  "F": "mol/s",
+  "D": "mol/s",
+  "B": "mol/s",
+  "N": "theoretical stages including the reboiler (and the condenser when partial)",
+  "R": "1 (external reflux ratio L/D)",
+  "q": "1 (liquid fraction of the feed)",
+  "fractions": "1 (mole fraction of the light component in binaries)"
+ },
+ "provenance": {
+  "generator": "tools/legacy_reference/freeze_legacy_distillation.py",
+  "commit": "b09517a3d05b30ecd5b10c225680bf929e3cb89c",
+  "legacySourcesModifiedInWorkingTree": true,
+  "legacySourceSha256": {
+   "core/mccabe_thiele.py": "2a2f3a9b32806a54a7c54c5766f5b4a6e0ae685e437c14b9974a45b8020389ee",
+   "core/ponchon_savarit.py": "391378d0d6fec47701a3ae74bc46f509da7b5ed82e2e5226099ce363f4347ca8",
+   "core/fug.py": "2ade1a7e40cf9850e4a4720aab3b07ed152aa01f10b8dc874a99e313a58d171b",
+   "core/columna_destilacion.py": "603e4a67d76cbdce6163e4fd11e90f602b444bd3bf0616af34aef996f0370bd2",
+   "core/balance_materia.py": "e7b7fa7dfc5dc3ffd1e978a5048aeba641118967fface76811f34017172fc989",
+   "core/orquestador.py": "4e4a3ef7ae0d4b1dbcfbc6e27f7cc60c733ba2da680bfa94ae2aaf04cd81be68",
+   "core/corriente.py": "7cf61f5e5c25aee4fe045b46f43c92995c9d408f43b28469b1b08a853a7765d8",
+   "core/diagrama_flujo.py": "c33213c583fc2ee95a7d625b4c7904818d8dc8d0d5574d654c65ac8e719a0d26",
+   "thermodynamics/proveedor.py": "ff60457d5ba515436adc96d1260a073ce0d1756cb92a8293bd12066dfa42aef6",
+   "thermodynamics/elv.py": "be5d352d8ffbdc59612984bc3744d29242e019643bc0f21b6d8a1e4172ebc379",
+   "thermodynamics/entalpia.py": "1d009eee30745a9556da4c7320691fd6bf8c8e219d9d4cc5a82763ebfb663522",
+   "backend/nucleo.py": "7f02185b0702315d88e954a5677d1a6893532e9a33a4dba22f962165fe35043e",
+   "backend/ejemplos.py": "ba74a8b174f03c173618d2dd03a607f78c88af28d94a9aa9970db27dafa6511f",
+   "backend/schemas.py": "64c342de983148f74ca0123933fe877bffb3b9b86e8c4683009d45b8aff0da5b"
+  },
+  "environment": {
+   "python": "3.12.10",
+   "numpy": "1.26.4",
+   "scipy": "1.16.2",
+   "thermo": "0.6.1"
+  }
+ }
+}
