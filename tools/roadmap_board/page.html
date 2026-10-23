@@ -1,0 +1,380 @@
+<style>
+  .rm { font-family: var(--font-anthropic-sans); color: var(--color-fg); display: grid; gap: var(--cds-gap-xl); }
+  .rm h1 { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); margin: 0; text-wrap: balance; }
+  .rm h2 { font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); margin: 0; }
+  .rm .lede { color: var(--color-fg-muted); margin: var(--cds-gap-xs) 0 0; max-width: 70ch; line-height: 1.5; }
+  .rm .lede b { color: var(--color-fg); font-weight: 600; }
+  .rm .note { color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); margin: var(--cds-gap-xs) 0 0; }
+  .rm .card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); min-width: 0; }
+  .rm .grid { display: grid; gap: var(--cds-gap-md); grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); }
+  .rm .chip { display: inline-flex; align-items: center; gap: 0.35rem; font-size: var(--cds-font-size-caption); padding: 0.1rem 0.5rem; border-radius: 999px; border: 1px solid var(--color-border-line); white-space: nowrap; color: var(--color-fg-muted); }
+  .rm .chip::before { content: ""; width: 0.45rem; height: 0.45rem; border-radius: 50%; background: var(--cds-chart-muted); }
+  .rm .chip[data-tone="done"] { color: var(--color-ok); } .rm .chip[data-tone="done"]::before { background: var(--color-ok); }
+  .rm .chip[data-tone="active"] { color: var(--color-fg); border-color: var(--rm-accent); } .rm .chip[data-tone="active"]::before { background: var(--rm-accent); }
+  .rm .chip[data-tone="decision"] { color: var(--color-warn); } .rm .chip[data-tone="decision"]::before { background: var(--color-warn); }
+  .rm .chip[data-tone="bad"] { color: var(--color-bad); } .rm .chip[data-tone="bad"]::before { background: var(--color-bad); }
+  .rm .next { font-size: var(--cds-font-size-caption); color: var(--color-fg); line-height: 1.4; }
+  .rm .next::before { content: "Siguiente acción: "; color: var(--color-fg-muted); }
+  .rm .blocked { font-size: var(--cds-font-size-caption); color: var(--color-warn); }
+  .rm .src { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; }
+  .rm .chip[data-tone="later"]::before { background: transparent; border: 1px dashed var(--cds-chart-muted); }
+  /* M1 route */
+  .rm .steps { list-style: none; margin: var(--cds-gap-md) 0 0; padding: 0; display: grid; gap: var(--cds-gap-sm); grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); min-height: 9rem; }
+  .rm .step { position: relative; border-top: 3px solid var(--cds-chart-muted); padding: var(--cds-pad-sm) 0 0; display: grid; gap: var(--cds-gap-xs); align-content: start; }
+  .rm .step[data-tone="done"] { border-top-color: var(--color-ok); }
+  .rm .step[data-tone="active"] { border-top-color: var(--rm-accent); }
+  .rm .step .n { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); font-variant-numeric: tabular-nums; }
+  .rm .step .t { font-weight: var(--cds-font-weight-medium); line-height: 1.3; }
+  .rm .step .o { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .rm .step .d { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); line-height: 1.4; }
+  .rm .step[data-current] .t::after { content: " ← ahora"; color: var(--rm-accent); font-weight: 400; font-size: var(--cds-font-size-caption); }
+  /* tiles */
+  .rm .tiles { display: grid; gap: var(--cds-gap-md); grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); }
+  .rm .tile .k { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .rm .tile .v { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: 2.4rem; line-height: 1.1; font-variant-numeric: tabular-nums; margin-top: var(--cds-gap-xs); }
+  .rm .tile .s { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin-top: var(--cds-gap-xs); }
+  /* area bars */
+  .rm .bars { display: grid; gap: var(--cds-gap-sm); margin-top: var(--cds-gap-md); min-height: 16rem; position: relative; }
+  .rm .bar-row { display: grid; grid-template-columns: minmax(7rem, 11rem) 1fr auto; gap: var(--cds-gap-sm); align-items: center; background: none; border: 0; padding: 0.15rem 0; color: inherit; font: inherit; text-align: left; cursor: pointer; border-radius: var(--cds-radius); }
+  .rm .bar-row:hover .bar-name, .rm .bar-row[aria-pressed="true"] .bar-name { color: var(--rm-accent); }
+  .rm .bar-row:focus-visible { outline: 2px solid var(--rm-accent); outline-offset: 2px; }
+  .rm .bar-name { font-size: var(--cds-font-size-body); overflow-wrap: anywhere; }
+  .rm .track { display: flex; height: 0.9rem; border-radius: 0.45rem; overflow: hidden; background: var(--cds-chart-grid); min-width: 0; }
+  .rm .seg { height: 100%; }
+  .rm .seg.ok { background: var(--color-ok); } .rm .seg.pend { background: var(--rm-accent); } .rm .seg.def { background: var(--cds-chart-muted); }
+  .rm .counts { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .rm .legend { display: flex; flex-wrap: wrap; gap: var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin-top: var(--cds-gap-sm); }
+  .rm .legend span { display: inline-flex; align-items: center; gap: 0.35rem; }
+  .rm .legend i { width: 0.7rem; height: 0.7rem; border-radius: 0.2rem; display: inline-block; }
+  .rm .tip { position: absolute; pointer-events: none; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm); font-size: var(--cds-font-size-caption); white-space: nowrap; z-index: 2; }
+  .rm .tip .h { color: var(--cds-text-secondary); }
+  /* tracks */
+  .rm .track-list { list-style: none; margin: var(--cds-gap-md) 0 0; padding: 0; display: grid; gap: var(--cds-gap-sm); }
+  .rm .track-list li { display: grid; gap: 0.2rem; padding-bottom: var(--cds-gap-sm); border-bottom: 1px solid var(--color-border-line); }
+  .rm .track-list li:last-child { border-bottom: 0; padding-bottom: 0; }
+  .rm .track-list .row1 { display: flex; justify-content: space-between; gap: var(--cds-gap-sm); align-items: baseline; flex-wrap: wrap; }
+  .rm .track-list .nm { font-weight: var(--cds-font-weight-medium); min-width: 0; }
+  .rm .track-list .ds { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); line-height: 1.4; }
+  .rm .tracks { min-height: 20rem; }
+  /* table */
+  .rm .controls { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm); margin-top: var(--cds-gap-md); align-items: center; }
+  .rm .controls input, .rm .controls select { font: inherit; font-size: var(--cds-font-size-body); color: var(--color-fg); background: var(--color-bg); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: 0.35rem 0.6rem; min-width: 0; }
+  .rm .controls input { flex: 1 1 14rem; }
+  .rm .controls button { font: inherit; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); background: none; border: 1px solid var(--color-border-line); border-radius: 999px; padding: 0.25rem 0.7rem; cursor: pointer; }
+  .rm .controls button:focus-visible, .rm .controls input:focus-visible, .rm .controls select:focus-visible { outline: 2px solid var(--rm-accent); outline-offset: 1px; }
+  .rm .tablebox { max-height: 34rem; overflow: auto; margin-top: var(--cds-gap-md); border-top: 1px solid var(--color-border-line); }
+  .rm table { width: 100%; border-collapse: collapse; font-size: var(--cds-font-size-body); }
+  .rm th { position: sticky; top: 0; background: var(--color-panel); text-align: left; font-weight: var(--cds-font-weight-medium); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); padding: var(--cds-pad-xs) var(--cds-pad-sm); border-bottom: 1px solid var(--color-border-line); }
+  .rm td { padding: var(--cds-pad-sm); border-bottom: 1px solid var(--color-border-line); vertical-align: top; line-height: 1.45; }
+  .rm td.area { white-space: nowrap; color: var(--color-fg-muted); }
+  .rm td.st { white-space: nowrap; }
+  .rm .count { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); font-variant-numeric: tabular-nums; }
+  .rm .failed { display: flex; align-items: center; justify-content: center; gap: 0.4rem; color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); min-height: inherit; }
+  .rm .failed::before { content: ""; width: 0.375rem; height: 0.375rem; border-radius: 50%; background: var(--color-bad); }
+  .rm [data-dash-source-state=empty] { color: transparent; }
+  .rm [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+  @media (max-width: 40rem) { .rm .bar-row { grid-template-columns: 1fr auto; } .rm .bar-row .track { grid-column: 1 / -1; grid-row: 2; } .rm td.area { white-space: normal; } }
+</style>
+
+<div class="rm">
+  <header id="resumen">
+    <h1>Hoja de ruta del motor</h1>
+    <p class="lede" id="takeaway">
+      Ahora: <b class="dash-skeleton" id="now-step">—</b>.
+      Hay <b data-source="capability_counts" data-field="n" data-where="status=Entregado">—</b> capacidades entregadas,
+      <b data-source="capability_counts" data-field="n" data-where="status=Pendiente">—</b> pendientes y
+      <b data-source="capability_counts" data-field="n" data-where="status=Aplazado">—</b> aplazadas a propósito.
+    </p>
+  </header>
+
+  <section class="card" id="ruta-m1">
+    <h2>Ruta M1: el motor usable de punta a punta</h2>
+    <p class="note">El objetivo actual. D1 cierra el pulido de la deducción; U1 entrega Transform → Solve → Results para tres casos fijos.</p>
+    <ol class="steps dash-skeleton" id="m1-steps" data-source="milestones" aria-label="Pasos de la ruta M1"></ol>
+  </section>
+
+  <section class="tiles" id="capacidades-totales">
+    <div class="card tile"><div class="k">Entregado</div><div class="v" data-source="capability_counts" data-field="n" data-where="status=Entregado">—</div><div class="s">Capacidades verificadas dentro de su alcance</div></div>
+    <div class="card tile"><div class="k">Pendiente</div><div class="v" data-source="capability_counts" data-field="n" data-where="status=Pendiente">—</div><div class="s">Extensiones por construir</div></div>
+    <div class="card tile"><div class="k">Aplazado</div><div class="v" data-source="capability_counts" data-field="n" data-where="status=Aplazado">—</div><div class="s">Fuera del alcance actual por decisión</div></div>
+    <div class="card tile"><div class="k">Avance del inventario</div><div class="v" data-source="capability_counts" data-field="share" data-where="status=Entregado">—</div><div class="s">Entregado sobre el total registrado</div></div>
+  </section>
+
+  <section class="card" id="por-area">
+    <h2>Capacidades por área</h2>
+    <p class="note">Haz clic en un área para ver solo sus pendientes en la tabla de abajo.</p>
+    <div class="legend"><span><i style="background: var(--color-ok)"></i>Entregado</span><span><i style="background: var(--rm-accent)"></i>Pendiente</span><span><i style="background: var(--cds-chart-muted)"></i>Aplazado</span></div>
+    <div class="bars dash-skeleton" id="area-bars" data-source="area_counts"></div>
+  </section>
+
+  <section id="gates">
+    <h2>Criterios de los gates D1 y U1</h2>
+    <p class="note">D1 decide si la deducción ya basta para M1; U1 si el motor se usa de punta a punta. Ninguno se marca cumplido sin la evidencia que pide el roadmap.</p>
+    <div class="grid dash-skeleton" id="gate-cards" data-source="gates" style="margin-top: var(--cds-gap-md); min-height: 14rem"></div>
+  </section>
+
+  <section class="grid" id="decisiones-riesgos">
+    <div class="card" id="decisiones">
+      <h2>Decisiones</h2>
+      <p class="note">Las abiertas esperan tu respuesta; las tomadas fijan el rumbo.</p>
+      <ul class="track-list dash-skeleton" id="decision-list" data-source="decisions" style="min-height: 10rem"></ul>
+    </div>
+    <div class="card" id="riesgos">
+      <h2>Riesgos y bloqueos</h2>
+      <p class="note">Lo que puede romper el proyecto si no se atiende, con su mitigación.</p>
+      <ul class="track-list dash-skeleton" id="risk-list" data-source="risks" style="min-height: 10rem"></ul>
+    </div>
+  </section>
+
+  <section id="pistas">
+    <h2>Hitos por pista</h2>
+    <p class="note">Fases del roadmap, deducción por familia física, incidencias de fiabilidad y limpieza del proyecto.</p>
+    <div class="grid tracks dash-skeleton" id="track-cards" data-source="milestones" style="margin-top: var(--cds-gap-md)"></div>
+  </section>
+
+  <section class="card" id="que-falta">
+    <h2>Qué falta construir</h2>
+    <p class="note">Cada fila es una capacidad del inventario canónico del motor (página Checklist).</p>
+    <div class="controls">
+      <input id="rm-search" type="search" placeholder="Buscar capacidad" aria-label="Buscar capacidad">
+      <select id="rm-status" aria-label="Estado">
+        <option value="open">Pendiente y aplazado</option>
+        <option value="Pendiente">Solo pendiente</option>
+        <option value="Aplazado">Solo aplazado</option>
+        <option value="Entregado">Solo entregado</option>
+        <option value="all">Todo</option>
+      </select>
+      <select id="rm-area" aria-label="Área"><option value="">Todas las áreas</option></select>
+      <button id="rm-reset" type="button">Quitar filtros</button>
+      <span class="count" id="rm-count"></span>
+    </div>
+    <div class="tablebox">
+      <table id="cap-table" data-source="capabilities" data-row-key="id">
+        <thead><tr><th data-field="area">Área</th><th data-field="status">Estado</th><th data-field="item">Capacidad</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<script>
+  const root = document.querySelector('.rm');
+  root.style.setProperty('--rm-accent', dash.colors[0]);
+  const TONE = {Hecho: 'done', Entregado: 'done', Cumplido: 'done', Tomada: 'done', Cerrado: 'done', 'En revisión': 'active', 'En curso': 'active', Siguiente: 'active', Pendiente: 'planned', Abierto: 'planned', Aplazado: 'later', 'Al final': 'later', 'Decisión pendiente': 'decision', Alta: 'bad', Media: 'decision', Baja: 'planned'};
+  const ORDER = {Pendiente: 0, Aplazado: 1, Entregado: 2};
+  const pct = d3.format('.0%');
+
+  dash.calc('capability_counts', {
+    inputs: ['capabilities'], title: 'Capacidades por estado',
+    description: 'Cuenta las capacidades del inventario por estado y su parte del total.',
+    fn: (capabilities) => {
+      const total = capabilities.length;
+      return ['Entregado', 'Pendiente', 'Aplazado'].map((status) => {
+        const n = capabilities.filter((r) => r.status === status).length;
+        return {status, n, share: total ? n / total : 0};
+      });
+    },
+  });
+  dash.calc('area_counts', {
+    inputs: ['capabilities'], title: 'Capacidades por área',
+    description: 'Cuenta entregadas, pendientes y aplazadas en cada área del inventario.',
+    fn: (capabilities) => {
+      const areas = new Map();
+      for (const r of capabilities) {
+        if (!areas.has(r.area)) areas.set(r.area, {area: r.area, order: Number(r.area_order), entregado: 0, pendiente: 0, aplazado: 0});
+        const a = areas.get(r.area);
+        if (r.status === 'Entregado') a.entregado++; else if (r.status === 'Pendiente') a.pendiente++; else a.aplazado++;
+      }
+      return [...areas.values()].sort((a, b) => a.order - b.order).map((a) => ({...a, total: a.entregado + a.pendiente + a.aplazado}));
+    },
+  });
+
+  const state = {area: '', status: 'open', q: ''};
+  const search = document.getElementById('rm-search');
+  const statusSel = document.getElementById('rm-status');
+  const areaSel = document.getElementById('rm-area');
+  search.addEventListener('input', () => { state.q = search.value.trim().toLowerCase(); drawTable(); });
+  statusSel.addEventListener('change', () => { state.status = statusSel.value; drawTable(); });
+  areaSel.addEventListener('change', () => { state.area = areaSel.value; drawBars(); drawTable(); });
+  document.getElementById('rm-reset').addEventListener('click', () => {
+    Object.assign(state, {area: '', status: 'open', q: ''});
+    search.value = ''; statusSel.value = 'open'; areaSel.value = '';
+    drawBars(); drawTable();
+  });
+
+  function failed(el) { el.classList.remove('dash-skeleton'); el.replaceChildren(); const d = document.createElement('div'); d.className = 'failed'; d.textContent = 'Failed to load'; el.append(d); }
+  function chip(text) { const s = document.createElement('span'); s.className = 'chip'; s.dataset.tone = TONE[text] || 'planned'; s.textContent = text; return s; }
+  function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+  function drawMilestones() {
+    const m = dash.data('milestones');
+    const steps = document.getElementById('m1-steps');
+    const cards = document.getElementById('track-cards');
+    const now = document.getElementById('now-step');
+    if (m.status !== 'ok') {
+      if (m.status === 'error') { failed(steps); failed(cards); now.classList.remove('dash-skeleton'); }
+      return;
+    }
+    const rows = m.data.map((r) => ({...r, order: Number(r.order)}));
+    const route = rows.filter((r) => r.track === 'Ruta M1').sort((a, b) => a.order - b.order);
+    const current = route.find((r) => r.status !== 'Hecho');
+    now.classList.remove('dash-skeleton');
+    now.textContent = current ? `${current.name} (${current.owner})` : 'la ruta M1 está completa';
+    steps.classList.remove('dash-skeleton');
+    steps.replaceChildren(...route.map((r, i) => {
+      const li = el('li', 'step'); li.dataset.tone = TONE[r.status] || 'planned';
+      if (r === current) li.dataset.current = '';
+      li.append(el('span', 'n', `Paso ${i + 1}`), el('span', 't', r.name), chip(r.status), el('span', 'o', r.owner), el('span', 'd', r.note));
+      if (r.blocked_by) li.append(el('span', 'blocked', `Espera a: ${r.blocked_by}`));
+      if (r.next_action) li.append(el('span', 'next', r.next_action));
+      return li;
+    }));
+    cards.classList.remove('dash-skeleton');
+    const tracks = d3.groups(rows.filter((r) => r.track !== 'Ruta M1'), (r) => r.track);
+    cards.replaceChildren(...tracks.map(([track, items]) => {
+      const card = el('div', 'card'); card.id = 'pista-' + track.toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '-');
+      const done = items.filter((r) => r.status === 'Hecho').length;
+      card.append(el('h2', null, track), el('p', 'note', `${done} de ${items.length} hechos`));
+      const ul = el('ul', 'track-list');
+      for (const r of items.sort((a, b) => a.order - b.order)) {
+        const li = el('li'); const row1 = el('div', 'row1');
+        row1.append(el('span', 'nm', r.name), chip(r.status));
+        li.append(row1, el('span', 'ds', `${r.note} · ${r.owner}`));
+        if (r.blocked_by) li.append(el('span', 'blocked', `Espera a: ${r.blocked_by}`));
+        if (r.next_action) li.append(el('span', 'next', r.next_action));
+        ul.append(li);
+      }
+      card.append(ul);
+      return card;
+    }));
+  }
+
+  const tip = el('div', 'tip'); tip.hidden = true;
+  function drawBars() {
+    const box = document.getElementById('area-bars');
+    const a = dash.data('area_counts');
+    if (a.status !== 'ok') { if (a.status === 'error') failed(box); return; }
+    box.classList.remove('dash-skeleton');
+    const rows = a.data;
+    const max = d3.max(rows, (r) => r.total) || 1;
+    if (areaSel.options.length !== rows.length + 1) {
+      areaSel.replaceChildren(new Option('Todas las áreas', ''), ...rows.map((r) => new Option(r.area, r.area)));
+      areaSel.value = state.area;
+    }
+    box.replaceChildren(...rows.map((r) => {
+      const b = el('button', 'bar-row'); b.type = 'button';
+      b.setAttribute('aria-pressed', String(state.area === r.area));
+      b.setAttribute('aria-label', `${r.area}: ${r.entregado} entregadas, ${r.pendiente} pendientes, ${r.aplazado} aplazadas`);
+      const track = el('div', 'track'); track.style.width = (100 * r.total / max) + '%';
+      for (const [cls, n, label] of [['ok', r.entregado, 'Entregado'], ['pend', r.pendiente, 'Pendiente'], ['def', r.aplazado, 'Aplazado']]) {
+        if (!n) continue;
+        const s = el('div', 'seg ' + cls); s.style.width = (100 * n / r.total) + '%';
+        s.addEventListener('mousemove', (ev) => {
+          tip.replaceChildren(el('div', 'h', r.area), el('div', null, `${label}: ${n} de ${r.total}`));
+          tip.hidden = false;
+          const host = box.getBoundingClientRect();
+          const x = Math.min(ev.clientX - host.left + 12, host.width - tip.offsetWidth);
+          tip.style.left = Math.max(0, x) + 'px'; tip.style.top = (ev.clientY - host.top + 12) + 'px';
+        });
+        s.addEventListener('mouseleave', () => { tip.hidden = true; });
+        track.append(s);
+      }
+      b.append(el('span', 'bar-name', r.area), track, el('span', 'counts', `${r.entregado} · ${r.pendiente} · ${r.aplazado}`));
+      b.addEventListener('click', () => {
+        state.area = state.area === r.area ? '' : r.area;
+        if (state.area && state.status === 'Entregado') { state.status = 'open'; statusSel.value = 'open'; }
+        areaSel.value = state.area; drawBars(); drawTable();
+        if (state.area) document.getElementById('que-falta').scrollIntoView({block: 'start'});
+      });
+      return b;
+    }), tip);
+  }
+
+  function drawTable() {
+    const c = dash.data('capabilities');
+    const body = document.querySelector('#cap-table tbody');
+    const count = document.getElementById('rm-count');
+    if (c.status !== 'ok') { body.replaceChildren(); count.textContent = c.status === 'error' ? 'Failed to load' : ''; return; }
+    const rows = c.data.filter((r) =>
+      (state.status === 'all' || (state.status === 'open' ? r.status !== 'Entregado' : r.status === state.status)) &&
+      (!state.area || r.area === state.area) &&
+      (!state.q || (r.item + ' ' + r.area).toLowerCase().includes(state.q)))
+      .sort((a, b) => (Number(a.area_order) - Number(b.area_order)) || (ORDER[a.status] - ORDER[b.status]));
+    count.textContent = `${rows.length} de ${c.data.length}`;
+    body.replaceChildren(...rows.map((r) => {
+      const tr = document.createElement('tr'); tr.dataset.key = r.id;
+      const area = el('td', 'area', r.area); const st = el('td', 'st'); st.append(chip(r.status));
+      tr.append(area, st, el('td', null, r.item));
+      return tr;
+    }));
+  }
+
+  function drawTiles() {
+    const k = dash.data('capability_counts');
+    if (k.status !== 'ok') return;
+    for (const node of document.querySelectorAll('[data-source="capability_counts"]')) {
+      const row = k.data.find((r) => r.status === new URLSearchParams(node.dataset.where).get('status'));
+      if (!row) continue;
+      node.textContent = node.dataset.field === 'share' ? pct(row.share) : d3.format(',')(row.n);
+    }
+  }
+
+  function listItems(box, items) {
+    box.classList.remove('dash-skeleton');
+    box.replaceChildren(...items);
+  }
+  function drawGates() {
+    const g = dash.data('gates');
+    const box = document.getElementById('gate-cards');
+    if (g.status !== 'ok') { if (g.status === 'error') failed(box); return; }
+    listItems(box, d3.groups(g.data, (r) => r.gate).map(([gate, rows]) => {
+      const card = el('div', 'card'); card.id = 'gate-' + gate.toLowerCase();
+      const met = rows.filter((r) => r.status_code === 'passed').length;
+      card.append(el('h2', null, `Gate ${gate}`), el('p', 'note', `${met} de ${rows.length} criterios cumplidos`));
+      const ul = el('ul', 'track-list');
+      for (const r of rows) {
+        const li = el('li'); const row1 = el('div', 'row1');
+        row1.append(el('span', 'nm', r.criterion), chip(r.status));
+        li.append(row1);
+        if (r.evidence) li.append(el('span', 'ds', r.evidence));
+        ul.append(li);
+      }
+      card.append(ul);
+      return card;
+    }));
+  }
+  function drawDecisions() {
+    const d = dash.data('decisions');
+    const box = document.getElementById('decision-list');
+    if (d.status !== 'ok') { if (d.status === 'error') failed(box); return; }
+    const rows = [...d.data].sort((a, b) => (a.status_code === 'open' ? 0 : 1) - (b.status_code === 'open' ? 0 : 1) || String(b.date).localeCompare(String(a.date)));
+    listItems(box, rows.map((r) => {
+      const li = el('li'); const row1 = el('div', 'row1');
+      row1.append(el('span', 'nm', r.decision), chip(r.status_code === 'open' ? 'Decisión pendiente' : r.status));
+      li.append(row1, el('span', 'ds', r.date ? `${r.detail} · ${r.date}` : r.detail), el('span', 'src', r.source));
+      return li;
+    }));
+  }
+  function drawRisks() {
+    const k = dash.data('risks');
+    const box = document.getElementById('risk-list');
+    if (k.status !== 'ok') { if (k.status === 'error') failed(box); return; }
+    const rank = {high: 0, medium: 1, low: 2};
+    const rows = [...k.data].sort((a, b) => (a.status_code === 'open' ? 0 : 1) - (b.status_code === 'open' ? 0 : 1) || rank[a.severity_code] - rank[b.severity_code]);
+    listItems(box, rows.map((r) => {
+      const li = el('li'); const row1 = el('div', 'row1');
+      row1.append(el('span', 'nm', r.risk), chip(r.status_code === 'open' ? r.severity : r.status));
+      li.append(row1, el('span', 'ds', `${r.mitigation} · ${r.owner}`));
+      return li;
+    }));
+  }
+
+  dash.onData(() => { drawTiles(); drawMilestones(); drawGates(); drawDecisions(); drawRisks(); drawBars(); drawTable(); });
+
+  const named = document.getElementById(location.hash.slice(1));
+  if (named) named.scrollIntoView();
+  for (const id of ['resumen', 'ruta-m1', 'gates', 'decisiones-riesgos', 'por-area', 'pistas', 'que-falta']) {
+    const s = document.getElementById(id);
+    new IntersectionObserver((e) => { if (e[0].isIntersecting) dash.setLink(id); }, {threshold: 0.6}).observe(s);
+  }
+</script>
