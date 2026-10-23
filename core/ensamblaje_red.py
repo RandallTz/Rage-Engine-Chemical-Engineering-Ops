@@ -331,10 +331,52 @@ class Sistema:
 # ----------------------------------------------------------------------
 # Resolucion relativa (a tf) con que se localiza un cambio del conjunto de fases (ver integrar).
 RES_EVENTO = 1e-12
+# Phase-stability margins limit the step (F0-5). The signature is only checked at the quarter points of a
+# step, so a phase window shorter than that spacing was skipped. Each margin is a distance to a phase-set
+# change: the appearance margin tm_nueva (smallest tm of a trial phase that is not present) and the smallest
+# phase fraction. A margin may fall by at most MARGEN_CAIDA between consecutive checks; otherwise the step is
+# redone shorter. Margins below MARGEN_MIN are left to the bisection: a window whose margin dips by less than
+# about MARGEN_MIN can still be missed (declared resolution).
+MARGEN_CAIDA = 0.5
+MARGEN_MIN = 1e-8
+H_MARGEN_MIN = 1e-8          # relative to tf: the shortest step the margin rule asks for
 
 
 def firma(ev):
     return (len(ev.fases),) + tuple(sorted(f.tipo for f in ev.fases))
+
+
+def margenes(ev):
+    """(appearance margin, smallest phase fraction) of a state; None where not available or not positive."""
+    est = getattr(ev, "estabilidad", None)
+    tm = est.get("tm_nueva") if isinstance(est, dict) else None
+    tm = float(tm) if tm is not None and math.isfinite(tm) and tm > 0 else None
+    beta = None
+    if len(ev.fases) > 1:
+        cantidades = [f.n for f in ev.fases]
+        beta = min(cantidades) / sum(cantidades)
+    return tm, beta
+
+
+def _margen_cae(serie):
+    """True when a margin above MARGEN_MIN falls below MARGEN_CAIDA times itself between two checks."""
+    for previo, actual in zip(serie, serie[1:]):
+        for mp, ma in zip(previo, actual):
+            for a, b in zip(mp, ma):
+                if a is not None and b is not None and a > MARGEN_MIN and b < MARGEN_CAIDA * a:
+                    return True
+    return False
+
+
+def _paso_por_margen(t3, fila3, t4, fila4, h_max, h_min):
+    """Largest next step whose quarter spacing keeps each falling margin within MARGEN_CAIDA (linear trend)."""
+    paso = h_max
+    for mp, ma in zip(fila3, fila4):
+        for a, b in zip(mp, ma):
+            if a is not None and b is not None and MARGEN_MIN < b < a:
+                distancia = b * (t4 - t3) / (a - b)
+                paso = min(paso, 4 * (1 - MARGEN_CAIDA) * distancia * 0.75)
+    return max(paso, h_min)
 
 
 def clasificar_evento(antes, despues):
@@ -422,6 +464,8 @@ def integrar(red, y0):
     evs = sis.estados(t, y)
     sis.semillas = list(evs)
     firmas = [firma(e) for e in evs]
+    marg_a = [margenes(e) for e in evs]      # margins of the state at the start of the current step
+    h_margen = max(H_MARGEN_MIN * red.tf, h_min)
     sis.firmas_tramo = firmas           # la misma lista: se actualiza en cada evento
     try:
         sis.flujos(0.0, y, evs)
@@ -466,16 +510,34 @@ def integrar(red, y0):
             t_b, y_b = solver.t, solver.y.copy()
             sem_b = list(sis.semillas)
             cambios = set()
+            t_cambio = None
+            revisiones = []                 # (t, margins per volume) at each check point without a change
             for tm in [t_a + (t_b - t_a) * k / 4 for k in (1, 2, 3)] + [t_b]:
                 yy = interp(tm) if tm < t_b else y_b
+                fila = []
                 for j in range(nv):
                     try:
-                        f = firma(sis.estado_vol(tm, yy, j, semilla=sem_a[j]))
+                        e = sis.estado_vol(tm, yy, j, semilla=sem_a[j])
+                        f = firma(e)
+                        fila.append(margenes(e))
                     except mz.FueraDeAlcance:
                         f = None
                     if f != firmas[j]:
                         cambios.add(j)
+                if cambios:
+                    # The bisection brackets [t_a, first changed check]: the phase set may return to the
+                    # original one before t_b (a closed window), where the predicate is false again.
+                    t_cambio = tm
+                    break
+                revisiones.append((tm, fila))
             sis.semillas = sem_b
+            if not cambios and _margen_cae([marg_a] + [fila for _, fila in revisiones]) and t_b - t_a > h_margen:
+                # A margin fell too fast for the check spacing: a phase window could lie between two checks.
+                tray.reintentos += 1
+                t, y, sis.semillas = t_a, y_a, sem_a
+                paso_max = max((t_b - t_a) / 4, h_margen)
+                reiniciar = True
+                break
             if cambios:
                 def cambia(tm):
                     yy = interp(tm)
@@ -486,7 +548,7 @@ def integrar(red, y0):
                         except mz.FueraDeAlcance:
                             return True
                     return False
-                lo, hi = t_a, t_b
+                lo, hi = t_a, t_cambio
                 # Refine the boundary without changing phase-presence or
                 # certificate tolerances. Preserve this exact flash context
                 # below so publication cannot lose an incipient phase by
@@ -574,7 +636,12 @@ def integrar(red, y0):
                         sis.semillas = sem_b
                         tray.tramos.append(Tramo(t_a, t_b, interp))
                         t, y = t_b, y_b
+                        try:
+                            marg_a = [margenes(sis.estado_vol(t_b, y_b, j, semilla=sem_b[j])) for j in range(nv)]
+                        except mz.FueraDeAlcance:
+                            pass
                         paso_max = h_max
+                        solver.max_step = paso_max
                         continue
                 tray.phase_event_states[t_e] = tuple(nuevos)
                 detener = None
@@ -592,6 +659,7 @@ def integrar(red, y0):
                         detener = Detencion("cambio_fase_prohibido", f"Volumen {red.volumenes[j].id}: {motivo}", t_e)
                     firmas[j] = nueva
                 sis.semillas = nuevos
+                marg_a = [margenes(e) for e in nuevos]
                 if detener is None:
                     try:
                         sis.flujos(t_e, y_e, nuevos)
@@ -609,7 +677,11 @@ def integrar(red, y0):
                 break
             tray.tramos.append(Tramo(t_a, t_b, interp))
             t, y = t_b, y_b
-            paso_max = h_max
+            t3, fila3 = revisiones[-2] if len(revisiones) > 1 else (t_a, marg_a)
+            t4, marg_a = revisiones[-1]
+            # The running solver reads max_step at every step, so the margin cap applies to the next one.
+            paso_max = _paso_por_margen(t3, fila3, t4, marg_a, h_max, h_margen)
+            solver.max_step = paso_max
         if not reiniciar:
             break
     tray.t_fin, tray.y_fin = t, y

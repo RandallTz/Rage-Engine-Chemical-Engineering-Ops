@@ -452,6 +452,10 @@ class Sistema:
         """[(tipo, w, tm)] minimos locales de la distancia al plano tangente."""
         RT = R * T
         sal = []
+        # Binary grid minima left unrefined (tm >= 1e-4): not trials, but the appearance margin (_tm_nueva) reads
+        # them so that a liquid candidate stays visible far from its boundary (F0-5).
+        sin_refinar = []
+        self.__dict__["_minimos_sin_refinar"] = sin_refinar
         if incluir_vapor:
             c = (np.array([self.esp[i].g_ig0(T) for i in idx]) + RT * math.log(P / P0) - mu_ref) / RT
             e = np.exp(-(c - c.min()))
@@ -478,6 +482,8 @@ class Sistema:
                                         options={"xatol": 1e-12})
                     a = 1 / (1 + math.exp(-r.x))
                     sal.append(("liquido", np.array([a, 1 - a]), float(min(r.fun, tm[k]))))
+                elif tm[k] <= tm[k - 1] and tm[k] <= tm[k + 1]:
+                    sin_refinar.append(("liquido", np.array([w1[k], 1 - w1[k]]), float(tm[k])))
             # A minimum at the grid edge (|u| = 34, fraction < 2e-15: a near-pure phase with a trace) is
             # refined beyond the edge. Both fractions are evaluated without cancellation, so neither rounds to
             # 0, which is outside the logarithm's domain; |u| <= 690 keeps exp(|u|) finite.
@@ -553,6 +559,7 @@ class Sistema:
             cert = self.prueba_estabilidad(T, P, mu_ref, idx, incluir_vapor=True)
             tm_min = min(p[2] for p in cert)
             estado = self._empaquetar(especificacion, T, P, n, idx, fases)
+            estado.estabilidad = {"tm_nueva": _tm_nueva(cert + self.__dict__.get("_minimos_sin_refinar", []), fases)}
             return fases, exploradas, cert, tm_min, estado, self._residuo_mu(estado, idx)
 
         fases, exploradas, cert, tm_min, estado, res_mu = secuencia([(cand[0][1], nz.copy())])
@@ -572,7 +579,8 @@ class Sistema:
                                                 "-min tm sobre fases de prueba vapor (minimo analitico) y liquido "
                                                 "(malla en el simplex y refinamiento local)")
         estado.estabilidad = {"tm_min": tm_min, "pruebas": len(cert) + len(exploradas),
-                              "candidatas": sorted({p[0] for p in cert})}
+                              "candidatas": sorted({p[0] for p in cert}),
+                              "tm_nueva": estado.estabilidad.get("tm_nueva", math.inf)}
         if max(0.0, -tm_min) > TOL_TM and len(fases) >= MAX_FASES and res_mu <= TOL_MU:
             competidora = min(cert, key=lambda q: q[2])
             raise FueraDeAlcance("no_soportado",
@@ -838,7 +846,7 @@ class Sistema:
         g_otra = (self.mu("vapor" if tipo == "liquido" else "liquido", T, P, [1.0], idx)[0] - e.fases[0].mu[i]) / RT
         e.verificaciones["equilibrio"] = (0.0, TOL_MU, "una fase")
         e.verificaciones["estabilidad"] = (max(0.0, -g_otra), TOL_TM, "g de la otra fase pura frente a la presente")
-        e.estabilidad = {"tm_min": g_otra, "pruebas": 1, "candidatas": ["liquido", "vapor"]}
+        e.estabilidad = {"tm_min": g_otra, "pruebas": 1, "candidatas": ["liquido", "vapor"], "tm_nueva": g_otra}
         return e
 
     # --- operaciones energeticas -------------------------------------------------------
@@ -1316,7 +1324,8 @@ def _newton(self, espec, a, b, n, semilla):
         e.verificaciones["estabilidad"] = (max(0.0, -tm_min), TOL_TM,
                                            "-min tm sobre fases de prueba vapor (minimo analitico) y liquido "
                                            "(malla en el simplex y refinamiento local)")
-        e.estabilidad = {"tm_min": tm_min, "pruebas": len(pr), "candidatas": sorted({p[0] for p in pr} | set(tipos))}
+        e.estabilidad = {"tm_min": tm_min, "pruebas": len(pr), "candidatas": sorted({p[0] for p in pr} | set(tipos)),
+                         "tm_nueva": _tm_nueva(pr + self.__dict__.get("_minimos_sin_refinar", []), fases)}
         return e
 
 
@@ -1350,6 +1359,14 @@ def _candidatas_nuevas(pruebas, presentes, tol=1e-5):
     malla ese valor puede salir -1e-10 y no debe tomarse como una fase nueva."""
     return [p for p in pruebas if not any(p[0] == t and np.max(np.abs(np.asarray(p[1]) - x)) < tol
                                           for t, x in presentes)]
+
+
+def _tm_nueva(pruebas, fases):
+    """Appearance margin: the smallest tm among trial phases that are not a present phase.
+    It approaches zero before a new phase appears; math.inf when no such local minimum was refined.
+    Only the network integrator uses it, to limit its step; certification still uses tm_min."""
+    nuevas = _candidatas_nuevas(pruebas, [(t, nf / nf.sum()) for t, nf in fases])
+    return float(min(p[2] for p in nuevas)) if nuevas else math.inf
 
 
 def _meseta_general(self, T, P, n, eje, y_nombre, objetivo, delta=1e-9):
