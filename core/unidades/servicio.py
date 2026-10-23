@@ -23,6 +23,7 @@ ORDEN = ["M", "L", "T", "N", "Theta", "I", "J"]
 SIMBOLO_SI = {"M": "kg", "L": "m", "T": "s", "N": "mol", "Theta": "K", "I": "A", "J": "cd"}
 
 _UREG = None
+_EXACT_UREG = None
 
 
 class ErrorUnidad(Exception):
@@ -116,6 +117,31 @@ def interpretar(unidad):
 def a_SI(valor, unidad):
     i = interpretar(unidad)
     return i["factor"] * valor + i["desplazamiento"]
+
+
+@functools.lru_cache(maxsize=4096)
+def exact_conversion(unit):
+    """Rational SI conversion from the same Pint definitions, without float rounding.
+
+    Catalog definitions are authoritative; this does not certify empirical
+    constants in that catalog. Nonrational conversions remain unsupported.
+    """
+    global _EXACT_UREG
+    specification = interpretar(unit)
+    try:
+        if _EXACT_UREG is None:
+            import pint
+            _EXACT_UREG = pint.UnitRegistry(non_int_type=Fraction)
+        zero = _EXACT_UREG.Quantity(Fraction(0), normalizar(unit)).to_base_units().magnitude
+        one = _EXACT_UREG.Quantity(Fraction(1), normalizar(unit)).to_base_units().magnitude
+        if not all(isinstance(value, (int, Fraction)) for value in (zero, one)):
+            raise ValueError('Conversion is not rational.')
+        factor, offset = Fraction(one - zero), Fraction(zero)
+        if factor <= 0:
+            raise ValueError('Conversion must be order preserving.')
+    except Exception as error:
+        raise ErrorUnidad('Exact rational unit conversion is unavailable for this unit.') from error
+    return {**specification, 'factor':factor, 'desplazamiento':offset}
 
 
 def desde_SI(valor, unidad):

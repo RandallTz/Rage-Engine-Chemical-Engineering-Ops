@@ -53,6 +53,36 @@ P_MIN = 100.0
 MAX_FASES = 3
 
 
+def _trial_phase_amounts(log_amounts, totals):
+    """Decode a Newton trial only inside the positive material-balance domain.
+
+    Each independent phase amount is bounded by its total component inventory.
+    Checking this in log space prevents overflow without changing any amount.
+    The dependent phase must also remain strictly positive. Invalid trials are
+    rejected so the caller can backtrack; they are never clipped or certified.
+    """
+    totals = np.asarray(totals, dtype=float)
+    logs = np.asarray(log_amounts, dtype=float)
+    if not np.all(np.isfinite(totals)) or np.any(totals <= 0) or not np.all(np.isfinite(logs)):
+        return None
+    if logs.size == 0:
+        return [totals.copy()]
+    if logs.size % totals.size:
+        return None
+    logs = logs.reshape(-1, totals.size)
+    if np.any(logs > np.log(totals)[None, :]):
+        return None
+    try:
+        with np.errstate(over="raise", under="raise", invalid="raise"):
+            independent = np.exp(logs)
+            remaining = totals - independent.sum(axis=0)
+    except FloatingPointError:
+        return None
+    if np.any(independent <= 0) or np.any(remaining <= 0) or not np.all(np.isfinite(remaining)):
+        return None
+    return [*independent, remaining]
+
+
 class FueraDeAlcance(Exception):
     def __init__(self, motivo, mensaje, **datos_):
         super().__init__(mensaje)
@@ -471,9 +501,15 @@ class Sistema:
             tml = self._tm_liquido_lote(T, P, W, mu_ref, idx)
             tms = sorted(zip(tml.tolist(), puntos), key=lambda z: z[0])
             semillas = [w for _, w in tms[:12]]
+            def f(zz):
+                # A trial whose composition underflows to an exact zero is outside the representable simplex
+                # (the binary search bounds |u| for the same reason); reject it instead of evaluating log(0).
+                w = _softmax3(zz)
+                if not np.all(w > 0):
+                    return math.inf
+                return self._tm_liquido(T, P, w, mu_ref, idx)
             for w0 in semillas:
                 z0 = np.log(w0[:2] / w0[2])
-                f = lambda zz: self._tm_liquido(T, P, _softmax3(zz), mu_ref, idx)
                 r = minimize(f, z0, method="Nelder-Mead", options={"xatol": 1e-11, "fatol": 1e-15, "maxiter": 4000})
                 sal.append(("liquido", _softmax3(r.x), float(r.fun)))
             return sal
@@ -620,7 +656,10 @@ class Sistema:
             # semilla del 10 % la sobredimensiona. Se reintenta con la fase nueva ya formada (fraccion beta del
             # inventario con la composicion de prueba, sin superar el 90 % de la fase donante). El camino
             # normal (separa al primer intento) no cambia.
-            for beta in (1e-3, 1e-4, 0.05, 0.2, 0.5):
+            # A newly stable phase can have a very small lever-rule amount.
+            # Try smaller *initial guesses* as well; accepted amounts still come
+            # from Gibbs minimization, equality polishing and stability checks.
+            for beta in (1e-3, 1e-4, 1e-5, 1e-6, 0.05, 0.2, 0.5):
                 add = np.maximum(np.minimum(beta * nz.sum() * w, 0.9 * fases[0][1]), 1e-9 * nz)
                 quedan = intento(add)
                 if len(quedan) >= 2:
@@ -681,17 +720,39 @@ class Sistema:
         if any(p.min() <= 0 for p in partes):
             partes = [np.maximum(p, 1e-14 * nz) for p in partes[:-1]] + [None]
             partes[-1] = nz - np.sum(partes[:-1], axis=0)
-            if partes[-1].min() <= 0:
-                return None
+            # A non-positive dependent phase left by an exact-zero trace is handled by the fallback below.
         z = np.log(np.concatenate(partes[:-1]))
+        if _trial_phase_amounts(z, nz) is None:
+            # The seed itself must be decodable. A trace left at the minimization's bound (0 or 1e-14 n,
+            # subnormal for n ~ 1e-300) gives a phase share that underflows, or puts almost all of the species in
+            # the independent phases so that the log/exp round trip (relative error ~ |ln n| eps ~ 1e-13) decodes
+            # the dependent phase as negative; a tiny share also makes the Jacobian singular in practice. Species
+            # with a share below 1e-6 in a phase restart with the same composition in every phase; Newton then
+            # solves their partition. Only the initial guess changes; the solved state is still accepted only by
+            # the equality and stability checks.
+            independientes = np.sum(partes[:-1], axis=0)
+            totales = np.array([p.sum() for p in partes[:-1]] + [float(np.sum(nz - independientes))])
+            if totales.min() <= 0:
+                return None
+            reparto = totales / totales.sum()
+            sin_reparto = (independientes > (1.0 - 1e-6) * nz) | np.any(
+                [p < 1e-6 * nz for p in partes[:-1]], axis=0)
+            partes = [np.where(sin_reparto, reparto[a] * nz, p) for a, p in enumerate(partes[:-1])] + [None]
+            z = np.log(np.concatenate(partes[:-1]))
+            if _trial_phase_amounts(z, nz) is None:
+                return None
 
         def F(zv):
-            ps = [np.exp(zv[a * m:(a + 1) * m]) for a in range(k - 1)]
-            ult = nz - np.sum(ps, axis=0)
-            if ult.min() <= 0 or any(p.min() <= 0 for p in ps):      # (exp que se anula por debajo)
+            phases = _trial_phase_amounts(zv, nz)
+            if phases is None:
                 return None
-            mus = [self.mu(t, T, P, p / p.sum(), idx) for t, p in zip(tipos, ps + [ult])]
-            return np.concatenate([(mus[a] - mus[-1]) / RT for a in range(k - 1)])
+            try:
+                with np.errstate(over="raise", invalid="raise", divide="raise"):
+                    mus = [self.mu(t, T, P, p / p.sum(), idx) for t, p in zip(tipos, phases)]
+                    residual = np.concatenate([(mus[a] - mus[-1]) / RT for a in range(k - 1)])
+            except (FloatingPointError, ValueError, OverflowError):
+                return None
+            return residual if np.all(np.isfinite(residual)) else None
         f = F(z)
         if f is None:
             return None
@@ -1156,24 +1217,30 @@ def _newton(self, espec, a, b, n, semilla):
         m = len(idx)
 
         def desempaquetar(v):
+            if not np.all(np.isfinite(v)):
+                return None
             j = 0
             Tv, Pv = T, P
             if espec != "TP":
                 Tv = v[0]
                 j = 1
             if espec == "UV":
+                if not math.log(P_MIN) <= v[1] <= math.log(P_MAX):
+                    return None
                 Pv = math.exp(v[1])
                 j = 2
             elif espec in ("PH", "UP"):
                 Pv = a
-            ps = [np.exp(v[j + q * m:j + (q + 1) * m]) for q in range(k - 1)]
-            ult = nz - np.sum(ps, axis=0) if k > 1 else nz.copy()
-            return Tv, Pv, ps + [ult]
+            if not self.T_rango[0] <= Tv <= self.T_rango[1] or not P_MIN <= Pv <= P_MAX:
+                return None
+            phases = _trial_phase_amounts(v[j:], nz)
+            return (Tv, Pv, phases) if phases is not None else None
 
         def F(v):
-            Tv, Pv, ps = desempaquetar(v)
-            if ps[-1].min() <= 0 or not self.T_rango[0] * 0.98 <= Tv <= self.T_rango[1] * 1.02:
+            trial = desempaquetar(v)
+            if trial is None:
                 return None
+            Tv, Pv, ps = trial
             RT = R * Tv
             res = []
             if k > 1:
@@ -1192,7 +1259,8 @@ def _newton(self, espec, a, b, n, semilla):
                 else:
                     res.append((Hs - Pv * Vs - a) / escala)
                     res.append((Vs - b) / b)
-            return np.array(res)
+            residual = np.array(res)
+            return residual if np.all(np.isfinite(residual)) else None
         v = x0.copy()
         f = F(v)
         if f is None:
@@ -1313,7 +1381,11 @@ def _meseta_general(self, T, P, n, eje, y_nombre, objetivo, delta=1e-9):
         # Newton en (ln T o ln P, composiciones de cada fase): (k-1) m ecuaciones mu_i^a = mu_i^0 y
         # 1 + k (m-1) incognitas, cuadrado para k = m + 1. Las composiciones de los lados del salto
         # (a 1e-9 relativo) son la semilla; sin pulir, la tangente comun queda a ~1e-8.
-        pul = _pulir_invariante(self, T, P, eje, cand, idx)
+        # The root search can deliberately use a coarse log-pressure tolerance
+        # while constructing a UV seed. Its actual straddling neighborhood is
+        # `delta`, not an unrelated fixed 1e-6 relative distance. Equality and
+        # stability certification below retain their original tolerances.
+        pul = _pulir_invariante(self, T, P, eje, cand, idx, relative_window=delta)
         if pul is not None:
             T, P, cand = pul
             tol_mu = TOL_MU
@@ -1342,24 +1414,36 @@ def _meseta_general(self, T, P, n, eje, y_nombre, objetivo, delta=1e-9):
     return e
 
 
-def _pulir_invariante(self, T, P, eje, cand, idx):
+def _pulir_invariante(self, T, P, eje, cand, idx, relative_window=1e-6):
     """Newton para el punto invariante con las fases `cand` (k = m + 1). Composiciones en coordenadas
     softmax respecto de la ultima especie (positivas y normalizadas). Devuelve (T, P, cand) o None."""
     m = len(idx)
     k = len(cand)
     tipos = [t for t, _ in cand]
+    # A Newton trial is decoded only where every exponential is a positive normal float: the logits, their
+    # sum and ln T or ln P stay inside the float range. Other trials are rejected (the line search backtracks)
+    # instead of producing inf/nan compositions; accepted values are computed exactly as before.
+    log_max = math.log(np.finfo(float).max) - math.log(m)
+    log_min = math.log(np.finfo(float).tiny)
 
     def a_x(zs):
         e = np.exp(np.concatenate([zs, [0.0]]))
         return e / e.sum()
 
     def desempaquetar(v):
+        zs = v[1:]
+        if not np.all(np.isfinite(v)) or not log_min < v[0] < log_max or (
+                zs.size and (zs.max() > log_max or zs.min() < log_min)):
+            return None
         Tv, Pv = (math.exp(v[0]), P) if eje == "T" else (T, math.exp(v[0]))
         xs = [a_x(v[1 + a * (m - 1):1 + (a + 1) * (m - 1)]) for a in range(k)]
         return Tv, Pv, xs
 
     def F(v):
-        Tv, Pv, xs = desempaquetar(v)
+        decoded = desempaquetar(v)
+        if decoded is None:
+            return None
+        Tv, Pv, xs = decoded
         mus = [self.mu(t, Tv, Pv, x, idx) for t, x in zip(tipos, xs)]
         return np.concatenate([(mus[a] - mus[0]) / (R * Tv) for a in range(1, k)])
     v = [math.log(T if eje == "T" else P)]
@@ -1369,6 +1453,8 @@ def _pulir_invariante(self, T, P, eje, cand, idx):
     v = np.array(v)
     try:
         f = F(v)
+        if f is None or not np.all(np.isfinite(f)):
+            return None
         for _ in range(40):
             if np.max(np.abs(f)) < 1e-14:
                 break
@@ -1376,12 +1462,17 @@ def _pulir_invariante(self, T, P, eje, cand, idx):
             for j in range(len(v)):
                 d = np.zeros_like(v)
                 d[j] = 1e-7
-                J[:, j] = (F(v + d) - F(v - d)) / 2e-7
+                fp, fm = F(v + d), F(v - d)
+                if fp is None or fm is None:
+                    return None
+                J[:, j] = (fp - fm) / 2e-7
+            if not np.all(np.isfinite(J)):
+                return None
             paso = np.linalg.solve(J, -f)
             a = 1.0
             for _ in range(30):
                 fn = F(v + a * paso)
-                if np.max(np.abs(fn)) < np.max(np.abs(f)):
+                if fn is not None and np.all(np.isfinite(fn)) and np.max(np.abs(fn)) < np.max(np.abs(f)):
                     v, f = v + a * paso, fn
                     break
                 a *= 0.5
@@ -1392,7 +1483,7 @@ def _pulir_invariante(self, T, P, eje, cand, idx):
     if not np.max(np.abs(f)) < 1e-12:
         return None
     Tv, Pv, xs = desempaquetar(v)
-    if abs(Tv / T - 1) > 1e-6 or abs(Pv / P - 1) > 1e-6:
+    if abs(Tv / T - 1) > relative_window or abs(Pv / P - 1) > relative_window:
         return None          # el Newton se fue a otro punto: no es el salto encontrado
     sal = []
     for (t, x0), xr in zip(cand, xs):

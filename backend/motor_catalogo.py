@@ -7,7 +7,7 @@ estan admitidas. Se construye a partir de:
   * core/catalogo.faltantes (regla UNICA de admision por especie, la que aplica el Sistema);
   * las capacidades ya publicadas de cada ruta (estado puntual, ensamblaje v2, diagramas) para las operaciones.
 No duplica la fisica ni los limites numericos: los tamanos admitidos/contrastados siguen en sus rutas.
-Contrato: docs/contratos/contratoCatalogo.ts. Documento: docs/MOTOR_CATALOGO_PROPIEDADES.md.
+Contrato: docs/contratos/contratoCatalogo.ts. Documento: docs/engine/property-catalog.md.
 """
 
 import copy
@@ -62,7 +62,7 @@ def _operaciones():
     """Operaciones publicadas por paquete, tomadas de las capacidades de cada ruta."""
     from backend import motor_diagramas, motor_ensamblaje_v2, motor_termodinamica
     estado = {m["id"]: {"especificaciones": list(m["especificaciones"]), "version": m["version"], "nombre": m["nombre"],
-                        "componentesCAS": list(m["componentesCAS"])}
+                        "componentesCAS": list(m["componentesCAS"]), "dominio": m["dominio"]}
               for m in motor_termodinamica.capacidades()["modelos"]}
     ens = {p["modelo"]["id"]: p for p in motor_ensamblaje_v2.capacidades_v2()["paquetes"]}
     diag = {p["modelo"]["id"]: p for p in motor_diagramas.capacidades()["paquetes"]}
@@ -75,6 +75,20 @@ def _liquido(mid):
     return mz.PAQUETES[mid].liquido
 
 
+DOMAIN_REASON = ("Temperature range where this package admits the species: the intersection of its vapor-pressure and "
+                 "ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is "
+                 "evaluated only inside the intersection of the ranges of its species.")
+ENVELOPE_REASON = ("Envelope of the admitted species' ranges (especies[].dominio), not the domain of a given system; a "
+                   "system is evaluated only inside the intersection of its species' ranges.")
+
+
+def _species_domain(mid, cas, model_domain):
+    """Admitted T range of one species in one package: the runtime's own domain for that species alone."""
+    if mid.startswith("agua-iapws95"):
+        return list(model_domain["T"])
+    return list(mz.Sistema(mid, [cas]).T_rango)
+
+
 @functools.lru_cache(maxsize=1)
 def _catalogo():
     estado, ens, diag = _operaciones()
@@ -85,11 +99,18 @@ def _catalogo():
         especies = []
         for c in catalogo.sustancias():
             f = catalogo.faltantes(liq, c, mid)
-            especies.append({"cas": c, "admitida": not f,
-                             "faltantes": [{"dato": x["dato"], "codigo": x["codigo"], "mensaje": x["mensaje"]} for x in f]})
+            entrada = {"cas": c, "admitida": not f,
+                       "faltantes": [{"dato": x["dato"], "codigo": x["codigo"], "mensaje": x["mensaje"]} for x in f]}
+            if not f:
+                entrada["dominio"] = {"T": _species_domain(mid, c, info["dominio"]), "motivo": DOMAIN_REASON}
+            especies.append(entrada)
         admitidas = [e["cas"] for e in especies if e["admitida"]]
         # coherencia: lo admitido por la regla es exactamente lo que publica la ruta de estado
         assert sorted(admitidas) == sorted(info["componentesCAS"]), (mid, admitidas, info["componentesCAS"])
+        rangos = [e["dominio"]["T"] for e in especies if e["admitida"]]
+        envolvente = [min(r[0] for r in rangos), max(r[1] for r in rangos)]
+        # The state route publishes the same envelope; a difference would make one of them wrong.
+        assert envolvente == list(info["dominio"]["T"]), (mid, envolvente, info["dominio"]["T"])
         ops = {"estado": {"especificaciones": info["especificaciones"]},
                "ensamblaje": {"disponible": bool(ens.get(mid, {}).get("dinamica"))},
                "diagramas": {"disponible": mid in diag,
@@ -97,11 +118,14 @@ def _catalogo():
         if mid in ens and "coberturaGrupos" in ens[mid]:
             ops["ensamblaje"]["coberturaGrupos"] = True
         paquetes.append({"modelo": {"id": mid, "version": info["version"]}, "nombre": info["nombre"],
-                         "requisitos": catalogo.requisitos(liq), "operaciones": ops, "especies": especies})
+                         "requisitos": catalogo.requisitos(liq), "operaciones": ops, "especies": especies,
+                         "dominio": {"T": envolvente, "P": list(info["dominio"]["P"]), "motivo": ENVELOPE_REASON}})
     return {"revision": REVISION, "sustancias": sustancias, "paquetes": paquetes,
             "regla": "una especie esta admitida en un paquete si no le falta ningun requisito porEspecie; la misma "
                      "regla vale para la especie pura y para las mezclas. Los requisitos porPar y porGrupo dependen "
-                     "del conjunto y se diagnostican al evaluar (PARAMETRO_AUSENTE, UNIFAC_INTERACCION_AUSENTE).",
+                     "del conjunto y se diagnostican al evaluar (PARAMETRO_AUSENTE, UNIFAC_INTERACCION_AUSENTE). "
+                     "Admission does not mean the whole package domain: especies[].dominio is the species' admitted "
+                     "temperature range, and a mixture is evaluated inside the intersection of those ranges.",
             "noDisponible": [
                 {"elemento": "incorporar sustancias desde la peticion", "motivo": "el registro es del servidor (F2.3)"},
                 {"elemento": "overrides de propiedades", "motivo": "pendiente de F2.4"},

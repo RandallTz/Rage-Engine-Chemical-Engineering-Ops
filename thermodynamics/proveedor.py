@@ -8,6 +8,8 @@ arrays de numpy en el Sistema Internacional.
 import numpy as np
 from thermo.chemical import Chemical
 from thermo.unifac import UNIFAC
+from core.errores import ErrorDeModelo
+from core import errores
 
 #: Constante de los gases [J/(mol K)]. El mismo valor que usa
 #: thermodynamics/reaccion.py, para que k = Cp/(Cp-R) y van't Hoff no
@@ -31,13 +33,14 @@ class ProveedorTermodinamico:
         # el componente culpable ni la causa.
         sin_grupos = [n for n, g in zip(nombres_componentes, self.grupos_unifac) if not g]
         if sin_grupos:
-            raise ValueError(
+            raise ErrorDeModelo(
                 f"'thermo' no tiene grupos UNIFAC para: {', '.join(sin_grupos)}. "
                 "El modelo de este simulador es UNIFAC predictivo, que descompone cada "
                 "molecula en grupos funcionales, y sin ellos no puede calcular coeficientes "
                 "de actividad. Suele pasar con gases permanentes (metano, nitrogeno, "
                 "hidrogeno, aire). Usa componentes condensables, o un portador como un "
-                "hidrocarburo ligero que si tenga grupos."
+                "hidrocarburo ligero que si tenga grupos.",
+                codigo=errores.SIN_GRUPOS_UNIFAC,
             )
 
     def actualizar_estado(self, T_kelvin, P_pascal=101325.0):

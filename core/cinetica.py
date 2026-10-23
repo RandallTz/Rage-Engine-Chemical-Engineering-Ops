@@ -220,12 +220,27 @@ class ReaccionCinetica:
         La inversa tiene tres origenes posibles y los tres se distinguen:
         una ley propia, derivarla del equilibrio, o no existir.
         """
-        if actividades is None:
-            actividades = self.ley_directa.actividades(proveedor, T, x)
+        # Cada ley con SU base. `actividades` es una cache {base: a_i} de la
+        # misma (T, x), que comparten las leyes de un volumen; un array suelto
+        # (forma antigua) son las de la base de la directa, y nunca se dan a
+        # una inversa que declaro otra.
+        if isinstance(actividades, dict):
+            cache = actividades
+        else:
+            cache = {}
+            if actividades is not None:
+                cache[self.ley_directa.base] = actividades
+
+        def de(ley):
+            if ley.base not in cache:
+                cache[ley.base] = ley.actividades(proveedor, T, x)
+            return cache[ley.base]
+
+        actividades = de(self.ley_directa)
         directa = self.ley_directa.evaluar(proveedor, T, x, actividades)
 
         if self.ley_inversa is not None:
-            inversa = self.ley_inversa.evaluar(proveedor, T, x, actividades)
+            inversa = self.ley_inversa.evaluar(proveedor, T, x, de(self.ley_inversa))
         elif self.inversa_desde_equilibrio:
             if K_eq is None or not math.isfinite(K_eq) or K_eq <= 0:
                 raise ErrorFisico(
@@ -450,8 +465,8 @@ def resolver_cinetica_isoterma(proveedor, reacciones, F_i_in, T, n,
     def tasas_en(xi, T_actual):
         evaluaciones["n"] += 1
         x = composicion(xi)
-        actividades = reacciones[0].ley_directa.actividades(
-            proveedor, T_actual, x)
+        # Una cache por base para esta (T, x): cada ley usa la suya.
+        actividades = {}
         netas = np.empty(len(reacciones), dtype=float)
         for j, reaccion in enumerate(reacciones):
             K = None
@@ -699,7 +714,8 @@ def resolver_cinetica_con_energia(proveedor, reacciones, F_i_in, T_in, h_in,
         total = float(np.sum(F_i))
         x = np.full(n, 1.0 / n) if total <= 0 else F_i / total
 
-        actividades = reacciones[0].ley_directa.actividades(proveedor, T, x)
+        # Una cache por base para esta (T, x): cada ley usa la suya.
+        actividades = {}
         netas = np.empty(len(reacciones), dtype=float)
         for j, reaccion in enumerate(reacciones):
             K = None

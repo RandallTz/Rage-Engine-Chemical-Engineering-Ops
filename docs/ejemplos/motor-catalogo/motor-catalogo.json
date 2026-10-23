@@ -597,7 +597,14 @@
     {
      "cas": "7732-18-5",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       273.16,
+       1073.15
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "64-17-5",
@@ -676,7 +683,18 @@
       }
      ]
     }
-   ]
+   ],
+   "dominio": {
+    "T": [
+     273.16,
+     1073.15
+    ],
+    "P": [
+     100.0,
+     100000000.0
+    ],
+    "motivo": "Envelope of the admitted species' ranges (especies[].dominio), not the domain of a given system; a system is evaluated only inside the intersection of its species' ranges."
+   }
   },
   {
    "modelo": {
@@ -718,44 +736,111 @@
     {
      "cas": "7732-18-5",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       275.0,
+       582.615
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "64-17-5",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       159.05,
+       462.52799999999996
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "71-43-2",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       278.68,
+       505.94399999999996
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "108-88-3",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       178.18,
+       532.62
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "71-36-3",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       183.85,
+       506.74499999999995
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "141-78-6",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       298.0,
+       470.88000000000005
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "67-56-1",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       175.47,
+       461.376
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "67-64-1",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       200.0,
+       457.29
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     }
-   ]
+   ],
+   "dominio": {
+    "T": [
+     159.05,
+     582.615
+    ],
+    "P": [
+     100.0,
+     500000.0
+    ],
+    "motivo": "Envelope of the admitted species' ranges (especies[].dominio), not the domain of a given system; a system is evaluated only inside the intersection of its species' ranges."
+   }
   },
   {
    "modelo": {
@@ -799,44 +884,111 @@
     {
      "cas": "7732-18-5",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       275.0,
+       582.615
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "64-17-5",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       159.05,
+       462.52799999999996
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "71-43-2",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       278.68,
+       505.94399999999996
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "108-88-3",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       178.18,
+       532.62
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "71-36-3",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       183.85,
+       506.74499999999995
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "141-78-6",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       298.0,
+       470.88000000000005
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "67-56-1",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       175.47,
+       461.376
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "67-64-1",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       200.0,
+       457.29
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     }
-   ]
+   ],
+   "dominio": {
+    "T": [
+     159.05,
+     582.615
+    ],
+    "P": [
+     100.0,
+     500000.0
+    ],
+    "motivo": "Envelope of the admitted species' ranges (especies[].dominio), not the domain of a given system; a system is evaluated only inside the intersection of its species' ranges."
+   }
   },
   {
    "modelo": {
@@ -879,7 +1031,14 @@
     {
      "cas": "7732-18-5",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       293.0,
+       373.0
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "64-17-5",
@@ -917,7 +1076,14 @@
     {
      "cas": "71-36-3",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       293.0,
+       373.0
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "141-78-6",
@@ -952,7 +1118,18 @@
       }
      ]
     }
-   ]
+   ],
+   "dominio": {
+    "T": [
+     293.0,
+     373.0
+    ],
+    "P": [
+     100.0,
+     500000.0
+    ],
+    "motivo": "Envelope of the admitted species' ranges (especies[].dominio), not the domain of a given system; a system is evaluated only inside the intersection of its species' ranges."
+   }
   },
   {
    "modelo": {
@@ -998,44 +1175,111 @@
     {
      "cas": "7732-18-5",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       275.0,
+       582.615
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "64-17-5",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       159.05,
+       462.52799999999996
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "71-43-2",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       278.68,
+       505.94399999999996
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "108-88-3",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       178.18,
+       532.62
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "71-36-3",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       183.85,
+       506.74499999999995
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "141-78-6",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       298.0,
+       470.88000000000005
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "67-56-1",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       175.47,
+       461.376
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "67-64-1",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       200.0,
+       457.29
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     }
-   ]
+   ],
+   "dominio": {
+    "T": [
+     159.05,
+     582.615
+    ],
+    "P": [
+     100.0,
+     500000.0
+    ],
+    "motivo": "Envelope of the admitted species' ranges (especies[].dominio), not the domain of a given system; a system is evaluated only inside the intersection of its species' ranges."
+   }
   },
   {
    "modelo": {
@@ -1081,44 +1325,111 @@
     {
      "cas": "7732-18-5",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       275.0,
+       582.615
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "64-17-5",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       159.05,
+       462.52799999999996
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "71-43-2",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       278.68,
+       505.94399999999996
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "108-88-3",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       178.18,
+       532.62
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "71-36-3",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       183.85,
+       506.74499999999995
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "141-78-6",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       298.0,
+       470.88000000000005
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "67-56-1",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       175.47,
+       461.376
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "67-64-1",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       200.0,
+       457.29
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     }
-   ]
+   ],
+   "dominio": {
+    "T": [
+     159.05,
+     582.615
+    ],
+    "P": [
+     100.0,
+     500000.0
+    ],
+    "motivo": "Envelope of the admitted species' ranges (especies[].dominio), not the domain of a given system; a system is evaluated only inside the intersection of its species' ranges."
+   }
   },
   {
    "modelo": {
@@ -1164,32 +1475,74 @@
     {
      "cas": "7732-18-5",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       283.15,
+       313.15
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "64-17-5",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       283.15,
+       313.15
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "71-43-2",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       283.15,
+       313.15
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "108-88-3",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       283.15,
+       313.15
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "71-36-3",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       283.15,
+       313.15
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "141-78-6",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       298.0,
+       313.15
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "67-56-1",
@@ -1205,9 +1558,27 @@
     {
      "cas": "67-64-1",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       283.15,
+       313.15
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     }
-   ]
+   ],
+   "dominio": {
+    "T": [
+     283.15,
+     313.15
+    ],
+    "P": [
+     100.0,
+     500000.0
+    ],
+    "motivo": "Envelope of the admitted species' ranges (especies[].dominio), not the domain of a given system; a system is evaluated only inside the intersection of its species' ranges."
+   }
   },
   {
    "modelo": {
@@ -1243,7 +1614,14 @@
     {
      "cas": "7732-18-5",
      "admitida": true,
-     "faltantes": []
+     "faltantes": [],
+     "dominio": {
+      "T": [
+       200.0,
+       300.0
+      ],
+      "motivo": "Temperature range where this package admits the species: the intersection of its vapor-pressure and ideal-gas Cp ranges, T <= 0.9 Tc and the interval of the package's parameter table. A mixture is evaluated only inside the intersection of the ranges of its species."
+     }
     },
     {
      "cas": "64-17-5",
@@ -1322,10 +1700,21 @@
       }
      ]
     }
-   ]
+   ],
+   "dominio": {
+    "T": [
+     200.0,
+     300.0
+    ],
+    "P": [
+     0.1,
+     100000000.0
+    ],
+    "motivo": "Envelope of the admitted species' ranges (especies[].dominio), not the domain of a given system; a system is evaluated only inside the intersection of its species' ranges."
+   }
   }
  ],
- "regla": "una especie esta admitida en un paquete si no le falta ningun requisito porEspecie; la misma regla vale para la especie pura y para las mezclas. Los requisitos porPar y porGrupo dependen del conjunto y se diagnostican al evaluar (PARAMETRO_AUSENTE, UNIFAC_INTERACCION_AUSENTE).",
+ "regla": "una especie esta admitida en un paquete si no le falta ningun requisito porEspecie; la misma regla vale para la especie pura y para las mezclas. Los requisitos porPar y porGrupo dependen del conjunto y se diagnostican al evaluar (PARAMETRO_AUSENTE, UNIFAC_INTERACCION_AUSENTE). Admission does not mean the whole package domain: especies[].dominio is the species' admitted temperature range, and a mixture is evaluated inside the intersection of those ranges.",
  "noDisponible": [
   {
    "elemento": "incorporar sustancias desde la peticion",

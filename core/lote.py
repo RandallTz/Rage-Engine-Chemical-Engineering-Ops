@@ -160,7 +160,9 @@ def integrar(proveedor, reacciones, n0, T, t_final, n_muestras=200,
         if total <= 0:
             return np.zeros(len(reacciones))
         x = n_segura / total
-        actividades = reacciones[0].ley_directa.actividades(proveedor, T, x)
+        # Una cache por base para esta (T, x): cada ley usa la de SU base
+        # (antes se calculaban con la base de la primera reaccion para todas).
+        actividades = {}
         netas = np.empty(len(reacciones), dtype=float)
         for j, reaccion in enumerate(reacciones):
             # K_eq hace falta si la inversa se deriva del equilibrio. Se

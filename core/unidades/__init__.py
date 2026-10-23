@@ -1,5 +1,5 @@
 """
-Servicio único de unidades y dimensiones (ARQUITECTURA_MOTOR.md §5, docs/SERVICIO_UNIDADES.md).
+Servicio único de unidades y dimensiones (ARCHITECTURE.md §5, docs/contracts/units-service.md).
 
   interpretar(unidad)          -> dimensión exacta, factor y desplazamiento a SI
   a_SI(valor, unidad) / desde_SI(valor_SI, unidad)
@@ -14,7 +14,7 @@ válida (no hay listas cerradas de unidades por magnitud).
 """
 
 from .servicio import (MAGNITUDES, BASES, ErrorUnidad, a_SI, compatibles, desde_SI, dimension_de_magnitud,
-                       dimension_texto, interpretar, magnitudes_de, normalizar, unidad_SI)
+                       dimension_texto, interpretar, magnitudes_de, normalizar, unidad_SI, exact_conversion)
 
 __all__ = ["MAGNITUDES", "BASES", "ErrorUnidad", "a_SI", "compatibles", "desde_SI", "dimension_de_magnitud",
-           "dimension_texto", "interpretar", "magnitudes_de", "normalizar", "unidad_SI"]
+           "dimension_texto", "interpretar", "magnitudes_de", "normalizar", "unidad_SI", "exact_conversion"]

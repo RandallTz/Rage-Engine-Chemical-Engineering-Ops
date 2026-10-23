@@ -1,5 +1,5 @@
 // Catalogo del motor (F2.1-F2.3, revision 1): GET /motor/catalogo. Sin efectos; no recibe parametros.
-// Documento: docs/MOTOR_CATALOGO_PROPIEDADES.md. Ejemplos: docs/ejemplos/motor-catalogo/
+// Documento: docs/engine/property-catalog.md. Ejemplos: docs/ejemplos/motor-catalogo/
 // (tests/generar_ejemplos_motor_catalogo.py; verificador tests/verificar_contrato_catalogo.mjs).
 //
 // Semantica:
@@ -56,7 +56,13 @@ export type PaqueteCatalogo = {
     ensamblaje: {disponible: boolean; coberturaGrupos?: true};
     diagramas: {disponible: boolean; operaciones: ('Txy' | 'Pxy')[]}};
   /** Una entrada por sustancia del catalogo, en su orden. */
-  especies: {cas: string; admitida: boolean; faltantes: FaltanteAdmision[]}[];
+  especies: {cas: string; admitida: boolean; faltantes: FaltanteAdmision[];
+    /** Admitted species only (additive, revision 1): temperature range [K] where this package evaluates the species.
+     *  A mixture is evaluated inside the intersection of its species' ranges. */
+    dominio?: {T: [number, number]; motivo: string}}[];
+  /** Additive, revision 1: envelope of the admitted species' ranges [K] and the state route's pressure range [Pa].
+   *  It is not the domain of a given system; use especies[].dominio for that. */
+  dominio?: {T: [number, number]; P: [number, number]; motivo: string};
 };
 
 // ------------------------------------------------------------------------------------------------------------

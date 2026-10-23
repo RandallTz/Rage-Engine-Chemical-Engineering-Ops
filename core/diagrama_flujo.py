@@ -141,12 +141,18 @@ class DiagramaFlujo:
             bloques.append(_bloque_cable(*conexion))
         return Orquestador(bloques)
 
-    def resolver(self, max_iteraciones=20, **valores_conocidos):
-        """valores_conocidos: claves calificadas ('operacion.puerto' o parametro sin calificar)."""
+    def resolver(self, max_iteraciones=None, **valores_conocidos):
+        """
+        valores_conocidos: claves calificadas ('operacion.puerto' o parametro sin calificar).
+
+        max_iteraciones=None (por omision) deja que el Orquestador calcule su
+        tope con el numero de bloques (len + 2); un numero fijo (antes 20)
+        cortaba las cadenas largas. Un tope pedido explicitamente se respeta.
+        """
         return self._construir_orquestador().resolver(max_iteraciones=max_iteraciones, **valores_conocidos)
 
     def resolver_con_reciclo(self, conexion_ruptura, valor_inicial, tolerancia=1e-4,
-                              max_iteraciones_reciclo=50, max_iteraciones_internas=20,
+                              max_iteraciones_reciclo=50, max_iteraciones_internas=None,
                               **valores_conocidos):
         """
         conexion_ruptura: tupla (op_origen, puerto_salida, op_destino,

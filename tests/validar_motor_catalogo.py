@@ -1,5 +1,5 @@
 """
-Catalogo y regla unica de admision (F2.1-F2.3 de frontend/ROADMAP_MOTOR_MULTIFISICO.md).
+Catalogo y regla unica de admision (F2.1-F2.3 de docs/engine/multiphysics-roadmap.md).
 
 Comprueba:
   0. registro unico e inmutable; la vista de core/mezclas_datos y las huellas de paquete NO cambian;
@@ -114,13 +114,17 @@ if activa("0"):
         check(mz.Sistema(paq, cas).huella() == h, f"huella de {paq} igual a la publicada en {f.split('/')[0]}")
     caps = json.loads((EJ / "motor-unifac" / "motor-termodinamica-capacidades.json").read_text(encoding="utf-8"))
     nuevas = mt.capacidades()
-    sin_ace = copy.deepcopy(nuevas["modelos"])
-    for m in sin_ace:
-        if CAS["acetona"] in m["componentesCAS"]:
-            m["componentesCAS"].remove(CAS["acetona"])
-    check(caps["modelos"] == sin_ace and all(CAS["acetona"] in m["componentesCAS"] for m in nuevas["modelos"]
+    # The historical snapshot was regenerated after acetone was added. Compare
+    # the unchanged base symmetrically, then check current acetone admission.
+    def without_acetone(models):
+        result = copy.deepcopy(models)
+        for model in result:
+            if CAS["acetona"] in model["componentesCAS"]:
+                model["componentesCAS"].remove(CAS["acetona"])
+        return result
+    check(without_acetone(caps["modelos"]) == without_acetone(nuevas["modelos"]) and all(CAS["acetona"] in m["componentesCAS"] for m in nuevas["modelos"]
                                              if m["id"] != "nrtl-lle-agua-butanol" and not m["id"].startswith("agua")),
-          "capacidades puntuales = las de F1 + la acetona (F2.6), sin otro cambio (dominios incluidos)")
+          "Published base capabilities and domains unchanged; current acetone admission matches F2.6")
 
 # ======================================================================
 if activa("1"):

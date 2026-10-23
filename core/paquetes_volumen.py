@@ -149,6 +149,42 @@ class PaqueteMezcla:
             return s.equilibrio_TV(a, b, n)
         raise ValueError(espec)
 
+    def certify_state(self, state):
+        """Recheck a located state without solving its phase amounts again.
+
+        Properties, chemical potentials, material reconstruction and the full
+        stability search are evaluated afresh. Cached certificate values are
+        never trusted. This keeps the exact limiting state rather than a second
+        Newton solve whose rounding can erase an incipient phase.
+        Phase selection remains upstream: no extra amount cutoff is applied.
+        """
+        system = self.sistema
+        system.dominio(state.T, state.P)
+        n = np.asarray(state.n, dtype=float)
+        if tuple(state.especies) != tuple(system.cas) or not np.all(np.isfinite(n)) or np.any(n < 0) or not n.sum() > 0:
+            raise mz.FueraDeAlcance('no_convergente', 'Invalid component inventory in the located state.')
+        active = np.flatnonzero(n > 0).tolist()
+        phases = []
+        for phase in state.fases:
+            x = np.asarray(phase.x, dtype=float)
+            if (phase.tipo not in ('liquido', 'vapor') or not np.isfinite(phase.n) or phase.n <= 0
+                    or x.shape != n.shape or not np.all(np.isfinite(x)) or np.any(x < 0)
+                    or abs(x.sum() - 1.) > 1e-12 or np.any(x[n == 0] != 0) or np.any(x[active] <= 0)):
+                raise mz.FueraDeAlcance('no_convergente', 'Invalid phase amount or composition in the located state.')
+            phases.append((phase.tipo, phase.n * x[active]))
+        if not phases:
+            raise mz.FueraDeAlcance('no_convergente', 'The located state has no present phase.')
+        result = system._empaquetar(state.especificacion, state.T, state.P, n, active, phases)
+        reference = system._mu_comun(state.T, state.P, phases, active)
+        trials = system.prueba_estabilidad(state.T, state.P, reference, active, incluir_vapor=True)
+        minimum = min(trial[2] for trial in trials)
+        result.verificaciones['equilibrio'] = (system._residuo_mu(result, active), mz.TOL_MU, 'Fresh chemical-potential equality at the located event state')
+        result.verificaciones['estabilidad'] = (max(0., -minimum), mz.TOL_TM, 'Fresh full stability search at the located event state')
+        result.estabilidad = {'tm_min': minimum, 'pruebas': len(trials), 'candidatas': sorted({trial[0] for trial in trials})}
+        if not np.isfinite(minimum) or any(not np.isfinite(value[0]) or value[0] > value[1] for value in result.verificaciones.values()):
+            raise mz.FueraDeAlcance('no_convergente', 'The located event state fails fresh thermodynamic certification.')
+        return result
+
     def transporte_TP(self, T, P, x):
         clave = (T, P, tuple(np.round(np.asarray(x, dtype=float), 15)))
         if clave not in self._cache:

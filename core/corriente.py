@@ -20,6 +20,8 @@ de flechas/flowsheet). Este modulo sigue siendo solo el estado que viaja
 por esas flechas -- no conoce el grafo ni las conexiones.
 """
 
+import math
+
 import numpy as np
 from scipy.integrate import quad
 from scipy.optimize import brentq
@@ -40,6 +42,14 @@ class Corriente:
         self.T = float(T)
         self.P = float(P)
 
+        # Un estado no finito (NaN, inf) pasa las comparaciones '< 0' sin
+        # disparar nada: se rechaza antes, porque esta clase viaja entre equipos.
+        for nombre, valor in (("flujo_molar", self.flujo_molar), ("T", self.T),
+                              ("P", self.P)):
+            if not math.isfinite(valor):
+                raise ValueError(f"{nombre} tiene que ser finito (se recibio {valor}).")
+        if not np.all(np.isfinite(self.composicion)):
+            raise ValueError("composicion tiene que ser finita (hay NaN o infinito).")
         if len(self.nombres) != len(self.composicion):
             raise ValueError(
                 f"nombres tiene {len(self.nombres)} componentes pero "

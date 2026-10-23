@@ -294,6 +294,49 @@ def construir_calculo(request):
     }
 
 
+# 2**53: hasta ahi un float64 representa TODOS los enteros. Es el limite de
+# lo que un JSON de navegador conserva como entero exacto.
+_ENTERO_EXACTO = 2 ** 53
+
+
+def canonico_exacto(valor):
+    """
+    Forma canonica EXACTA de un valor, estable tras un roundtrip JSON en
+    JavaScript (JSON.stringify(JSON.parse(texto))).
+
+    Por que no basta `canonico`: aquella redondea a 15 cifras, y una firma
+    de integridad que redondea deja de ver cambios en las ultimas cifras. Y
+    por que no basta `json.dumps` a secas: JavaScript no distingue enteros
+    de reales, asi que `3887500.0` vuelve como `3887500` y `-0.0` como `0`;
+    el numero es el mismo, el texto no.
+
+    La regla: todo numero se lleva a float64 --que es lo unico que un JSON
+    de navegador conserva--; si es un entero exacto (|v| < 2**53) se escribe
+    como entero, y si no, con la representacion mas corta que identifica
+    ESE float (la de `repr`, que es la misma que usa JavaScript para
+    escribirlo y la que Python vuelve a leer al mismo bit). Asi `1`, `1.0`,
+    `1e0` y `-0.0`/`0` dan el mismo texto, y dos floats distintos nunca
+    dan el mismo. No se redondea nada.
+
+    Los booleanos no son numeros aqui (en Python, True es un int). NaN e
+    infinito no caben en JSON y se rechazan en vez de escribirse.
+    """
+    if isinstance(valor, bool) or valor is None:
+        return valor
+    if isinstance(valor, (int, float)):
+        x = float(valor)
+        if not math.isfinite(x):
+            raise ValueError(f"Numero no representable en JSON: {valor!r}")
+        if x == int(x) and abs(x) < _ENTERO_EXACTO:
+            return int(x)        # tambien -0.0 -> 0
+        return x                 # json.dumps escribe repr(x): exacto
+    if isinstance(valor, dict):
+        return {str(k): canonico_exacto(valor[k]) for k in sorted(valor, key=str)}
+    if isinstance(valor, (list, tuple)):
+        return [canonico_exacto(v) for v in valor]
+    return str(valor)
+
+
 def canonico(valor):
     """
     El formato canonico, publico para quien tenga que normalizar sus

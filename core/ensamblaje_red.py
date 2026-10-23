@@ -330,7 +330,7 @@ class Sistema:
 
 # ----------------------------------------------------------------------
 # Resolucion relativa (a tf) con que se localiza un cambio del conjunto de fases (ver integrar).
-RES_EVENTO = 1e-9
+RES_EVENTO = 1e-12
 
 
 def firma(ev):
@@ -384,8 +384,13 @@ class Trayectoria:
     detenida: Detencion | None = None
     pasos: int = 0
     reintentos: int = 0
+    # Frozen numerical context of located phase events. Publication must start
+    # from the state used to locate the event, rather than an unrelated sample.
+    phase_event_states: dict = field(default_factory=dict)
 
     def y(self, t):
+        if t == self.t_fin and self.y_fin is not None:
+            return self.y_fin
         for tr in self.tramos:
             if tr.t0 <= t <= tr.t1 and tr.interp is not None:
                 return tr.interp(t)
@@ -482,10 +487,10 @@ def integrar(red, y0):
                             return True
                     return False
                 lo, hi = t_a, t_b
-                # Resolucion 1e-9 tf: con ella la fase naciente en t_e tiene tm ~ -1e-8 y el estado certificado
-                # de la muestra la muestra (con 1e-12 tf quedaba por debajo de TOL_TM y el evento se publicaba
-                # sin faseIds). Su P V (n ~ Q dt/dh) no entra en el trabajo integrado del tramo anterior: es el
-                # error de localizacion del trabajo en una trayectoria detenida en la arista.
+                # Refine the boundary without changing phase-presence or
+                # certificate tolerances. Preserve this exact flash context
+                # below so publication cannot lose an incipient phase by
+                # starting Newton from a different sample's phase set.
                 while hi - lo > max(RES_EVENTO * red.tf, 1e-12):
                     mid = 0.5 * (lo + hi)
                     if cambia(mid):
@@ -571,6 +576,7 @@ def integrar(red, y0):
                         t, y = t_b, y_b
                         paso_max = h_max
                         continue
+                tray.phase_event_states[t_e] = tuple(nuevos)
                 detener = None
                 for j in range(nv):
                     nueva = firma(nuevos[j])
@@ -615,7 +621,10 @@ def muestras(red, tray):
     ts = [red.tf * k / (n - 1) for k in range(n)]
     ts = [t for t in ts if t <= tray.t_fin * (1 + 1e-15)]
     for _, t_e, _, _ in tray.eventos:
-        if t_e <= tray.t_fin and all(abs(t_e - t) > 1e-12 * red.tf for t in ts):
+        if t_e <= tray.t_fin:
+            # Keep the located event itself when it nearly coincides with a
+            # requested output time; its frozen flash context uses this key.
+            ts = [t for t in ts if abs(t_e - t) > 1e-12 * red.tf]
             ts.append(t_e)
     if tray.detenida is not None and all(abs(tray.t_fin - t) > 1e-12 * red.tf for t in ts):
         ts.append(tray.t_fin)
