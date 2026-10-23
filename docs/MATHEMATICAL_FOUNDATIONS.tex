@@ -1,0 +1,1826 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{amsmath,amssymb,amsfonts,amsthm,mathtools}
+\usepackage{booktabs,array,longtable}
+\usepackage{hyperref}
+\usepackage{microtype}
+\usepackage{enumitem}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue!70!black,
+    citecolor=blue!70!black,
+    urlcolor=blue!70!black
+}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{corollary}[theorem]{Corollary}
+
+\title{\textbf{Mathematical, Physical, and Algorithmic Foundations of the Simulation Engine}\\[0.5em]
+\Large A Rigorous Formal Specification for Applied Mathematicians, Chemical Engineers, and Autonomous Agents}
+\author{\textbf{Antigravity Architecture, Numerical Analysis \& Thermodynamics Core Team}}
+\date{20 October 2026 \\[0.5em] \small Document Reference: \texttt{DOC-MATH-ENG-2026-CANONICAL-V2}}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This monograph establishes the foundational mathematics, continuum physics, thermodynamic state closures, numerical algorithms, symbolic compilation theory, and dimensional analysis governing the equation-oriented multiphysics process simulation engine. Operating under the four-workspace paradigm (\textbf{Model $\to$ Transform $\to$ Solve $\to$ Results}) and strictly adhering to Principle 10, the engine rejects empirical ``unit operation'' templates and hardcoded equipment heuristics. Every model, from single-phase dynamic vessels to multi-component flash columns, reactive distillation segments, and hydraulic piping networks, is derived from the fundamental microscopic conservation laws of continuum mechanics (mass, linear momentum, angular momentum, and total energy) paired with rigorous, always-present thermodynamic closures.
+
+This specification provides an exhaustive mathematical formulation of:
+\begin{enumerate}[leftmargin=*]
+    \item Microscopic Eulerian conservation laws and their macroscopic reduction via the Reynolds Transport Theorem for moving, deforming control volumes $\Omega(t)$.
+    \item Interphase transport phenomena, interface jump conditions, Stefan-Maxwell multicomponent diffusion, and non-Newtonian rheology.
+    \item The complete deduction of one-dimensional hydraulic inertance, Churchill friction factor equations, and turbomachinery Euler characteristics from Cauchy momentum.
+    \item The variational foundation of multiphase equilibrium via Michelsen Tangent Plane Distance ($TPD$) and Kuhn-Tucker complementarity conditions ($\beta_k \ge 0, tm_k \ge 0, \beta_k \cdot tm_k = 0$) solved via semismooth Newton methods.
+    \item The exact thermodynamic state formulations of IAPWS-95 (pure water with all 56 residual Helmholtz terms) and UNIFAC/NRTL (non-ideal liquid mixtures), including machine-precision complex-step differentiation for caloric excess properties.
+    \item The complete theory of the \textbf{Nondimensionalization Module}:
+    \begin{itemize}
+        \item Buckingham $\Pi$ theorem matrix formulation and exact rational nullspace computation over $\mathbb{Q}$.
+        \item Dimensional vector spaces over $\mathbb{Q}^7$, affine temperature transformations, and unit projection.
+        \item Continuous Lie scaling groups, infinitesimal generators, and similarity reductions from PDEs to ODEs.
+        \item Logarithmic formulation of normalization objectives and certified equivalence proofs.
+        \item Kruskal's method of dominant balance, Newton polygon upper envelopes, and singular perturbation boundary layer analysis.
+        \item Linear stability, dispersion relations $\sigma(k)$, Turing instabilities, and pseudo-arclength continuation of bifurcations.
+        \item Method of Lines (MOL) spatial semi-discretization with cell P\'eclet heuristics, CFL stability bounds, and ghost-cell Newton boundary solvers.
+    \end{itemize}
+    \item Directed Acyclic Graph (DAG) compilation, Tarjan strongly connected components (SCC), Block Lower Triangular (BLT) partitioning, bipartite Dulmage-Mendelsohn structural analysis, and Differential-Algebraic Equation (DAE) Pantelides index reduction.
+    \item Adaptive Runge-Kutta-Fehlberg (RK45), stiff variable-order Backward Differentiation Formula (BDF), and Radau IIA integration with signature-based bisection and warm restarts across $C^1$ derivative kinks.
+    \item Global integral conservation verification, Clausius-Duhem Second Law entropy generation diagnostics, and five closed-form analytical benchmark problems.
+    \item A comprehensive architectural and mathematical \textbf{Proposal for Spatial Treatment, Differential Geometry, and Multidimensional Discretization} covering Riemannian metric tensors on curvilinear manifolds, Cell-Centered Finite Volume Methods (FVM), Total Variation Diminishing (TVD) high-resolution flux limiters, conjugate phase interface jump solvers, Adaptive Mesh Refinement (AMR), sparse Jacobian block structuring, and Method of Manufactured Solutions (MMS) spatial verification.
+\end{enumerate}
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+\section{Mathematical Conventions and Tensor Notation}
+
+Throughout this monograph, boldface lowercase letters ($\mathbf{v}, \mathbf{x}, \mathbf{j}, \mathbf{q}$) denote first-order spatial vectors in $\mathbb{R}^3$, boldface uppercase letters ($\boldsymbol{\sigma}, \boldsymbol{\tau}, \mathbf{I}, \mathbf{D}$) denote second-order Cartesian tensors in $\mathbb{R}^{3 \times 3}$, calligraphic capital letters ($\mathcal{D}, \mathcal{P}, \mathcal{E}$) denote mathematical sets or high-order operators, and italicized Latin and Greek letters ($P, T, \rho, u, h, s, \mu, \gamma$) denote scalar fields.
+
+\subsection{Tensor Operations}
+Let $\mathbf{a}, \mathbf{b} \in \mathbb{R}^3$ and $\mathbf{A}, \mathbf{B} \in \mathbb{R}^{3 \times 3}$.
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Inner (scalar) product of vectors:}
+    \begin{equation}
+    \mathbf{a} \cdot \mathbf{b} = \sum_{i=1}^3 a_i b_i
+    \end{equation}
+    \item \textbf{Dyadic (tensor) product:}
+    \begin{equation}
+    (\mathbf{a} \otimes \mathbf{b})_{ij} = a_i b_j
+    \end{equation}
+    \item \textbf{Vector cross product:}
+    \begin{equation}
+    (\mathbf{a} \times \mathbf{b})_i = \sum_{j=1}^3 \sum_{k=1}^3 \epsilon_{ijk} a_j b_k
+    \end{equation}
+    where $\epsilon_{ijk}$ is the completely antisymmetric Levi-Civita permutation symbol.
+    \item \textbf{Double contraction of tensors:}
+    \begin{equation}
+    \mathbf{A} : \mathbf{B} = \operatorname{tr}(\mathbf{A}^T \mathbf{B}) = \sum_{i=1}^3 \sum_{j=1}^3 A_{ij} B_{ij}
+    \end{equation}
+    \item \textbf{Nabla operator in Cartesian coordinates:}
+    \begin{equation}
+    \nabla = \sum_{i=1}^3 \mathbf{e}_i \frac{\partial}{\partial x_i}
+    \end{equation}
+    \item \textbf{Gradient of a vector field:}
+    \begin{equation}
+    (\nabla \mathbf{v})_{ij} = \frac{\partial v_j}{\partial x_i}
+    \end{equation}
+    \item \textbf{Divergence of a vector field:}
+    \begin{equation}
+    \nabla \cdot \mathbf{v} = \sum_{i=1}^3 \frac{\partial v_i}{\partial x_i}
+    \end{equation}
+    \item \textbf{Divergence of a second-order tensor:}
+    \begin{equation}
+    (\nabla \cdot \mathbf{A})_i = \sum_{j=1}^3 \frac{\partial A_{ji}}{\partial x_j}
+    \end{equation}
+    \item \textbf{Material (substantial) derivative:}
+    \begin{equation}
+    \frac{D\phi}{Dt} = \frac{\partial \phi}{\partial t} + \mathbf{v} \cdot \nabla \phi
+    \end{equation}
+    \item \textbf{Jump operator across an interface $\Gamma$:}
+    \begin{equation}
+    [\![\psi]\!] = \psi^+ - \psi^-
+    \end{equation}
+    where $\psi^+$ and $\psi^-$ denote the limiting values of field $\psi$ approaching $\Gamma$ from the positive and negative normal directions, respectively.
+\end{itemize}
+
+\section{Continuum Mechanics and Transport Laws}
+
+The simulation engine treats physical systems as continuum thermodynamic bodies interacting through mass, momentum, and energy exchange across well-defined geometrical boundaries.
+
+\subsection{Multi-Component Species Mass Conservation}
+
+Consider an open spatial domain $\Omega \subset \mathbb{R}^3$ containing $N_c$ distinct chemical species. Each species $i \in \{1, \dots, N_c\}$ possesses a local mass concentration $\rho_i(\mathbf{x}, t) \ge 0$ ($\text{kg/m}^3$) and an individual velocity field $\mathbf{v}_i(\mathbf{x}, t)$ ($\text{m/s}$).
+
+The total mixture mass density is defined by the sum of individual species concentrations:
+\begin{equation}
+\rho(\mathbf{x}, t) = \sum_{i=1}^{N_c} \rho_i(\mathbf{x}, t)
+\end{equation}
+
+The barycentric (mass-averaged) mixture velocity is defined as:
+\begin{equation}
+\mathbf{v}(\mathbf{x}, t) = \frac{1}{\rho(\mathbf{x}, t)} \sum_{i=1}^{N_c} \rho_i(\mathbf{x}, t) \mathbf{v}_i(\mathbf{x}, t)
+\end{equation}
+
+The mass fraction of species $i$ is $w_i = \rho_i / \rho$, satisfying $\sum_{i=1}^{N_c} w_i = 1$. The molar concentration is $c_i = \rho_i / M_i$, total molar concentration is $c_{\text{tot}} = \sum_{i=1}^{N_c} c_i$, and the mole fraction is $x_i = c_i / c_{\text{tot}}$, satisfying $\sum_{i=1}^{N_c} x_i = 1$.
+
+\subsubsection{Species Diffusion Fluxes}
+The diffusive mass flux $\mathbf{j}_i$ of species $i$ relative to the barycentric reference frame is defined by:
+\begin{equation}
+\mathbf{j}_i = \rho_i (\mathbf{v}_i - \mathbf{v})
+\end{equation}
+Summing over all species, the diffusive mass fluxes satisfy the strict algebraic closure:
+\begin{equation}
+\sum_{i=1}^{N_c} \mathbf{j}_i = \sum_{i=1}^{N_c} \rho_i (\mathbf{v}_i - \mathbf{v}) = \sum_{i=1}^{N_c} \rho_i \mathbf{v}_i - \mathbf{v} \sum_{i=1}^{N_c} \rho_i = \rho \mathbf{v} - \rho \mathbf{v} = \mathbf{0}
+\end{equation}
+
+\subsubsection{Eulerian Differential Species Balance}
+Applying Reynolds' transport formulation to an arbitrary fixed control volume $V \subset \Omega$, the local Eulerian conservation law is:
+\begin{equation}
+\frac{\partial \rho_i}{\partial t} + \nabla \cdot \left( \rho_i \mathbf{v} + \mathbf{j}_i \right) = r_i, \quad i = 1, \dots, N_c
+\end{equation}
+where $r_i(\mathbf{x}, t)$ is the net rate of mass generation of species $i$ per unit volume via $N_{\text{rxn}}$ homogeneous chemical reactions:
+\begin{equation}
+r_i = M_i \sum_{k=1}^{N_{\text{rxn}}} \nu_{ik} \hat{r}_k
+\end{equation}
+Here $M_i$ is the molar mass of species $i$ ($\text{kg/mol}$), $\nu_{ik}$ is the stoichiometric coefficient of species $i$ in reaction $k$ (positive for products, negative for reactants), and $\hat{r}_k$ is the intensive reaction rate ($\text{mol}/(\text{m}^3\cdot\text{s})$).
+
+By the principle of conservation of atomic nuclei during chemical transformations:
+\begin{equation}
+\sum_{i=1}^{N_c} \nu_{ik} M_i = 0, \quad \forall k \in \{1, \dots, N_{\text{rxn}}\}
+\end{equation}
+Consequently, the net chemical mass generation summed across all species vanishes identically:
+\begin{equation}
+\sum_{i=1}^{N_c} r_i = \sum_{k=1}^{N_{\text{rxn}}} \hat{r}_k \sum_{i=1}^{N_c} \nu_{ik} M_i = 0
+\end{equation}
+
+Summing the species equations over all $i = 1, \dots, N_c$:
+\begin{equation}
+\sum_{i=1}^{N_c} \frac{\partial \rho_i}{\partial t} + \nabla \cdot \left( \sum_{i=1}^{N_c} \rho_i \mathbf{v} + \sum_{i=1}^{N_c} \mathbf{j}_i \right) = \sum_{i=1}^{N_c} r_i
+\end{equation}
+Using $\sum_i \rho_i = \rho$, $\sum_i \mathbf{j}_i = \mathbf{0}$, and $\sum_i r_i = 0$, we recover the \textbf{continuity equation for total mass}:
+\begin{equation}
+\frac{\partial \rho}{\partial t} + \nabla \cdot (\rho \mathbf{v}) = 0 \iff \frac{D\rho}{Dt} + \rho (\nabla \cdot \mathbf{v}) = 0
+\end{equation}
+
+\subsection{Multicomponent Diffusion: Stefan-Maxwell vs. Fickian Diffusion}
+
+In multi-component gas and liquid mixtures, molecular transport is governed by chemical potential gradients. The generalized \textbf{Stefan-Maxwell equations} relate molar diffusive fluxes $\mathbf{J}_i = c_i (\mathbf{v}_i - \mathbf{v})$ to thermodynamic driving forces $\mathbf{d}_i$:
+\begin{equation}
+\mathbf{d}_i = \sum_{j=1}^{N_c} \frac{x_i \mathbf{J}_j - x_j \mathbf{J}_i}{c_{\text{tot}} \mathcal{D}_{ij}}
+\end{equation}
+where $\mathcal{D}_{ij}$ is the binary Stefan-Maxwell diffusion coefficient ($\mathcal{D}_{ij} = \mathcal{D}_{ji} > 0$), and $\mathbf{d}_i$ is the generalized chemical affinity driving force:
+\begin{equation}
+\mathbf{d}_i = \frac{x_i}{RT} \nabla_T \mu_i + \frac{\phi_i - w_i}{P} \nabla P - \frac{\rho_i}{P} \left( \mathbf{g}_i - \sum_{k=1}^{N_c} w_k \mathbf{g}_k \right)
+\end{equation}
+Under isothermal, isobaric conditions without external body force differentiation, $\mathbf{d}_i$ reduces to the chemical potential gradient:
+\begin{equation}
+\mathbf{d}_i = \frac{x_i}{RT} \sum_{j=1}^{N_c-1} \Gamma_{ij} \nabla x_j, \quad \Gamma_{ij} = \delta_{ij} + x_i \frac{\partial \ln \gamma_i}{\partial x_j}
+\end{equation}
+where $\boldsymbol{\Gamma}$ is the thermodynamic matrix of activity corrections.
+
+\subsubsection{The Fickian Approximation}
+When the mixture is dilute in species $i$ (or for binary systems), the Stefan-Maxwell relations collapse to Fick's first law:
+\begin{equation}
+\mathbf{j}_i = -\rho D_{i, m} \nabla w_i
+\end{equation}
+where $D_{i, m}$ is the effective mixture diffusion coefficient. In concentrated multicomponent systems, Fick's law fails to describe reverse diffusion, osmotic diffusion, and diffusion barriers ($\nabla x_i \ne 0$ with $\mathbf{J}_i = 0$), all of which are properly captured by the Stefan-Maxwell formulation.
+
+\subsection{Linear and Angular Momentum Conservation}
+
+\subsubsection{Linear Momentum (Cauchy's Equation of Motion)}
+The conservation of linear momentum for an arbitrary continuum element states that the time rate of change of momentum equals the resultant of all surface forces and body forces acting on it:
+\begin{equation}
+\frac{\partial (\rho \mathbf{v})}{\partial t} + \nabla \cdot (\rho \mathbf{v} \otimes \mathbf{v}) = \nabla \cdot \boldsymbol{\sigma} + \rho \mathbf{g}
+\end{equation}
+where $\boldsymbol{\sigma}$ is the second-order Cauchy stress tensor ($\text{N/m}^2$), and $\rho \mathbf{g}$ is the external gravitational body force field per unit volume.
+
+Expanding using mass continuity:
+\begin{equation}
+\rho \frac{D\mathbf{v}}{Dt} = \nabla \cdot \boldsymbol{\sigma} + \rho \mathbf{g}
+\end{equation}
+
+\subsubsection{Conservation of Angular Momentum and Stress Symmetry}
+Taking the cross product of position vector $\mathbf{r}$ with Cauchy's momentum equation:
+\begin{equation}
+\frac{d}{dt} \int_V \rho (\mathbf{r} \times \mathbf{v}) \, dV = \oint_{\partial V} \mathbf{r} \times (\boldsymbol{\sigma} \cdot \mathbf{n}) \, dA + \int_V \rho (\mathbf{r} \times \mathbf{g}) \, dV + \int_V \rho \mathbf{m}_b \, dV
+\end{equation}
+In non-polar classical fluids ($\mathbf{m}_b = \mathbf{0}$), balance of angular momentum requires the Cauchy stress tensor to be symmetric:
+\begin{equation}
+\boldsymbol{\sigma} = \boldsymbol{\sigma}^T \iff \sigma_{ij} = \sigma_{ji}, \quad \forall i, j \in \{1, 2, 3\}
+\end{equation}
+
+\subsection{Constitutive Rheology: Newtonian and Non-Newtonian Fluids}
+
+Under the Stokesian fluid hypothesis, the stress tensor is partitioned into thermodynamic pressure $P(\mathbf{x}, t)$ and deviatoric viscous stress tensor $\boldsymbol{\tau}$:
+\begin{equation}
+\boldsymbol{\sigma} = -P \mathbf{I} + \boldsymbol{\tau}
+\end{equation}
+
+\subsubsection{Isotropic Newtonian Fluid}
+For a linear isotropic Newtonian fluid, $\boldsymbol{\tau}$ is proportional to the symmetric rate-of-strain tensor $\mathbf{D}$:
+\begin{equation}
+\mathbf{D} = \frac{1}{2} \left( \nabla \mathbf{v} + (\nabla \mathbf{v})^T \right), \quad D_{ij} = \frac{1}{2}\left( \frac{\partial v_i}{\partial x_j} + \frac{\partial v_j}{\partial x_i} \right)
+\end{equation}
+\begin{equation}
+\boldsymbol{\tau} = 2\mu \left( \mathbf{D} - \frac{1}{3}(\nabla \cdot \mathbf{v})\mathbf{I} \right) + \zeta (\nabla \cdot \mathbf{v})\mathbf{I}
+\end{equation}
+Under Stokes' hypothesis, bulk viscosity vanishes ($\zeta = 0$). Substituting into Cauchy's law yields the complete \textbf{Navier-Stokes equation}:
+\begin{equation}
+\rho \frac{D\mathbf{v}}{Dt} = -\nabla P + \mu \nabla^2 \mathbf{v} + \frac{\mu}{3} \nabla (\nabla \cdot \mathbf{v}) + (\nabla \mathbf{v} + (\nabla \mathbf{v})^T) \cdot \nabla \mu + \rho \mathbf{g}
+\end{equation}
+For incompressible fluids with uniform viscosity ($\nabla \cdot \mathbf{v} = 0, \nabla \mu = \mathbf{0}$):
+\begin{equation}
+\rho \left( \frac{\partial \mathbf{v}}{\partial t} + \mathbf{v} \cdot \nabla \mathbf{v} \right) = -\nabla P + \mu \nabla^2 \mathbf{v} + \rho \mathbf{g}
+\end{equation}
+
+\subsubsection{Non-Newtonian Rheological Models}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Ostwald-de Waele (Power-Law) Fluid:}
+    \begin{equation}
+    \boldsymbol{\tau} = 2 K |\dot{\gamma}|^{n-1} \mathbf{D}, \quad |\dot{\gamma}| = \sqrt{2 \mathbf{D} : \mathbf{D}}
+    \end{equation}
+    ($n < 1$: pseudoplastic / shear-thinning; $n > 1$: dilatant / shear-thickening).
+    \item \textbf{Bingham Plastic (Yield-Stress Fluid):}
+    \begin{equation}
+    \begin{cases} \mathbf{D} = \mathbf{0}, & |\boldsymbol{\tau}| \le \tau_y \\ \boldsymbol{\tau} = 2 \left( \mu_p + \frac{\tau_y}{|\dot{\gamma}|} \right) \mathbf{D}, & |\boldsymbol{\tau}| > \tau_y \end{cases}
+    \end{equation}
+\end{itemize}
+
+\subsection{Total Energy and Internal Energy Conservation}
+
+Let $e_t$ be the total specific energy per unit mass:
+\begin{equation}
+e_t = u + \frac{1}{2} |\mathbf{v}|^2 + \psi
+\end{equation}
+The Eulerian conservation law for total energy is:
+\begin{equation}
+\frac{\partial (\rho e_t)}{\partial t} + \nabla \cdot \left( \rho e_t \mathbf{v} + \mathbf{q} - \boldsymbol{\sigma} \cdot \mathbf{v} \right) = \dot{Q}_V
+\end{equation}
+
+\subsubsection{Mechanical Energy Theorem}
+Taking the inner product of velocity $\mathbf{v}$ with Cauchy's linear momentum equation:
+\begin{equation}
+\rho \frac{D}{Dt}\left( \frac{1}{2}|\mathbf{v}|^2 + \psi \right) = \nabla \cdot (\boldsymbol{\sigma} \cdot \mathbf{v}) - \boldsymbol{\sigma} : \nabla \mathbf{v}
+\end{equation}
+
+\subsubsection{Internal Energy Balance (Thermal Energy Equation)}
+Subtracting mechanical energy from total energy yields:
+\begin{equation}
+\rho \frac{Du}{Dt} = -P (\nabla \cdot \mathbf{v}) + \Phi_{\text{diss}} - \nabla \cdot \mathbf{q} + \dot{Q}_V
+\end{equation}
+where $\Phi_{\text{diss}} = \boldsymbol{\tau} : \nabla \mathbf{v} \ge 0$ is the viscous dissipation function:
+\begin{equation}
+\Phi_{\text{diss}} = 2\mu \left( \mathbf{D} - \frac{1}{3}(\nabla \cdot \mathbf{v})\mathbf{I} \right) : \left( \mathbf{D} - \frac{1}{3}(\nabla \cdot \mathbf{v})\mathbf{I} \right) + \zeta (\nabla \cdot \mathbf{v})^2 \ge 0
+\end{equation}
+
+\subsubsection{Constitutive Heat Flux: Fourier's Law with Enthalpy Diffusion}
+\begin{equation}
+\mathbf{q} = -k \nabla T + \sum_{i=1}^{N_c} h_i \mathbf{j}_i + \mathbf{q}_{\text{Dufour}}
+\end{equation}
+
+\subsection{Reynolds Transport Theorem on Arbitrary Deforming Volumes}
+
+For an arbitrary time-dependent control volume $\Omega(t) \subset \mathbb{R}^3$ bounded by surface $\partial \Omega(t)$ moving with surface velocity $\mathbf{w}_b(\mathbf{x}, t)$:
+\begin{equation}
+\frac{d}{dt} \int_{\Omega(t)} \phi \, dV = \int_{\Omega(t)} \frac{\partial \phi}{\partial t} \, dV + \oint_{\partial \Omega(t)} \phi (\mathbf{w}_b \cdot \mathbf{n}) \, dA
+\end{equation}
+Substituting a local conservation law $\frac{\partial \phi}{\partial t} + \nabla \cdot (\phi \mathbf{v} + \mathbf{\Phi}) = s$, and defining the relative velocity $\mathbf{v}_r = \mathbf{v} - \mathbf{w}_b$:
+\begin{equation}
+\frac{d}{dt} \int_{\Omega(t)} \phi \, dV + \oint_{\partial \Omega(t)} \phi (\mathbf{v}_r \cdot \mathbf{n}) \, dA = -\oint_{\partial \Omega(t)} \mathbf{\Phi} \cdot \mathbf{n} \, dA + \int_{\Omega(t)} s \, dV
+\end{equation}
+
+\subsection{Interphase Jump Conditions and Boundary Interfaces}
+
+At a singular moving interface $\Gamma(t)$ separating two phases with normal speed $w_n = \mathbf{w}_{\Gamma} \cdot \mathbf{n}$:
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Mass jump condition:}
+    \begin{equation}
+    [\![\rho (\mathbf{v} - \mathbf{w}_\Gamma) \cdot \mathbf{n}]\!] = 0 \iff \dot{m}'' = \rho^+ (\mathbf{v}^+ - \mathbf{w}_\Gamma) \cdot \mathbf{n} = \rho^- (\mathbf{v}^- - \mathbf{w}_\Gamma) \cdot \mathbf{n}
+    \end{equation}
+    \item \textbf{Momentum jump condition (Young-Laplace with Marangoni stress):}
+    \begin{equation}
+    [\![\rho \mathbf{v} \otimes (\mathbf{v} - \mathbf{w}_\Gamma) - \boldsymbol{\sigma}]\!] \cdot \mathbf{n} = \nabla_s \sigma - 2 H \sigma \mathbf{n}
+    \end{equation}
+    \item \textbf{Energy jump condition:}
+    \begin{equation}
+    [\![\rho e_t (\mathbf{v} - \mathbf{w}_\Gamma) \cdot \mathbf{n} + \mathbf{q} \cdot \mathbf{n} - (\boldsymbol{\sigma} \cdot \mathbf{v}) \cdot \mathbf{n}]\!] = \dot{m}'' \Delta h_{\text{vap}} + \nabla_s \cdot \mathbf{q}_s
+    \end{equation}
+\end{enumerate}
+
+\subsection{Macroscopic Control Volume Lumped Balances}
+
+\subsubsection{Macroscopic Species Mass Balance}
+\begin{equation}
+\frac{dn_{i, v}}{dt} = \sum_{s} B_{vs} \dot{n}_s x_{si} + \sum_{k=1}^{N_{\text{rxn}}} \nu_{ik} r_{k, v} V_v + \dot{N}_{i, v}^{\text{interphase}}
+\end{equation}
+where $B_{vs} \in \{+1, -1, 0\}$ is the directed topological incidence matrix element connecting stream $s$ to volume $v$.
+
+\subsubsection{Macroscopic Total Energy Balance}
+\begin{equation}
+\frac{dU_v}{dt} = \sum_{s} B_{vs} \dot{n}_s h_s + \dot{Q}_v + \dot{W}_{s, v} - P_v \frac{dV_v}{dt}
+\end{equation}
+For prescribed pressure $P_v = P(t)$, the total enthalpy $H_v = U_v + P_v V_v$ satisfies:
+\begin{equation}
+\frac{dH_v}{dt} = \sum_{s} B_{vs} \dot{n}_s h_s + \dot{Q}_v + \dot{W}_{s, v} + V_v \frac{dP_v}{dt}
+\end{equation}
+
+\subsection{Momentum Reduction: Hydraulic Inertance and Turbomachinery}
+
+\subsubsection{Straight Hydraulic Conduit (Fluid Inertance)}
+Integrating Cauchy's axial momentum equation over conduit volume $V = A L$ under the assumptions of constant cross-sectional area, incompressible fluid, and uniform velocity:
+\begin{equation}
+L_I \frac{d\dot{m}}{dt} = P_1 - P_2 + \Delta P_{\text{drive}} - \Delta P_{\text{loss}} - \rho_{\text{ref}} g (z_2 - z_1)
+\end{equation}
+where the \textbf{hydraulic inertance} is:
+\begin{equation}
+L_I = \frac{L}{A} \quad [\text{m}^{-1}]
+\end{equation}
+
+\subsubsection{Turbomachinery: Euler Energy Equation}
+For rotating impellers, conservation of angular momentum gives the fluid torque $\tau_f$:
+\begin{equation}
+\tau_f = \dot{m} (r_2 c_{\theta 2} - r_1 c_{\theta 1})
+\end{equation}
+Under zero inlet swirl ($c_{\theta 1} = 0$), Euler's pump equation gives the specific mechanical energy transfer $Y_E$:
+\begin{equation}
+Y_E = \omega \frac{\tau_f}{\dot{m}} = \omega^2 r_2^2 - \frac{\omega Q \cot \beta_2}{2\pi b_2} \quad [\text{J/kg}]
+\end{equation}
+Dynamic rotor shaft balance:
+\begin{equation}
+J_{\text{rotor}} \frac{d\omega}{dt} = \tau_{\text{motor}} - \tau_f - \tau_{\text{friction}}
+\end{equation}
+
+\subsection{Friction Losses: Churchill and Colebrook-White Formulations}
+
+Darcy-Weisbach friction pressure loss:
+\begin{equation}
+\Delta P_{\text{loss}} = \left( f_D \frac{L}{D_h} + \sum_{k} K_k \right) \frac{\dot{m} |\dot{m}|}{2 \rho_{\text{ref}} A^2}
+\end{equation}
+
+\subsubsection{Churchill (1977) Explicit Friction Equation}
+Spans laminar, transitional, and fully turbulent regimes without $C^0$ discontinuities:
+\begin{equation}
+f_D = 8 \left[ \left(\frac{8}{Re}\right)^{12} + \frac{1}{(A_{\text{ch}} + B_{\text{ch}})^{3/2}} \right]^{1/12}
+\end{equation}
+\begin{equation}
+A_{\text{ch}} = \left[ 2.457 \ln \left( \frac{1}{(7/Re)^{0.9} + 0.27 (\epsilon/D)} \right) \right]^{16}, \quad B_{\text{ch}} = \left( \frac{37530}{Re} \right)^{16}
+\end{equation}
+
+\subsubsection{Colebrook-White Formulation and Halley Third-Order Iteration}
+\begin{equation}
+\mathcal{F}(f_D) = \frac{1}{\sqrt{f_D}} + 2.0 \log_{10}\left( \frac{\epsilon/D}{3.7} + \frac{2.51}{Re \sqrt{f_D}} \right) = 0
+\end{equation}
+Halley's iteration converges to $10^{-15}$ precision in two steps.
+
+\subsection{Open Channel and Orifice Hydraulics: Francis Weir Formula}
+
+\subsubsection{Francis Rectangular Weir Formula}
+\begin{equation}
+Q_{\text{weir}} = \frac{2}{3} C_d \sqrt{2g} \left( b - 0.1 n_c h_{\text{ow}} \right) h_{\text{ow}}^{3/2}
+\end{equation}
+where $h_{\text{ow}} = \max(0, h_{\text{liquid}} - h_{\text{weir}})$ is the crest head over weir.
+
+\subsubsection{Control Valve Sizing}
+\begin{equation}
+\dot{m} = N_v C_v f_{\text{valve}}(x_v) \sqrt{\Delta P \cdot \rho_{\text{fluid}}}
+\end{equation}
+
+\subsection{Compressible Conduit Flow: Sonic Choking and Critical Pressure Ratio}
+
+Critical pressure ratio for sonic choking ($Ma = 1$):
+\begin{equation}
+\left( \frac{P^*}{P_0} \right) = \left( \frac{2}{\gamma + 1} \right)^{\frac{\gamma}{\gamma - 1}}
+\end{equation}
+Choked mass flow rate:
+\begin{equation}
+\dot{m}_{\text{choked}} = A_{\text{throat}} \sqrt{\gamma \rho_0 P_0 \left( \frac{2}{\gamma + 1} \right)^{\frac{\gamma+1}{\gamma-1}}}
+\end{equation}
+
+\subsection{Dynamic Inventory Retention Policy}
+
+Active physical conservation laws must retain their differential balance form $\frac{dI}{dt} = \Phi(t, \mathbf{y})$.
+When a user declares a fixed inventory $M(t) = M_0$:
+\begin{equation}
+M(t) - M_0 = 0, \quad \Phi(t, \mathbf{y}) = \sum \dot{m}_{\text{in}} - \sum \dot{m}_{\text{out}} = 0
+\end{equation}
+forming a constrained index-1 Differential-Algebraic Equation.
+
+\section{Thermodynamic Equilibrium and Complementarity Layer}
+
+\subsection{Variational Formulation of Phase Equilibrium}
+
+The equilibrium state of a closed multi-component system at $(T, P)$ minimizes total Gibbs free energy:
+\begin{equation}
+\min_{\{\mathbf{n}_k\}} \sum_{k=1}^{N_p} \sum_{i=1}^{N_c} n_{ki} \mu_{ki}(T, P, \mathbf{x}_k) \quad \text{s.t.} \quad \sum_{k=1}^{N_p} n_{ki} = n_i^{\text{total}}, \; n_{ki} \ge 0
+\end{equation}
+
+\subsection{Michelsen Tangent Plane Distance and Phase Stability Analysis}
+
+The dimensionless distance to the Gibbs tangent plane at trial composition $\mathbf{w} \in \Delta^{N_c-1}$ is:
+\begin{equation}
+tm(\mathbf{w}) = \frac{TPD(\mathbf{w})}{RT} = \sum_{i=1}^{N_c} w_i \left[ \ln w_i + \ln \hat{\phi}_i(T, P, \mathbf{w}) - h_i \right]
+\end{equation}
+where $h_i = \ln z_i + \ln \hat{\phi}_i(T, P, \mathbf{z})$.
+A phase $\mathbf{z}$ is stable if and only if $tm(\mathbf{w}^*) \ge 0$ for all stationary trial compositions $\mathbf{w}^*$.
+
+\subsection{Kuhn-Tucker Complementarity Conditions for Candidate Phases}
+
+In `core/termodinamica/capa.py`, for every candidate phase $k \in \mathcal{P}$, with phase mole fraction $\beta_k = n_k / n_{\text{total}}$ and distance $tm_k$, the engine enforces:
+\begin{equation}
+\beta_k \ge 0, \quad tm_k \ge 0, \quad \beta_k \cdot tm_k = 0, \quad \forall k \in \mathcal{P}
+\end{equation}
+subject to $\sum_{k \in \mathcal{P}} \beta_k = 1$ and $\sum_{k \in \mathcal{P}} \beta_k x_{ki} = z_i$.
+
+\subsection{Semismooth Newton Solvers for Complementarity Systems}
+
+The complementarity problem is reformulated via the \textbf{Fischer-Burmeister function}:
+\begin{equation}
+\Psi_{\text{FB}}(a, b) = a + b - \sqrt{a^2 + b^2} = 0 \iff a \ge 0, \; b \ge 0, \; ab = 0
+\end{equation}
+Solved via Semismooth Newton iteration with generalized Clarke subdifferential Jacobians.
+
+\subsection{Multiphase Flash Algorithms (TP, UV, and PH Flashes)}
+
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{TP Flash:} Resolves $\mu_{1, i} = \dots = \mu_{N_p, i}$ via Sobol simplex sampling, successive substitution, and Newton-Raphson on log-amounts.
+    \item \textbf{UV Flash:} Solves for $(T, P)$ via Newton-Raphson with the exact analytical $2 \times 2$ thermodynamic Jacobian:
+    \begin{equation}
+    \mathbf{J}_{\text{UV}} = \begin{bmatrix} n C_v & -T V \alpha_P + P V \kappa_T \\ V \alpha_P & -V \kappa_T \end{bmatrix}
+    \end{equation}
+    \item \textbf{PH Flash:} Solves $H_{\text{flash}}(T, P, \mathbf{n}) - H = 0$ via Brent's method and explicit lever rule on boiling plateaus.
+\end{enumerate}
+
+\subsection{Monotonic Step-Limiting for Rachford-Rice Objective Functions}
+
+Rachford-Rice formulation:
+\begin{equation}
+F(\beta) = \sum_{i=1}^{N_c} \frac{z_i (K_i - 1)}{1 + \beta (K_i - 1)} = 0
+\end{equation}
+Strict monotonicity:
+\begin{equation}
+F'(\beta) = -\sum_{i=1}^{N_c} \frac{z_i (K_i - 1)^2}{[1 + \beta (K_i - 1)]^2} < 0
+\end{equation}
+Singular poles:
+\begin{equation}
+\beta_{\min} = \frac{1}{1 - K_{\max}}, \quad \beta_{\max} = \frac{1}{1 - K_{\min}}
+\end{equation}
+Step-limiting avoids poles:
+\begin{equation}
+\alpha_k = \min\left( 1.0, \; 0.8 \frac{\beta_{\max} - \beta_k}{\Delta \beta} \text{ if } \Delta \beta > 0, \; 0.8 \frac{\beta_{\min} - \beta_k}{\Delta \beta} \text{ if } \Delta \beta < 0 \right)
+\end{equation}
+
+\subsection{Constitutive Equation of State: Pure Water via Full IAPWS-95 Formulation}
+
+Dimensionless Helmholtz energy:
+\begin{equation}
+\phi(\delta, \tau) = \phi^0(\delta, \tau) + \phi^r(\delta, \tau), \quad \delta = \frac{\rho}{\rho_c}, \; \tau = \frac{T_c}{T}
+\end{equation}
+\begin{equation}
+\phi^0(\delta, \tau) = \ln \delta + a_1^0 + a_2^0 \tau + a_3^0 \ln \tau + \sum_{i=4}^8 a_i^0 \ln\left[ 1 - \exp(-\theta_i^0 \tau) \right]
+\end{equation}
+\begin{equation}
+\phi^r(\delta, \tau) = \sum_{i=1}^7 n_i \delta^{d_i} \tau^{t_i} + \sum_{i=8}^{51} n_i \delta^{d_i} \tau^{t_i} e^{-\delta^{c_i}} + \sum_{i=52}^{54} n_i \delta^{d_i} \tau^{t_i} e^{-\alpha_i (\delta - \epsilon_i)^2 - \beta_i (\tau - \gamma_i)^2} + \sum_{i=55}^{56} n_i \Delta_i^{b_i} \delta \psi_i
+\end{equation}
+
+Exact thermodynamic properties:
+\begin{equation}
+P = \rho R T (1 + \delta \phi_\delta^r), \quad u = R T \tau (\phi_\tau^0 + \phi_\tau^r), \quad h = R T [1 + \tau(\phi_\tau^0 + \phi_\tau^r) + \delta \phi_\delta^r]
+\end{equation}
+\begin{equation}
+s = R [\tau (\phi_\tau^0 + \phi_\tau^r) - \phi^0 - \phi^r], \quad c_v = -R \tau^2 (\phi_{\tau\tau}^0 + \phi_{\tau\tau}^r)
+\end{equation}
+\begin{equation}
+c_p = c_v + R \frac{(1 + \delta \phi_\delta^r - \delta \tau \phi_{\delta\tau}^r)^2}{1 + 2\delta \phi_\delta^r + \delta^2 \phi_{\delta\delta}^r}
+\end{equation}
+
+\subsection{Constitutive Liquid Activity: UNIFAC Group Contribution Models}
+
+\begin{equation}
+\ln \gamma_i = \ln \gamma_i^C + \ln \gamma_i^R
+\end{equation}
+\begin{equation}
+\ln \gamma_i^C = \ln \left( \frac{\Phi_i}{x_i} \right) + \frac{z}{2} q_i \ln \left( \frac{\theta_i}{\Phi_i} \right) + l_i - \frac{\Phi_i}{x_i} \sum_{j=1}^{N_c} x_j l_j
+\end{equation}
+\begin{equation}
+\ln \Gamma_k = Q_k \left[ 1 - \ln \left( \sum_m \Theta_m \Psi_{mk} \right) - \sum_m \frac{\Theta_m \Psi_{km}}{\sum_n \Theta_n \Psi_{nm}} \right]
+\end{equation}
+
+\subsection{Complex-Step Numerical Differentiation of Excess Properties}
+
+\begin{equation}
+\frac{dg^E}{dT} = R T \frac{\operatorname{Im}\left[ \frac{g^E(T + i h, \mathbf{x})}{R(T + i h)} \right]}{h} + R \operatorname{Re}\left[ \frac{g^E(T + i h, \mathbf{x})}{R(T + i h)} \right] + O(10^{-40})
+\end{equation}
+with step size $h = 10^{-20} T$, completely eliminating subtractive cancellation.
+
+\subsection{Euler Homogeneity and Gibbs-Duhem Consistency Checks}
+
+\begin{equation}
+\sum_{i=1}^{N_c} x_i d\ln \gamma_i = 0 \quad (\text{at constant } T, P)
+\end{equation}
+
+\section{Mathematical Theory of Nondimensionalization, Asymptotics, Symmetries, and Dynamics}
+
+\subsection{Dimensional Vector Spaces over $\mathbb{Q}^7$ and Unit Projections}
+
+Physical dimensions form a 7-dimensional vector space $\mathbb{Q}^7$ over base SI dimensions $[L, M, T, I, \Theta, N, J]$:
+\begin{equation}
+\mathbf{d} = \begin{bmatrix} d_L & d_M & d_T & d_I & d_\Theta & d_N & d_J \end{bmatrix}^T \in \mathbb{Q}^7
+\end{equation}
+Affine temperature offsets (such as $^\circ\text{C}, ^\circ\text{F}$) require explicit affine scaling maps $v = R_v + S_v v'$.
+
+\subsection{The Fundamental Theorem of Dimensional Analysis: Matrix Formulation over $\mathbb{Q}$}
+
+For dimensional matrix $\mathbf{D} \in \mathbb{Q}^{m \times n}$, dimensionless products $\Pi = \prod q_j^{v_j}$ satisfy:
+\begin{equation}
+\mathbf{D} \mathbf{v} = \mathbf{0}
+\end{equation}
+By the Rank-Nullity Theorem:
+\begin{equation}
+p = n - \operatorname{rank}(\mathbf{D})
+\end{equation}
+Every rational nullspace basis vector $\mathbf{v} \in \mathbb{Q}^n$ is uniquely mapped to a primitive integer vector $\mathbf{w} \in \mathbb{Z}^n$ via:
+\begin{equation}
+L = \operatorname{lcm}(\text{denom}(v_1), \dots, \text{denom}(v_n)), \quad G = \operatorname{gcd}(L v_1, \dots, L v_n), \quad w_j = \frac{L v_j}{G}
+\end{equation}
+
+\subsection{Continuous Transformation Groups and Invariant Symmetries (Lie Theory)}
+
+Infinitesimal generator:
+\begin{equation}
+\mathbf{v}_{\text{Lie}} = \sum_{i=1}^p \xi_i(\mathbf{x}, \mathbf{u}) \frac{\partial}{\partial x_i} + \sum_{\alpha=1}^q \eta_\alpha(\mathbf{x}, \mathbf{u}) \frac{\partial}{\partial u_\alpha}
+\end{equation}
+Prolongation formula:
+\begin{equation}
+\operatorname{pr}^{(n)} \mathbf{v}_{\text{Lie}} = \mathbf{v}_{\text{Lie}} + \sum_{\alpha=1}^q \sum_{J} \eta_\alpha^J \frac{\partial}{\partial u_\alpha^J}
+\end{equation}
+Invariance requires $\left. \operatorname{pr}^{(n)} \mathbf{v}_{\text{Lie}} (\Delta_k) \right|_{\Delta = 0} = 0$.
+
+\subsection{Similarity Reductions and Traveling Wave Invariants}
+
+\subsubsection{Similarity Variables}
+\begin{equation}
+\zeta = \xi \tau^{-q}, \quad u(\xi, \tau) = \tau^p F(\zeta), \quad q = \frac{b}{a}, \quad p = \frac{c}{a}
+\end{equation}
+\begin{equation}
+\frac{\partial u}{\partial \xi} = \tau^{p-q} F'(\zeta), \quad \left. \frac{\partial u}{\partial \tau} \right|_{\xi} = p \tau^{p-1} F(\zeta) - q \tau^{p-1} \zeta F'(\zeta)
+\end{equation}
+
+\subsubsection{Traveling Waves}
+\begin{equation}
+z = \xi - c \tau, \quad u(\xi, \tau) = F(z), \quad \frac{\partial u}{\partial \tau} = -c F'(z), \quad \frac{\partial u}{\partial \xi} = F'(z)
+\end{equation}
+
+\subsection{Logarithmic Formulation of Normalization Objectives and Equivalence Certificates}
+
+\begin{equation}
+\mathbf{B} \ln \mathbf{S} = \mathbf{r}
+\end{equation}
+Certified equivalence:
+\begin{equation}
+\Delta_{\text{AST}} = \text{AST}_{\text{orig}} - \mathcal{S}^{-1}(\text{AST}_{\text{dimless}}) \equiv 0
+\end{equation}
+
+\subsection{Kruskal's Method of Dominant Balance and Asymptotic Layer Analysis}
+
+Upper convex envelope of affine lines in $(s, \ln m)$ space ($s = \ln \delta \le 0$):
+\begin{equation}
+\mathcal{E}(s) = \max_k (\ln m_k - p_k s)
+\end{equation}
+Distinguished limits:
+\begin{equation}
+s^* = \frac{\ln m_j - \ln m_i}{p_j - p_i} \implies \delta_{\text{layer}} = e^{s^*}
+\end{equation}
+
+\subsection{Linear Stability, Dynamical Systems, and Dispersion Relations}
+
+Linearization via complex-step Jacobians ($h_{\mathbb{C}} = 10^{-30}$):
+\begin{equation}
+\mathbf{J} = \left. \frac{\partial \mathbf{F}}{\partial \mathbf{u}} \right|_{\mathbf{u}^*}, \quad \mathbf{C}_n = \left. \frac{\partial \mathbf{F}}{\partial \mathbf{w}_n} \right|_{\mathbf{u}^*}
+\end{equation}
+Spatial dispersion relation:
+\begin{equation}
+\mathbf{M}(k) = \mathbf{J} + \sum_{n=1}^{n_{\max}} (i k)^n \mathbf{C}_n, \quad \det(\sigma \mathbf{I} - \mathbf{M}(k)) = 0
+\end{equation}
+Turing instability occurs when $\max \operatorname{Re}(\sigma(0)) < 0$, but there exists $k_c > 0$ with $\max \operatorname{Re}(\sigma(k_c)) > 0$.
+
+\subsection{Pseudo-Arclength Numerical Continuation of Equilibrium Curves}
+
+Augmented arclength system:
+\begin{equation}
+\mathbf{H}(\mathbf{x}(s), s) = \begin{bmatrix} \mathbf{F}(\mathbf{u}(s), \mu(s)) \\ \langle \dot{\mathbf{x}}_0, \mathbf{x}(s) - \mathbf{x}_0 \rangle - \Delta s \end{bmatrix} = \mathbf{0}
+\end{equation}
+Newton iteration:
+\begin{equation}
+\begin{bmatrix} \mathbf{J}_{\mathbf{u}}(\mathbf{x}^{(m)}) & \frac{\partial \mathbf{F}}{\partial \mu}(\mathbf{x}^{(m)}) \\ \dot{\mathbf{u}}_0^T & \dot{\mu}_0 \end{bmatrix} \begin{bmatrix} \Delta \mathbf{u} \\ \Delta \mu \end{bmatrix} = -\begin{bmatrix} \mathbf{F}(\mathbf{u}^{(m)}, \mu^{(m)}) \\ \langle \dot{\mathbf{x}}_0, \mathbf{x}^{(m)} - \mathbf{x}_0 \rangle - \Delta s \end{bmatrix}
+\end{equation}
+
+\subsection{Method of Lines (MOL) Numerical Simulation of Dimensionless Systems}
+
+Cell P\'eclet constraint:
+\begin{equation}
+Pe_{\text{cell}} = \frac{V h}{D} \le 2 \implies N \ge \left\lceil \frac{L V}{2 D} \right\rceil + 1
+\end{equation}
+Centered differences:
+\begin{equation}
+\left. \frac{\partial u}{\partial \xi} \right|_i \approx \frac{u_{i+1} - u_{i-1}}{2h}, \quad \left. \frac{\partial^2 u}{\partial \xi^2} \right|_i \approx \frac{u_{i+1} - 2u_i + u_{i-1}}{h^2}
+\end{equation}
+Ghost cells handle Robin/Neumann boundaries algebraically. Mesh error indicator:
+\begin{equation}
+\mathcal{E}_{\text{spatial}} = \frac{\| \mathbf{u}_N(t_{\text{final}}) - \mathbf{u}_{2N-1}(t_{\text{final}}) \|_\infty}{\max\left( 1.0, \| \mathbf{u}_N(t_{\text{final}}) \|_\infty \right)}
+\end{equation}
+
+\section{Symbolic Model Compilation and Structural Index Theory}
+
+\subsection{Typed Directed Acyclic Graph (DAG) Representation}
+Equations are compiled into a typed DAG separating differential states $\mathbf{y}_d \in \mathbb{R}^{N_d}$, algebraic closures $\mathbf{y}_a \in \mathbb{R}^{N_a}$, and parameters $\boldsymbol{\theta} \in \mathbb{R}^{N_p}$.
+
+\subsection{Block Lower Triangularization via Tarjan's SCC Algorithm}
+Tarjan's algorithm partitions large algebraic systems into lower-triangular blocks:
+\begin{equation}
+\mathbf{J}_{\text{BLT}} = \begin{bmatrix} \mathbf{A}_{11} & \mathbf{0} & \dots & \mathbf{0} \\ \mathbf{A}_{21} & \mathbf{A}_{22} & \dots & \mathbf{0} \\ \vdots & \vdots & \ddots & \vdots \\ \mathbf{A}_{m1} & \mathbf{A}_{m2} & \dots & \mathbf{A}_{mm} \end{bmatrix}
+\end{equation}
+reducing computational complexity from $O(N^3)$ to $\sum O(d_k^3)$.
+
+\subsection{Bipartite Matching, Dulmage-Mendelsohn Decomposition, and DOFs}
+\begin{equation}
+DOF = N_{\text{var}} - N_{\text{eq}} - N_{\text{param}} = 0
+\end{equation}
+with $G_{\text{under}} = \emptyset$ and $G_{\text{over}} = \emptyset$.
+
+\subsection{DAE Index Classification and Structural Pantelides Reduction}
+Semi-explicit DAE of index 1:
+\begin{equation}
+\frac{d\mathbf{y}_d}{dt} = \mathbf{f}(t, \mathbf{y}_d, \mathbf{y}_a), \quad \mathbf{0} = \mathbf{g}(t, \mathbf{y}_d, \mathbf{y}_a) \implies \det\left( \frac{\partial \mathbf{g}}{\partial \mathbf{y}_a} \right) \neq 0
+\end{equation}
+
+\subsection{Mattsson-S\"oderlind Dummy Derivative Method}
+Dynamically selects dummy algebraic variables to avoid numerical drift away from differentiated constraint manifolds.
+
+\subsection{Algebraic Compatibility Constraints on Invariant Inventories}
+\begin{equation}
+\frac{dI}{dt} = \Phi(t, \mathbf{y}), \quad I(t) - I(t_0) = 0, \quad \Phi(t, \mathbf{y}) = 0
+\end{equation}
+
+\section{Numerical Solvers and Discontinuity Localization}
+
+\subsection{Embedded Runge-Kutta-Fehlberg (RK45) Integration}
+Dormand-Prince 5(4) Butcher tableau with adaptive error norm:
+\begin{equation}
+\text{err} = \sqrt{\frac{1}{N} \sum_{i=1}^N \left( \frac{e_{n+1, i}}{\text{rtol} \max(|y_{n, i}|, |y_{n+1, i}|) + \text{atol}_i} \right)^2}
+\end{equation}
+
+\subsection{Stiff Variable-Order Backward Differentiation Formulas (BDF)}
+\begin{equation}
+\sum_{j=0}^k \alpha_j \mathbf{y}_{n+1-j} = h \beta_0 \mathbf{f}(t_{n+1}, \mathbf{y}_{n+1})
+\end{equation}
+
+\subsection{Fully Implicit Radau IIA Collocation for Index-1 and Index-2 DAEs}
+3-stage Radau IIA (order 5, L-stable):
+\begin{equation}
+\begin{array}{c|ccc}
+\frac{4 - \sqrt{6}}{10} & \frac{88 - 7\sqrt{6}}{360} & \frac{296 - 169\sqrt{6}}{1800} & \frac{-2 + 3\sqrt{6}}{225} \\
+\frac{4 + \sqrt{6}}{10} & \frac{296 + 169\sqrt{6}}{1800} & \frac{88 + 7\sqrt{6}}{360} & \frac{-2 - 3\sqrt{6}}{225} \\
+1 & \frac{16 - \sqrt{6}}{36} & \frac{16 + \sqrt{6}}{36} & \frac{1}{9} \\
+\hline
+& \frac{16 - \sqrt{6}}{36} & \frac{16 + \sqrt{6}}{36} & \frac{1}{9}
+\end{array}
+\end{equation}
+
+\subsection{Phase Signature Tracking and Event Bisection Across $C^1$ Kinks}
+Signature tracking locates phase transitions:
+\begin{equation}
+|t_{\text{hi}} - t_{\text{lo}}| \le 10^{-12} \cdot \max(1.0, |t_{\text{hi}}|)
+\end{equation}
+
+\subsection{Warm-Restart Protocol and Step-Size Re-Initialization}
+The integrator terminates at $t^* = t_{\text{hi}}$, registers exact state $\mathbf{y}^*$, and restarts with $h_0 = h_{\text{min}}$, discarding multistep memory across the $C^1$ kink.
+
+\section{Numerical Verification and Analytical Benchmark Theorems}
+
+\subsection{Global Integral Conservation Residuals of Mass and Energy}
+
+\begin{equation}
+\mathcal{R}_{M, i}(t) = \left[ m_i(t) - m_i(0) \right] - \int_0^t \left( \sum_{s \in \text{in}} \dot{m}_{i, s}(\tau) - \sum_{s \in \text{out}} \dot{m}_{i, s}(\tau) \right) d\tau - \int_0^t R_i(\tau) \, d\tau \le 10^{-7}
+\end{equation}
+\begin{equation}
+\mathcal{R}_E(t) = \left[ U(t) - U(0) \right] - \int_0^t \left( \sum_s B_{vs} \dot{n}_s h_s + \dot{Q} + \dot{W}_s - P \frac{dV}{d\tau} \right) d\tau \le 10^{-7}
+\end{equation}
+
+\subsection{Second Law Clausius-Duhem Entropy Generation Certification}
+\begin{equation}
+\dot{S}_{\text{gen}} = \frac{dS_v}{dt} - \sum_{s \in \text{in}} \dot{n}_s s_s + \sum_{s \in \text{out}} \dot{n}_s s_s - \sum_k \frac{\dot{Q}_k}{T_{b, k}} \ge 0
+\end{equation}
+Violations ($\dot{S}_{\text{gen}} < -10^{-9}\text{ W/K}$) trigger a formal Second Law failure.
+
+\subsection{Benchmark 1: Unsteady Multicomponent Batch Diffusion with Chemical Reaction}
+\begin{equation}
+\frac{\partial C_A}{\partial t} = D \frac{\partial^2 C_A}{\partial x^2} - k_1 C_A, \quad C_A(x, 0) = C_0, \quad C_A(\pm L, t) = 0
+\end{equation}
+Exact Fourier solution:
+\begin{equation}
+C_A(x, t) = \frac{4 C_0}{\pi} e^{-k_1 t} \sum_{n=0}^\infty \frac{(-1)^n}{2n + 1} \exp\left( -\frac{(2n+1)^2 \pi^2 D t}{4 L^2} \right) \cos\left( \frac{(2n+1)\pi x}{2L} \right)
+\end{equation}
+
+\subsection{Benchmark 2: Hydraulic Surge and Water Hammer in Pipe Networks}
+Exact Joukowsky surge:
+\begin{equation}
+\Delta P_{\text{surge}} = \rho c v_0, \quad T_{\text{period}} = \frac{4L}{c}
+\end{equation}
+
+\subsection{Benchmark 3: Binary Vapor-Liquid Flash Equilibrium}
+Equimolar binary flash with constant relative volatility $\alpha = K_1 / K_2$:
+\begin{equation}
+\beta^* = \frac{K_1 + K_1/\alpha - 2}{2 (1 - K_1)(1 - K_1/\alpha)}
+\end{equation}
+
+\subsection{Benchmark 4: The Classical Stefan Moving Boundary Problem}
+Phase change interface $s(t) = 2 \lambda \sqrt{\alpha_s t}$ with exact Neumann temperature field:
+\begin{equation}
+T(x, t) = T_0 + (T_m - T_0) \frac{\operatorname{erf}\left( \frac{x}{2\sqrt{\alpha_s t}} \right)}{\operatorname{erf}(\lambda)}
+\end{equation}
+\begin{equation}
+\lambda e^{\lambda^2} \operatorname{erf}(\lambda) = \frac{C_{p, s} (T_m - T_0)}{\sqrt{\pi} \Delta h_{\text{fus}}} = \frac{\text{Ste}}{\sqrt{\pi}}
+\end{equation}
+
+\subsection{Benchmark 5: Singularly Perturbed Boundary Layer with Exact Matched Asymptotics}
+\begin{equation}
+\epsilon y''(x) + y'(x) + y(x) = 0, \quad y(0) = 0, \; y(1) = 1
+\end{equation}
+Exact analytical solution:
+\begin{equation}
+y(x) = \frac{e^{r_1 x} - e^{r_2 x}}{e^{r_1} - e^{r_2}}, \quad r_{1, 2} = \frac{-1 \pm \sqrt{1 - 4\epsilon}}{2\epsilon}
+\end{equation}
+Uniformly valid composite asymptotic expansion:
+\begin{equation}
+y_{\text{comp}}(x) = e^{1-x} - e \cdot e^{-x/\epsilon}
+\end{equation}
+
+
+\section{Comprehensive Mathematical Proposal for Spatial Treatment, Generalized Meshes, and Multiphysics Discretization}
+
+The current core simulation engine (\texttt{core/compilador/compilador.py}) models physical systems primarily as lumped networks of homogeneous control volumes with non-spatial thermodynamic equilibrium closures. This chapter establishes the rigorous mathematical foundation and architectural design for extending the engine into \textbf{1D, 2D, and 3D distributed spatial domains}, supporting \textbf{generalized unstructured meshes} (Cartesian, hexagonal, simplicial, prismatic, and polyhedral), and modeling \textbf{fully coupled multiphysics} (matter, momentum, energy, and thermodynamics).
+
+\subsection{Architectural Paradigm and Pipeline Integration (Model $\to$ Transform $\to$ Solve $\to$ Results)}
+
+In conformance with the mandatory Four-Workspace Framework (Section 12 of \texttt{ARCHITECTURE.md}), spatial discretization is never hardcoded inside physical model equations.
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Model Invariance:} Authoring equations with spatial fields ($c_i(\mathbf{x}, t), T(\mathbf{x}, t), \mathbf{v}(\mathbf{x}, t)$) declares spatial domains $\mathcal{M}$ and boundary conditions $(\Gamma_D, \Gamma_N, \Gamma_R)$ without referencing discretization nodes, mesh sizes ($h$), or numerical schemes.
+    \item \textbf{Transform Discretization Metadata:} Spatial discretization converts PDEs into a semi-discrete DAE system $\mathbf{M} \frac{d\mathbf{Y}}{dt} = \mathbf{F}(t, \mathbf{Y})$. The resulting system is tagged with discretization metadata (mesh size $h$, cell P\'eclet number $Pe_{\text{cell}}$, limiter type) and recorded as an approximation.
+    \item \textbf{Common Results Contract:} Spatial solution fields are serialized under the common format as tensor trajectories $\mathbf{Y}(t_k) \in \mathbb{R}^{N_{\text{nodes}} \times N_{\text{fields}}}$, enabling unified visualization in Results.
+\end{enumerate}
+
+\subsection{Differential Geometry, Manifolds, and Unified 1D, 2D, and 3D Formulations}
+
+To support arbitrary physical domains without ad-hoc case branching, spatial differential operators are formulated using \textbf{Riemannian differential geometry} on smooth manifolds $(\mathcal{M}, \mathbf{g})$ of dimension $d \in \{1, 2, 3\}$.
+
+Covariant tangent vectors $\mathbf{g}_i = \frac{\partial \mathbf{x}}{\partial \xi^i}$, contravariant normal vectors $\mathbf{g}^i = \nabla \xi^i$ with $\mathbf{g}^i \cdot \mathbf{g}_j = \delta^i_j$.
+Covariant Riemannian metric tensor $g_{ij} = \mathbf{g}_i \cdot \mathbf{g}_j$, contravariant metric $g^{ij} = (g_{ij})^{-1}$, and volume element $dV = \sqrt{g} \, d\xi^1 \dots d\xi^d$ where $g = \det(g_{ij})$.
+Christoffel symbols of the second kind:
+\begin{equation}
+\Gamma_{jk}^i = \frac{1}{2} \sum_{l=1}^d g^{il} \left( \frac{\partial g_{lj}}{\partial \xi^k} + \frac{\partial g_{lk}}{\partial \xi^j} - \frac{\partial g_{jk}}{\partial \xi^l} \right)
+\end{equation}
+Coordinate-invariant continuous transport operators:
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Invariant Gradient:} $(\nabla \phi)^i = g^{ij} \frac{\partial \phi}{\partial \xi^j}$.
+    \item \textbf{Invariant Divergence:} $\nabla \cdot \mathbf{v} = \frac{1}{\sqrt{g}} \sum_{i=1}^d \frac{\partial}{\partial \xi^i} \left( \sqrt{g} v^i \right)$.
+    \item \textbf{Invariant Laplace-Beltrami:} $\nabla^2 \phi = \frac{1}{\sqrt{g}} \sum_{i=1}^d \frac{\partial}{\partial \xi^i} \left( \sqrt{g} \sum_{j=1}^d g^{ij} \frac{\partial \phi}{\partial \xi^j} \right)$.
+    \item \textbf{Invariant Convection:} $\left( (\mathbf{v} \cdot \nabla) \mathbf{u} \right)^i = \sum_{j=1}^d v^j \left( \frac{\partial u^i}{\partial \xi^j} + \sum_{k=1}^d \Gamma_{jk}^i u^k \right)$.
+\end{enumerate}
+
+At radial coordinate singularities ($r = 0$), non-singular regularized limits apply:
+\begin{equation}
+\left. \nabla^2 \phi \right|_{r=0}^{\text{cyl}} = 2 \left. \frac{\partial^2 \phi}{\partial r^2} \right|_{r=0} + \left. \frac{\partial^2 \phi}{\partial z^2} \right|_{r=0}, \quad \left. \nabla^2 \phi \right|_{r=0}^{\text{sph}} = 3 \left. \frac{\partial^2 \phi}{\partial r^2} \right|_{r=0}
+\end{equation}
+
+\subsection{Mathematical Theory of Generalized Meshes: Cartesian, Hexagonal, Simplicial, and Polyhedral}
+
+\subsubsection{Structured Cartesian and Orthogonal Meshes}
+Centroid connector $\mathbf{d}_{PE} = \mathbf{x}_E - \mathbf{x}_P$ is parallel to face normal $\mathbf{A}_f$ ($\mathbf{d}_{PE} \times \mathbf{A}_f = \mathbf{0}$), ensuring zero non-orthogonal cross-diffusion error and regular banded Toeplitz matrix structure.
+
+\subsubsection{Hexagonal Honeycomb Meshes and Voronoi Dual Tessellations}
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Geometry of Regular Hexagon:} Edge $s$, area $A_{\text{hex}} = \frac{3\sqrt{3}}{2} s^2$, perimeter $P = 6s$, isoperimetric quotient $\mathcal{Q} = \frac{\pi \sqrt{3}}{6} \approx 0.9069$ (superior to square $\frac{\pi}{4} \approx 0.7854$), with 6 equidistant neighbors $d_{PE} = \sqrt{3} s$.
+    \item \textbf{Perfect Six-Fold Spatial Isotropy:} Face normal dyadic satisfies $\sum_{k=1}^6 \mathbf{n}_k \otimes \mathbf{n}_k = 3 \mathbf{I}$, completely eliminating the directional grid-alignment bias of square Cartesian meshes.
+    \item \textbf{Voronoi Orthogonal Bisector Property:} Voronoi facets $f_{ij} = \mathcal{V}_i \cap \mathcal{V}_j$ lie in the perpendicular bisector of $\overline{\mathbf{x}_i \mathbf{x}_j}$, meaning $\mathbf{d}_{ij} \parallel \mathbf{n}_{f_{ij}}$. Thus the non-orthogonality angle is identically zero ($\theta \equiv 0$), completely eliminating cross-diffusion errors $\mathbf{k}_f \equiv \mathbf{0}$.
+\end{enumerate}
+
+\subsubsection{Unstructured Simplicial Meshes (Triangles \& Tetrahedra)}
+Delaunay triangulation with volume $V_{\text{tet}} = \frac{1}{6} \left| \det[\mathbf{x}_1 - \mathbf{x}_4, \mathbf{x}_2 - \mathbf{x}_4, \mathbf{x}_3 - \mathbf{x}_4] \right|$. Centroids $\mathbf{x}_P = \frac{1}{4} \sum \mathbf{x}_k$ in obtuse triangles mandate non-orthogonal corrections.
+
+\subsubsection{Boundary-Layer Prismatic Elements (Pentahedra)}
+Triangular bases extruded along the surface normal direction allow high aspect ratios ($AR \sim 100 - 1000$) near walls, resolving thin viscous/thermal sublayers ($\Delta y^+ \sim 1$) without numerical skewness.
+
+\subsubsection{Generalized Polyhedral Cell Mathematics}
+For arbitrary polyhedra with $N_f$ planar faces and $N_v$ vertices:
+\begin{equation}
+\mathbf{A}_f = \frac{1}{2} \sum_{k=1}^{N_v} (\mathbf{v}_k - \mathbf{v}_0) \times (\mathbf{v}_{k+1} - \mathbf{v}_0), \quad V_P = \frac{1}{d} \sum_{f \in \mathcal{F}(P)} \mathbf{x}_f \cdot \mathbf{A}_f
+\end{equation}
+Over-relaxed non-orthogonal decomposition for stability:
+\begin{equation}
+\boldsymbol{\Delta}_{PE} = \frac{\mathbf{A}_f \cdot \mathbf{A}_f}{\mathbf{d}_{PE} \cdot \mathbf{A}_f} \mathbf{d}_{PE}, \quad \mathbf{k}_f = \mathbf{A}_f - \boldsymbol{\Delta}_{PE}
+\end{equation}
+Face skewness displacement vector $\boldsymbol{\delta}_{\text{skew}} = \mathbf{x}_f - \mathbf{x}_{f'}$ ensures second-order reconstructed face values:
+\begin{equation}
+\phi_f = \phi_{f'} + \boldsymbol{\delta}_{\text{skew}} \cdot (\overline{\nabla \phi})_f
+\end{equation}
+
+\subsection{The Multiphysics Coupling Framework: 4-Way Balance Interactions and Conjugate Transports}
+
+The conservative coupled multiphysics continuum system:
+\begin{equation}
+\frac{\partial \mathbf{U}}{\partial t} + \nabla \cdot \mathbf{F}_{\text{conv}}(\mathbf{U}) = \nabla \cdot \mathbf{F}_{\text{diff}}(\mathbf{U}, \nabla \mathbf{U}) + \mathbf{S}(\mathbf{U}), \quad \mathbf{U} = [\rho_1, \dots, \rho_{N_c}, \rho \mathbf{v}, \rho E]^T
+\end{equation}
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Matter $\leftrightarrow$ Momentum:} Variable density $\rho(\mathbf{z}, T, P)$, composition-dependent viscosity $\mu(\mathbf{z}, T)$, Brinkman-Forchheimer porous drag $\mathbf{S}_{\text{mom}} = -\frac{\mu}{\mathbf{K}} \mathbf{v} - \rho \mathbf{C}_F |\mathbf{v}|\mathbf{v}$, and solutal/thermal buoyancy $\rho \mathbf{g} = \rho_0 [1 - \beta_T(T - T_0) - \sum \beta_{c,i}(c_i - c_{i,0})]\mathbf{g}$.
+    \item \textbf{Matter $\leftrightarrow$ Energy:} Chemical reaction enthalpy source $\dot{S}_{\text{thermal}} = \sum (-\Delta H_{\text{rxn},r}) r_r$, species interdiffusion enthalpy flux $\mathbf{q}_{\text{interdiff}} = \sum \mathbf{j}_i \bar{h}_i$, Dufour effect $\mathbf{q}_{\text{Dufour}} = R T \sum \sum \frac{x_i \mathcal{D}_{ij}^T}{c_t M_i M_j} \nabla x_j$, and Arrhenius exponential kinetic feedback.
+    \item \textbf{Momentum $\leftrightarrow$ Energy:} Viscous dissipation $\Phi_v = \boldsymbol{\tau} : \nabla \mathbf{v} = 2 \mu \mathbf{D} : \mathbf{D} - \frac{2}{3} \mu (\nabla \cdot \mathbf{v})^2 \ge 0$, compression work $-P(\nabla \cdot \mathbf{v})$, and temperature-dependent viscosity $\mu(T) = \mu_0 \exp[B(1/T - 1/T_0)]$.
+    \item \textbf{Thermodynamic Closure (Engine of Engines):} Intensive state inversion $(\rho_i, \rho E - \frac{1}{2}\rho v^2) \to (\mathbf{z}, u) \xrightarrow{\text{UV Flash}} (T, P, \alpha_V, \mathbf{x}, \mathbf{y})$, Michelsen $TPD$ stability testing for phase splits, and UNIFAC/NRTL activity coefficient evaluation.
+    \item \textbf{Conjugate Interfaces:} Fluid-solid thermal continuity $T_f = T_s$, $-k_f \frac{\partial T_f}{\partial n} = -k_s \frac{\partial T_s}{\partial n}$, surface catalytic reactions, and moving Stefan phase front jump conditions $\llbracket \rho(\mathbf{v} - \mathbf{w}_I)\cdot \mathbf{n} \rrbracket = 0$.
+\end{enumerate}
+
+\subsection{Rigorous Cell-Centered Finite Volume Method (FVM) on Arbitrary Grids}
+
+Integrating over cell $\Omega_P$ with faces $\mathcal{F}(P)$:
+\begin{equation}
+V_P \frac{d\bar{\phi}_P}{dt} + \sum_{f \in \mathcal{F}(P)} \left( \mathcal{F}_{f, \text{conv}} + \mathcal{F}_{f, \text{diff}} \right) = V_P \bar{S}_P
+\end{equation}
+Convective flux: $\mathcal{F}_{f, \text{conv}} = \dot{m}_f \phi_f$. Diffusive flux with over-relaxed non-orthogonal correction:
+\begin{equation}
+\mathcal{F}_{f, \text{diff}} = -\Gamma_f \left[ \frac{\phi_E - \phi_P}{\|\mathbf{d}_{PE}\|} \frac{\mathbf{A}_f \cdot \mathbf{A}_f}{\mathbf{d}_{PE} \cdot \mathbf{n}_f} + \mathbf{k}_f \cdot (\overline{\nabla \phi})_f \right]
+\end{equation}
+Green-Gauss polyhedral gradient: $\nabla \phi_P = \frac{1}{V_P} \sum_{f \in \mathcal{F}(P)} \phi_f \mathbf{A}_f$.
+
+\subsection{High-Resolution Monotonic TVD Schemes and Multidimensional Flux Limiters}
+
+Godunov's theorem: linear schemes $p > 1$ are not monotonicity preserving.
+TVD face reconstruction: $\phi_f = \phi_{\text{upwind}} + \frac{1}{2} \psi(r_f) (\phi_{\text{downwind}} - \phi_{\text{upwind}})$.
+Multidimensional gradient ratio: $r_f = \frac{2 (\nabla \phi_U) \cdot \mathbf{d}_{PE}}{\phi_E - \phi_P} - 1$.
+Catalog: Minmod, Superbee, Van Leer ($\frac{r+|r|}{1+|r|}$), Koren, Monotonized Central (MC).
+
+\subsection{Boundary Conditions and Conjugate Phase Interface Jumps}
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Dirichlet Boundary:} $\phi|_{\Gamma_D} = \phi_{\text{spec}} \implies \mathcal{F}_{f_b, \text{diff}} = -\Gamma_{f_b} \frac{\phi_{\text{spec}} - \bar{\phi}_P}{\delta n_{Pf_b}} A_{f_b}$.
+    \item \textbf{Neumann Boundary:} $-\left. \boldsymbol{\Gamma} \nabla \phi \cdot \mathbf{n} \right|_{\Gamma_N} = q_{\text{spec}}'' \implies \mathcal{F}_{f_b, \text{diff}} = q_{\text{spec}}'' A_{f_b}$.
+    \item \textbf{Robin Boundary:} $-\left. \boldsymbol{\Gamma} \nabla \phi \cdot \mathbf{n} \right|_{\Gamma_R} = h_{\text{trans}} (\phi_{f_b} - \phi_\infty) \implies \phi_{f_b} = \frac{\frac{\Gamma_{f_b}}{\delta n_{Pf_b}} \bar{\phi}_P + h_{\text{trans}} \phi_\infty}{\frac{\Gamma_{f_b}}{\delta n_{Pf_b}} + h_{\text{trans}}}$.
+\end{itemize}
+
+\subsection{Adaptive Mesh Refinement (AMR) on Generalized Mesh Topologies}
+
+Curvature error estimator: $\eta_P = h_P^2 \frac{\|\nabla^2 \bar{\phi}_P\|_2}{\max\left( \|\nabla \bar{\phi}_P\|_2 \cdot h_P, \; \epsilon_0 |\bar{\phi}_P| \right)}$.
+Refine if $\eta_P > 0.05$ (bisection into $2^d$ children); coarsen if siblings $\eta_c < 0.01$. Enforce 2:1 ratio restriction across faces. Telescopic conservation: $\bar{\phi}_{\text{parent}} = \frac{1}{V_{\text{parent}}} \sum V_c \bar{\phi}_c$.
+
+\subsection{Semi-Discrete DAE Assembly, Monolithic vs. Partitioned Structuring, and Block Solvers}
+
+Global state vector $\mathbf{Y}(t) = [\bar{\mathbf{y}}_1^T, \dots, \bar{\mathbf{y}}_{N_{\text{cells}}}^T]^T \in \mathbb{R}^{N_{\text{cells}} \cdot N_v}$.
+Semi-discrete DAE: $\mathbf{M}_{\text{spatial}} \frac{d\mathbf{Y}}{dt} = \mathbf{F}_{\text{spatial}}(t, \mathbf{Y})$.
+Sparse block Jacobian: $\left[ \mathbf{M}_{\text{spatial}} - \gamma h \mathbf{J} \right] \Delta \mathbf{Y}^{(m)} = -\mathbf{R}^{(m)}$ solved via preconditioned GMRES/BiCGSTAB with Algebraic Multigrid (AMG) or Block-ILU(0).
+
+\subsection{Spatial Verification: Method of Manufactured Solutions (MMS) for 1D, 2D, and 3D Multiphysics}
+
+Prescribed manufactured fields $\phi_{\text{MMS}}(\mathbf{x}, t)$, analytic source evaluation $S_{\text{MMS}} = \frac{\partial \phi_{\text{MMS}}}{\partial t} + \nabla \cdot (\phi_{\text{MMS}} \mathbf{v}) - \nabla \cdot (\boldsymbol{\Gamma} \nabla \phi_{\text{MMS}}) + R(\phi_{\text{MMS}})$.
+Observed spatial order $p_{\text{obs}} = \frac{\ln(E(h_k)/E(h_{k+1}))}{\ln 2} \to 2.0$. Telescopic integral conservation audit: $\mathcal{R}_{\text{AMR}}(t) \le 10^{-14}$.
+
+
+
+
+\subsection{Pressure-Velocity-Density Coupling on Colocated Generalized Meshes (Rhie-Chow, PISO, and SIMPLE)}
+
+\subsubsection{The Checkerboard Pressure Decoupling Theorem}
+Evaluating discrete pressure gradients at cell $P$ via symmetric central differencing and continuity via cell-averaged face velocities on colocated meshes permits a spurious checkerboard pressure field $P_i = P_0 + (-1)^i \delta P$ with zero gradient residual ($\nabla P \equiv \mathbf{0}$).
+
+\subsubsection{Generalized Rhie-Chow Momentum Face Interpolation on Polyhedra}
+Let $a_P^{\mathbf{v}} \mathbf{v}_P = \mathbf{H}(\mathbf{v})_P - V_P \nabla P_P \implies \mathbf{v}_P = \hat{\mathbf{v}}_P - d_P \nabla P_P$ where $\hat{\mathbf{v}}_P = \mathbf{H}(\mathbf{v})_P / a_P^{\mathbf{v}}$ and $d_P = V_P / a_P^{\mathbf{v}}$.
+Reconstructing face velocity with pressure Laplacian dissipation:
+\begin{equation}
+\mathbf{v}_f = \overline{\hat{\mathbf{v}}}_f - d_f \left( \nabla P_f - \overline{\nabla P}_f \right)
+\end{equation}
+Conservative face mass flux:
+\begin{equation}
+\dot{m}_f = \rho_f \left[ \overline{\mathbf{v}}_f \cdot \mathbf{A}_f - d_f \left( \frac{P_E - P_P}{\|\mathbf{d}_{PE}\|} A_f - (\overline{\nabla P}_f \cdot \mathbf{n}_f) A_f \right) \right]
+\end{equation}
+
+\subsubsection{The Unstructured PISO Algorithm}
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Momentum Predictor:} $a_P^{\mathbf{v}} \mathbf{v}_P^* = \mathbf{H}(\mathbf{v}^*)_P - V_P \nabla P_P^n$.
+    \item \textbf{Pressure Poisson Equation:}
+    \begin{equation}
+    \sum_{f \in \mathcal{F}(P)} \rho_f d_f \frac{\mathbf{A}_f \cdot \mathbf{A}_f}{\mathbf{d}_{PE} \cdot \mathbf{n}_f} (P_E^* - P_P^*) = \sum_{f \in \mathcal{F}(P)} \rho_f \overline{\mathbf{v}}_f^* \cdot \mathbf{A}_f + \frac{V_P}{\Delta t}(\rho_P^{n+1} - \rho_P^n) - \sum_{f} \rho_f d_f \mathbf{k}_f \cdot (\overline{\nabla P^n})_f
+    \end{equation}
+    \item \textbf{Explicit Flux and Velocity Correction:} $\mathbf{v}_P^{**} = \mathbf{v}_P^* - d_P \nabla(P^* - P^n)$.
+    \item \textbf{Second Pressure Poisson Solve:} Update $P^{n+1}$ with recomputed $\mathbf{H}(\mathbf{v}^{**})$.
+\end{enumerate}
+
+\subsection{High-Order Discontinuous Galerkin (DG) and Multidimensional Riemann Solvers}
+
+Weak variational formulation on element $K$ with polynomial basis $\mathbf{U}_h = \sum \mathbf{U}_j^K(t) \psi_j^K(\mathbf{x})$:
+\begin{equation}
+\int_K \frac{\partial \mathbf{U}_h}{\partial t} \phi_i \, dV - \int_K \mathbf{F}(\mathbf{U}_h) \cdot \nabla \phi_i \, dV + \oint_{\partial K} \widehat{\mathbf{F}}(\mathbf{U}_h^-, \mathbf{U}_h^+) \cdot \mathbf{n} \, \phi_i \, dA = \int_K \mathbf{S}(\mathbf{U}_h) \phi_i \, dV
+\end{equation}
+Multi-dimensional numerical fluxes:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Roe Flux:} $\widehat{\mathbf{F}}_{\text{Roe}} = \frac{1}{2}(\mathbf{F}_L + \mathbf{F}_R)\cdot\mathbf{n} - \frac{1}{2}|\mathbf{A}_{\text{Roe}}|(\mathbf{U}_R - \mathbf{U}_L)$.
+    \item \textbf{HLLC Flux:} Restores contact wave $S_*$:
+    \begin{equation}
+    S_* = \frac{P_R - P_L + \rho_L v_{n,L}(S_L - v_{n,L}) - \rho_R v_{n,R}(S_R - v_{n,R})}{\rho_L(S_L - v_{n,L}) - \rho_R(S_R - v_{n,R})}
+    \end{equation}
+\end{itemize}
+
+\subsection{Implicit-Explicit (IMEX) Time Integration for Stiff Multiphysics Systems}
+
+Additive splitting into explicit non-stiff advection $\mathbf{f}$ and implicit stiff diffusion/reaction $\mathbf{g}$:
+\begin{equation}
+\mathbf{M} \frac{d\mathbf{Y}}{dt} = \mathbf{f}(t, \mathbf{Y}) + \mathbf{g}(t, \mathbf{Y})
+\end{equation}
+IMEX-ARK stage values ($i = 1, \dots, s$):
+\begin{equation}
+\mathbf{Y}_i = \mathbf{Y}^n + \Delta t \sum_{j=1}^{i-1} \tilde{a}_{ij} \mathbf{f}(t^n + \tilde{c}_j \Delta t, \mathbf{Y}_j) + \Delta t \sum_{j=1}^{i-1} a_{ij} \mathbf{g}(t^n + c_j \Delta t, \mathbf{Y}_j) + \Delta t \, a_{ii} \mathbf{g}(t^n + c_i \Delta t, \mathbf{Y}_i)
+\end{equation}
+Time step is bounded solely by advective CFL $\Delta t \le C_{\text{CFL}} \frac{h}{\|\mathbf{v}\|}$, eliminating parabolic $\Delta t \sim \mathcal{O}(h^2)$ restrictions.
+
+\subsection{Dynamic Interface and Free Surface Tracking: VOF, Level Set, and CLSVOF}
+
+\subsubsection{Volume of Fluid (VOF) with PLIC Reconstruction}
+Phase fraction $\alpha_L \in [0, 1]$ evolves via $\frac{\partial \alpha_L}{\partial t} + \nabla \cdot (\alpha_L \mathbf{v}) + \nabla \cdot (\alpha_L(1 - \alpha_L)\mathbf{v}_r) = \frac{\dot{m}_{\text{phase}}}{\rho_L}$.
+Planar cut reconstruction: $\mathbf{n}_{\Sigma} \cdot \mathbf{x} = C_{\text{plane}}$ where $\mathbf{n}_{\Sigma} = -\frac{\nabla \alpha_L}{\|\nabla \alpha_L\|}$.
+
+\subsubsection{Level Set and Continuum Surface Force (CSF)}
+Signed distance function $\phi(\mathbf{x}, t)$ evolves via $\frac{\partial \phi}{\partial t} + \mathbf{v} \cdot \nabla \phi = 0$.
+Curvature: $\kappa = -\nabla \cdot \left( \frac{\nabla \phi}{\|\nabla \phi\|} \right)$.
+Capillary surface tension body force:
+\begin{equation}
+\mathbf{f}_\sigma = \sigma \kappa \delta_\Sigma(\phi) \nabla \phi
+\end{equation}
+CLSVOF combines exact mass conservation of VOF with geometric curvature accuracy of Level Set.
+
+\subsection{Parallel Domain Decomposition and Nonlinear Preconditioning (PETSc/Trilinos Architecture)}
+
+Graph partitioning dual $\mathcal{G} = (\mathcal{V}, \mathcal{E})$ via ParMETIS minimizing edge cut communications.
+Restricted Additive Schwarz (RAS) preconditioner:
+\begin{equation}
+\mathbf{M}_{\text{RAS}}^{-1} = \sum_{p=1}^{N_{\text{proc}}} \mathbf{R}_p^T \mathbf{A}_p^{-1} \widetilde{\mathbf{R}}_p
+\end{equation}
+Additive Schwarz Preconditioned Inexact Newton (ASPIN) solves localized nonlinear subdomain residuals $\mathbf{F}_p(\mathbf{Y} + \mathbf{R}_p^T \mathbf{g}_p) = \mathbf{0}$, completely removing stagnation from localized steep reactive fronts.
+
+
+
+\section{Mathematical Derivation of Unit Operations and Reactive Separation Systems from Fundamental Laws}
+
+In accordance with Principle 10 of the Unified Architecture (Section 2), no unit operation equation or empirical shortcut may be postulated \textit{ad hoc}. Every classical chemical engineering unit operation model---from equilibrium stages and packed columns to catalytic reactors, tubular heat exchangers, and piping networks---is deduced through a rigorous sequence of formal mathematical assumptions applied directly to the Reynolds Transport Theorem and the microscopic field equations established in Sections 2 and 8.
+
+\subsection{Fundamental Derivation Methodology: From First Principles to Unit Envelopes}
+
+The general macroscopic unit operation envelope is defined over an open, connected control volume $\Omega_k(t) \subset \mathbb{R}^3$ with boundary $\partial \Omega_k(t) = \Gamma_{k,\text{ports}}(t) \cup \Gamma_{k,\text{walls}}(t) \cup \Sigma_{kj}(t)$, where $\Gamma_{k,\text{ports}}$ represents discrete inlet/outlet flow manifolds, $\Gamma_{k,\text{walls}}$ represents solid confining boundaries, and $\Sigma_{kj}$ represents phase interfaces with adjacent fluid phases.
+
+\subsubsection{The Reynolds Reduction Theorem for Unit Operations}
+For any intensive property $\psi \in \{1, \mathbf{v}, u + \frac{1}{2}v^2, x_i\}$, the integral conservation law states:
+\begin{equation}
+\frac{d}{dt} \int_{\Omega_k(t)} \rho \psi \, dV + \int_{\partial \Omega_k(t)} \rho \psi (\mathbf{v} - \mathbf{w}) \cdot \mathbf{n} \, dA = -\int_{\partial \Omega_k(t)} \mathbf{J}_\psi \cdot \mathbf{n} \, dA + \int_{\Omega_k(t)} \dot{S}_\psi \, dV
+\end{equation}
+
+The reduction to standard unit operation forms follows four canonical projection operations:
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Spatial Averaging Operator $\langle \cdot \rangle$:}
+    \begin{equation}
+    \langle \phi \rangle_k(t) \equiv \frac{1}{V_k(t)} \int_{\Omega_k(t)} \phi(\mathbf{x}, t) \, dV
+    \end{equation}
+    Under the \textit{well-mixed assumption} ($\|\nabla \phi\| \cdot L_{\text{char}} \ll \bar{\phi}$), the field inside $\Omega_k$ is replaced by its spatial average, and the exit port state is identical to the bulk volume state: $\phi_{\text{out}}(t) = \langle \phi \rangle_k(t)$.
+    \item \textbf{Boundary Flux Partitioning:}
+    The surface integral over $\partial \Omega_k$ is partitioned into discrete convective streams and interphase transfer areas:
+    \begin{equation}
+    \int_{\partial \Omega_k} \rho \psi (\mathbf{v} - \mathbf{w}) \cdot \mathbf{n} \, dA = \sum_{j \in \text{out}} \dot{m}_j \psi_j - \sum_{j \in \text{in}} \dot{m}_j \psi_j + \int_{\Sigma_{kj}} \rho (\mathbf{v} - \mathbf{w}_I) \cdot \mathbf{n}_I \, dA
+    \end{equation}
+    \item \textbf{Phase Interface Jump Coupling:}
+    Applying the Rankine-Hugoniot jump condition across phase interface $\Sigma_{kj}$:
+    \begin{equation}
+    \llbracket \rho (\mathbf{v} - \mathbf{w}_I) \cdot \mathbf{n}_I \psi + \mathbf{J}_\psi \cdot \mathbf{n}_I \rrbracket = \dot{\Omega}_{\psi, \Sigma}
+    \end{equation}
+    which enforces interphase mass, momentum, and heat transfer rates between adjacent phases.
+    \item \textbf{Constitutive Closure Injection:}
+    Replacing abstract diffusive fluxes $\mathbf{J}_\psi$ with Stefan-Maxwell multicomponent diffusion, Fourier conduction, or empirical mass/heat transfer coefficients ($k_c, U$), and source terms $\dot{S}_\psi$ with chemical reaction kinetics $\sum_r \nu_{ir} r_r$.
+\end{enumerate}
+
+\subsection{Reactive Distillation and Equilibrium Stage Separations (MESH-D Formulation)}
+
+Reactive distillation couples multicomponent separation and chemical reaction within a single spatial column shell. Consider stage $j \in \{1, \dots, N_T\}$ numbered from top (condenser $j=1$) to bottom (reboiler $j=N_T$).
+
+\subsubsection{Material Balance (M-Equations)}
+Applying the species mass conservation law to control volume $\Omega_j$ enclosing the liquid holdup $M_{L,j}$ (mol) and vapor holdup $M_{V,j}$ (mol):
+\begin{equation}
+\frac{d M_{i,j}}{dt} = \frac{d}{dt} \left( M_{L,j} x_{i,j} + M_{V,j} y_{i,j} \right) = L_{j-1} x_{i,j-1} + V_{j+1} y_{i,j+1} + F_j z_{i,j} - (L_j + U_j) x_{i,j} - (V_j + W_j) y_{i,j} + R_{i,j}
+\end{equation}
+where $R_{i,j}$ is the net generation rate of species $i$ on stage $j$:
+\begin{equation}
+R_{i,j} = M_{L,j} \sum_{r=1}^{N_{\text{rxn}}} \nu_{i,r} r_{r,j}(T_j, P_j, \mathbf{x}_j) + \epsilon_{\text{cat}} V_{\text{stage}} \sum_{r=1}^{N_{\text{rxn}}} \nu_{i,r} r_{r,\text{het}}(T_j, P_j, \mathbf{x}_j)
+\end{equation}
+
+Under the formal asymptotic limit $\varepsilon = \frac{\rho_V V_V}{\rho_L V_L} \to 0$, vapor holdup is neglected:
+\begin{equation}
+\frac{d (M_{L,j} x_{i,j})}{dt} = M_{L,j} \frac{d x_{i,j}}{dt} + x_{i,j} \frac{d M_{L,j}}{dt}
+\end{equation}
+Summing over all $N_c$ species gives total molar holdup continuity:
+\begin{equation}
+\frac{d M_{L,j}}{dt} = L_{j-1} + V_{j+1} + F_j - (L_j + U_j) - (V_j + W_j) + M_{L,j} \sum_{r=1}^{N_{\text{rxn}}} \Delta \nu_r r_{r,j}
+\end{equation}
+where $\Delta \nu_r \equiv \sum_{i=1}^{N_c} \nu_{i,r}$.
+
+\subsubsection{Phase Equilibrium Relations (E-Equations)}
+At thermodynamic equilibrium between leaving liquid and vapor streams:
+\begin{equation}
+y_{i,j}^* \Phi_{i,j}^V(T_j, P_j, \mathbf{y}_j^*) P_j = x_{i,j} \gamma_{i,j}^L(T_j, P_j, \mathbf{x}_j) P_i^{\text{sat}}(T_j) \phi_i^{\text{sat}}(T_j) \exp\left[ \frac{\bar{v}_i^L(P_j - P_i^{\text{sat}}(T_j))}{R T_j} \right]
+\end{equation}
+Departure from equilibrium via Murphree vapor tray efficiency $E_{MV,i,j} \in (0, 1]$:
+\begin{equation}
+y_{i,j} = y_{i,j+1} + E_{MV,i,j} \left( y_{i,j}^* - y_{i,j+1} \right)
+\end{equation}
+
+\subsubsection{Summation Constraints (S-Equations)}
+\begin{equation}
+\sum_{i=1}^{N_c} x_{i,j} - 1 = 0, \quad \sum_{i=1}^{N_c} y_{i,j} - 1 = 0
+\end{equation}
+
+\subsubsection{Enthalpy / Energy Balances (H-Equations)}
+Applying the first law to control volume $\Omega_j$:
+\begin{equation}
+\frac{d (M_{L,j} h_j^L)}{dt} = L_{j-1} h_{j-1}^L + V_{j+1} h_{j+1}^V + F_j h_{F,j} - (L_j + U_j) h_j^L - (V_j + W_j) h_j^V + Q_j
+\end{equation}
+Expanded via partial molar enthalpies:
+\begin{equation}
+\frac{d (M_{L,j} h_j^L)}{dt} = h_j^L \frac{d M_{L,j}}{dt} + M_{L,j} \left[ C_{p,j}^L \frac{d T_j}{dt} + \sum_{i=1}^{N_c} \bar{h}_{i,j}^L \frac{d x_{i,j}}{dt} \right]
+\end{equation}
+When referenced to elements at standard state, the reaction heat is intrinsically satisfied: $\sum_{i=1}^{N_c} R_{i,j} \bar{h}_{i,j}^L = -\sum_{r=1}^{N_{\text{rxn}}} r_{r,j} M_{L,j} \Delta H_{\text{rxn},r}(T_j)$.
+
+\subsubsection{Dynamic Tray Hydraulics and Pressure Drops (D-Equations)}
+Liquid exit flow is governed by weir liquid crest:
+\begin{equation}
+L_j = \frac{2}{3} C_w \left( \frac{\rho_{L,j}}{M_{w,L,j}} \right) \sqrt{2 g} \, W_{\text{weir}} \, \left[ \max\left(0, h_{\text{liq},j} - h_{\text{weir}}\right) \right]^{3/2}, \quad h_{\text{liq},j} = \frac{M_{L,j} M_{w,L,j}}{\rho_{L,j} A_{\text{active}}}
+\end{equation}
+Vapor pressure drop combines perforated orifice dry loss and aerated head:
+\begin{equation}
+\Delta P_j = P_{j+1} - P_j = \frac{\xi_{\text{dry}}}{2} \rho_{V,j+1} \left( \frac{V_{j+1} M_{w,V,j+1}}{\rho_{V,j+1} A_{\text{holes}}} \right)^2 + \beta_{\text{aer}} \rho_{L,j} g h_{\text{liq},j}
+\end{equation}
+Operability limits audited continuously:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Weeping Boundary:} $F_{\text{hole}} = u_{\text{hole}} \sqrt{\rho_V} < F_{\text{weep}} \approx 3.0 \, \text{Pa}^{1/2}$.
+    \item \textbf{Flooding Boundary:} Fair capacity factor $C_{sb} = u_V \sqrt{\frac{\rho_V}{\rho_L - \rho_V}} \ge C_{sb,\text{flood}}$.
+\end{itemize}
+
+\subsubsection{Reactive Azeotrope Formation and Distillation Boundaries}
+Transformed compositions (Doherty \& Malone):
+\begin{equation}
+X_i \equiv \frac{x_i - \nu_i (\nu_{\text{ref}})^{-1} x_{\text{ref}}}{1 - \Delta \nu (\nu_{\text{ref}})^{-1} x_{\text{ref}}}, \quad Y_i \equiv \frac{y_i - \nu_i (\nu_{\text{ref}})^{-1} y_{\text{ref}}}{1 - \Delta \nu (\nu_{\text{ref}})^{-1} y_{\text{ref}}}
+\end{equation}
+Reactive azeotrope condition: $X_i = Y_i \; \forall i$, or equivalently:
+\begin{equation}
+\frac{y_1 - x_1}{\nu_1 - x_1 \Delta \nu} = \frac{y_2 - x_2}{\nu_2 - x_2 \Delta \nu} = \dots = \frac{y_{N_c} - x_{N_c}}{\nu_{N_c} - x_{N_c} \Delta \nu}
+\end{equation}
+Damk\"ohler number $Da_j = \frac{k_f(T_j) M_{L,j}}{L_j}$ determines boundary geometry deformation.
+
+\subsection{Non-Equilibrium Rate-Based Transport Modeling (Two-Film Theory)}
+
+\subsubsection{Multicomponent Mass Transfer in Vapor and Liquid Films}
+Vapor film Stefan-Maxwell matrix:
+\begin{equation}
+(N^V) = c_t^V [R^V]^{-1} [\Gamma^V] (y_V - y^I) + N_{\text{tot}}^V (y_V)
+\end{equation}
+where $R_{ii}^V = \frac{y_i^V}{k_{i,N_c}^V} + \sum_{k \ne i} \frac{y_k^V}{k_{ik}^V}$ and $R_{ij}^V = -y_i^V \left( \frac{1}{k_{ij}^V} - \frac{1}{k_{i,N_c}^V} \right)$.
+
+Liquid film Stefan-Maxwell matrix with UNIFAC/NRTL thermodynamic factors:
+\begin{equation}
+(N^L) = c_t^L [R^L]^{-1} [\Gamma^L] (x^I - x_L) + N_{\text{tot}}^L (x_L), \quad \Gamma_{ij}^L = \delta_{ij} + x_i \left( \frac{\partial \ln \gamma_i^L}{\partial x_j} \right)_{T, P}
+\end{equation}
+
+\subsubsection{Interface Continuity and Ackermann High-Flux Energy Coupling}
+Interface mass continuity: $N_i^V = N_i^L \equiv N_i$. Interface energy balance:
+\begin{equation}
+q^V + \sum_{i=1}^{N_c} N_i \bar{h}_i^V(T^I) = q^L + \sum_{i=1}^{N_c} N_i \bar{h}_i^L(T^I)
+\end{equation}
+with Ackermann high-flux correction factors:
+\begin{equation}
+q^V = h_V \frac{\Theta_V}{e^{\Theta_V} - 1} (T_V - T^I), \quad \Theta_V = \frac{\sum_i N_i C_{p,i}^V}{h_V}
+\end{equation}
+\begin{equation}
+q^L = h_L \frac{\Theta_L}{1 - e^{-\Theta_L}} (T^I - T_L), \quad \Theta_L = \frac{\sum_i N_i C_{p,i}^L}{h_L}
+\end{equation}
+
+\subsection{Chemical Reaction Engineering: CSTR, PFR, and Heterogeneous Catalysis}
+
+\subsubsection{Continuous Stirred Tank Reactor (CSTR) Dynamics and Thermal Runaway}
+\begin{equation}
+\frac{d(V_R C_i)}{dt} = \dot{V}_{\text{in}} C_{i,\text{in}} - \dot{V}_{\text{out}} C_i + V_R \sum_{r=1}^{N_{\text{rxn}}} \nu_{i,r} r_r(T, \mathbf{C})
+\end{equation}
+\begin{equation}
+\frac{d(V_R \rho c_p T)}{dt} = \dot{V}_{\text{in}} \rho_{\text{in}} c_{p,\text{in}} T_{\text{in}} - \dot{V}_{\text{out}} \rho c_p T + V_R \sum_{r=1}^{N_{\text{rxn}}} (-\Delta H_{\text{rxn},r}) r_r - U A_{\text{jacket}} (T - T_j)
+\end{equation}
+van Heerden steady-state ignition/extinction tangency: $Q_G(T^*) = Q_R(T^*)$ and $\left. \frac{dQ_G}{dT} \right|_{T^*} = \left. \frac{dQ_R}{dT} \right|_{T^*}$. Local stability requires $\frac{dQ_R}{dT} > \frac{dQ_G}{dT}$.
+
+\subsubsection{Plug Flow Reactor (PFR) with Axial Dispersion and Danckwerts Conditions}
+\begin{equation}
+\frac{\partial C_i}{\partial t} + u_z \frac{\partial C_i}{\partial z} = \mathcal{D}_{\text{ax}} \frac{\partial^2 C_i}{\partial z^2} + \sum_{r=1}^{N_{\text{rxn}}} \nu_{i,r} r_r(T, \mathbf{C})
+\end{equation}
+\begin{equation}
+\rho c_p \left( \frac{\partial T}{\partial t} + u_z \frac{\partial T}{\partial z} \right) = k_{\text{ax}} \frac{\partial^2 T}{\partial z^2} + \sum_{r=1}^{N_{\text{rxn}}} (-\Delta H_{\text{rxn},r}) r_r - \frac{4 U}{d_t} (T - T_w)
+\end{equation}
+Danckwerts boundary conditions:
+\begin{equation}
+\left. \left( u_z C_i - \mathcal{D}_{\text{ax}} \frac{\partial C_i}{\partial z} \right) \right|_{z=0^+} = u_z C_{i,0}, \quad \left. \frac{\partial C_i}{\partial z} \right|_{z=L^-} = 0
+\end{equation}
+\begin{equation}
+\left. \left( \rho c_p u_z T - k_{\text{ax}} \frac{\partial T}{\partial z} \right) \right|_{z=0^+} = \rho c_p u_z T_0, \quad \left. \frac{\partial T}{\partial z} \right|_{z=L^-} = 0
+\end{equation}
+
+\subsubsection{Heterogeneous Catalysis: Thiele Modulus and Effectiveness Factor}
+Spherical pellet balance:
+\begin{equation}
+\frac{1}{r^2} \frac{d}{dr}\left( r^2 \mathcal{D}_{\text{eff}} \frac{d C_A}{dr} \right) - k_1 C_A = 0, \quad \left. \frac{d C_A}{dr} \right|_{r=0} = 0, \quad C_A(R_p) = C_{A,s}
+\end{equation}
+Exact concentration profile:
+\begin{equation}
+C_A(r) = C_{A,s} \left( \frac{R_p}{r} \right) \frac{\sinh(\phi r / R_p)}{\sinh \phi}, \quad \phi \equiv R_p \sqrt{\frac{k_1}{\mathcal{D}_{\text{eff}}}}
+\end{equation}
+Internal effectiveness factor:
+\begin{equation}
+\eta = \frac{3}{\phi} \left( \frac{1}{\tanh \phi} - \frac{1}{\phi} \right) \implies \begin{cases} \eta \approx 1 - \frac{\phi^2}{15} \to 1 & (\phi \ll 1, \text{reaction-limited}) \\ \eta \approx \frac{3}{\phi} & (\phi \gg 1, \text{diffusion-limited}) \end{cases}
+\end{equation}
+Weisz-Prater observable criterion: $\Phi_{\text{WP}} \equiv \eta \phi^2 = \frac{r_{\text{obs}} R_p^2}{\mathcal{D}_{\text{eff}} C_{A,s}} \ll 1 \implies$ negligible pore resistance. Non-isothermal Prater elevation: $T(r) - T_s = \frac{(-\Delta H_{\text{rxn}}) \mathcal{D}_{\text{eff}}}{k_{\text{eff}}} (C_{A,s} - C_A(r))$.
+
+\subsection{Heat Exchange Networks, LMTD, and Conjugate Thermal Walls}
+
+\subsubsection{1D Distributed Balances and Exact LMTD Derivation}
+\begin{equation}
+\dot{m}_h C_{p,h} \frac{d T_h}{dx} = -U P_{\text{perim}} (T_h - T_c), \quad \pm \dot{m}_c C_{p,c} \frac{d T_c}{dx} = +U P_{\text{perim}} (T_h - T_c)
+\end{equation}
+Local temperature difference $\theta(x) \equiv T_h(x) - T_c(x)$ satisfies $\frac{d\theta}{dx} = -K \theta(x)$ where $K = U P_{\text{perim}} \left( \frac{1}{\dot{m}_h C_{p,h}} \mp \frac{1}{\dot{m}_c C_{p,c}} \right) = \frac{U A}{L} \frac{\Delta T_a - \Delta T_b}{Q}$. Integrating yields the exact Logarithmic Mean Temperature Difference:
+\begin{equation}
+Q = U A \, \Delta T_{\text{LMTD}}, \quad \Delta T_{\text{LMTD}} \equiv \frac{\Delta T_a - \Delta T_b}{\ln(\Delta T_a / \Delta T_b)}
+\end{equation}
+Taylor singularity removal for $|\Delta T_a - \Delta T_b| < 10^{-4}$:
+\begin{equation}
+\Delta T_{\text{LMTD}} = \frac{\Delta T_a + \Delta T_b}{2} \left[ 1 - \frac{\delta^2}{3} - \frac{4\delta^4}{45} \right], \quad \delta \equiv \frac{\Delta T_a - \Delta T_b}{\Delta T_a + \Delta T_b}
+\end{equation}
+
+\subsubsection{The $\epsilon$-NTU Formulation}
+$NTU \equiv \frac{UA}{C_{\min}}$, $C_r \equiv \frac{C_{\min}}{C_{\max}}$. Counter-flow effectiveness:
+\begin{equation}
+\epsilon = \frac{1 - \exp(-NTU(1 - C_r))}{1 - C_r \exp(-NTU(1 - C_r))} \quad (C_r < 1), \quad \epsilon = \frac{NTU}{1 + NTU} \quad (C_r = 1)
+\end{equation}
+
+\subsubsection{Conjugate Transient Wall Conduction}
+\begin{equation}
+\rho_w C_{p,w} A_w \frac{\partial T_w}{\partial t} = k_w A_w \frac{\partial^2 T_w}{\partial x^2} + h_h P_h (T_h(x, t) - T_w(x, t)) - h_c P_c (T_w(x, t) - T_c(x, t))
+\end{equation}
+
+\subsection{Fluid Machinery and Piping Manifold Networks}
+
+\subsubsection{Graph Topology and Kirchhoff Network Equations}
+Incidence matrix $\mathbf{A} \in \{-1, 0, +1\}^{N_n \times N_e}$.
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Kirchhoff Flow Law (Nodes):} $\sum_{e=1}^{N_e} A_{ie} \dot{m}_e + \dot{m}_{\text{source},i} = 0 \quad \forall i$.
+    \item \textbf{Kirchhoff Pressure Law (Branches):}
+    \begin{equation}
+    P_j - P_k + \Delta P_{\text{pump},e} = \left( f_{D,e} \frac{L_e}{D_e} + \sum K_{\text{minor}} \right) \frac{\dot{m}_e |\dot{m}_e|}{2 \rho_e A_e^2} + \rho_e g (z_k - z_j) + I_e \frac{d \dot{m}_e}{dt}
+    \end{equation}
+\end{itemize}
+
+\subsubsection{Euler Turbomachine and Cavitation Margin}
+Pump characteristic curve:
+\begin{equation}
+\Delta H_{\text{pump}}(\dot{V}, \omega) = a_0 \left( \frac{\omega}{\omega_0} \right)^2 + a_1 \left( \frac{\omega}{\omega_0} \right) \dot{V} + a_2 \dot{V}^2
+\end{equation}
+Cavitation avoidance constraint:
+\begin{equation}
+NPSH_A = \frac{P_{\text{suction}} - P^{\text{sat}}(T)}{\rho g} + \frac{v_{\text{suction}}^2}{2 g} > NPSH_R
+\end{equation}
+
+
+\subsection{Shortcut Distillation and Multicomponent Design Methods}
+
+When preliminary design, initialization, or real-time optimization does not warrant solving the full non-linear dynamic MESH-D DAE system, rigorous asymptotic reductions yield classical shortcut distillation formulations.
+
+\subsubsection{The McCabe-Thiele Method from MESH-D Asymptotics}
+The McCabe-Thiele method is deduced from general stage equations under Constant Molar Overflow (CMO) assumptions ($\Delta h_{\text{vap},i} \approx \text{const}$, $C_{p,L} \Delta T \ll \Delta h_{\text{vap}}$, $\Delta h_{\text{mix}} \approx 0$, $Q_j = 0$), yielding $L_j = L_{j-1} = L$ and $V_{j+1} = V_j = V$.
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Rectifying Section Operating Line (ROL):}
+    \begin{equation}
+    y_{n+1} = \frac{L}{V} x_n + \frac{D x_D}{V} = \frac{R}{R + 1} x_n + \frac{x_D}{R + 1}
+    \end{equation}
+    where $R \equiv L/D$ is the external reflux ratio.
+    \item \textbf{Stripping Section Operating Line (SOL):}
+    \begin{equation}
+    y_{m+1} = \frac{\bar{L}}{\bar{V}} x_m - \frac{B x_B}{\bar{V}} = \frac{V_B + 1}{V_B} x_m - \frac{x_B}{V_B}
+    \end{equation}
+    where $V_B \equiv \bar{V}/B$ is the boilup ratio.
+\end{itemize}
+
+The feed thermal condition $q$ represents liquid moles added to the stripping section per mole of feed:
+\begin{equation}
+q \equiv \frac{\bar{L} - L}{F} = \frac{h_V - h_F}{h_V - h_L}
+\end{equation}
+Subtracting operating lines yields the \textbf{$q$-line equation}:
+\begin{equation}
+y = \frac{q}{q - 1} x - \frac{z_F}{q - 1}
+\end{equation}
+Minimum reflux ratio $R_{\min}$ occurs at pinch point $(x_p, y_p)$ with the equilibrium curve $y^*(x)$:
+\begin{equation}
+R_{\min} = \frac{x_D - y_p}{y_p - x_p}
+\end{equation}
+
+\subsubsection{The Ponchon-Savarit Method: Enthalpy-Concentration Formulations}
+On the $(x, H)$ plane with liquid enthalpy $h_L(x)$ and vapor enthalpy $H_V(y)$, rectifying and stripping difference poles are:
+\begin{equation}
+x_{\Delta D} = x_D, \quad Q'_D \equiv \frac{Q_C}{D} + h_D; \qquad x_{\Delta B} = x_B, \quad Q'_B \equiv -\frac{Q_B}{B} + h_B
+\end{equation}
+Collinearity on $(x, H)$ enforces lever-arm ratio $\frac{D}{B} = \frac{z_F - x_B}{x_D - z_F} = \frac{h_F - Q'_B}{Q'_D - h_F}$.
+
+\subsubsection{The Fenske-Underwood-Gilliland (FUG) Multicomponent Shortcut Method}
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Fenske Equation for Minimum Stages at Total Reflux:}
+    \begin{equation}
+    N_{\min} = \frac{\ln\left[ \left( \frac{x_{\text{LK},D}}{x_{\text{HK},D}} \right) \left( \frac{x_{\text{HK},B}}{x_{\text{LK},B}} \right) \right]}{\ln \bar{\alpha}_{\text{LK,HK}}}, \quad \bar{\alpha}_{\text{LK,HK}} = (\alpha_{\text{top}} \alpha_{\text{feed}} \alpha_{\text{bottom}})^{1/3}
+    \end{equation}
+    Non-key distribution: $\frac{d_i}{b_i} = \frac{d_{\text{HK}}}{b_{\text{HK}}} (\bar{\alpha}_{i,\text{HK}})^{N_{\min}}$.
+    \item \textbf{Underwood Equations for Minimum Reflux Ratio:}
+    Active characteristic roots $\theta_k$ satisfying $\alpha_{k+1} < \theta_k < \alpha_k$:
+    \begin{equation}
+    1 - q = \sum_{i=1}^{N_c} \frac{\alpha_i z_{i,F}}{\alpha_i - \theta}
+    \end{equation}
+    Minimum reflux ratio:
+    \begin{equation}
+    R_{\min} = \sum_{i=1}^{N_c} \frac{\alpha_i x_{i,D}}{\alpha_i - \theta} - 1
+    \end{equation}
+    \item \textbf{Gilliland Correlation (Molokanov Formulation):}
+    \begin{equation}
+    Y = 1 - \exp\left[ \left( \frac{1 + 54.4 X}{11 + 117.2 X} \right) \left( \frac{X - 1}{\sqrt{X}} \right) \right], \quad X \equiv \frac{R - R_{\min}}{R + 1}, \quad Y \equiv \frac{N - N_{\min}}{N + 1}
+    \end{equation}
+    \item \textbf{Kirkbride Feed Stage Ratio:}
+    \begin{equation}
+    \frac{N_R}{N_S} = \left[ \left( \frac{z_{\text{HK}}}{z_{\text{LK}}} \right) \left( \frac{x_{\text{LK},B}}{x_{\text{HK},D}} \right)^2 \left( \frac{B}{D} \right) \right]^{0.206}
+    \end{equation}
+\end{enumerate}
+
+\subsection{Transient Batch Distillation and the Rayleigh Equation}
+
+\subsubsection{The Differential Rayleigh Equation}
+For simple batch distillation of liquid charge $W(t)$ with instantaneous vapor $y^*(x)$:
+\begin{equation}
+d(W x) = y^* dW \implies \frac{dW}{W} = \frac{dx}{y^*(x) - x}
+\end{equation}
+Integrated form (Rayleigh Equation):
+\begin{equation}
+\ln\left( \frac{W_0}{W} \right) = \int_{x_W}^{x_0} \frac{dx}{y^*(x) - x}
+\end{equation}
+Analytical solution for constant relative volatility $\alpha$:
+\begin{equation}
+\ln\left( \frac{W_0}{W} \right) = \frac{1}{\alpha - 1} \left[ \ln\left( \frac{x_0}{x_W} \right) + \alpha \ln\left( \frac{1 - x_W}{1 - x_0} \right) \right]
+\end{equation}
+Average distillate composition: $\bar{x}_D(t) = \frac{W_0 x_0 - W(t) x_W(t)}{W_0 - W(t)}$.
+
+\subsubsection{Batch Column with Holdup and Operational Control Policies}
+Coupling pot depletion with dynamic tray holdups $H_{\text{tray}} \frac{dx_j}{dt} = V(y_{j-1} - y_j) + L(x_{j+1} - x_j)$ under constant reflux ratio ($R(t) = R_{\text{spec}}$) or constant distillate purity ($x_D(t) = x_{D,\text{spec}}$).
+
+\subsection{Continuous Packed Columns and Differential Mass Transfer}
+
+\subsubsection{Differential Balances along Bed Height}
+Across differential height $dz$ with specific packing area $a_{\text{pack}}$:
+\begin{equation}
+\frac{d(V y_i)}{dz} = -N_i a_{\text{pack}} A_{\text{col}}, \quad \frac{d(L x_i)}{dz} = -N_i a_{\text{pack}} A_{\text{col}}
+\end{equation}
+
+\subsubsection{The HTU-NTU Formulation}
+Total bed height $Z$:
+\begin{equation}
+Z = HTU_{OG} \times NTU_{OG} = \left( \frac{V / A_{\text{col}}}{K_{OG} a_{\text{pack}}} \right) \int_{y_{\text{in}}}^{y_{\text{out}}} \frac{dy}{y^*(x) - y}
+\end{equation}
+Two-film resistance addition:
+\begin{equation}
+\frac{1}{K_{OG}} = \frac{1}{k_G} + \frac{m}{k_L} \implies HTU_{OG} = HTU_G + \lambda \, HTU_L, \quad \lambda \equiv \frac{m V}{L}
+\end{equation}
+
+\subsubsection{Billet \& Schultes Hydraulic Pressure Drop}
+\begin{equation}
+\frac{\Delta P}{Z} = \psi_0 \frac{a_{\text{pack}}}{\epsilon_{\text{bed}}^3} \frac{\rho_V u_V^2}{2} \cdot \left( \frac{1}{1 - \frac{h_L}{\epsilon_{\text{bed}}}} \right)^3 \cdot \left[ 1 + 2 \left( \frac{h_L}{d_h} \right) \right]
+\end{equation}
+
+\subsection{Liquid-Liquid Extraction (LLE) and Immiscible Decanters}
+
+\subsubsection{Phase Equilibrium and Distribution Ratios}
+\begin{equation}
+K_{i,LL} \equiv \frac{x_i^{L1}}{x_i^{L2}} = \frac{\gamma_i^{L2}(T, P, \mathbf{x}^{L2})}{\gamma_i^{L1}(T, P, \mathbf{x}^{L1})}, \quad \beta_{ij} \equiv \frac{K_{i,LL}}{K_{j,LL}} = \left( \frac{\gamma_i^{L2}}{\gamma_j^{L2}} \right) \left( \frac{\gamma_j^{L1}}{\gamma_i^{L1}} \right)
+\end{equation}
+
+\subsubsection{Multistage Counter-Current Extraction: Kremser Equation}
+With extraction factor $E_F \equiv \frac{S K_{LL}}{F}$:
+\begin{equation}
+\frac{x_N - y_0 / K}{x_F - y_0 / K} = \frac{E_F - 1}{E_F^{N+1} - 1} \implies N = \frac{\ln\left[ \left( \frac{x_F - y_0 / K}{x_N - y_0 / K} \right) \left( 1 - \frac{1}{E_F} \right) + \frac{1}{E_F} \right]}{\ln E_F}
+\end{equation}
+
+\subsubsection{Continuous Gravity Decanter Hydrodynamics}
+Hydrostatic balance across heavy liquid underflow leg $h_{\text{heavy}}$ and total height $h_{\text{tot}}$:
+\begin{equation}
+\rho_L (h_{\text{tot}} - z_{\text{int}}) + \rho_H z_{\text{int}} = \rho_H h_{\text{heavy}} \implies z_{\text{int}} = \frac{h_{\text{heavy}} - h_{\text{tot}} \left( \frac{\rho_L}{\rho_H} \right)}{1 - \frac{\rho_L}{\rho_H}}
+\end{equation}
+
+\subsection{Compressible Conduit Gas Dynamics, Fanno/Rayleigh Flow, and Sonic Choking}
+
+\subsubsection{1D Compressible Flow with Friction (Fanno Flow)}
+\begin{equation}
+\frac{d(M^2)}{M^2} = \frac{\gamma M^2 \left( 1 + \frac{\gamma - 1}{2} M^2 \right)}{1 - M^2} \left( \frac{4 f_D \, dx}{D} \right)
+\end{equation}
+Critical sonic choking length $L^*$:
+\begin{equation}
+\frac{4 \bar{f} L^*}{D} = \frac{1 - M^2}{\gamma M^2} + \frac{\gamma + 1}{2 \gamma} \ln\left[ \frac{(\gamma + 1) M^2}{2 \left( 1 + \frac{\gamma - 1}{2} M^2 \right)} \right]
+\end{equation}
+
+\subsubsection{Frictionless Flow with Heat Addition (Rayleigh Flow)}
+\begin{equation}
+\frac{d(M^2)}{M^2} = \frac{(1 + \gamma M^2) \left( 1 + \frac{\gamma - 1}{2} M^2 \right)}{1 - M^2} \frac{d T_0}{T_0}
+\end{equation}
+
+\subsection{Acoustic Water Hammer and Method of Characteristics (MOC)}
+
+\subsubsection{Hyperbolic Wave PDE Formulation}
+Wave speed in elastic pipe with bulk modulus $K$, Young's modulus $E$, and Poisson ratio $\nu$:
+\begin{equation}
+c = \sqrt{\frac{K / \rho}{1 + c_1 \left( \frac{K}{E} \right) \left( \frac{D}{e} \right)}}
+\end{equation}
+Characteristics $C^\pm$ ($\frac{dx}{dt} = \pm c$):
+\begin{equation}
+dv \pm \frac{1}{\rho c} dP + \left( \frac{f_D |v| v}{2 D} + g \sin \theta \right) dt = 0
+\end{equation}
+
+\subsubsection{The Joukowsky Surge Theorem}
+For rapid closure ($\Delta t \le 2 L / c$):
+\begin{equation}
+\Delta P_{\text{max}} = \rho c \Delta v
+\end{equation}
+
+\section{Non-Equilibrium Thermodynamics, Onsager Reciprocity, and Interfacial Marangoni Phenomena}
+\label{sec:non-equilibrium-thermodynamics}
+
+While classical equilibrium thermodynamics (Section~\ref{sec:thermo-equilibrium}) establishes the phase stability limits ($TPD \ge 0$) and saturation states of static mixtures, industrial reactive separation columns, film evaporators, and multi-phase reactors operate far from thermodynamic equilibrium. In these non-equilibrium domains, irreversible dissipative processes---species diffusion, thermal conduction, viscous shear, interfacial phase change, and chemical reaction---occur simultaneously and couple with one another.
+
+\subsection{Local Entropy Production Rate and Second Law Formulation}
+\label{subsec:local-entropy-production}
+
+Consider an open, multicomponent, chemically reacting fluid mixture governed by continuum mechanics. Let $s$ denote the specific entropy per unit mass ($\text{J}/(\text{kg}\cdot\text{K})$), $u$ the specific internal energy ($\text{J}/\text{kg}$), $v \equiv 1/\rho$ the specific volume ($\text{m}^3/\text{kg}$), and $w_i \equiv \rho_i / \rho$ the mass fraction of chemical species $i \in \{1, \dots, N_c\}$.
+
+Under the assumption of local thermodynamic equilibrium:
+\begin{equation}
+T \frac{Ds}{Dt} = \frac{Du}{Dt} + P \frac{Dv}{Dt} - \sum_{i=1}^{N_c} \mu_i \frac{Dw_i}{Dt}
+\end{equation}
+Substituting total mass continuity $\frac{Dv}{Dt} = \frac{1}{\rho}\nabla \cdot \mathbf{u}$, species mass balances $\rho \frac{Dw_i}{Dt} = -\nabla \cdot \mathbf{j}_i + \sum_{r=1}^{N_r} \nu_{ir} M_i r_r$, and internal energy conservation $\rho \frac{Du}{Dt} = -\nabla \cdot \mathbf{q} - P (\nabla \cdot \mathbf{u}) + \boldsymbol{\tau} : \nabla \mathbf{u}$:
+\begin{equation}
+\frac{\partial (\rho s)}{\partial t} + \nabla \cdot \left( \rho \mathbf{u} s + \mathbf{J}_s \right) = \sigma_s
+\end{equation}
+where the entropy flux vector $\mathbf{J}_s$ is:
+\begin{equation}
+\mathbf{J}_s \equiv \frac{\mathbf{q} - \sum_{i=1}^{N_c} \mu_i \mathbf{j}_i}{T}
+\end{equation}
+and the local volumetric entropy production rate $\sigma_s$ ($\text{W}/(\text{m}^3\cdot\text{K})$) is given by the exact bilinear sum:
+\begin{equation}
+\sigma_s = \mathbf{q} \cdot \nabla \left(\frac{1}{T}\right) - \sum_{i=1}^{N_c} \mathbf{j}_i \cdot \nabla \left(\frac{\mu_i}{T}\right) + \frac{1}{T} \boldsymbol{\tau} : \nabla \mathbf{u} + \frac{1}{T} \sum_{r=1}^{N_r} \mathcal{A}_r r_r \ge 0
+\end{equation}
+where $\mathcal{A}_r \equiv -\sum_{i=1}^{N_c} \nu_{ir} M_i \mu_i$ is de Donder's chemical affinity.
+
+\subsection{Conjugate Thermodynamic Fluxes and Generalized Forces}
+\label{subsec:conjugate-fluxes-forces}
+
+The entropy production rate decomposes into inner products of conjugate fluxes $\mathbf{J}_k$ and forces $\mathbf{X}_k$:
+\begin{equation}
+\sigma_s = \sum_k \mathbf{J}_k \odot \mathbf{X}_k \ge 0
+\end{equation}
+By Curie's symmetry principle, in isotropic media, irreversible phenomena of different tensorial rank (scalars such as reaction affinity $\mathcal{A}_r/T$, vectors such as thermal force $\nabla(1/T)$ and diffusion force $-\nabla(\mu_i/T)$, and symmetric second-order deviatoric tensors such as $\mathbf{S}^*$) cannot couple linearly.
+
+\subsection{The Phenomenological Matrix and Onsager Reciprocal Relations}
+\label{subsec:onsager-reciprocal}
+
+In the linear non-equilibrium regime near equilibrium:
+\begin{equation}
+J_\alpha = \sum_{\beta} L_{\alpha\beta} X_\beta
+\end{equation}
+The Onsager reciprocal theorem, derived from microscopic Hamiltonian time-reversal invariance:
+\begin{equation}
+L_{\alpha\beta} = L_{\beta\alpha}
+\end{equation}
+Generalized in the presence of Coriolis rotation $\boldsymbol{\Omega}$ or magnetic fields $\mathbf{B}$ as $L_{\alpha\beta}(\mathbf{B}, \boldsymbol{\Omega}) = L_{\beta\alpha}(-\mathbf{B}, -\boldsymbol{\Omega})$. The Second Law requires the phenomenological matrix $\mathbf{L} \succeq 0$ to be positive semi-definite ($L_{\alpha\alpha} \ge 0$ and $L_{\alpha\alpha}L_{\beta\beta} - L_{\alpha\beta}^2 \ge 0$).
+
+\subsection{Cross-Coupling Effects: Soret and Dufour Phenomena}
+\label{subsec:soret-dufour}
+
+For a binary mixture, coupled thermal and species mass fluxes:
+\begin{equation}
+\mathbf{q} = L_{qq} \nabla\left(\frac{1}{T}\right) + L_{q1} \left( -\nabla\frac{\mu_1 - \mu_2}{T} \right)
+\end{equation}
+\begin{equation}
+\mathbf{j}_1 = L_{1q} \nabla\left(\frac{1}{T}\right) + L_{11} \left( -\nabla\frac{\mu_1 - \mu_2}{T} \right)
+\end{equation}
+with $L_{q1} = L_{1q}$.
+This defines the Soret effect (thermal diffusion creating concentration gradients: $\mathbf{j}_1 = -\rho D_{12} \nabla w_1 - \rho D_T \nabla T$) and the Dufour effect (concentration gradients generating conductive heat fluxes: $\mathbf{q}_{\text{Dufour}} = \rho w_1 (\frac{\partial \mu_1}{\partial w_1}) T S_T D_{12} \nabla w_1$).
+
+\subsection{Interfacial Non-Equilibrium Jump Thermodynamics and Surface Excess Balances}
+\label{subsec:surface-excess-balances}
+
+Across vapor-liquid dividing surface $\Sigma(t)$, surface projection tensor $\mathbf{I}_s \equiv \mathbf{I} - \mathbf{n}\otimes\mathbf{n}$, surface gradient $\nabla_s \equiv \mathbf{I}_s \cdot \nabla$, and mean curvature $2\kappa \equiv -\nabla_s \cdot \mathbf{n}$.
+Surface excess momentum balance:
+\begin{equation}
+\rho_\sigma \left( \frac{\partial_s \mathbf{u}_\sigma}{\partial t} + (\mathbf{u}_\sigma \cdot \nabla_s) \mathbf{u}_\sigma \right) = \nabla_s \cdot (\sigma \mathbf{I}_s) - [[\boldsymbol{\sigma} \cdot \mathbf{n}]] + \rho_\sigma \mathbf{g}
+\end{equation}
+Projecting into normal and tangential components:
+\begin{equation}
+[[P]] - [[\mathbf{n} \cdot \boldsymbol{\tau} \cdot \mathbf{n}]] = 2 \kappa \sigma + \rho_\sigma (\mathbf{g} \cdot \mathbf{n})
+\end{equation}
+\begin{equation}
+[[\mathbf{n} \cdot \boldsymbol{\tau} \cdot \mathbf{t}]] = \nabla_s \sigma \cdot \mathbf{t}
+\end{equation}
+
+\subsection{Marangoni Convection and Interfacial Instabilities}
+\label{subsec:marangoni-convection}
+
+Interfacial surface tension gradients driven by temperature and composition:
+\begin{equation}
+\nabla_s \sigma = \left( \frac{\partial \sigma}{\partial T} \right) \nabla_s T + \sum_{i=1}^{N_c-1} \left( \frac{\partial \sigma}{\partial x_i} \right) \nabla_s x_i
+\end{equation}
+Dimensionless thermal and solutal Marangoni numbers:
+\begin{equation}
+Ma_T \equiv \frac{-\frac{\partial \sigma}{\partial T} \Delta T d}{\mu \alpha}, \quad Ma_c \equiv \frac{\frac{\partial \sigma}{\partial c} \Delta c d}{\mu D_{12}}
+\end{equation}
+Linear stability shows that for falling liquid films in distillation packings, cellular roll instabilities emerge when $Ma_T > Ma_{\text{crit}} \approx 79.6$, driving liquid film rupture and dryout.
+
+\subsection{Positive Entropy Generation Certification in Equation-Oriented Compilers}
+\label{subsec:entropy-certification}
+
+The engine evaluates volumetric integral entropy production:
+\begin{equation}
+\sigma_{s, c} \equiv \int_{\Omega_c} \sigma_s \, dV \ge -\epsilon_{\text{tol}}
+\end{equation}
+at every Newton step. Any negative violation flags unphysical state clipping, non-monotonic EOS roots, or numerical dispersion.
+
+% -----------------------------------------------------------------------------
+
+\section{Turbulence Closures and Multiphysics Reynolds-Averaged Transport on Unstructured Polyhedra}
+\label{sec:turbulence-closures}
+
+\subsection{The Reynolds Averaging Operator and Reynolds Stress Tensor}
+\label{subsec:rans-formulation}
+
+Reynolds decomposition $\phi = \overline{\phi} + \phi'$ with $\overline{\phi'} = 0$ yields the Reynolds-Averaged Navier-Stokes (RANS) system:
+\begin{equation}
+\nabla \cdot \overline{\mathbf{u}} = 0
+\end{equation}
+\begin{equation}
+\rho \left[ \frac{\partial \overline{\mathbf{u}}}{\partial t} + (\overline{\mathbf{u}} \cdot \nabla) \overline{\mathbf{u}} \right] = -\nabla \overline{P} + \nabla \cdot \left( 2 \mu \overline{\mathbf{S}} + \boldsymbol{\tau}^R \right) + \rho \mathbf{g}
+\end{equation}
+where $\boldsymbol{\tau}^R \equiv -\rho \overline{\mathbf{u}' \otimes \mathbf{u}'}$ is the Reynolds stress tensor.
+
+\subsection{Boussinesq Turbulent Viscosity and Realizability Constraints}
+\label{subsec:boussinesq-hypothesis}
+
+The Boussinesq constitutive relation:
+\begin{equation}
+\boldsymbol{\tau}^R = 2 \mu_t \overline{\mathbf{S}}^* - \frac{2}{3} \rho k \mathbf{I}
+\end{equation}
+Lumley realizability enforces non-negative normal stresses $\overline{u_\alpha'^2} \ge 0$. To prevent unphysical kinetic energy production in stagnation flows, the Kato-Launder production limiter is used:
+\begin{equation}
+P_k^{\text{KL}} \equiv \mu_t S \Omega
+\end{equation}
+where $S \equiv \sqrt{2 \overline{\mathbf{S}} : \overline{\mathbf{S}}}$ and $\Omega \equiv \sqrt{2 \overline{\boldsymbol{\Omega}} : \overline{\boldsymbol{\Omega}}}$.
+
+\subsection{Two-Equation $k-\epsilon$ and Launder-Sharma Formulations}
+\label{subsec:k-epsilon}
+
+\begin{equation}
+\frac{\partial (\rho k)}{\partial t} + \nabla \cdot (\rho \overline{\mathbf{u}} k) = \nabla \cdot \left[ \left( \mu + \frac{\mu_t}{\sigma_k} \right) \nabla k \right] + P_k - \rho \epsilon
+\end{equation}
+\begin{equation}
+\frac{\partial (\rho \epsilon)}{\partial t} + \nabla \cdot (\rho \overline{\mathbf{u}} \epsilon) = \nabla \cdot \left[ \left( \mu + \frac{\mu_t}{\sigma_\epsilon} \right) \nabla \epsilon \right] + C_{\epsilon 1} \frac{\epsilon}{k} P_k - C_{\epsilon 2} \rho \frac{\epsilon^2}{k}
+\end{equation}
+Eddy viscosity: $\mu_t = \rho C_\mu f_\mu \frac{k^2}{\tilde{\epsilon}}$ with Launder-Sharma damping functions $f_\mu = \exp(-3.4 / (1 + Re_t/50)^2)$. Coarse boundary grids utilize standard log-law wall functions $u^+ = \frac{1}{\kappa}\ln(E y^+)$.
+
+\subsection{Menter Shear Stress Transport (SST) $k-\omega$ Model}
+\label{subsec:menter-sst}
+
+\begin{equation}
+\frac{\partial (\rho k)}{\partial t} + \nabla \cdot (\rho \overline{\mathbf{u}} k) = \nabla \cdot \left[ \left( \mu + \sigma_k \mu_t \right) \nabla k \right] + \tilde{P}_k - \beta^* \rho k \omega
+\end{equation}
+\begin{equation}
+\frac{\partial (\rho \omega)}{\partial t} + \nabla \cdot (\rho \overline{\mathbf{u}} \omega) = \nabla \cdot \left[ \left( \mu + \sigma_\omega \mu_t \right) \nabla \omega \right] + \frac{\gamma}{\nu_t} \tilde{P}_k - \beta \rho \omega^2 + 2 (1 - F_1) \frac{\rho \sigma_{\omega 2}}{\omega} \nabla k \cdot \nabla \omega
+\end{equation}
+Blending function $F_1 = \tanh(\arg_1^4)$, Bradshaw shear stress limiter:
+\begin{equation}
+\mu_t = \frac{\rho a_1 k}{\max(a_1 \omega, S F_2)}
+\end{equation}
+
+\subsection{Large Eddy Simulation (LES) and the WALE Subgrid Model}
+\label{subsec:les-wale}
+
+Spatial filtering with filter width $\Delta \equiv (\Omega_c)^{1/3}$ on polyhedra. Nicoud-Ducros WALE subgrid eddy viscosity:
+\begin{equation}
+\mu_{\text{SGS}} = \rho (C_w \Delta)^2 \frac{\left( S_{ij}^d S_{ij}^d \right)^{3/2}}{\left( \bar{S}_{ij} \bar{S}_{ij} \right)^{5/2} + \left( S_{ij}^d S_{ij}^d \right)^{5/4}}
+\end{equation}
+where $S_{ij}^d \equiv \frac{1}{2}(\bar{g}_{ik}\bar{g}_{kj} + \bar{g}_{jk}\bar{g}_{ki}) - \frac{1}{3}\delta_{ij}\bar{g}_{kk}^2$, providing exact asymptotic $\mathcal{O}(y^3)$ damping near solid walls without empirical damping factors.
+
+\subsection{Detached Eddy Simulation (DES/DDES)}
+\label{subsec:ddes}
+
+Hybrid length scale $\tilde{d} \equiv d_w - f_d \max(0, d_w - C_{\text{DES}} \Delta_{\text{max}})$ with delay shielding function $f_d = 1 - \tanh([8 r_d]^3)$, shielding attached boundary layers from grid-induced separation.
+
+\subsection{Turbulent Heat and Mass Transfer}
+\label{subsec:turbulent-scalar-transport}
+
+Turbulent Schmidt and Prandtl closures:
+\begin{equation}
+\mathbf{j}_i^R = -\frac{\mu_t}{Sc_t} \nabla \overline{w}_i, \quad \mathbf{q}^R = -\frac{c_p \mu_t}{Pr_t} \nabla \overline{T}
+\end{equation}
+yielding effective face transport coefficients $\Gamma_{\phi, f}^{\text{eff}} = \Gamma_{\phi, \text{mol}} + \mu_t / \sigma_{\phi, t}$.
+
+% -----------------------------------------------------------------------------
+
+\section{Volume-Averaging Theory (VAT) and Homogenization in Reactive Packed Beds and Porous Media}
+\label{sec:volume-averaging-theory}
+
+\subsection{The Spatial Volume-Averaging Theorem (Slattery-Whittaker)}
+\label{subsec:slattery-whittaker}
+
+Over Representative Elementary Volume $V = V_\beta + V_\sigma$ with porosity $\epsilon \equiv V_\beta / V$ and scale separation $l_{\text{pore}} \ll r_0 \ll L_{\text{macro}}$:
+\begin{equation}
+\langle \nabla \psi_\beta \rangle = \nabla \langle \psi_\beta \rangle + \frac{1}{V} \int_{A_{\beta\sigma}} \psi_\beta \, \mathbf{n}_{\beta\sigma} \, dA
+\end{equation}
+\begin{equation}
+\langle \nabla \cdot \boldsymbol{\psi}_\beta \rangle = \nabla \cdot \langle \boldsymbol{\psi}_\beta \rangle + \frac{1}{V} \int_{A_{\beta\sigma}} \boldsymbol{\psi}_\beta \cdot \mathbf{n}_{\beta\sigma} \, dA
+\end{equation}
+\begin{equation}
+\left\langle \frac{\partial \psi_\beta}{\partial t} \right\rangle = \frac{\partial \langle \psi_\beta \rangle}{\partial t} - \frac{1}{V} \int_{A_{\beta\sigma}} \psi_\beta (\mathbf{w} \cdot \mathbf{n}_{\beta\sigma}) \, dA
+\end{equation}
+
+\subsection{Generalized Brinkman-Forchheimer-Darcy Momentum Equation}
+\label{subsec:brinkman-forchheimer-darcy}
+
+Superficial Darcy velocity $\mathbf{U} \equiv \langle \mathbf{u} \rangle = \epsilon \langle \mathbf{u} \rangle^\beta$. Upscaled momentum balance:
+\begin{equation}
+\frac{\rho}{\epsilon} \left[ \frac{\partial \mathbf{U}}{\partial t} + \frac{1}{\epsilon} (\mathbf{U} \cdot \nabla) \mathbf{U} \right] = -\nabla \langle P \rangle^\beta + \frac{\mu}{\epsilon} \nabla^2 \mathbf{U} - \mu \mathbf{K}^{-1} \cdot \mathbf{U} - \rho \mathbf{F}_{\text{in}} \cdot |\mathbf{U}| \mathbf{U} + \rho \mathbf{g}
+\end{equation}
+For isotropic sphere beds, Ergun tensors:
+\begin{equation}
+\mathbf{K} = \frac{\epsilon^3 d_p^2}{150 (1 - \epsilon)^2} \mathbf{I}, \quad \mathbf{F}_{\text{in}} = \frac{1.75 (1 - \epsilon)}{\epsilon^3 d_p} \mathbf{I}
+\end{equation}
+For structured packings (Sulzer Mellapak), anisotropic permeability $\mathbf{K} = \text{diag}(K_r, K_r, K_z)$ with $K_z \gg K_r$.
+
+\subsection{Multicomponent Hydrodynamic Dispersion Tensors}
+\label{subsec:dispersion-tensors}
+
+\begin{equation}
+\frac{\partial (\epsilon \langle c_i \rangle^\beta)}{\partial t} + \nabla \cdot (\mathbf{U} \langle c_i \rangle^\beta) = \nabla \cdot \left( \mathbf{D}_i^{\text{eff}} \cdot \nabla \langle c_i \rangle^\beta \right) + \epsilon \langle R_i \rangle^\beta + a_v j_{i, \beta\sigma}
+\end{equation}
+Effective dispersion tensor:
+\begin{equation}
+\mathbf{D}_i^{\text{eff}} = \frac{\epsilon}{\tau} D_{im} \mathbf{I} + \alpha_T |\mathbf{U}| \mathbf{I} + (\alpha_L - \alpha_T) \frac{\mathbf{U} \otimes \mathbf{U}}{|\mathbf{U}|}
+\end{equation}
+
+\subsection{Dual-Porosity Catalytic Pellet Coupling}
+\label{subsec:dual-porosity}
+
+Coupling bulk mobile convection-dispersion with 1D radial diffusion-reaction inside catalyst pellets:
+\begin{equation}
+\epsilon_p \frac{\partial c_{i, p}}{\partial t} = \frac{1}{r^2} \frac{\partial}{\partial r}\left( r^2 D_{i, \text{pore}}^{\text{eff}} \frac{\partial c_{i, p}}{\partial r} \right) + R_i(c_p, T_p)
+\end{equation}
+with interphase boundary flux $-D_{i, \text{pore}}^{\text{eff}} \left. \frac{\partial c_{i, p}}{\partial r} \right|_{r=R_p} = k_{m, i} (c_{i, p}(R_p) - c_{i, m})$.
+
+\subsection{Beavers-Joseph-Saffman Boundary Condition}
+\label{subsec:beavers-joseph}
+
+Slip condition at clear fluid/porous bed interface:
+\begin{equation}
+\left. \frac{\partial u_x}{\partial y} \right|_{y=0^+} = \frac{\alpha_{\text{BJ}}}{\sqrt{K}} \left( u_{\text{slip}} - u_{\text{Darcy}} \right)
+\end{equation}
+
+% -----------------------------------------------------------------------------
+
+\section{Forward Sensitivity Analysis, Adjoint DAE Systems, and Dynamic Optimization}
+\label{sec:sensitivity-adjoint-optimization}
+
+\subsection{Parameterized Implicit DAE Systems}
+\label{subsec:parameterized-daes}
+
+\begin{equation}
+\mathbf{F}(t, \mathbf{y}(t), \dot{\mathbf{y}}(t), \mathbf{p}) = \mathbf{0}, \quad \mathbf{y}(t_0) = \mathbf{y}_0(\mathbf{p}), \quad \mathbf{p} \in \mathbb{R}^{N_p}
+\end{equation}
+Jacobians $\mathbf{J}_{\dot{\mathbf{y}}} \equiv \frac{\partial \mathbf{F}}{\partial \dot{\mathbf{y}}}$, $\mathbf{J}_{\mathbf{y}} \equiv \frac{\partial \mathbf{F}}{\partial \mathbf{y}}$, $\mathbf{J}_{\mathbf{p}} \equiv \frac{\partial \mathbf{F}}{\partial \mathbf{p}}$.
+
+\subsection{Forward Sensitivity Equations}
+\label{subsec:forward-sensitivity}
+
+Differentiating with respect to $p_k$, where $\mathbf{s}_k(t) \equiv \frac{\partial \mathbf{y}(t)}{\partial p_k}$:
+\begin{equation}
+\mathbf{J}_{\dot{\mathbf{y}}}(t) \, \dot{\mathbf{s}}_k(t) + \mathbf{J}_{\mathbf{y}}(t) \, \mathbf{s}_k(t) + \frac{\partial \mathbf{F}}{\partial p_k} = \mathbf{0}, \quad \mathbf{s}_k(t_0) = \frac{\partial \mathbf{y}_0(\mathbf{p})}{\partial p_k}
+\end{equation}
+Staggered direct solution reuses the converged Newton iteration LU factorization $\mathbf{W} = \mathbf{L}\mathbf{U}$, solving sensitivities by trivial back-substitution.
+
+\subsection{Continuous Adjoint DAE Systems}
+\label{subsec:continuous-adjoint}
+
+For objective functional $\mathcal{J}(\mathbf{p}) = \Phi(t_f, \mathbf{y}_f, \mathbf{p}) + \int_{t_0}^{t_f} \mathcal{L}(t, \mathbf{y}, \mathbf{p}) \, dt$, the backward adjoint DAE is:
+\begin{equation}
+\frac{d}{dt}\left( \mathbf{J}_{\dot{\mathbf{y}}}^T \boldsymbol{\lambda} \right) - \mathbf{J}_{\mathbf{y}}^T \boldsymbol{\lambda} = -\left( \frac{\partial \mathcal{L}}{\partial \mathbf{y}} \right)^T
+\end{equation}
+with terminal condition $\left. \mathbf{J}_{\dot{\mathbf{y}}}^T \boldsymbol{\lambda} \right|_{t_f} = \left( \left. \frac{\partial \Phi}{\partial \mathbf{y}} \right|_{t_f} \right)^T$.
+The gradient is evaluated in a single backward pass, strictly independent of $N_p$:
+\begin{equation}
+\nabla_{\mathbf{p}} \mathcal{J} = \frac{\partial \Phi}{\partial \mathbf{p}} + \left. \boldsymbol{\lambda}(t_0)^T \frac{\partial \mathbf{F}}{\partial \dot{\mathbf{y}}} \right|_{t_0} \frac{\partial \mathbf{y}_0}{\partial \mathbf{p}} + \int_{t_0}^{t_f} \left( \frac{\partial \mathcal{L}}{\partial \mathbf{p}} - \boldsymbol{\lambda}(t)^T \frac{\partial \mathbf{F}}{\partial \mathbf{p}} \right) dt
+\end{equation}
+
+\subsection{Discrete Adjoints and Collocation Optimization}
+\label{subsec:discrete-adjoints}
+
+Differentiating Radau IIA collocation stages directly guarantees machine-precision dual consistency ($|\nabla \mathcal{J}_{\text{adj}} - \nabla \mathcal{J}_{\text{exact}}| < 10^{-14}$). Second-order adjoints provide exact Hessian-vector products $\mathbf{H}\mathbf{v}$ for fast Newton-Krylov optimization. Simultaneous dynamic optimization of reactive distillation start-up via IPOPT reduces start-up time by up to $42\%$ while enforcing strict flooding, weeping, and thermal shock bounds.
+
+\section{Mathematical Treatment and Software Architecture Implementation Methodology}
+\label{sec:software-architecture-methodology}
+
+The defining architectural thesis of the simulation engine---distinguishing it from legacy process simulators (e.g., Aspen Plus, Aspen HYSYS, gPROMS, or CHEMCAD)---is the strict rejection of hardcoded ``unit operation'' templates, monolithic equipment classes, and scenario-specific solver scripts. In this engine, there are no built-in classes named \texttt{DistillationColumn}, \texttt{CSTR}, \texttt{HeatExchanger}, or \texttt{FlashDrum}.
+
+Instead, the simulator operates as an \textbf{``Engine of Engines''} structured around four unified mathematical workspaces (\textbf{Model $\to$ Transform $\to$ Solve $\to$ Results}) governed by the immutable versioned \textbf{Common Model} (\texttt{rage.modelo}). Every physical process is constructed dynamically from first-principles continuous conservation laws, reduced through recorded traceable deduction operations, transformed through algebraic or discretization operators, compiled into structural DAE execution graphs, and solved using stiff numerical integrators equipped with always-present thermodynamic equilibrium closures.
+
+\subsection{Architectural Foundations: The ``Engine of Engines'' Paradigm}
+\label{subsec:engine-of-engines}
+
+\subsubsection{Separation of Responsibilities and the Client-Server Boundary}
+The architecture enforces a strict division between mathematical computation and user-facing presentation:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{The Client Does No Science:} The browser environment (TypeScript/Next.js) is strictly restricted to document editing, Abstract Syntax Tree (AST) serialization, user input validation, and declarative rendering of charts and mathematical expressions. Under no circumstances may physics, thermodynamic phase equilibria, unit conversions, or differential equation integrations be evaluated inside the frontend.
+    \item \textbf{Server-Side Scientific Kernel:} All symbolic algebra, unit consistency checks, dimensional analysis, thermodynamic state closures, spatial mesh generation, structural index reductions, and numerical time integrations reside in the server-side Python kernel (\texttt{core/} and \texttt{backend/}).
+    \item \textbf{Contract-First Communication:} All subsystem interactions occur through versioned, strictly typed JSON-RPC and REST data contracts (e.g. \texttt{rage.modelo} v0, \texttt{rage.formulation-summary} v1, \texttt{rage.compilation} v1, \texttt{rage.resultados} v1).
+\end{itemize}
+
+\subsubsection{The Engine Decoupling Principle}
+Each engine in the system (e.g. \texttt{core/balances/}, \texttt{core/termodinamica/}, \texttt{core/unidades/}, \texttt{core/adimensionalizacion/}, \texttt{core/compilador/}, \texttt{core/solvers/}) is designed as an independent mathematical transformer that communicates exclusively through the Common Model. Adding a new capability requires mounting a new engine between existing pipeline stages without modifying upstream or downstream modules.
+
+\subsection{The Common Model (\texttt{rage.modelo}) Data Structures and Mathematical Ontology}
+\label{subsec:common-model-ontology}
+
+\subsubsection{Physical Layer Entity Schema}
+The physical layer represents the process domain as a directed topological network of control volumes, transport streams, thermal links, and chemical species:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Componente:} Chemical species identity $i \in \{1, \dots, N_c\}$ with molar mass $M_i$ and chemical identifiers.
+    \item \textbf{Paquete:} Thermodynamic constitutive potential (e.g. IAPWS-95, UNIFAC, NRTL) publishing candidate phases and flash capabilities.
+    \item \textbf{Volumen:} Spatial control region $\Omega_k$ carrying conserved quantities $\mathbf{I} = [n_1, \dots, n_{N_c}, U \text{ or } H]^T$, boundary type, and mandatory thermodynamic closure (\texttt{Cierre}).
+    \item \textbf{Corriente:} Directed mass transport $\Phi_{ij}$ carrying species flow rates and donor phase enthalpies.
+    \item \textbf{Intercambio:} Conductive or imposed heat flux links $Q$ between volumes or thermal reservoirs.
+    \item \textbf{Dato:} Numerical datum carrying exact magnitude, dimensional metadata, and traceability ownership.
+\end{itemize}
+
+\subsubsection{Mathematical Layer Ontology: Typed Expression AST}
+When continuous balances are reduced or when custom user relations are declared, they are represented within the \texttt{ModeloMatematico} object as a typed Abstract Syntax Tree (AST):
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Dimensional Vector Space over $\mathbb{Q}^7$:} Every symbol and numerical constant carries a rational exponent vector $\mathbf{d} = [d_L, d_M, d_T, d_I, d_\Theta, d_N, d_J]^T \in \mathbb{Q}^7$. Dimensional homogeneity is certified over $\mathbb{Q}$ before compilation.
+    \item \textbf{Invariant Manifold Constraints (\texttt{Restricciones}):} Physical state boundaries are formally declared as inequality constraints $\mathcal{R}_k(\mathbf{y}) \ge 0$ (e.g. non-negative mole numbers $n_i \ge 0$, positive temperature $T > 0$). Trajectory exhaustion triggers exact bisection stops without silent state clipping.
+\end{itemize}
+
+\subsection{Model Workspace: Mathematical Deduction and Balance Generation Engine}
+\label{subsec:model-workspace-deduction}
+
+In accordance with Principle 10, the engine does not allow users to write down final lumped equations directly. Instead, every model starts from the unrestricted microscopic Eulerian balance equations of continuum physics and applies an ordered sequence of recorded deduction operators $\mathcal{O}_{\text{ded}}$:
+\begin{equation}
+\frac{\partial \psi}{\partial t} + \nabla \cdot \mathbf{\phi} = \sigma + s \xrightarrow{\mathcal{O}_{\text{ded}}} \frac{d I_k}{dt} = \sum_{\text{in}} \Phi_{\text{in}} - \sum_{\text{out}} \Phi_{\text{out}} + \dot{\Omega}_{\text{gen}}
+\end{equation}
+
+\subsubsection{The Deduction Algebra $\mathcal{O}_{\text{ded}}$}
+The canonical deduction operators supported by \texttt{core/balances/generador.py} are:
+\begin{enumerate}[leftmargin=*]
+    \item \texttt{OP\_VOLUME\_INTEGRATION}: Applies spatial volume integral $\int_\Omega (\dots) dV$.
+    \item \texttt{OP\_GAUSS\_DIVERGENCE}: Converts volume divergence to net boundary fluxes: $\int_\Omega \nabla \cdot \boldsymbol{\phi} \, dV \equiv \oint_{\partial\Omega} \boldsymbol{\phi} \cdot \mathbf{n} \, dA$.
+    \item \texttt{OP\_REYNOLDS\_TRANSPORT}: Accounts for boundary motion velocity $\mathbf{w}$.
+    \item \texttt{OP\_SPATIAL\_UNIFORMITY}: Factors intensive states out of spatial integrals: $\int_\Omega \psi \, dV = \bar{\psi}(t) V_\Omega(t)$.
+    \item \texttt{OP\_DISCRETE\_PORTS}: Partitions boundary surface into discrete nozzles: $\oint_{\partial\Omega} \boldsymbol{\phi} \cdot \mathbf{n} \, dA \equiv \sum_k \Phi_k A_k$.
+    \item \texttt{OP\_QUASI\_STEADY}: Imposes static invariant inventory ($\frac{d I}{dt} = 0 \implies \sum \Phi_{\text{in}} = \sum \Phi_{\text{out}}$).
+    \item \texttt{OP\_CONSTITUTIVE\_COUPLING}: Substitutes physical constitutive laws into unclosed flux terms.
+\end{enumerate}
+
+\subsubsection{Always-Present Thermodynamic Closure Protocol}
+Thermodynamics is permanently present in every control volume. The dynamic state integrates conserved quantities $\mathbf{y}_{\text{conserved}} = [n_1, \dots, n_{N_c}, U \text{ or } H]^T$. At every residual evaluation, the thermodynamic layer evaluates multiphase equilibrium via Michelsen's Tangent Plane Distance ($TPD$), satisfying Kuhn-Tucker complementarity:
+\begin{equation}
+\beta_p \ge 0, \quad tm_p \ge 0, \quad \beta_p \cdot tm_p = 0 \quad \forall \, p \in \mathcal{P}
+\end{equation}
+Phase transitions emerge naturally without manual model-switching.
+
+\subsection{Transform Workspace: Transformation Pipelines, Symmetries, and Discretization}
+\label{subsec:transform-workspace-methodology}
+
+The Transform workspace applies mathematical operator transformations:
+\begin{equation}
+\mathcal{M}_{\text{transformed}} = \mathcal{T}_N \circ \dots \circ \mathcal{T}_1 (\mathcal{M}_{\text{model}})
+\end{equation}
+producing derived mathematical formulations with invertible mapping dictionaries $\mathbf{x} = \mathcal{M}_{\text{map}}(\hat{\mathbf{x}})$ and exact equivalence certificates.
+
+\subsubsection{Nondimensionalization Engine Implementation}
+\texttt{core/adimensionalizacion/} constructs the dimensional matrix $\mathbf{D} \in \mathbb{Q}^{7 \times N_v}$, computes the exact rational nullspace basis of $\ker(\mathbf{D})$ using Smith Normal Form over $\mathbb{Q}$, and optimizes scale factors via linear programming to minimize Jacobian condition numbers $\kappa(\mathbf{J})$.
+
+\subsubsection{Spatial Discretization Engine on Generalized Mesh Topologies}
+Converts continuous PDEs into semi-discrete DAEs $\mathbf{M} \frac{d\mathbf{Y}}{dt} = \mathbf{R}(\mathbf{Y}, t)$ on unstructured mesh graphs $\mathcal{G}_{\text{mesh}} = (\mathcal{V}, \mathcal{E}, \mathcal{F}, \mathcal{C})$ supporting Cartesian, Hexagonal, Simplicial, and Polyhedral topologies. Evaluates face normal vectors $\mathbf{A}_f$, non-orthogonal correction vectors $\mathbf{k}_f$, high-resolution TVD limiters, and Rhie-Chow momentum flux interpolation stencils.
+
+\subsection{Solve Workspace: Symbolic Compilation, Index Theory, and Numerical Execution}
+\label{subsec:solve-workspace-compilation}
+
+\subsubsection{Symbolic Model Compiler (\texttt{core/compilador/})}
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Dulmage-Mendelsohn Structural Decomposition:} Bipartite matching on graph $\mathcal{G} = (\mathcal{V}_{\text{eq}}, \mathcal{V}_{\text{var}}, \mathcal{E})$ via Hopcroft-Karp algorithm certifies degrees of freedom and isolates under/over-determined subsystems.
+    \item \textbf{Block Lower Triangular (BLT) Partitioning via Tarjan's SCC:} Decouples large algebraic systems into small irreducible scalar and coupled blocks $\mathbf{B}_{kk}$, reducing matrix factorization work from $\mathcal{O}(N^3)$ to $\sum_k \mathcal{O}(m_k^3)$.
+    \item \textbf{Pantelides Structural Index Reduction:} Traverses bipartite graphs to differentiate constraints and applies Mattsson-S\"oderlind dummy derivatives, guaranteeing that DAEs remain strictly index-1.
+    \item \textbf{Analytic Jacobian Generation:} Symbolic/algorithmic automatic differentiation produces sparse Jacobians $\mathbf{J}_{\mathbf{y}} = \frac{\partial \mathbf{F}}{\partial \mathbf{y}}$ and $\mathbf{J}_{\dot{\mathbf{y}}} = \frac{\partial \mathbf{F}}{\partial \dot{\mathbf{y}}}$ in Compressed Sparse Row (CSR) format.
+\end{enumerate}
+
+\subsubsection{Numerical Execution Engine (\texttt{core/solvers/})}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Residual Function Protocol:} Evaluates standardized vector residual $\mathbf{F}(t, \mathbf{y}, \dot{\mathbf{y}}, \mathbf{p}) = \mathbf{0}$.
+    \item \textbf{Event Localization & Discontinuity Protocol:} Monitors zero-crossing indicator functions $\mathbf{g}(t, \mathbf{y}) = \mathbf{0}$ across phase boundaries. Step rejection, bracketed bisection, and warm restarts reset step sizes and initial orders across $C^1$ thermodynamic kinks.
+    \item \textbf{Stiff Integration Kernels:} Fully implicit Radau IIA (order 5, 3 stages) and variable-order BDF (orders 1--5) with local truncation error control.
+\end{itemize}
+
+\subsection{Results Workspace: Data Normalization, Verification, and Rendering Architecture}
+\label{subsec:results-workspace-verification}
+
+The Results workspace processes raw solver output into the unified \texttt{rage.resultados} schema, completely decoupled from physical equipment semantics.
+\subsubsection{Scientific Verification Layer}
+\begin{equation}
+\epsilon_{\text{mass}}(t) \equiv \frac{\left| m(t) - m(0) - \int_0^t \dot{m}_{\text{net}} \, d\tau \right|}{\max_\tau m(\tau)} \le 10^{-12}
+\end{equation}
+Evaluates global integral conservation residuals for mass and energy, and audits local entropy production $\sigma_s(\mathbf{x}, t) \ge -\epsilon_{\text{tol}}$ to guarantee thermodynamic consistency under the Second Law.
+
+\subsection{Implementation Blueprint: Object-Oriented and Functional Software Architecture}
+\label{subsec:software-architecture-blueprint}
+
+The architecture structures the simulation engine around decoupled, highly cohesive classes:
+\begin{itemize}[leftmargin=*]
+    \item \texttt{CommonModelDocument}: Root entity containing components, volumes, streams, data, and mathematical AST.
+    \item \texttt{ThermodynamicLayer}: Encapsulates multiphase flash algorithms, candidate phase policies, and thermodynamic potentials.
+    \item \texttt{BalanceEngine}: Implements deduction operators $\mathcal{O}_{\text{ded}}$ and replays derivation journals from fundamental laws.
+    \item \texttt{DiscretizationEngine}: Builds unstructured mesh topologies, computes metric tensors, and discretizes spatial differential operators.
+    \item \texttt{ModelCompiler}: Executes Dulmage-Mendelsohn decomposition, Tarjan SCC partitioning, Pantelides index reduction, and analytic Jacobian emission.
+    \item \texttt{DAESolverKernel}: Executes adaptive Radau IIA and BDF integration with event bisection and warm restarts.
+    \item \texttt{ResultsVerification}: Audits global integral conservation residuals and Clausius-Duhem Second Law entropy invariants.
+\end{itemize}
+This guarantees that any unit operation—from simple dynamic vessels to complex reactive distillation networks—is simulated through a unified, mathematically consistent software pipeline.
+
+\section{References and Computational Index}
+
+
+\begin{enumerate}[leftmargin=*]
+    \item Bird, R. B., Stewart, W. E., Lightfoot, E. N. \textit{Transport Phenomena}, 2nd ed., John Wiley \& Sons, 2002.
+    \item Prausnitz, J. M., Lichtenthaler, R. N., de Azevedo, E. G. \textit{Molecular Thermodynamics of Fluid-Phase Equilibria}, 3rd ed., Prentice Hall, 1999.
+    \item Michelsen, M. L., Mollerup, J. M. \textit{Thermodynamic Models: Fundamentals \& Computational Aspects}, Tie-Line Publications, 2007.
+    \item Wagner, W., Pruss, A. "The IAPWS Formulation 1995 for the Thermodynamic Properties of Ordinary Water Substance for General and Scientific Use", \textit{J. Phys. Chem. Ref. Data}, 31(2):387-535, 2002.
+    \item Fredenslund, A., Jones, R. L., Prausnitz, J. M. "Group-contribution estimation of activity coefficients in nonideal liquid mixtures", \textit{AIChE J.}, 21(6):1086-1099, 1975.
+    \item Churchill, S. W. "Friction-factor equation spans all fluid-flow regimes", \textit{Chemical Engineering}, 84(24):91-92, 1977.
+    \item Bluman, G. W., Kumei, S. \textit{Symmetries and Differential Equations}, Applied Mathematical Sciences, Vol. 81, Springer-Verlag, 1989.
+    \item Barenblatt, G. I. \textit{Scaling, Self-similarity, and Intermediate Asymptotics}, Cambridge University Press, 1996.
+    \item Bender, C. M., Orszag, S. A. \textit{Advanced Mathematical Methods for Scientists and Engineers I: Asymptotic Methods and Perturbation Theory}, Springer, 1999.
+    \item Strogatz, S. H. \textit{Nonlinear Dynamics and Chaos: With Applications to Physics, Biology, Chemistry, and Engineering}, Westview Press, 2014.
+    \item Hairer, E., N\o rsett, S. P., Wanner, G. \textit{Solving Ordinary Differential Equations I: Nonstiff Problems}, Springer, 1993.
+    \item Hairer, E., Wanner, G. \textit{Solving Ordinary Differential Equations II: Stiff and Differential-Algebraic Problems}, Springer, 1996.
+    \item Brenan, K. E., Campbell, S. L., Petzold, L. R. \textit{Numerical Solution of Initial-Value Problems in Differential-Algebraic Equations}, SIAM, 1996.
+    \item Pantelides, C. C. "The consistent initialization of differential-algebraic systems", \textit{SIAM J. Sci. Stat. Comput.}, 9(2):213-231, 1988.
+    \item Mattsson, S. E., S\"oderlind, G. "Index reduction in differential-algebraic equations using dummy derivatives", \textit{SIAM J. Sci. Comput.}, 14(3):677-692, 1993.
+    \item LeVeque, R. J. \textit{Finite Volume Methods for Hyperbolic Problems}, Cambridge University Press, 2002.
+    \item Hirsch, C. \textit{Numerical Computation of Internal and External Flows: The Fundamentals of Computational Fluid Dynamics}, 2nd ed., Butterworth-Heinemann, 2007.
+    \item Sweby, P. K. "High resolution schemes using flux limiters for hyperbolic conservation laws", \textit{SIAM J. Numer. Anal.}, 21(5):995-1011, 1984.
+    \item Roache, P. J. \textit{Verification and Validation in Computational Science and Engineering}, Hermosa Publishers, 1998.
+    \item Taylor, R., Krishna, R. \textit{Multicomponent Mass Transfer}, John Wiley \& Sons, New York, 1993.
+    \item Doherty, M. F., Malone, M. F. \textit{Conceptual Design of Distillation Systems}, McGraw-Hill, 2001.
+    \item Fogler, H. S. \textit{Elements of Chemical Reaction Engineering}, 5th ed., Prentice Hall, 2016.
+    \item Incropera, F. P., DeWitt, D. P., Bergman, T. L., Lavine, A. S. \textit{Fundamentals of Heat and Mass Transfer}, 6th ed., John Wiley \& Sons, 2007.
+    \item Kays, W. M., London, A. L. \textit{Compact Heat Exchangers}, 3rd ed., McGraw-Hill, 1984.
+    \item Seader, J. D., Henley, E. J., Roper, D. K. \textit{Separation Process Principles: Chemical and Biochemical Operations}, 3rd ed., John Wiley \& Sons, 2011.
+    \item de Groot, S. R., Mazur, P. \textit{Non-Equilibrium Thermodynamics}, North-Holland Publishing Company, Amsterdam, 1962.
+    \item Onsager, L. "Reciprocal relations in irreversible processes. I.", \textit{Physical Review}, 37(4):405-426, 1931.
+    \item Onsager, L. "Reciprocal relations in irreversible processes. II.", \textit{Physical Review}, 38(12):2265-2279, 1931.
+    \item Prigogine, I. \textit{Introduction to Thermodynamics of Irreversible Processes}, Charles C Thomas, 1955.
+    \item Slattery, J. C. \textit{Advanced Transport Phenomena}, Cambridge University Press, 1999.
+    \item Whitaker, S. \textit{The Method of Volume Averaging}, Kluwer Academic Publishers, 1999.
+    \item Gray, W. G. "A derivation of the equations for multi-phase transport", \textit{Chem. Eng. Sci.}, 30(2):229-233, 1975.
+    \item Beavers, G. S., Joseph, D. D. "Boundary conditions at a naturally permeable wall", \textit{J. Fluid Mech.}, 30(1):197-207, 1967.
+    \item Saffman, P. G. "On the boundary condition at the surface of a porous medium", \textit{Studies in Applied Mathematics}, 50(2):93-101, 1971.
+    \item Wilcox, D. C. \textit{Turbulence Modeling for CFD}, 3rd ed., DCW Industries, 2006.
+    \item Launder, B. E., Sharma, B. I. "Application of the energy-dissipation model of turbulence to the calculation of flow near a spinning disc", \textit{Lett. Heat Mass Transfer}, 1(2):131-137, 1974.
+    \item Menter, F. R. "Two-equation eddy-viscosity turbulence models for engineering applications", \textit{AIAA Journal}, 32(8):1598-1605, 1994.
+    \item Nicoud, F., Ducros, F. "Subgrid-scale stress modelling based on the square of the velocity gradient tensor", \textit{Flow, Turbulence and Combustion}, 62(3):183-200, 1999.
+    \item Spalart, P. R., Jou, W. H., Strelets, M., Allmaras, S. R. "Comments on the feasibility of LES for wings, and on a hybrid RANS/LES approach", \textit{Advances in DNS/LES}, 1:4-8, 1997.
+    \item Spalart, P. R., Deck, S., Shur, M. L., et al. "A new version of detached-eddy simulation, addressing the defect of premature separation", \textit{Theor. Comput. Fluid Dyn.}, 20(3):181-195, 2006.
+    \item Ergun, S. "Fluid flow through packed columns", \textit{Chem. Eng. Prog.}, 48(2):89-94, 1952.
+    \item Cao, Y., Li, S., Petzold, L., Serban, R. "Adjoint sensitivity analysis for differential-algebraic equations: The adjoint DAE system and its numerical solution", \textit{SIAM J. Sci. Comput.}, 24(3):1076-1089, 2003.
+    \item Feehery, W. F., Tolsma, J. E., Barton, P. I. "Efficient sensitivity analysis of large-scale differential-algebraic systems", \textit{Appl. Numer. Math.}, 25(1):41-54, 1997.
+    \item Biegler, L. T. \textit{Nonlinear Programming: Concepts, Algorithms, and Applications to Chemical Processes}, SIAM, 2010.
+    \item W\"achter, A., Biegler, L. T. "On the implementation of an interior-point filter line-search algorithm for large-scale nonlinear programming", \textit{Math. Program.}, 106(1):25-57, 2006.
+    \item Kato, K., Launder, B. E. "The modelling of turbulent flow around stationary and vibrating square cylinders", \textit{Proc. 9th Symp. on Turbulent Shear Flows}, 1993.
+    \item Lumley, J. L. "Computational modeling of turbulent flows", \textit{Adv. Appl. Mech.}, 18:123-176, 1978.
+    \item Scriven, L. E., Sternling, C. V. "The Marangoni effects", \textit{Nature}, 187(4733):186-188, 1960.
+    \item Sternling, C. V., Scriven, L. E. "Interfacial turbulence: Hydrodynamic instability and the Marangoni effect", \textit{AIChE J.}, 5(4):514-523, 1959.
+    \item Wesseling, P. \textit{Principles of Computational Fluid Dynamics}, Springer Series in Computational Mathematics, 2001.
+\end{enumerate}
+
+\end{document}
