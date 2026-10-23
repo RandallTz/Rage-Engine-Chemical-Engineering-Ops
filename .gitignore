@@ -60,6 +60,12 @@ env/
 htmlcov/
 .ipynb_checkpoints/
 
+# Scratch output of local runs: server logs, temporary results and the
+# holding folder of the repository cleanup (docs/repository-cleanup/).
+.tmp/
+/*.log
+/frontend/*.log
+
 # --------------------------------------------------------------------
 # Entornos y secretos: NUNCA al repositorio
 # --------------------------------------------------------------------
@@ -109,5 +115,7 @@ resultados/
 # Los servicios de resultados del motor son codigo, no salidas.
 !core/resultados/
 !frontend/motores/resultados/
+!frontend/app/motor/hojas/*/resultados/
+!frontend/app/motor/hojas/*/resultados/page.tsx
 # Generated project-board datasets (tools/roadmap_board/README.md)
 tools/roadmap_board/out/
