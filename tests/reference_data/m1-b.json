@@ -1,0 +1,1534 @@
+{
+  "version": 1,
+  "model": {
+    "formato": "rage.modelo",
+    "version": 0,
+    "id": "m1-b",
+    "nombre": "M1-B coupled inventories and dissipative inertial flow",
+    "componentes": [
+      {
+        "id": 1,
+        "nombre": "Reference Newtonian liquid",
+        "simbolo": "L"
+      }
+    ],
+    "termodinamica": {
+      "paquetes": []
+    },
+    "volumenes": [
+      {
+        "id": "upper",
+        "componenteIds": [
+          1
+        ],
+        "balances": {
+          "materia": true,
+          "energia": false,
+          "momento": true
+        },
+        "supuestos": {
+          "materia": {
+            "campo": {
+              "sinReaccion": true,
+              "sinDifusion": false,
+              "sinConveccion": false,
+              "estacionario": false,
+              "difusion": "flujo"
+            },
+            "coordenadas": "cartesianas",
+            "expandida": false,
+            "vista": "cantidad",
+            "uniforme": false,
+            "fija": false,
+            "sinAcumulacion": false,
+            "invariantes": [
+              false,
+              false,
+              false
+            ],
+            "generacionUniforme": false,
+            "consumoUniforme": false,
+            "restoImpermeable": true,
+            "cantidadVolumen": false,
+            "densidadMediaConstante": false,
+            "densidadComunPuertos": false,
+            "expandirProducto": false
+          },
+          "energia": {
+            "forma": "local",
+            "trabajoTotalHeredado": false,
+            "separarPresion": false,
+            "entalpia": false,
+            "sinCinetica": false,
+            "sinTrabajoViscoso": false,
+            "sinFuerzasVolumen": false,
+            "sinFuenteVolumetrica": false,
+            "sinConduccionLocal": false,
+            "adiabatico": false,
+            "estacionario": false,
+            "sinAcumulacionTotal": false,
+            "uniforme": false,
+            "monofasico": true,
+            "sinCambioFase": true,
+            "densidadConstante": true,
+            "presionUniforme": false,
+            "presionPrescrita": false,
+            "modelo": "sin_declarar"
+          }
+        },
+        "frontera": {
+          "tipo": "sin_relacion"
+        },
+        "inicial": {
+          "cantidades": {
+            "base": "masica",
+            "datoIds": {
+              "1": "upper__inicial_1"
+            }
+          }
+        },
+        "termodinamica": {
+          "tipo": "supuesto",
+          "supuesto": "fase_no_evaluada",
+          "motivo": "Declared isothermal single-phase reference medium; no equilibrium certification"
+        }
+      },
+      {
+        "id": "channel",
+        "componenteIds": [
+          1
+        ],
+        "balances": {
+          "materia": false,
+          "energia": false,
+          "momento": true
+        },
+        "supuestos": {
+          "materia": {
+            "campo": {
+              "sinReaccion": true,
+              "sinDifusion": false,
+              "sinConveccion": false,
+              "estacionario": false,
+              "difusion": "flujo"
+            },
+            "coordenadas": "cartesianas",
+            "expandida": false,
+            "vista": "cantidad",
+            "uniforme": false,
+            "fija": true,
+            "sinAcumulacion": false,
+            "invariantes": [
+              false,
+              false,
+              false
+            ],
+            "generacionUniforme": false,
+            "consumoUniforme": false,
+            "restoImpermeable": true,
+            "cantidadVolumen": false,
+            "densidadMediaConstante": false,
+            "densidadComunPuertos": false,
+            "expandirProducto": false
+          },
+          "energia": {
+            "forma": "local",
+            "trabajoTotalHeredado": false,
+            "separarPresion": false,
+            "entalpia": false,
+            "sinCinetica": false,
+            "sinTrabajoViscoso": false,
+            "sinFuerzasVolumen": false,
+            "sinFuenteVolumetrica": false,
+            "sinConduccionLocal": false,
+            "adiabatico": false,
+            "estacionario": false,
+            "sinAcumulacionTotal": false,
+            "uniforme": false,
+            "monofasico": true,
+            "sinCambioFase": true,
+            "densidadConstante": true,
+            "presionUniforme": false,
+            "presionPrescrita": false,
+            "modelo": "sin_declarar"
+          }
+        },
+        "frontera": {
+          "tipo": "sin_relacion"
+        },
+        "inicial": {
+          "cantidades": {
+            "base": "masica",
+            "datoIds": {
+              "1": "channel__inicial_1"
+            }
+          }
+        },
+        "termodinamica": {
+          "tipo": "supuesto",
+          "supuesto": "fase_no_evaluada",
+          "motivo": "Declared isothermal single-phase reference medium; no equilibrium certification"
+        }
+      },
+      {
+        "id": "lower",
+        "componenteIds": [
+          1
+        ],
+        "balances": {
+          "materia": true,
+          "energia": false,
+          "momento": true
+        },
+        "supuestos": {
+          "materia": {
+            "campo": {
+              "sinReaccion": true,
+              "sinDifusion": false,
+              "sinConveccion": false,
+              "estacionario": false,
+              "difusion": "flujo"
+            },
+            "coordenadas": "cartesianas",
+            "expandida": false,
+            "vista": "cantidad",
+            "uniforme": false,
+            "fija": false,
+            "sinAcumulacion": false,
+            "invariantes": [
+              false,
+              false,
+              false
+            ],
+            "generacionUniforme": false,
+            "consumoUniforme": false,
+            "restoImpermeable": true,
+            "cantidadVolumen": false,
+            "densidadMediaConstante": false,
+            "densidadComunPuertos": false,
+            "expandirProducto": false
+          },
+          "energia": {
+            "forma": "local",
+            "trabajoTotalHeredado": false,
+            "separarPresion": false,
+            "entalpia": false,
+            "sinCinetica": false,
+            "sinTrabajoViscoso": false,
+            "sinFuerzasVolumen": false,
+            "sinFuenteVolumetrica": false,
+            "sinConduccionLocal": false,
+            "adiabatico": false,
+            "estacionario": false,
+            "sinAcumulacionTotal": false,
+            "uniforme": false,
+            "monofasico": true,
+            "sinCambioFase": true,
+            "densidadConstante": true,
+            "presionUniforme": false,
+            "presionPrescrita": false,
+            "modelo": "sin_declarar"
+          }
+        },
+        "frontera": {
+          "tipo": "sin_relacion"
+        },
+        "inicial": {
+          "cantidades": {
+            "base": "masica",
+            "datoIds": {
+              "1": "lower__inicial_1"
+            }
+          }
+        },
+        "termodinamica": {
+          "tipo": "supuesto",
+          "supuesto": "fase_no_evaluada",
+          "motivo": "Declared isothermal single-phase reference medium; no equilibrium certification"
+        }
+      }
+    ],
+    "corrientes": [
+      {
+        "id": "s1",
+        "desde": "upper",
+        "hasta": "channel",
+        "componenteIds": [
+          1
+        ],
+        "mecanismo": "convectivo",
+        "materia": {
+          "modo": "por_componente",
+          "base": "masica",
+          "caudalIds": {}
+        },
+        "constante": false
+      },
+      {
+        "id": "s2",
+        "desde": "channel",
+        "hasta": "lower",
+        "componenteIds": [
+          1
+        ],
+        "mecanismo": "convectivo",
+        "materia": {
+          "modo": "por_componente",
+          "base": "masica",
+          "caudalIds": {}
+        },
+        "constante": false
+      }
+    ],
+    "intercambios": [],
+    "datos": {
+      "density": {
+        "magnitud": "sin_clasificar",
+        "funcion": "parametro",
+        "declaracion": {
+          "texto": "1000",
+          "unidad": "kg/m3"
+        },
+        "origen": {
+          "propietarioId": "hoja",
+          "ruta": "config.datos.density"
+        }
+      },
+      "viscosity": {
+        "magnitud": "sin_clasificar",
+        "funcion": "parametro",
+        "declaracion": {
+          "texto": "0.05",
+          "unidad": "Pa*s"
+        },
+        "origen": {
+          "propietarioId": "hoja",
+          "ruta": "config.datos.viscosity"
+        }
+      },
+      "temperature": {
+        "magnitud": "sin_clasificar",
+        "funcion": "parametro",
+        "declaracion": {
+          "texto": "293.15",
+          "unidad": "K"
+        },
+        "origen": {
+          "propietarioId": "hoja",
+          "ruta": "config.datos.temperature"
+        }
+      },
+      "minimumPressure": {
+        "magnitud": "sin_clasificar",
+        "funcion": "parametro",
+        "declaracion": {
+          "texto": "2500",
+          "unidad": "Pa"
+        },
+        "origen": {
+          "propietarioId": "hoja",
+          "ruta": "config.datos.minimumPressure"
+        }
+      },
+      "gravity": {
+        "magnitud": "sin_clasificar",
+        "funcion": "parametro",
+        "declaracion": {
+          "texto": "9.80665",
+          "unidad": "m/s2"
+        },
+        "origen": {
+          "propietarioId": "hoja",
+          "ruta": "config.datos.gravity"
+        }
+      },
+      "length": {
+        "magnitud": "sin_clasificar",
+        "funcion": "parametro",
+        "declaracion": {
+          "texto": "10",
+          "unidad": "m"
+        },
+        "origen": {
+          "propietarioId": "hoja",
+          "ruta": "config.datos.length"
+        }
+      },
+      "area": {
+        "magnitud": "sin_clasificar",
+        "funcion": "parametro",
+        "declaracion": {
+          "texto": "0.0003141592653589793",
+          "unidad": "m2"
+        },
+        "origen": {
+          "propietarioId": "hoja",
+          "ruta": "config.datos.area"
+        }
+      },
+      "diameter": {
+        "magnitud": "sin_clasificar",
+        "funcion": "parametro",
+        "declaracion": {
+          "texto": "0.02",
+          "unidad": "m"
+        },
+        "origen": {
+          "propietarioId": "hoja",
+          "ruta": "config.datos.diameter"
+        }
+      },
+      "drive": {
+        "magnitud": "sin_clasificar",
+        "funcion": "parametro",
+        "declaracion": {
+          "texto": "0",
+          "unidad": "Pa"
+        },
+        "origen": {
+          "propietarioId": "hoja",
+          "ruta": "config.datos.drive"
+        }
+      },
+      "inletElevation": {
+        "magnitud": "sin_clasificar",
+        "funcion": "parametro",
+        "declaracion": {
+          "texto": "0",
+          "unidad": "m"
+        },
+        "origen": {
+          "propietarioId": "hoja",
+          "ruta": "config.datos.inletElevation"
+        }
+      },
+      "outletElevation": {
+        "magnitud": "sin_clasificar",
+        "funcion": "parametro",
+        "declaracion": {
+          "texto": "0",
+          "unidad": "m"
+        },
+        "origen": {
+          "propietarioId": "hoja",
+          "ruta": "config.datos.outletElevation"
+        }
+      },
+      "channel__inicial_1": {
+        "magnitud": "masa",
+        "funcion": "inicial",
+        "declaracion": {
+          "texto": "3.141592653589793",
+          "unidad": "kg"
+        },
+        "origen": {
+          "propietarioId": "hoja",
+          "ruta": "config.datos.channel__inicial_1"
+        }
+      },
+      "upper__inicial_1": {
+        "magnitud": "masa",
+        "funcion": "inicial",
+        "declaracion": {
+          "texto": "40",
+          "unidad": "kg"
+        },
+        "origen": {
+          "propietarioId": "hoja",
+          "ruta": "config.datos.upper__inicial_1"
+        }
+      },
+      "lower__inicial_1": {
+        "magnitud": "masa",
+        "funcion": "inicial",
+        "declaracion": {
+          "texto": "10",
+          "unidad": "kg"
+        },
+        "origen": {
+          "propietarioId": "hoja",
+          "ruta": "config.datos.lower__inicial_1"
+        }
+      },
+      "upperArea": {
+        "magnitud": "sin_clasificar",
+        "funcion": "parametro",
+        "declaracion": {
+          "texto": "0.02",
+          "unidad": "m2"
+        },
+        "origen": {
+          "propietarioId": "hoja",
+          "ruta": "config.datos.upperArea"
+        }
+      },
+      "lowerArea": {
+        "magnitud": "sin_clasificar",
+        "funcion": "parametro",
+        "declaracion": {
+          "texto": "0.02",
+          "unidad": "m2"
+        },
+        "origen": {
+          "propietarioId": "hoja",
+          "ruta": "config.datos.lowerArea"
+        }
+      },
+      "upperSurface": {
+        "magnitud": "sin_clasificar",
+        "funcion": "parametro",
+        "declaracion": {
+          "texto": "101325",
+          "unidad": "Pa"
+        },
+        "origen": {
+          "propietarioId": "hoja",
+          "ruta": "config.datos.upperSurface"
+        }
+      },
+      "lowerSurface": {
+        "magnitud": "sin_clasificar",
+        "funcion": "parametro",
+        "declaracion": {
+          "texto": "101325",
+          "unidad": "Pa"
+        },
+        "origen": {
+          "propietarioId": "hoja",
+          "ruta": "config.datos.lowerSurface"
+        }
+      },
+      "upperFloor": {
+        "magnitud": "sin_clasificar",
+        "funcion": "parametro",
+        "declaracion": {
+          "texto": "0",
+          "unidad": "m"
+        },
+        "origen": {
+          "propietarioId": "hoja",
+          "ruta": "config.datos.upperFloor"
+        }
+      },
+      "lowerFloor": {
+        "magnitud": "sin_clasificar",
+        "funcion": "parametro",
+        "declaracion": {
+          "texto": "0",
+          "unidad": "m"
+        },
+        "origen": {
+          "propietarioId": "hoja",
+          "ruta": "config.datos.lowerFloor"
+        }
+      },
+      "initialFlow": {
+        "magnitud": "sin_clasificar",
+        "funcion": "parametro",
+        "declaracion": {
+          "texto": "0",
+          "unidad": "kg/s"
+        },
+        "origen": {
+          "propietarioId": "hoja",
+          "ruta": "config.datos.initialFlow"
+        }
+      },
+      "estudio.tf": {
+        "magnitud": "tiempo",
+        "funcion": "estudio",
+        "declaracion": {
+          "texto": "600",
+          "unidad": "s"
+        },
+        "origen": {
+          "propietarioId": "estudio",
+          "ruta": "config.tiempo"
+        }
+      }
+    },
+    "matematico": null,
+    "estudio": {
+      "tipo": "temporal",
+      "tiempoId": "estudio.tf",
+      "metodoSolicitado": "euler_implicito",
+      "muestras": 121,
+      "rtol": 1e-08,
+      "atol": {
+        "cantidad": 1e-10
+      }
+    },
+    "motores": {
+      "hydraulicNetwork": {
+        "format": "rage.hydraulic-network",
+        "version": 1,
+        "medium": {
+          "densityId": "density",
+          "viscosityId": "viscosity",
+          "temperatureId": "temperature",
+          "minimumPressureId": "minimumPressure",
+          "reason": "Explicit reference Newtonian liquid, externally isothermal, single phase and constant density. rho and mu are declared constitutive data, not an inferred substance package. No energy or equilibrium certification is claimed."
+        },
+        "gravityId": "gravity",
+        "storages": [
+          {
+            "volumeId": "upper",
+            "areaId": "upperArea",
+            "surfacePressureId": "upperSurface",
+            "floorElevationId": "upperFloor"
+          },
+          {
+            "volumeId": "lower",
+            "areaId": "lowerArea",
+            "surfacePressureId": "lowerSurface",
+            "floorElevationId": "lowerFloor"
+          }
+        ],
+        "paths": [
+          {
+            "volumeId": "channel",
+            "inletStreamId": "s1",
+            "outletStreamId": "s2",
+            "lengthId": "length",
+            "areaId": "area",
+            "diameterId": "diameter",
+            "driveId": "drive",
+            "inletElevationId": "inletElevation",
+            "outletElevationId": "outletElevation",
+            "flow": {
+              "kind": "dynamic",
+              "initialId": "initialFlow"
+            },
+            "inletPressure": {
+              "kind": "storage",
+              "volumeId": "upper"
+            },
+            "outletPressure": {
+              "kind": "storage",
+              "volumeId": "lower"
+            }
+          }
+        ]
+      },
+      "momentumDerivation": {
+        "format": "rage.momentum-derivation",
+        "version": 1,
+        "volumes": {
+          "upper": {
+            "origin": "recorded",
+            "operations": [
+              {
+                "id": "deduction-1",
+                "title": "Hydrostatic limit: pressureStress",
+                "changes": {
+                  "pressureStress": true
+                }
+              },
+              {
+                "id": "deduction-2",
+                "title": "Hydrostatic limit: negligibleConvection",
+                "changes": {
+                  "negligibleConvection": true
+                }
+              },
+              {
+                "id": "deduction-3",
+                "title": "Hydrostatic limit: negligibleViscousStress",
+                "changes": {
+                  "negligibleViscousStress": true
+                }
+              },
+              {
+                "id": "deduction-4",
+                "title": "Hydrostatic limit: zeroLocalAccumulation",
+                "changes": {
+                  "zeroLocalAccumulation": true
+                }
+              },
+              {
+                "id": "deduction-5",
+                "title": "Hydrostatic limit: uniformGravity",
+                "changes": {
+                  "uniformGravity": true
+                }
+              },
+              {
+                "id": "deduction-6",
+                "title": "Hydrostatic limit: referenceDensity",
+                "changes": {
+                  "referenceDensity": true
+                }
+              },
+              {
+                "id": "deduction-7",
+                "title": "Hydrostatic limit: verticalGravity",
+                "changes": {
+                  "verticalGravity": true
+                }
+              },
+              {
+                "id": "deduction-8",
+                "title": "Hydrostatic limit: pressureReference",
+                "changes": {
+                  "pressureReference": true
+                }
+              },
+              {
+                "id": "deduction-9",
+                "title": "Hydrostatic limit: prismaticStorage",
+                "changes": {
+                  "prismaticStorage": true
+                }
+              }
+            ]
+          },
+          "channel": {
+            "origin": "recorded",
+            "operations": [
+              {
+                "id": "deduction-1",
+                "title": "Declare pressureStress \u00b7 true",
+                "changes": {
+                  "pressureStress": true
+                }
+              },
+              {
+                "id": "deduction-2",
+                "title": "Declare newtonian \u00b7 true",
+                "changes": {
+                  "newtonian": true
+                }
+              },
+              {
+                "id": "deduction-3",
+                "title": "Declare massContinuity \u00b7 true",
+                "changes": {
+                  "massContinuity": true
+                }
+              },
+              {
+                "id": "deduction-4",
+                "title": "Declare constantViscosity \u00b7 true",
+                "changes": {
+                  "constantViscosity": true
+                }
+              },
+              {
+                "id": "deduction-5",
+                "title": "Declare divergenceFree \u00b7 true",
+                "changes": {
+                  "divergenceFree": true
+                }
+              },
+              {
+                "id": "deduction-6",
+                "title": "Declare form \u00b7 integral",
+                "changes": {
+                  "form": "integral"
+                }
+              },
+              {
+                "id": "deduction-7",
+                "title": "Declare fixedBoundary \u00b7 true",
+                "changes": {
+                  "fixedBoundary": true
+                }
+              },
+              {
+                "id": "deduction-8",
+                "title": "Declare uniformSections \u00b7 true",
+                "changes": {
+                  "uniformSections": true
+                }
+              },
+              {
+                "id": "deduction-9",
+                "title": "Declare impermeableWall \u00b7 true",
+                "changes": {
+                  "impermeableWall": true
+                }
+              },
+              {
+                "id": "deduction-10",
+                "title": "Declare form \u00b7 ports",
+                "changes": {
+                  "form": "ports"
+                }
+              },
+              {
+                "id": "deduction-11",
+                "title": "Declare constantArea \u00b7 true",
+                "changes": {
+                  "constantArea": true
+                }
+              },
+              {
+                "id": "deduction-12",
+                "title": "Declare referenceDensity \u00b7 true",
+                "changes": {
+                  "referenceDensity": true
+                }
+              },
+              {
+                "id": "deduction-13",
+                "title": "Declare uniformGravity \u00b7 true",
+                "changes": {
+                  "uniformGravity": true
+                }
+              },
+              {
+                "id": "deduction-14",
+                "title": "Declare form \u00b7 hydraulic",
+                "changes": {
+                  "form": "hydraulic"
+                }
+              },
+              {
+                "id": "deduction-15",
+                "title": "Declare circularSection \u00b7 true",
+                "changes": {
+                  "circularSection": true
+                }
+              },
+              {
+                "id": "deduction-16",
+                "title": "Declare developedProfile \u00b7 true",
+                "changes": {
+                  "developedProfile": true
+                }
+              },
+              {
+                "id": "deduction-17",
+                "title": "Declare quasiSteadyWall \u00b7 true",
+                "changes": {
+                  "quasiSteadyWall": true
+                }
+              },
+              {
+                "id": "deduction-18",
+                "title": "Declare regularAxis \u00b7 true",
+                "changes": {
+                  "regularAxis": true
+                }
+              },
+              {
+                "id": "deduction-19",
+                "title": "Declare noSlipWall \u00b7 true",
+                "changes": {
+                  "noSlipWall": true
+                }
+              },
+              {
+                "id": "deduction-20",
+                "title": "Bind the existing material ports",
+                "changes": {
+                  "inletStreamId": "s1",
+                  "outletStreamId": "s2"
+                }
+              }
+            ]
+          },
+          "lower": {
+            "origin": "recorded",
+            "operations": [
+              {
+                "id": "deduction-1",
+                "title": "Hydrostatic limit: pressureStress",
+                "changes": {
+                  "pressureStress": true
+                }
+              },
+              {
+                "id": "deduction-2",
+                "title": "Hydrostatic limit: negligibleConvection",
+                "changes": {
+                  "negligibleConvection": true
+                }
+              },
+              {
+                "id": "deduction-3",
+                "title": "Hydrostatic limit: negligibleViscousStress",
+                "changes": {
+                  "negligibleViscousStress": true
+                }
+              },
+              {
+                "id": "deduction-4",
+                "title": "Hydrostatic limit: zeroLocalAccumulation",
+                "changes": {
+                  "zeroLocalAccumulation": true
+                }
+              },
+              {
+                "id": "deduction-5",
+                "title": "Hydrostatic limit: uniformGravity",
+                "changes": {
+                  "uniformGravity": true
+                }
+              },
+              {
+                "id": "deduction-6",
+                "title": "Hydrostatic limit: referenceDensity",
+                "changes": {
+                  "referenceDensity": true
+                }
+              },
+              {
+                "id": "deduction-7",
+                "title": "Hydrostatic limit: verticalGravity",
+                "changes": {
+                  "verticalGravity": true
+                }
+              },
+              {
+                "id": "deduction-8",
+                "title": "Hydrostatic limit: pressureReference",
+                "changes": {
+                  "pressureReference": true
+                }
+              },
+              {
+                "id": "deduction-9",
+                "title": "Hydrostatic limit: prismaticStorage",
+                "changes": {
+                  "prismaticStorage": true
+                }
+              }
+            ]
+          }
+        }
+      },
+      "thermodynamicDerivation": {
+        "format": "rage.thermodynamic-derivation",
+        "version": 1,
+        "volumes": {
+          "upper": {
+            "origin": "recorded",
+            "operations": [
+              {
+                "id": "thermodynamic-history-1",
+                "title": "Declare the single-phase reference-medium approximation",
+                "changes": {
+                  "monofasico": true
+                }
+              },
+              {
+                "id": "thermodynamic-history-2",
+                "title": "No phase change within the declared pressure and temperature domain",
+                "changes": {
+                  "sinCambioFase": true
+                }
+              },
+              {
+                "id": "thermodynamic-history-3",
+                "title": "Declare the constant-density state approximation",
+                "changes": {
+                  "densidadConstante": true
+                }
+              }
+            ]
+          },
+          "channel": {
+            "origin": "recorded",
+            "operations": [
+              {
+                "id": "thermodynamic-history-1",
+                "title": "Declare the single-phase reference-medium approximation",
+                "changes": {
+                  "monofasico": true
+                }
+              },
+              {
+                "id": "thermodynamic-history-2",
+                "title": "No phase change within the declared pressure and temperature domain",
+                "changes": {
+                  "sinCambioFase": true
+                }
+              },
+              {
+                "id": "thermodynamic-history-3",
+                "title": "Declare the constant-density state approximation",
+                "changes": {
+                  "densidadConstante": true
+                }
+              }
+            ]
+          },
+          "lower": {
+            "origin": "recorded",
+            "operations": [
+              {
+                "id": "thermodynamic-history-1",
+                "title": "Declare the single-phase reference-medium approximation",
+                "changes": {
+                  "monofasico": true
+                }
+              },
+              {
+                "id": "thermodynamic-history-2",
+                "title": "No phase change within the declared pressure and temperature domain",
+                "changes": {
+                  "sinCambioFase": true
+                }
+              },
+              {
+                "id": "thermodynamic-history-3",
+                "title": "Declare the constant-density state approximation",
+                "changes": {
+                  "densidadConstante": true
+                }
+              }
+            ]
+          }
+        }
+      },
+      "materialDerivation": {
+        "format": "rage.material-derivation",
+        "version": 1,
+        "volumes": {
+          "upper": {
+            "origin": "recorded",
+            "operations": [
+              {
+                "id": "history-2",
+                "title": "Integrate local conservation with Gauss and Reynolds",
+                "changes": {
+                  "vista": "integral"
+                }
+              },
+              {
+                "id": "history-3",
+                "title": "Define the dynamic total inventory",
+                "changes": {
+                  "vista": "cantidad"
+                }
+              },
+              {
+                "id": "history-4",
+                "title": "No chemical generation or consumption",
+                "changes": {
+                  "campo": {
+                    "sinReaccion": true,
+                    "sinDifusion": false,
+                    "sinConveccion": false,
+                    "estacionario": false,
+                    "difusion": "flujo"
+                  }
+                }
+              },
+              {
+                "id": "history-5",
+                "title": "Impermeable boundary outside the material ports",
+                "changes": {
+                  "restoImpermeable": true
+                }
+              }
+            ]
+          },
+          "channel": {
+            "origin": "recorded",
+            "operations": [
+              {
+                "id": "history-2",
+                "title": "Integrate local conservation with Gauss and Reynolds",
+                "changes": {
+                  "vista": "integral"
+                }
+              },
+              {
+                "id": "history-3",
+                "title": "Define the dynamic total inventory",
+                "changes": {
+                  "vista": "cantidad"
+                }
+              },
+              {
+                "id": "history-4",
+                "title": "No chemical generation or consumption",
+                "changes": {
+                  "campo": {
+                    "sinReaccion": true,
+                    "sinDifusion": false,
+                    "sinConveccion": false,
+                    "estacionario": false,
+                    "difusion": "flujo"
+                  }
+                }
+              },
+              {
+                "id": "history-5",
+                "title": "Impermeable boundary outside the material ports",
+                "changes": {
+                  "restoImpermeable": true
+                }
+              },
+              {
+                "id": "history-6",
+                "title": "Fixed full flow-path envelope",
+                "changes": {
+                  "fija": true
+                }
+              }
+            ]
+          },
+          "lower": {
+            "origin": "recorded",
+            "operations": [
+              {
+                "id": "history-2",
+                "title": "Integrate local conservation with Gauss and Reynolds",
+                "changes": {
+                  "vista": "integral"
+                }
+              },
+              {
+                "id": "history-3",
+                "title": "Define the dynamic total inventory",
+                "changes": {
+                  "vista": "cantidad"
+                }
+              },
+              {
+                "id": "history-4",
+                "title": "No chemical generation or consumption",
+                "changes": {
+                  "campo": {
+                    "sinReaccion": true,
+                    "sinDifusion": false,
+                    "sinConveccion": false,
+                    "estacionario": false,
+                    "difusion": "flujo"
+                  }
+                }
+              },
+              {
+                "id": "history-5",
+                "title": "Impermeable boundary outside the material ports",
+                "changes": {
+                  "restoImpermeable": true
+                }
+              }
+            ]
+          }
+        }
+      },
+      "equationWorkbench": {
+        "format": "rage.equation-workbench",
+        "version": 1,
+        "operations": [
+          {
+            "kind": "substitute",
+            "family": "momentum",
+            "sources": [
+              "momentum.channel.path.pressure-form"
+            ],
+            "relation": "momentum.channel.wall.area-form",
+            "symbol": "xaad0a45d07",
+            "sourceSignatures": {
+              "momentum.channel.path.pressure-form": "211772616b467c3be7921843ef97e2e85d311d800a496a1282ee1014224ff121",
+              "momentum.channel.wall.area-form": "a3db56982fc4c5e19b32151f94fecb4cb720daec8f739cdba4b31d20f678310c"
+            }
+          },
+          {
+            "kind": "declare_relation",
+            "family": "momentum",
+            "left": "xe090e564d9",
+            "right": "xf8c23f3403",
+            "relationKind": "constraint",
+            "reason": "The material port is at the storage floor"
+          },
+          {
+            "kind": "substitute",
+            "family": "momentum",
+            "sources": [
+              "momentum.upper.storage.port-pressure"
+            ],
+            "relation": "operation.2",
+            "symbol": "xe090e564d9",
+            "sourceSignatures": {
+              "momentum.upper.storage.port-pressure": "8f714e05cd4d12e0844031003bc22065b69999846531557d8b4eb63dbadf0ea0",
+              "operation.2": "a6cea8064ba8b4ed687e5cf897120f47ac02b429d1757b734861e36254450057"
+            }
+          },
+          {
+            "kind": "substitute",
+            "family": "momentum",
+            "sources": [
+              "operation.3"
+            ],
+            "relation": "matter.upper.total-definition",
+            "symbol": "xdbf4a63983",
+            "sourceSignatures": {
+              "operation.3": "9117bb95932c67ee5a6dc87305e57702ea4653001cc58dea5bfc35d6adf13ebf",
+              "matter.upper.total-definition": "756fb8b8cd844101851cd4fb8228979f2a17d1eddd2fe39def42f8a6cfd1d7ce"
+            }
+          },
+          {
+            "kind": "declare_relation",
+            "family": "momentum",
+            "left": "x2abb45cf02",
+            "right": "x0567685de7",
+            "relationKind": "constraint",
+            "reason": "Continuous pressure at the shared material port"
+          },
+          {
+            "kind": "substitute",
+            "family": "momentum",
+            "sources": [
+              "operation.1"
+            ],
+            "relation": "operation.5",
+            "symbol": "x2abb45cf02",
+            "sourceSignatures": {
+              "operation.1": "7248bf1452797e2a1458f2bd51f18f2c96691f167008259a300d98989ed5fde8",
+              "operation.5": "466a2d6d7bb3843d4d58a968eb1d54e6981227bfb6624b09a39e23be5b80be5d"
+            }
+          },
+          {
+            "kind": "substitute",
+            "family": "momentum",
+            "sources": [
+              "operation.6"
+            ],
+            "relation": "operation.4",
+            "symbol": "x0567685de7",
+            "sourceSignatures": {
+              "operation.6": "c43acb4264661b236fdad1d6fd83b90795fcb898b57bdbee92508f055ef476ec",
+              "operation.4": "3873f129074a23235c86172635b641a3e95cd7e561ec7e73512a243a840686d4"
+            }
+          },
+          {
+            "kind": "declare_relation",
+            "family": "momentum",
+            "left": "x4bf72af703",
+            "right": "x51ea799352",
+            "relationKind": "constraint",
+            "reason": "The material port is at the storage floor"
+          },
+          {
+            "kind": "substitute",
+            "family": "momentum",
+            "sources": [
+              "momentum.lower.storage.port-pressure"
+            ],
+            "relation": "operation.8",
+            "symbol": "x4bf72af703",
+            "sourceSignatures": {
+              "momentum.lower.storage.port-pressure": "0dbcdeb9095ae5a72177640105669674cf270d74bf513c63ce7964e22551a731",
+              "operation.8": "2eccfab7968938a8af63de1e71450459f74ef2a248eccc8da85e22d3a32362e9"
+            }
+          },
+          {
+            "kind": "substitute",
+            "family": "momentum",
+            "sources": [
+              "operation.9"
+            ],
+            "relation": "matter.lower.total-definition",
+            "symbol": "xf6491da53b",
+            "sourceSignatures": {
+              "operation.9": "eba95664645196bd4855bdb5e648b479b514413c2de0243a220b87517fcb66f9",
+              "matter.lower.total-definition": "ee0b16a9e6e22d973ee3c49786422e9ccfa9346ef0543a0e638702d818f1dfcb"
+            }
+          },
+          {
+            "kind": "declare_relation",
+            "family": "momentum",
+            "left": "x979fd9c21e",
+            "right": "x8f451b2d71",
+            "relationKind": "constraint",
+            "reason": "Continuous pressure at the shared material port"
+          },
+          {
+            "kind": "substitute",
+            "family": "momentum",
+            "sources": [
+              "operation.7"
+            ],
+            "relation": "operation.11",
+            "symbol": "x979fd9c21e",
+            "sourceSignatures": {
+              "operation.7": "70bf8c28a9210719013d333014e55972e6a947a238bbbfa832e0f476d0cd6ad9",
+              "operation.11": "ecc2afddeb478d647f37bc175e7e1ad2e6c092941f533fe8739dc99e17cab76f"
+            }
+          },
+          {
+            "kind": "substitute",
+            "family": "momentum",
+            "sources": [
+              "operation.12"
+            ],
+            "relation": "operation.10",
+            "symbol": "x8f451b2d71",
+            "sourceSignatures": {
+              "operation.12": "d0c7270ec9f7b0e1d3145b5ab7410457ff92f6fcd846329eddbf5d4bd8f3107c",
+              "operation.10": "b0fb10f8a5fc790774879190d431eb44633a4f8ec8bd4b3c7d67942c146c0ac5"
+            }
+          },
+          {
+            "kind": "declare_relation",
+            "family": "momentum",
+            "left": "x818b3a245d",
+            "right": "0",
+            "relationKind": "constraint",
+            "reason": "No applied pressure drive"
+          },
+          {
+            "kind": "substitute",
+            "family": "momentum",
+            "sources": [
+              "operation.13"
+            ],
+            "relation": "operation.14",
+            "symbol": "x818b3a245d",
+            "sourceSignatures": {
+              "operation.13": "1829c7fe969a4f0fe1052414b31acc3944ab958a8b6d58d705ca82f50642660c",
+              "operation.14": "b0829442bdd90927db93e332deafef74d6f083c40d3c5914a4256c9ffe698478"
+            }
+          },
+          {
+            "kind": "declare_relation",
+            "family": "momentum",
+            "left": "x2657b4250d",
+            "right": "x28382f67ce",
+            "relationKind": "constraint",
+            "reason": "Equal path endpoint elevations"
+          },
+          {
+            "kind": "substitute",
+            "family": "momentum",
+            "sources": [
+              "operation.15"
+            ],
+            "relation": "operation.16",
+            "symbol": "x2657b4250d",
+            "sourceSignatures": {
+              "operation.15": "076fa325520565f8dd7814b5afa85b1979c0b613db1f10edc8ecc8a696240dab",
+              "operation.16": "2f45f0a92644b03b5a486e418066f150ff0807d0a30836a321bdf8bb3ac08905"
+            }
+          },
+          {
+            "kind": "isolate",
+            "family": "momentum",
+            "sources": [
+              "operation.17"
+            ],
+            "symbol": "xbd3a0ecfff",
+            "sourceSignatures": {
+              "operation.17": "9dded90afc6f3ea058e2c2ff66e966ae36e487196891597888d01c06d7bcce41"
+            }
+          },
+          {
+            "kind": "isolate",
+            "family": "matter",
+            "sources": [
+              "momentum.channel.path.mass-compatibility"
+            ],
+            "symbol": "xd4a8ae523f",
+            "sourceSignatures": {
+              "momentum.channel.path.mass-compatibility": "aa90cfa03f6ee6b0e9cc9958c31d9fd06ab518f39e1a91cf3664172a1961a21f"
+            }
+          },
+          {
+            "kind": "substitute",
+            "family": "matter",
+            "sources": [
+              "matter.lower.1.closed"
+            ],
+            "relation": "operation.19",
+            "symbol": "xd4a8ae523f",
+            "sourceSignatures": {
+              "matter.lower.1.closed": "5abd4e44c2b846e7bdc5405c4bed4717e111f55fbd0d3e274a4305bcf2dc108d",
+              "operation.19": "ed4159a092a77a497d8441f1f90808deac07fc844fe023e17be51ab111f83572"
+            }
+          },
+          {
+            "kind": "combine",
+            "family": "matter",
+            "sources": [
+              "matter.upper.1.closed",
+              "operation.20"
+            ],
+            "sourceSignatures": {
+              "matter.upper.1.closed": "794e00179e50b81a71e9aca16c47cc1b05a604da0d25db715c681da27b81c397",
+              "operation.20": "2f87b4f8066d56b3447ff404d0564454f413afc9e6c853597f93bfbf85bd2038"
+            }
+          },
+          {
+            "kind": "declare_domain",
+            "family": "momentum",
+            "sources": [
+              "operation.18"
+            ],
+            "symbol": "x6c9dcd099f",
+            "domain": "positive",
+            "reason": "Positive geometry and passive reference-medium coefficients",
+            "sourceSignatures": {
+              "operation.18": "e7ee4b4dd86390b224d709b79e2e380a0e18c35964f896e94c98fcd9405fd35a"
+            }
+          },
+          {
+            "kind": "declare_domain",
+            "family": "momentum",
+            "sources": [
+              "operation.18"
+            ],
+            "symbol": "x4553416b8c",
+            "domain": "positive",
+            "reason": "Positive geometry and passive reference-medium coefficients",
+            "sourceSignatures": {
+              "operation.18": "e7ee4b4dd86390b224d709b79e2e380a0e18c35964f896e94c98fcd9405fd35a"
+            }
+          },
+          {
+            "kind": "declare_domain",
+            "family": "momentum",
+            "sources": [
+              "operation.18"
+            ],
+            "symbol": "xb24202d2e9",
+            "domain": "positive",
+            "reason": "Positive geometry and passive reference-medium coefficients",
+            "sourceSignatures": {
+              "operation.18": "e7ee4b4dd86390b224d709b79e2e380a0e18c35964f896e94c98fcd9405fd35a"
+            }
+          },
+          {
+            "kind": "declare_domain",
+            "family": "momentum",
+            "sources": [
+              "operation.18"
+            ],
+            "symbol": "x2e4a0cd66c",
+            "domain": "positive",
+            "reason": "Positive geometry and passive reference-medium coefficients",
+            "sourceSignatures": {
+              "operation.18": "e7ee4b4dd86390b224d709b79e2e380a0e18c35964f896e94c98fcd9405fd35a"
+            }
+          },
+          {
+            "kind": "declare_domain",
+            "family": "momentum",
+            "sources": [
+              "operation.4"
+            ],
+            "symbol": "x673acb0cab",
+            "domain": "positive",
+            "reason": "Positive geometry and passive reference-medium coefficients",
+            "sourceSignatures": {
+              "operation.4": "3873f129074a23235c86172635b641a3e95cd7e561ec7e73512a243a840686d4"
+            }
+          },
+          {
+            "kind": "declare_domain",
+            "family": "matter",
+            "sources": [
+              "momentum.upper.storage.height"
+            ],
+            "symbol": "xea6c991ce9",
+            "domain": "positive",
+            "reason": "Positive geometry and passive reference-medium coefficients",
+            "sourceSignatures": {
+              "momentum.upper.storage.height": "c43b90c0513fe517fc529bfc2dd20261e3080c1896b29d093b15d38159ba2089"
+            }
+          },
+          {
+            "kind": "declare_domain",
+            "family": "momentum",
+            "sources": [
+              "operation.4"
+            ],
+            "symbol": "xe232780f34",
+            "domain": "positive",
+            "reason": "Positive geometry and passive reference-medium coefficients",
+            "sourceSignatures": {
+              "operation.4": "3873f129074a23235c86172635b641a3e95cd7e561ec7e73512a243a840686d4"
+            }
+          },
+          {
+            "kind": "declare_domain",
+            "family": "momentum",
+            "sources": [
+              "operation.10"
+            ],
+            "symbol": "x49681611a0",
+            "domain": "positive",
+            "reason": "Positive geometry and passive reference-medium coefficients",
+            "sourceSignatures": {
+              "operation.10": "b0fb10f8a5fc790774879190d431eb44633a4f8ec8bd4b3c7d67942c146c0ac5"
+            }
+          },
+          {
+            "kind": "declare_domain",
+            "family": "matter",
+            "sources": [
+              "momentum.lower.storage.height"
+            ],
+            "symbol": "xa41a9ff6af",
+            "domain": "positive",
+            "reason": "Positive geometry and passive reference-medium coefficients",
+            "sourceSignatures": {
+              "momentum.lower.storage.height": "4df0818f31851a4b58d0dc4cde144a862295184e1a75beec7b1232db3880be18"
+            }
+          },
+          {
+            "kind": "declare_domain",
+            "family": "momentum",
+            "sources": [
+              "operation.10"
+            ],
+            "symbol": "xec16398b66",
+            "domain": "positive",
+            "reason": "Positive geometry and passive reference-medium coefficients",
+            "sourceSignatures": {
+              "operation.10": "b0fb10f8a5fc790774879190d431eb44633a4f8ec8bd4b3c7d67942c146c0ac5"
+            }
+          }
+        ],
+        "cursor": 31
+      }
+    },
+    "procedencia": {
+      "tipo": "hoja_motor_materia",
+      "hojaId": "matter-momentum-pressure-v1",
+      "firmaHoja": "[\"[\\\"[\\\\\\\"[\\\\\\\\\\\\\\\"[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"motor-independiente-materia-1\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"ensamblaje-materia-1\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",[[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"upper\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",null,{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"componentes\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"id\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":1,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"nombre\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"Reference Newtonian liquid\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"simbolo\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"L\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"}],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"campo\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"sinReaccion\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":true,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"sinDifusion\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"sinConveccion\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"estacionario\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"difusion\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"flujo\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"coordenadas\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"cartesianas\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"expandida\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"vista\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"cantidad\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"fronteras\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"id\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":1,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"sentido\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"salida\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"constante\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false}],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"uniforme\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"fija\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"sinAcumulacion\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"invariantes\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[false,false,false],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"generacionUniforme\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"consumoUniforme\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"restoImpermeable\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":true,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"cantidadVolumen\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"densidadMediaConstante\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"densidadComunPuertos\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"expandirProducto\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false}],[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"channel\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",null,{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"componentes\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"id\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":1,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"nombre\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"Reference Newtonian liquid\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"simbolo\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"L\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"}],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"campo\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"sinReaccion\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":true,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"sinDifusion\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"sinConveccion\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"estacionario\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"difusion\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"flujo\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"coordenadas\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"cartesianas\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"expandida\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"vista\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"cantidad\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"fronteras\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"id\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":1,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"sentido\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"entrada\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"constante\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false},{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"id\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":2,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"sentido\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"salida\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"constante\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false}],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"uniforme\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"fija\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":true,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"sinAcumulacion\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"invariantes\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[false,false,false],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"generacionUniforme\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"consumoUniforme\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"restoImpermeable\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":true,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"cantidadVolumen\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"densidadMediaConstante\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"densidadComunPuertos\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"expandirProducto\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false}],[\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"lower\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",null,{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"componentes\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"id\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":1,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"nombre\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"Reference Newtonian liquid\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"simbolo\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"L\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"}],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"campo\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"sinReaccion\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":true,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"sinDifusion\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"sinConveccion\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"estacionario\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"difusion\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"flujo\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"coordenadas\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"cartesianas\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"expandida\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"vista\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"cantidad\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"fronteras\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"id\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":2,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"sentido\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"entrada\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"constante\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false}],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"uniforme\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"fija\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"sinAcumulacion\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"invariantes\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":[false,false,false],\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"generacionUniforme\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"consumoUniforme\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"restoImpermeable\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":true,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"cantidadVolumen\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"densidadMediaConstante\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"densidadComunPuertos\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"expandirProducto\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false}]],[{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"id\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":1,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"desde\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"upper\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"hasta\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"channel\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"constante\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"mecanismo\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"convectivo\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"datos\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"materia\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"modo\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"por_componente\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"base\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"masica\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"caudales\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":{}}}},{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"id\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":2,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"desde\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"channel\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"hasta\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"lower\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"constante\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"mecanismo\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"convectivo\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"datos\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"materia\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"modo\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"por_componente\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"base\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"masica\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"caudales\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":{}}}}],{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"datos\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"density\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"texto\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"1000\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"unidad\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"kg/m3\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"viscosity\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"texto\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"0.05\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"unidad\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"Pa*s\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"temperature\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"texto\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"293.15\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"unidad\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"K\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"minimumPressure\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"texto\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"2500\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"unidad\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"Pa\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"gravity\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"texto\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"9.80665\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"unidad\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"m/s2\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"length\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"texto\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"10\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"unidad\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"m\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"area\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"texto\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"0.0003141592653589793\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"unidad\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"m2\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"diameter\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"texto\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"0.02\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"unidad\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"m\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"drive\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"texto\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"0\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"unidad\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"Pa\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"inletElevation\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"texto\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"0\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"unidad\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"m\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"outletElevation\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"texto\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"0\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"unidad\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"m\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"channel__inicial_1\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"texto\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"3.141592653589793\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"unidad\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"kg\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"upper__inicial_1\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"texto\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"40\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"unidad\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"kg\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"lower__inicial_1\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"texto\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"10\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"unidad\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"kg\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"upperArea\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"texto\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"0.02\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"unidad\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"m2\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"lowerArea\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"texto\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"0.02\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"unidad\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"m2\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"upperSurface\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"texto\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"101325\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"unidad\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"Pa\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"lowerSurface\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"texto\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"101325\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"unidad\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"Pa\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"upperFloor\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"texto\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"0\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"unidad\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"m\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"lowerFloor\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"texto\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"0\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"unidad\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"m\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"initialFlow\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"texto\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"0\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"unidad\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"kg/s\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"}},\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"tiempo\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"texto\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"600\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"unidad\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"s\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"},\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"metodo\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"euler_implicito\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"muestras\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":121,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"celdas\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":40,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"rtol\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":1e-8,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"atol\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":1e-10,\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"frontera\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"}]\\\\\\\\\\\\\\\",{\\\\\\\\\\\\\\\"materia\\\\\\\\\\\\\\\":true,\\\\\\\\\\\\\\\"energia\\\\\\\\\\\\\\\":false,\\\\\\\\\\\\\\\"momento\\\\\\\\\\\\\\\":true}]\\\\\\\",{\\\\\\\"format\\\\\\\":\\\\\\\"rage.momentum-derivation\\\\\\\",\\\\\\\"version\\\\\\\":1,\\\\\\\"volumes\\\\\\\":{\\\\\\\"upper\\\\\\\":{\\\\\\\"origin\\\\\\\":\\\\\\\"recorded\\\\\\\",\\\\\\\"operations\\\\\\\":[{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-1\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Hydrostatic limit: pressureStress\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"pressureStress\\\\\\\":true}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-2\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Hydrostatic limit: negligibleConvection\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"negligibleConvection\\\\\\\":true}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-3\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Hydrostatic limit: negligibleViscousStress\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"negligibleViscousStress\\\\\\\":true}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-4\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Hydrostatic limit: zeroLocalAccumulation\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"zeroLocalAccumulation\\\\\\\":true}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-5\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Hydrostatic limit: uniformGravity\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"uniformGravity\\\\\\\":true}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-6\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Hydrostatic limit: referenceDensity\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"referenceDensity\\\\\\\":true}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-7\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Hydrostatic limit: verticalGravity\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"verticalGravity\\\\\\\":true}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-8\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Hydrostatic limit: pressureReference\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"pressureReference\\\\\\\":true}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-9\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Hydrostatic limit: prismaticStorage\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"prismaticStorage\\\\\\\":true}}]},\\\\\\\"channel\\\\\\\":{\\\\\\\"origin\\\\\\\":\\\\\\\"recorded\\\\\\\",\\\\\\\"operations\\\\\\\":[{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-1\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Declare pressureStress \u00b7 true\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"pressureStress\\\\\\\":true}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-2\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Declare newtonian \u00b7 true\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"newtonian\\\\\\\":true}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-3\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Declare massContinuity \u00b7 true\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"massContinuity\\\\\\\":true}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-4\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Declare constantViscosity \u00b7 true\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"constantViscosity\\\\\\\":true}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-5\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Declare divergenceFree \u00b7 true\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"divergenceFree\\\\\\\":true}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-6\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Declare form \u00b7 integral\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"form\\\\\\\":\\\\\\\"integral\\\\\\\"}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-7\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Declare fixedBoundary \u00b7 true\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"fixedBoundary\\\\\\\":true}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-8\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Declare uniformSections \u00b7 true\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"uniformSections\\\\\\\":true}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-9\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Declare impermeableWall \u00b7 true\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"impermeableWall\\\\\\\":true}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-10\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Declare form \u00b7 ports\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"form\\\\\\\":\\\\\\\"ports\\\\\\\"}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-11\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Declare constantArea \u00b7 true\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"constantArea\\\\\\\":true}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-12\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Declare referenceDensity \u00b7 true\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"referenceDensity\\\\\\\":true}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-13\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Declare uniformGravity \u00b7 true\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"uniformGravity\\\\\\\":true}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-14\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Declare form \u00b7 hydraulic\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"form\\\\\\\":\\\\\\\"hydraulic\\\\\\\"}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-15\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Declare circularSection \u00b7 true\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"circularSection\\\\\\\":true}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-16\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Declare developedProfile \u00b7 true\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"developedProfile\\\\\\\":true}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-17\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Declare quasiSteadyWall \u00b7 true\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"quasiSteadyWall\\\\\\\":true}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-18\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Declare regularAxis \u00b7 true\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"regularAxis\\\\\\\":true}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-19\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Declare noSlipWall \u00b7 true\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"noSlipWall\\\\\\\":true}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-20\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Bind the existing material ports\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"inletStreamId\\\\\\\":\\\\\\\"s1\\\\\\\",\\\\\\\"outletStreamId\\\\\\\":\\\\\\\"s2\\\\\\\"}}]},\\\\\\\"lower\\\\\\\":{\\\\\\\"origin\\\\\\\":\\\\\\\"recorded\\\\\\\",\\\\\\\"operations\\\\\\\":[{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-1\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Hydrostatic limit: pressureStress\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"pressureStress\\\\\\\":true}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-2\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Hydrostatic limit: negligibleConvection\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"negligibleConvection\\\\\\\":true}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-3\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Hydrostatic limit: negligibleViscousStress\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"negligibleViscousStress\\\\\\\":true}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-4\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Hydrostatic limit: zeroLocalAccumulation\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"zeroLocalAccumulation\\\\\\\":true}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-5\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Hydrostatic limit: uniformGravity\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"uniformGravity\\\\\\\":true}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-6\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Hydrostatic limit: referenceDensity\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"referenceDensity\\\\\\\":true}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-7\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Hydrostatic limit: verticalGravity\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"verticalGravity\\\\\\\":true}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-8\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Hydrostatic limit: pressureReference\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"pressureReference\\\\\\\":true}},{\\\\\\\"id\\\\\\\":\\\\\\\"deduction-9\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Hydrostatic limit: prismaticStorage\\\\\\\",\\\\\\\"changes\\\\\\\":{\\\\\\\"prismaticStorage\\\\\\\":true}}]}}}]\\\",\\\"physical-equation-graphs-8\\\"]\",\"reduced-hydraulics-equation-operations-3\",{\"format\":\"rage.hydraulic-network\",\"version\":1,\"medium\":{\"densityId\":\"density\",\"viscosityId\":\"viscosity\",\"temperatureId\":\"temperature\",\"minimumPressureId\":\"minimumPressure\",\"reason\":\"Explicit reference Newtonian liquid, externally isothermal, single phase and constant density. rho and mu are declared constitutive data, not an inferred substance package. No energy or equilibrium certification is claimed.\"},\"gravityId\":\"gravity\",\"storages\":[{\"volumeId\":\"upper\",\"areaId\":\"upperArea\",\"surfacePressureId\":\"upperSurface\",\"floorElevationId\":\"upperFloor\"},{\"volumeId\":\"lower\",\"areaId\":\"lowerArea\",\"surfacePressureId\":\"lowerSurface\",\"floorElevationId\":\"lowerFloor\"}],\"paths\":[{\"volumeId\":\"channel\",\"inletStreamId\":\"s1\",\"outletStreamId\":\"s2\",\"lengthId\":\"length\",\"areaId\":\"area\",\"diameterId\":\"diameter\",\"driveId\":\"drive\",\"inletElevationId\":\"inletElevation\",\"outletElevationId\":\"outletElevation\",\"flow\":{\"kind\":\"dynamic\",\"initialId\":\"initialFlow\"},\"inletPressure\":{\"kind\":\"storage\",\"volumeId\":\"upper\"},\"outletPressure\":{\"kind\":\"storage\",\"volumeId\":\"lower\"}}]},[{\"materia\":true,\"energia\":false,\"momento\":true},{\"materia\":false,\"energia\":false,\"momento\":true},{\"materia\":true,\"energia\":false,\"momento\":true}]]",
+      "via": "motor_de_balances"
+    }
+  },
+  "selectedEquations": {
+    "upper.pressure": "operation.4",
+    "upper.mass": "matter.upper.1.closed",
+    "upper.height": "momentum.upper.storage.height",
+    "lower.pressure": "operation.10",
+    "lower.mass": "operation.20",
+    "lower.height": "momentum.lower.storage.height",
+    "flow": "operation.18",
+    "totalMass": "operation.21"
+  },
+  "reference": {
+    "initialMass": [
+      40,
+      10
+    ],
+    "initialFlow": 0,
+    "density": 1000,
+    "viscosity": 0.05,
+    "length": 10,
+    "diameter": 0.02,
+    "storageArea": [
+      0.02,
+      0.02
+    ],
+    "surfacePressure": 101325,
+    "gravity": 9.80665,
+    "temperature": 293.15,
+    "minimumPressure": 2500,
+    "maximumReynolds": 2100,
+    "horizon": 600,
+    "samples": 121,
+    "massScale": 50,
+    "flowScale": 0.1,
+    "heightScale": 2,
+    "pressureScale": 20000
+  }
+}

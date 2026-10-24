@@ -33,12 +33,11 @@ from core.modelo import leer_modelo_comun
 from core.resultados import conjunto, eje, evento, serie
 from core.solvers import integrar
 
-from .compilador import NoSoportado
+from .compilador import NoSoportado, temporal_method
 
 PREFIJO = "matematico."
 _FUNCIONES = {"exp": math.exp, "log": math.log, "sin": math.sin, "cos": math.cos, "tan": math.tan, "tanh": math.tanh,
               "sinh": math.sinh, "cosh": math.cosh, "atan": math.atan, "erf": math.erf, "abs": abs}
-_METODOS = {None: "RK45", "rk45": "RK45", "euler_implicito": "BDF", "bdf": "BDF"}
 _NOMBRE_METODO = {"RK45": "RK45 adaptativo (Dormand-Prince 5/4, core/solvers)",
                   "BDF": "BDF implícito de orden variable (core/solvers)"}
 
@@ -172,9 +171,7 @@ class SistemaExplicito:
         self.tf = _valor_SI(dt, f"datos.{est['tiempoId']}", dim_t)
         if not (self.tf > 0 and math.isfinite(self.tf)):
             raise NoSoportado(f"datos.{est['tiempoId']}: el tiempo final debe ser positivo y finito")
-        if est["metodoSolicitado"] not in _METODOS:
-            raise NoSoportado(f"estudio.metodoSolicitado: método no admitido ({est['metodoSolicitado']})")
-        self.metodo = _METODOS[est["metodoSolicitado"]]
+        self.metodo = temporal_method(est["metodoSolicitado"])
         self.unidades = {c: un.unidad_SI(self.dims[c]) for c in self.campos}
         self.unidad_t = un.unidad_SI(dim_t)
         # Magnitudes derivadas que se publican como series y comprobaciones que deben ser ~0 en cada muestra.

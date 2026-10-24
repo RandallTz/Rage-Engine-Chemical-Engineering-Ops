@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from derived_execution_inputs import fixture
 from core.compilador import resolver, compilar, NoSoportado
-from core.compilador.derived import DerivedSystem, resolve_system, source_signature
+from core.compilador.derived import DerivedSystem, LoweringError, resolve_system, source_signature
 from core.compilador.presentation import formulation_summary
 from core.compilador.report import compilation_report
 from core.compilador.explicito import SistemaExplicito
@@ -200,6 +200,48 @@ class DerivedExecutionTests(unittest.TestCase):
         with self.assertRaises(NoSoportado):
             compilation_report(changed)
 
+    def test_missing_selected_data_has_structured_diagnostics_at_python_and_http_boundaries(self):
+        from backend.api_modelo import describe_compilation, resolver_modelo
+        from fastapi import HTTPException
+        for field in ('parameters', 'initialValues', 'checks', 'scaling'):
+            model = copy.deepcopy(self.documents['c'][0]); selection = model['motores']['derivedExecution']
+            if field == 'checks':
+                selection[field][0]['scaleDataId'] = 'missing.selected.datum'
+            elif field == 'scaling':
+                selection[field] = {q: 'missing.selected.datum' for q in [selection['timeId'], *(r['quantityId'] for r in selection['states'])]}
+            else:
+                selection[field][next(iter(selection[field]))] = 'missing.selected.datum'
+            for run in (DerivedSystem, compilar, compilation_report, resolver):
+                with self.subTest(field=field, boundary=run.__name__), self.assertRaises(LoweringError) as caught:
+                    run(model)
+                self.assertEqual(caught.exception.diagnostics[0]['code'], 'missing_data')
+            for run in (describe_compilation, resolver_modelo):
+                with self.assertRaises(HTTPException) as caught:
+                    run({'modelo': model})
+                self.assertEqual(caught.exception.status_code, 422)
+                self.assertEqual(caught.exception.detail['diagnostics'][0]['code'], 'missing_data')
+
+    def test_implicit_euler_is_rejected_instead_of_running_bdf(self):
+        from core.compilador.compilador import temporal_method
+        from core.compilador.hydraulics import HydraulicSystem
+        for name in 'bc':
+            model = copy.deepcopy(self.documents[name][0])
+            model['estudio']['metodoSolicitado'] = 'euler_implicito'
+            with self.assertRaises(NoSoportado) as caught:
+                compilation_report(model)
+            self.assertEqual(caught.exception.diagnostics[0]['code'], 'unsupported_method')
+        lowered = copy.deepcopy(self.systems['c'].lowered)
+        lowered['estudio']['metodoSolicitado'] = 'euler_implicito'
+        with self.assertRaisesRegex(NoSoportado, 'not implicit Euler'):
+            SistemaExplicito(lowered)
+        hydraulic = copy.deepcopy(self.documents['b'][0]); hydraulic['motores'].pop('derivedExecution')
+        hydraulic['motores'].pop('equationWorkbench')
+        hydraulic['estudio']['metodoSolicitado'] = 'euler_implicito'
+        with self.assertRaisesRegex(NoSoportado, 'not implicit Euler'):
+            HydraulicSystem(hydraulic)
+        with self.assertRaisesRegex(NoSoportado, 'not implicit Euler'):
+            temporal_method('euler_implicito')
+
     def test_scaled_units_preserve_constants_and_labels_preserve_execution_identity(self):
         model = copy.deepcopy(self.documents['c'][0]); model['nombre'] = 'Renamed'
         model['componentes'][0]['nombre'] = 'A display name'
@@ -268,6 +310,15 @@ class DerivedExecutionTests(unittest.TestCase):
             compilation_report(model)
         self.assertEqual(caught.exception.diagnostics[0]['code'], 'unsupported_spatial_condition')
 
+    def test_contradicted_parameter_premises_are_reported_before_unsupported_operations(self):
+        for data, value, premise in [('drive', '1', 'operation.14'), ('outletElevation', '1', 'operation.16')]:
+            model = copy.deepcopy(self.documents['b'][0])
+            model['datos'][data]['declaracion']['texto'] = value
+            with self.subTest(data=data), self.assertRaises(NoSoportado) as caught:
+                compilation_report(model)
+            self.assertEqual(caught.exception.diagnostics[0]['code'], 'inconsistent_parameter_premise')
+            self.assertEqual(caught.exception.diagnostics[0]['equationId'], premise)
+
     def test_nonzero_runtime_guard_detects_a_crossing_between_opposite_signs(self):
         # This is a numerical-domain test, independent of physical family or
         # equipment. A nonzero trajectory cannot cross the excluded zero.
@@ -280,6 +331,114 @@ class DerivedExecutionTests(unittest.TestCase):
             self.assertTrue(strict)
             self.assertGreater(float(margin.subs(q, initial)), 0)
             self.assertLess(float(margin.subs(q, forbidden)), 0)
+
+
+class MatterLoweringTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        from matter_lowering_inputs import matter_case
+        cls.models = {name: matter_case(name) for name in ('decay', 'filling', 'dilution')}
+
+    def test_malformed_envelopes_keep_strict_reader_diagnostics(self):
+        from backend.api_modelo import describe_compilation
+        from fastapi import HTTPException
+        for field in ('motores', 'datos'):
+            model = copy.deepcopy(self.models['decay']); model[field] = []
+            with self.assertRaises(HTTPException) as caught:
+                describe_compilation({'modelo': model})
+            self.assertEqual(caught.exception.status_code, 422)
+            self.assertIn('ruta', caught.exception.detail)
+
+    def test_density_volume_cases_against_independent_analytic_references(self):
+        publications = {}
+        for name, original in self.models.items():
+            for method in ('rk45', 'bdf'):
+                for factor in (1, 0.1):
+                    model = copy.deepcopy(original)
+                    model['estudio']['metodoSolicitado'] = method
+                    model['estudio']['rtol'] *= factor
+                    model['estudio']['atol']['cantidad'] *= factor
+                    system = DerivedSystem(model)
+                    result = leer_resultados(resolve_system(system))
+                    self.assertEqual(result['estado'], 'resuelto')
+                    t = np.array(result['ejes'][0]['valores'])
+                    # Independent mass accounting: quadratic sink in a fixed
+                    # volume, fixed-density feed, and prescribed-volume dilution.
+                    if name == 'decay':
+                        density = 3/(1+0.3*t); volume = np.full_like(t, 2)
+                    elif name == 'filling':
+                        density = np.full_like(t, 3); volume = 2+0.2*t
+                    else:
+                        volume = 2+0.2*t; density = (6+0.3*t)/volume
+                    expected = volume if name == 'filling' else density
+                    state = next(s for s in result['series'] if s['id'] == 'campo.'+system.state_ids[0])
+                    error = float(np.max(np.abs(np.array(state['valores'])-expected))/3)
+                    self.assertLess(error, 2e-8)
+                    mass_id = next(row['quantityId'] for row in system.selection['reconstructions'] if str(system._quantity(row['quantityId'])) == 'm__region__7(t)')
+                    mass = next(s for s in result['series'] if s['id'] == 'observable.'+mass_id)
+                    self.assertLess(np.max(np.abs(np.array(mass['valores'])-density*volume))/6, 2e-8)
+                    self.assertEqual(len(system.report['variables']), 1)
+                    self.assertTrue(system.report['derivedExecution']['runtimeConditions'])
+                    print(json.dumps({'matter': name, 'method': method, 'toleranceFactor': factor, 'scaledError': error}), flush=True)
+                    publications[name+'.'+method+'.'+str(factor)] = {'model': model, 'report': system.report, 'result': result}
+        (ROOT/'.tmp/matter-lowering-publications.json').write_text(json.dumps(publications), encoding='utf8')
+
+    def test_source_ancestry_replay_and_transform_are_preserved(self):
+        from core.modelo.equation_workbench import build
+        from matter_lowering_inputs import matter_case
+        for name, model in self.models.items():
+            system = DerivedSystem(json.loads(json.dumps(model)))
+            key = system.selection['states'][0]['equationId']
+            ancestors = set()
+            def visit(identity):
+                if identity in ancestors:
+                    return
+                ancestors.add(identity)
+                for parent in system.graph.nodes[identity].inputs:
+                    visit(parent)
+            visit(key)
+            self.assertIn('matter.region.7.local', ancestors)
+            self.assertIn('matter.region.7.mean-inventory', ancestors)
+            summary = formulation_summary(model)
+            self.assertTrue(any(row['id'] == key for family in summary['families'] for volume in family['volumes'] for row in volume['steps']))
+            renamed = copy.deepcopy(model); renamed['nombre'] = 'Display only'
+            self.assertEqual(source_signature(renamed), source_signature(model))
+            # A different owner/component uses identical generic lowering.
+            other = DerivedSystem(matter_case(name, owner='other_region', component=23))
+            np.testing.assert_allclose(other.rhs(0, other.initial()), system.rhs(0, system.initial()), atol=1e-14)
+            self.assertEqual(len(build(model).receipts), model['motores']['equationWorkbench']['cursor'])
+
+    def test_singular_missing_closure_undo_and_constraints_fail_closed(self):
+        for name in self.models:
+            model = copy.deepcopy(self.models[name])
+            data = 'density' if name == 'filling' else 'volume' if name == 'decay' else 'initialVolume'
+            model['datos'][data]['declaracion']['texto'] = '0'
+            with self.subTest(case=name), self.assertRaises(LoweringError):
+                DerivedSystem(model)
+        original = self.models['dilution']
+        changed = copy.deepcopy(original)
+        changed['motores']['derivedExecution']['reconstructions'] = [r for r in changed['motores']['derivedExecution']['reconstructions'] if r['equationId'] != 'operation.3']
+        changed['motores']['equationWorkbench']['cursor'] = 2
+        changed['motores']['derivedExecution']['sourceSignature'] = source_signature(changed)
+        with self.assertRaises(LoweringError):
+            DerivedSystem(changed)
+        changed = copy.deepcopy(original)
+        before = changed['motores']['equationWorkbench']
+        changed['motores']['equationWorkbench'] = edit(changed, {'kind': 'undo'})['definition']
+        with self.assertRaisesRegex(LoweringError, 'changed'):
+            DerivedSystem(changed)
+        changed['motores']['equationWorkbench'] = edit(changed, {'kind': 'redo'})['definition']
+        self.assertEqual(changed['motores']['equationWorkbench'], before)
+        DerivedSystem(changed)
+        changed = copy.deepcopy(original)
+        entry = changed['motores']['materialDerivation']['volumes']['region']
+        entry['operations'].append({'id': 'stationary', 'title': 'Permanent zero rate', 'changes': {'sinAcumulacion': True}})
+        changed['volumenes'][0]['supuestos']['materia']['sinAcumulacion'] = True
+        changed['motores']['derivedExecution']['sourceSignature'] = source_signature(changed)
+        with self.assertRaises(LoweringError) as caught:
+            DerivedSystem(changed)
+        self.assertEqual(caught.exception.diagnostics[0]['code'], 'uncovered_balance')
+        self.assertEqual(caught.exception.diagnostics[0]['equationId'], 'matter.region.7.stationary')
 
 
 if __name__ == '__main__':

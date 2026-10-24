@@ -1,0 +1,1058 @@
+{
+  "version": 1,
+  "model": {
+    "formato": "rage.modelo",
+    "version": 0,
+    "id": "m1-c",
+    "nombre": "M1-C isolated thermal exchange",
+    "componentes": [
+      {
+        "id": 1,
+        "nombre": "Material",
+        "simbolo": "M"
+      }
+    ],
+    "termodinamica": {
+      "paquetes": []
+    },
+    "volumenes": [
+      {
+        "id": "region_a",
+        "componenteIds": [
+          1
+        ],
+        "balances": {
+          "materia": true,
+          "energia": true,
+          "momento": false
+        },
+        "supuestos": {
+          "materia": {
+            "campo": {
+              "sinReaccion": true,
+              "sinDifusion": false,
+              "sinConveccion": false,
+              "estacionario": false,
+              "difusion": "flujo",
+              "sinGeneracion": false,
+              "sinConsumo": false,
+              "generacionUniforme": false,
+              "consumoUniforme": false
+            },
+            "coordenadas": "cartesianas",
+            "expandida": false,
+            "vista": "cantidad",
+            "uniforme": false,
+            "fija": true,
+            "sinAcumulacion": false,
+            "invariantes": [
+              false,
+              false,
+              false
+            ],
+            "generacionUniforme": false,
+            "consumoUniforme": false,
+            "restoImpermeable": true,
+            "cantidadVolumen": false,
+            "densidadMediaConstante": false,
+            "densidadComunPuertos": false,
+            "expandirProducto": false
+          },
+          "energia": {
+            "forma": "total",
+            "trabajoTotalHeredado": false,
+            "separarPresion": true,
+            "entalpia": false,
+            "sinCinetica": true,
+            "sinTrabajoViscoso": true,
+            "sinFuerzasVolumen": true,
+            "sinFuenteVolumetrica": true,
+            "sinConduccionLocal": false,
+            "adiabatico": false,
+            "estacionario": false,
+            "sinAcumulacionTotal": false,
+            "uniforme": true,
+            "presionUniforme": false,
+            "presionPrescrita": false,
+            "monofasico": true,
+            "sinCambioFase": true,
+            "densidadConstante": false,
+            "modelo": "u_lineal"
+          }
+        },
+        "frontera": {
+          "tipo": "rigida",
+          "datoId": "region_a.volume"
+        },
+        "inicial": {
+          "cantidades": {
+            "base": "masica",
+            "datoIds": {
+              "1": "region_a.mass"
+            }
+          },
+          "energia": {
+            "tipo": "T",
+            "datoId": "region_a.temperature"
+          }
+        },
+        "termodinamica": {
+          "tipo": "supuesto",
+          "supuesto": "u_lineal",
+          "motivo": "Declared constant caloric coefficient on the frozen temperature interval",
+          "parametros": {
+            "cId": "region_a.capacity",
+            "uRefId": "region_a.referenceEnergy",
+            "TRefId": "region_a.referenceTemperature",
+            "TMinId": "region_a.minimumTemperature",
+            "TMaxId": "region_a.maximumTemperature"
+          }
+        }
+      },
+      {
+        "id": "region_b",
+        "componenteIds": [
+          1
+        ],
+        "balances": {
+          "materia": true,
+          "energia": true,
+          "momento": false
+        },
+        "supuestos": {
+          "materia": {
+            "campo": {
+              "sinReaccion": true,
+              "sinDifusion": false,
+              "sinConveccion": false,
+              "estacionario": false,
+              "difusion": "flujo",
+              "sinGeneracion": false,
+              "sinConsumo": false,
+              "generacionUniforme": false,
+              "consumoUniforme": false
+            },
+            "coordenadas": "cartesianas",
+            "expandida": false,
+            "vista": "cantidad",
+            "uniforme": false,
+            "fija": true,
+            "sinAcumulacion": false,
+            "invariantes": [
+              false,
+              false,
+              false
+            ],
+            "generacionUniforme": false,
+            "consumoUniforme": false,
+            "restoImpermeable": true,
+            "cantidadVolumen": false,
+            "densidadMediaConstante": false,
+            "densidadComunPuertos": false,
+            "expandirProducto": false
+          },
+          "energia": {
+            "forma": "total",
+            "trabajoTotalHeredado": false,
+            "separarPresion": true,
+            "entalpia": false,
+            "sinCinetica": true,
+            "sinTrabajoViscoso": true,
+            "sinFuerzasVolumen": true,
+            "sinFuenteVolumetrica": true,
+            "sinConduccionLocal": false,
+            "adiabatico": false,
+            "estacionario": false,
+            "sinAcumulacionTotal": false,
+            "uniforme": true,
+            "presionUniforme": false,
+            "presionPrescrita": false,
+            "monofasico": true,
+            "sinCambioFase": true,
+            "densidadConstante": false,
+            "modelo": "u_lineal"
+          }
+        },
+        "frontera": {
+          "tipo": "rigida",
+          "datoId": "region_b.volume"
+        },
+        "inicial": {
+          "cantidades": {
+            "base": "masica",
+            "datoIds": {
+              "1": "region_b.mass"
+            }
+          },
+          "energia": {
+            "tipo": "T",
+            "datoId": "region_b.temperature"
+          }
+        },
+        "termodinamica": {
+          "tipo": "supuesto",
+          "supuesto": "u_lineal",
+          "motivo": "Declared constant caloric coefficient on the frozen temperature interval",
+          "parametros": {
+            "cId": "region_b.capacity",
+            "uRefId": "region_b.referenceEnergy",
+            "TRefId": "region_b.referenceTemperature",
+            "TMinId": "region_b.minimumTemperature",
+            "TMaxId": "region_b.maximumTemperature"
+          }
+        }
+      }
+    ],
+    "corrientes": [],
+    "intercambios": [],
+    "datos": {
+      "region_a.volume": {
+        "magnitud": "volume",
+        "funcion": "geometria",
+        "declaracion": {
+          "texto": "1",
+          "unidad": "m3"
+        },
+        "origen": {
+          "propietarioId": "volumen:region_a",
+          "ruta": "volume"
+        }
+      },
+      "region_a.mass": {
+        "magnitud": "mass",
+        "funcion": "inicial",
+        "declaracion": {
+          "texto": "2",
+          "unidad": "kg"
+        },
+        "origen": {
+          "propietarioId": "volumen:region_a",
+          "ruta": "mass"
+        }
+      },
+      "region_a.temperature": {
+        "magnitud": "temperature",
+        "funcion": "inicial",
+        "declaracion": {
+          "texto": "360",
+          "unidad": "K"
+        },
+        "origen": {
+          "propietarioId": "volumen:region_a",
+          "ruta": "temperature"
+        }
+      },
+      "region_a.capacity": {
+        "magnitud": "capacity",
+        "funcion": "parametro",
+        "declaracion": {
+          "texto": "500",
+          "unidad": "J/(kg*K)"
+        },
+        "origen": {
+          "propietarioId": "volumen:region_a",
+          "ruta": "capacity"
+        }
+      },
+      "region_a.referenceEnergy": {
+        "magnitud": "referenceEnergy",
+        "funcion": "parametro",
+        "declaracion": {
+          "texto": "0",
+          "unidad": "J/kg"
+        },
+        "origen": {
+          "propietarioId": "volumen:region_a",
+          "ruta": "referenceEnergy"
+        }
+      },
+      "region_a.referenceTemperature": {
+        "magnitud": "referenceTemperature",
+        "funcion": "parametro",
+        "declaracion": {
+          "texto": "300",
+          "unidad": "K"
+        },
+        "origen": {
+          "propietarioId": "volumen:region_a",
+          "ruta": "referenceTemperature"
+        }
+      },
+      "region_a.minimumTemperature": {
+        "magnitud": "minimumTemperature",
+        "funcion": "parametro",
+        "declaracion": {
+          "texto": "290",
+          "unidad": "K"
+        },
+        "origen": {
+          "propietarioId": "volumen:region_a",
+          "ruta": "minimumTemperature"
+        }
+      },
+      "region_a.maximumTemperature": {
+        "magnitud": "maximumTemperature",
+        "funcion": "parametro",
+        "declaracion": {
+          "texto": "370",
+          "unidad": "K"
+        },
+        "origen": {
+          "propietarioId": "volumen:region_a",
+          "ruta": "maximumTemperature"
+        }
+      },
+      "region_b.volume": {
+        "magnitud": "volume",
+        "funcion": "geometria",
+        "declaracion": {
+          "texto": "1",
+          "unidad": "m3"
+        },
+        "origen": {
+          "propietarioId": "volumen:region_b",
+          "ruta": "volume"
+        }
+      },
+      "region_b.mass": {
+        "magnitud": "mass",
+        "funcion": "inicial",
+        "declaracion": {
+          "texto": "3",
+          "unidad": "kg"
+        },
+        "origen": {
+          "propietarioId": "volumen:region_b",
+          "ruta": "mass"
+        }
+      },
+      "region_b.temperature": {
+        "magnitud": "temperature",
+        "funcion": "inicial",
+        "declaracion": {
+          "texto": "300",
+          "unidad": "K"
+        },
+        "origen": {
+          "propietarioId": "volumen:region_b",
+          "ruta": "temperature"
+        }
+      },
+      "region_b.capacity": {
+        "magnitud": "capacity",
+        "funcion": "parametro",
+        "declaracion": {
+          "texto": "1000",
+          "unidad": "J/(kg*K)"
+        },
+        "origen": {
+          "propietarioId": "volumen:region_b",
+          "ruta": "capacity"
+        }
+      },
+      "region_b.referenceEnergy": {
+        "magnitud": "referenceEnergy",
+        "funcion": "parametro",
+        "declaracion": {
+          "texto": "0",
+          "unidad": "J/kg"
+        },
+        "origen": {
+          "propietarioId": "volumen:region_b",
+          "ruta": "referenceEnergy"
+        }
+      },
+      "region_b.referenceTemperature": {
+        "magnitud": "referenceTemperature",
+        "funcion": "parametro",
+        "declaracion": {
+          "texto": "300",
+          "unidad": "K"
+        },
+        "origen": {
+          "propietarioId": "volumen:region_b",
+          "ruta": "referenceTemperature"
+        }
+      },
+      "region_b.minimumTemperature": {
+        "magnitud": "minimumTemperature",
+        "funcion": "parametro",
+        "declaracion": {
+          "texto": "290",
+          "unidad": "K"
+        },
+        "origen": {
+          "propietarioId": "volumen:region_b",
+          "ruta": "minimumTemperature"
+        }
+      },
+      "region_b.maximumTemperature": {
+        "magnitud": "maximumTemperature",
+        "funcion": "parametro",
+        "declaracion": {
+          "texto": "370",
+          "unidad": "K"
+        },
+        "origen": {
+          "propietarioId": "volumen:region_b",
+          "ruta": "maximumTemperature"
+        }
+      }
+    },
+    "matematico": null,
+    "estudio": null,
+    "motores": {
+      "materialDerivation": {
+        "format": "rage.material-derivation",
+        "version": 1,
+        "volumes": {
+          "region_a": {
+            "origin": "reviewed_rebuild",
+            "operations": [
+              {
+                "id": "step-1",
+                "title": "No chemical generation or consumption",
+                "changes": {
+                  "campo": {
+                    "sinReaccion": true,
+                    "sinDifusion": false,
+                    "sinConveccion": false,
+                    "estacionario": false,
+                    "difusion": "flujo",
+                    "sinGeneracion": false,
+                    "sinConsumo": false,
+                    "generacionUniforme": false,
+                    "consumoUniforme": false
+                  }
+                }
+              },
+              {
+                "id": "step-2",
+                "title": "Fixed control-volume boundary",
+                "changes": {
+                  "fija": true
+                }
+              },
+              {
+                "id": "step-3",
+                "title": "Integrate over the control volume \u00b7 Gauss and Reynolds",
+                "changes": {
+                  "vista": "integral"
+                }
+              },
+              {
+                "id": "step-4",
+                "title": "Define component inventories and partition the boundary into streams",
+                "changes": {
+                  "vista": "cantidad"
+                }
+              },
+              {
+                "id": "step-5",
+                "title": "Impermeable boundary outside the declared streams",
+                "changes": {
+                  "restoImpermeable": true
+                }
+              }
+            ]
+          },
+          "region_b": {
+            "origin": "reviewed_rebuild",
+            "operations": [
+              {
+                "id": "step-1",
+                "title": "No chemical generation or consumption",
+                "changes": {
+                  "campo": {
+                    "sinReaccion": true,
+                    "sinDifusion": false,
+                    "sinConveccion": false,
+                    "estacionario": false,
+                    "difusion": "flujo",
+                    "sinGeneracion": false,
+                    "sinConsumo": false,
+                    "generacionUniforme": false,
+                    "consumoUniforme": false
+                  }
+                }
+              },
+              {
+                "id": "step-2",
+                "title": "Fixed control-volume boundary",
+                "changes": {
+                  "fija": true
+                }
+              },
+              {
+                "id": "step-3",
+                "title": "Integrate over the control volume \u00b7 Gauss and Reynolds",
+                "changes": {
+                  "vista": "integral"
+                }
+              },
+              {
+                "id": "step-4",
+                "title": "Define component inventories and partition the boundary into streams",
+                "changes": {
+                  "vista": "cantidad"
+                }
+              },
+              {
+                "id": "step-5",
+                "title": "Impermeable boundary outside the declared streams",
+                "changes": {
+                  "restoImpermeable": true
+                }
+              }
+            ]
+          }
+        }
+      },
+      "energyDerivation": {
+        "format": "rage.energy-derivation",
+        "version": 1,
+        "volumes": {
+          "region_a": {
+            "origin": "reviewed_rebuild",
+            "operations": [
+              {
+                "id": "step-1",
+                "title": "Separate pressure and viscous stress",
+                "changes": {
+                  "separarPresion": true
+                }
+              },
+              {
+                "id": "step-2",
+                "title": "Negligible kinetic energy",
+                "changes": {
+                  "sinCinetica": true
+                }
+              },
+              {
+                "id": "step-3",
+                "title": "Negligible viscous work",
+                "changes": {
+                  "sinTrabajoViscoso": true
+                }
+              },
+              {
+                "id": "step-4",
+                "title": "No body-force work",
+                "changes": {
+                  "sinFuerzasVolumen": true
+                }
+              },
+              {
+                "id": "step-5",
+                "title": "No volumetric energy source",
+                "changes": {
+                  "sinFuenteVolumetrica": true
+                }
+              },
+              {
+                "id": "step-6",
+                "title": "Integrate the local first law and apply Gauss",
+                "changes": {
+                  "forma": "integrada"
+                }
+              },
+              {
+                "id": "step-7",
+                "title": "Apply Reynolds transport theorem",
+                "changes": {
+                  "forma": "integral"
+                }
+              },
+              {
+                "id": "step-8",
+                "title": "Define total energy and oriented stream contributions",
+                "changes": {
+                  "forma": "total"
+                }
+              },
+              {
+                "id": "step-9",
+                "title": "Uniform temperature and specific internal energy",
+                "changes": {
+                  "uniforme": true
+                }
+              }
+            ]
+          },
+          "region_b": {
+            "origin": "reviewed_rebuild",
+            "operations": [
+              {
+                "id": "step-1",
+                "title": "Separate pressure and viscous stress",
+                "changes": {
+                  "separarPresion": true
+                }
+              },
+              {
+                "id": "step-2",
+                "title": "Negligible kinetic energy",
+                "changes": {
+                  "sinCinetica": true
+                }
+              },
+              {
+                "id": "step-3",
+                "title": "Negligible viscous work",
+                "changes": {
+                  "sinTrabajoViscoso": true
+                }
+              },
+              {
+                "id": "step-4",
+                "title": "No body-force work",
+                "changes": {
+                  "sinFuerzasVolumen": true
+                }
+              },
+              {
+                "id": "step-5",
+                "title": "No volumetric energy source",
+                "changes": {
+                  "sinFuenteVolumetrica": true
+                }
+              },
+              {
+                "id": "step-6",
+                "title": "Integrate the local first law and apply Gauss",
+                "changes": {
+                  "forma": "integrada"
+                }
+              },
+              {
+                "id": "step-7",
+                "title": "Apply Reynolds transport theorem",
+                "changes": {
+                  "forma": "integral"
+                }
+              },
+              {
+                "id": "step-8",
+                "title": "Define total energy and oriented stream contributions",
+                "changes": {
+                  "forma": "total"
+                }
+              },
+              {
+                "id": "step-9",
+                "title": "Uniform temperature and specific internal energy",
+                "changes": {
+                  "uniforme": true
+                }
+              }
+            ]
+          }
+        }
+      },
+      "thermodynamicDerivation": {
+        "format": "rage.thermodynamic-derivation",
+        "version": 1,
+        "volumes": {
+          "region_a": {
+            "origin": "reviewed_rebuild",
+            "operations": [
+              {
+                "id": "step-1",
+                "title": "Assume a single phase",
+                "changes": {
+                  "monofasico": true
+                }
+              },
+              {
+                "id": "step-2",
+                "title": "Keep the initial phase set",
+                "changes": {
+                  "sinCambioFase": true
+                }
+              },
+              {
+                "id": "step-3",
+                "title": "Declare a linear specific internal-energy law",
+                "changes": {
+                  "modelo": "u_lineal"
+                }
+              }
+            ]
+          },
+          "region_b": {
+            "origin": "reviewed_rebuild",
+            "operations": [
+              {
+                "id": "step-1",
+                "title": "Assume a single phase",
+                "changes": {
+                  "monofasico": true
+                }
+              },
+              {
+                "id": "step-2",
+                "title": "Keep the initial phase set",
+                "changes": {
+                  "sinCambioFase": true
+                }
+              },
+              {
+                "id": "step-3",
+                "title": "Declare a linear specific internal-energy law",
+                "changes": {
+                  "modelo": "u_lineal"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "equationWorkbench": {
+        "format": "rage.equation-workbench",
+        "version": 1,
+        "operations": [
+          {
+            "kind": "declare_function",
+            "family": "energy",
+            "name": "internalHeat",
+            "unit": "W",
+            "dependencies": [
+              "x8a44e00a1e"
+            ]
+          },
+          {
+            "kind": "declare_symbol",
+            "family": "energy",
+            "name": "conductance",
+            "unit": "W/K"
+          },
+          {
+            "kind": "declare_relation",
+            "family": "energy",
+            "left": "internalHeat",
+            "right": "conductance*(x42ea871dc5-x25483f8946)",
+            "relationKind": "constitutive",
+            "reason": "Linear heat transfer from the first region to the second; constant conductance"
+          },
+          {
+            "kind": "declare_domain",
+            "family": "energy",
+            "sources": [
+              "operation.3"
+            ],
+            "symbol": "conductance",
+            "domain": "positive",
+            "reason": "Passive thermal connection on the M1-C regular regime",
+            "sourceSignatures": {
+              "operation.3": "541595952feefa52648f0b1d628fbb30bc947947ac349a542a4e33a785bdfd2a"
+            }
+          },
+          {
+            "kind": "declare_relation",
+            "family": "energy",
+            "left": "xef0c7ac9af",
+            "right": "-internalHeat",
+            "relationKind": "constraint",
+            "reason": "Exhaustive isolated-pair boundary: this is the only heat exchange"
+          },
+          {
+            "kind": "substitute",
+            "family": "energy",
+            "sources": [
+              "energy.region_a.rates.11"
+            ],
+            "relation": "operation.5",
+            "symbol": "xef0c7ac9af",
+            "sourceSignatures": {
+              "energy.region_a.rates.11": "d9fb4dcf6615dfa44ba27e4025cd0d17d2ddb89167ba540f756f49eb7e25afae",
+              "operation.5": "51e3581cfba00886fc0be9904df70f0e802aadae2a4ccb20c3c05831a6646921"
+            }
+          },
+          {
+            "kind": "substitute",
+            "family": "energy",
+            "sources": [
+              "operation.6"
+            ],
+            "relation": "operation.3",
+            "symbol": "internalHeat",
+            "sourceSignatures": {
+              "operation.6": "a8df29ec4eedb1e6574d031fd06f75e84915653b89788f374c01369c3fa669be",
+              "operation.3": "541595952feefa52648f0b1d628fbb30bc947947ac349a542a4e33a785bdfd2a"
+            }
+          },
+          {
+            "kind": "declare_domain",
+            "family": "thermodynamics",
+            "sources": [
+              "thermodynamics.region_a.caloric-inventory"
+            ],
+            "symbol": "x6af4c48059",
+            "domain": "positive",
+            "reason": "Positive inventory and caloric coefficient in the M1-C regular regime",
+            "sourceSignatures": {
+              "thermodynamics.region_a.caloric-inventory": "13915047aa3b8495e73987bfc4326d02c681948c19934530fc71e9f22d3ec7a6"
+            }
+          },
+          {
+            "kind": "declare_domain",
+            "family": "thermodynamics",
+            "sources": [
+              "thermodynamics.region_a.caloric-inventory"
+            ],
+            "symbol": "xd8a7e3b8d5",
+            "domain": "positive",
+            "reason": "Positive inventory and caloric coefficient in the M1-C regular regime",
+            "sourceSignatures": {
+              "thermodynamics.region_a.caloric-inventory": "13915047aa3b8495e73987bfc4326d02c681948c19934530fc71e9f22d3ec7a6"
+            }
+          },
+          {
+            "kind": "declare_domain",
+            "family": "thermodynamics",
+            "sources": [
+              "thermodynamics.region_a.caloric-inventory"
+            ],
+            "symbol": "x42ea871dc5",
+            "domain": "interval",
+            "lower": "290",
+            "upper": "370",
+            "lowerOpen": false,
+            "upperOpen": false,
+            "endpointUnit": "K",
+            "reason": "Declared caloric validity interval for the frozen M1-C reference",
+            "sourceSignatures": {
+              "thermodynamics.region_a.caloric-inventory": "13915047aa3b8495e73987bfc4326d02c681948c19934530fc71e9f22d3ec7a6"
+            }
+          },
+          {
+            "kind": "differentiate",
+            "family": "thermodynamics",
+            "sources": [
+              "thermodynamics.region_a.caloric-inventory"
+            ],
+            "symbol": "x8a44e00a1e",
+            "sourceSignatures": {
+              "thermodynamics.region_a.caloric-inventory": "13915047aa3b8495e73987bfc4326d02c681948c19934530fc71e9f22d3ec7a6"
+            }
+          },
+          {
+            "kind": "substitute",
+            "family": "thermodynamics",
+            "sources": [
+              "operation.11"
+            ],
+            "relation": "matter.region_a.1.fixed-volume-apply",
+            "symbol": "x8f45b4d59a",
+            "sourceSignatures": {
+              "operation.11": "686ace4b723f51a5f7dc1cd4bc189e4d8230ed6a36657c3c896d5c345cd38b68",
+              "matter.region_a.1.fixed-volume-apply": "e71392cfad09d4efb9a25a7b59ddc6dafd9b1379ec3885801f4a0aa4ea482e17"
+            }
+          },
+          {
+            "kind": "substitute",
+            "family": "thermodynamics",
+            "sources": [
+              "operation.12"
+            ],
+            "relation": "operation.7",
+            "symbol": "xfdd1582097",
+            "sourceSignatures": {
+              "operation.12": "8275c623ad88d96027bcc313a23e84920ff00112d2961955644d753ed2de525b",
+              "operation.7": "e16fe3f3a20ea884566dc069eb0ee7dfe07610ab61d822217dc9eabbf7ab88ad"
+            }
+          },
+          {
+            "kind": "isolate",
+            "family": "thermodynamics",
+            "sources": [
+              "operation.13"
+            ],
+            "symbol": "xb540ed3a04",
+            "sourceSignatures": {
+              "operation.13": "33eccb919cc02b28d225977a58300fb0a8b036d5ed27ece428d82e1bdc1ed2dc"
+            }
+          },
+          {
+            "kind": "declare_relation",
+            "family": "energy",
+            "left": "x0a32e9c1ca",
+            "right": "internalHeat",
+            "relationKind": "constraint",
+            "reason": "Exhaustive isolated-pair boundary: this is the only heat exchange"
+          },
+          {
+            "kind": "substitute",
+            "family": "energy",
+            "sources": [
+              "energy.region_b.rates.11"
+            ],
+            "relation": "operation.15",
+            "symbol": "x0a32e9c1ca",
+            "sourceSignatures": {
+              "energy.region_b.rates.11": "5c98b6e0c0dd308c2c98d38a7df7ce84f4cc24f1127a217b6e3e977e0db2c461",
+              "operation.15": "9235e1c5ea405a59edde533afbf7f7bb696ff557e3a1628a3bfea50742407f01"
+            }
+          },
+          {
+            "kind": "substitute",
+            "family": "energy",
+            "sources": [
+              "operation.16"
+            ],
+            "relation": "operation.3",
+            "symbol": "internalHeat",
+            "sourceSignatures": {
+              "operation.16": "7b93b7a456d2f454eb79d6396a90c93c49334429aa7bb3e08ad57c2c26e2b877",
+              "operation.3": "541595952feefa52648f0b1d628fbb30bc947947ac349a542a4e33a785bdfd2a"
+            }
+          },
+          {
+            "kind": "declare_domain",
+            "family": "thermodynamics",
+            "sources": [
+              "thermodynamics.region_b.caloric-inventory"
+            ],
+            "symbol": "x88ca9b352d",
+            "domain": "positive",
+            "reason": "Positive inventory and caloric coefficient in the M1-C regular regime",
+            "sourceSignatures": {
+              "thermodynamics.region_b.caloric-inventory": "3e8586aa4c97fd1752b3a7022ea7f27ad52349e16c9bd75ea940a42a5efc01cf"
+            }
+          },
+          {
+            "kind": "declare_domain",
+            "family": "thermodynamics",
+            "sources": [
+              "thermodynamics.region_b.caloric-inventory"
+            ],
+            "symbol": "x7b79769c91",
+            "domain": "positive",
+            "reason": "Positive inventory and caloric coefficient in the M1-C regular regime",
+            "sourceSignatures": {
+              "thermodynamics.region_b.caloric-inventory": "3e8586aa4c97fd1752b3a7022ea7f27ad52349e16c9bd75ea940a42a5efc01cf"
+            }
+          },
+          {
+            "kind": "declare_domain",
+            "family": "thermodynamics",
+            "sources": [
+              "thermodynamics.region_b.caloric-inventory"
+            ],
+            "symbol": "x25483f8946",
+            "domain": "interval",
+            "lower": "290",
+            "upper": "370",
+            "lowerOpen": false,
+            "upperOpen": false,
+            "endpointUnit": "K",
+            "reason": "Declared caloric validity interval for the frozen M1-C reference",
+            "sourceSignatures": {
+              "thermodynamics.region_b.caloric-inventory": "3e8586aa4c97fd1752b3a7022ea7f27ad52349e16c9bd75ea940a42a5efc01cf"
+            }
+          },
+          {
+            "kind": "differentiate",
+            "family": "thermodynamics",
+            "sources": [
+              "thermodynamics.region_b.caloric-inventory"
+            ],
+            "symbol": "x8a44e00a1e",
+            "sourceSignatures": {
+              "thermodynamics.region_b.caloric-inventory": "3e8586aa4c97fd1752b3a7022ea7f27ad52349e16c9bd75ea940a42a5efc01cf"
+            }
+          },
+          {
+            "kind": "substitute",
+            "family": "thermodynamics",
+            "sources": [
+              "operation.21"
+            ],
+            "relation": "matter.region_b.1.fixed-volume-apply",
+            "symbol": "xd2fec37957",
+            "sourceSignatures": {
+              "operation.21": "07c84a200c82787616090fa00caa8c776b73d2f6ada645973a334b0ee405a718",
+              "matter.region_b.1.fixed-volume-apply": "df06a5bf48804a3e9084c5aecac9aa63348251c2be1bd9b2f09fd62d2e05990e"
+            }
+          },
+          {
+            "kind": "substitute",
+            "family": "thermodynamics",
+            "sources": [
+              "operation.22"
+            ],
+            "relation": "operation.17",
+            "symbol": "xb75cd3314c",
+            "sourceSignatures": {
+              "operation.22": "552d273ae6f66ccd1c621fae02459ade5910de5c5da966fdf510bba47ceaa18f",
+              "operation.17": "decdea2f7d32e75ec68fa94ac3485c07d4744dea0c37a2103bb088c6ffe8cb88"
+            }
+          },
+          {
+            "kind": "isolate",
+            "family": "thermodynamics",
+            "sources": [
+              "operation.23"
+            ],
+            "symbol": "x55c388f25a",
+            "sourceSignatures": {
+              "operation.23": "2da5eed5274ac9d41bd8c7d7b12805fca481fe1f86cc98d1178a2ec0b21208f1"
+            }
+          },
+          {
+            "kind": "combine",
+            "family": "energy",
+            "sources": [
+              "operation.6",
+              "operation.16"
+            ],
+            "sourceSignatures": {
+              "operation.6": "a8df29ec4eedb1e6574d031fd06f75e84915653b89788f374c01369c3fa669be",
+              "operation.16": "7b93b7a456d2f454eb79d6396a90c93c49334429aa7bb3e08ad57c2c26e2b877"
+            }
+          }
+        ],
+        "cursor": 25
+      }
+    },
+    "procedencia": {
+      "tipo": "nuevo"
+    }
+  },
+  "selectedEquations": {
+    "region_a.heat": "operation.6",
+    "region_a.energy": "operation.7",
+    "region_a.temperature": "operation.14",
+    "region_b.heat": "operation.16",
+    "region_b.energy": "operation.17",
+    "region_b.temperature": "operation.24",
+    "totalEnergy": "operation.25"
+  },
+  "reference": {
+    "mass": [
+      2,
+      3
+    ],
+    "specificCapacity": [
+      500,
+      1000
+    ],
+    "initialTemperature": [
+      360,
+      300
+    ],
+    "referenceTemperature": 300,
+    "conductance": 10,
+    "temperatureInterval": [
+      290,
+      370
+    ],
+    "horizon": 600,
+    "samples": 121,
+    "temperatureScale": 60,
+    "massScale": 5,
+    "energyScale": 60000,
+    "heatRateScale": 600
+  }
+}

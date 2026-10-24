@@ -32,6 +32,15 @@ dominio. Un valor nulo en t = 0 con derivada negativa detiene en t = 0.
 
 Métodos: Dormand-Prince 5(4) (scipy RK45, por omisión) o BDF implícito de
 orden variable (scipy BDF, para sistemas rígidos), con tolerancias por componente.
+
+Optional shared event protocol:
+    event_state(t, y) -> (signature, margins)
+Margins have fixed positional identities and contain finite nonnegative scalars
+or None when inactive. Their meaning belongs to the system. Probes must preserve
+the RHS evaluation context. The solver checks quarter points, retries steep
+margin falls, limits the next step by their trend and brackets the first changed
+interior check. This is a finite resolution heuristic, not a proof that arbitrary
+closed windows are absent. Systems without this hook keep endpoint detection.
 """
 
 from dataclasses import dataclass, field
@@ -40,6 +49,42 @@ import numpy as np
 from scipy.integrate import BDF, RK45
 
 METODOS = {"RK45": RK45, "BDF": BDF}
+
+# Same dimensionless margin resolution used by the network coordinator. The
+# system supplies the physical meaning; this module knows no phases/packages.
+MARGIN_FLOOR = 1e-8
+MARGIN_RATIO = 0.5
+MARGIN_MIN_STEP = 1e-8
+
+
+def _event_state(system, t, y):
+    if not hasattr(system, 'event_state'):
+        return system.firma(t, y), ()
+    signature, margins = system.event_state(t, y)
+    margins = tuple(margins)
+    if any(value is not None and (not np.isfinite(value) or value < 0) for value in margins):
+        raise ValueError('Event margins must be finite nonnegative scalars or None.')
+    return signature, margins
+
+
+def _falling_margin(samples):
+    for (_, previous), (_, current) in zip(samples, samples[1:]):
+        if len(previous) != len(current):
+            raise ValueError('Event margin identities must remain stable during a run.')
+        if any(a is not None and b is not None and a > MARGIN_FLOOR and b < MARGIN_RATIO*a for a, b in zip(previous, current)):
+            return True
+    return False
+
+
+def _margin_step(previous, current, maximum, minimum):
+    ta, before = previous
+    tb, after = current
+    step = maximum
+    for a, b in zip(before, after):
+        if a is not None and b is not None and MARGIN_FLOOR < b < a:
+            distance = b*(tb-ta)/(a-b)
+            step = min(step, 4*(1-MARGIN_RATIO)*distance*0.75)
+    return max(step, minimum)
 
 
 class Detencion(Exception):
@@ -95,7 +140,7 @@ def integrar(sistema, y0, t_final, rtol=1e-8, atol=1e-10, max_step=np.inf, h_min
     tray = Trayectoria()
     t, y = 0.0, np.array(y0, dtype=float)
     try:
-        firma = sistema.firma(t, y)
+        firma, initial_margins = _event_state(sistema, t, y)
     except Detencion as d:
         tray.detenida, tray.t_fin, tray.y_fin = d, t, y
         tray.eventos.append((d.codigo, t, None, None, d.mensaje))
@@ -115,6 +160,8 @@ def integrar(sistema, y0, t_final, rtol=1e-8, atol=1e-10, max_step=np.inf, h_min
                     tray.t_fin, tray.y_fin = t, y
                     return tray
     paso_max = max_step
+    margin_min_step = max(h_min, MARGIN_MIN_STEP*t_final)
+    current_margins = initial_margins
     r = _rk(sistema, t, y, t_final, rtol, atol, paso_max, metodo)
     while r.status == "running" and tray.pasos < max_pasos:
         t_a, y_a = r.t, r.y.copy()
@@ -169,24 +216,44 @@ def integrar(sistema, y0, t_final, rtol=1e-8, atol=1e-10, max_step=np.inf, h_min
             _detener_dominio(sistema, tray, (k or fuera)[0], lo)
             return tray
         try:
-            nueva = sistema.firma(r.t, r.y)
+            dense = r.dense_output()
+            checks = [t_a+(r.t-t_a)*k/4 for k in (1, 2, 3, 4)] if hasattr(sistema, 'event_state') else [r.t]
+            samples = [(t_a, current_margins)]
+            changed_at = None
+            for probe in checks:
+                nueva, margins = _event_state(sistema, probe, r.y if probe == r.t else dense(probe))
+                if nueva != firma:
+                    changed_at = probe
+                    break
+                samples.append((probe, margins))
         except Detencion as d:
             tray.detenida = d
             tray.eventos.append((d.codigo, r.t, firma, None, d.mensaje))
             tray.tramos.append((t_a, r.t, r.dense_output()))
             tray.t_fin, tray.y_fin = r.t, r.y.copy()
             return tray
-        if nueva == firma:
+        if changed_at is None:
+            if _falling_margin(samples) and r.t-t_a > margin_min_step:
+                tray.rechazos += 1
+                paso_max = max((r.t-t_a)/4, margin_min_step)
+                r = _rk(sistema, t_a, y_a, t_final, rtol, atol, paso_max, metodo)
+                continue
             tray.tramos.append((t_a, r.t, r.dense_output()))
+            current_margins = samples[-1][1]
+            if len(samples) > 1:
+                paso_max = _margin_step(samples[-2], samples[-1], max_step, margin_min_step)
+                r.max_step = min(max_step, paso_max)
             continue
         # Cambio de régimen dentro del paso: bisección sobre la salida densa.
         d = r.dense_output()
-        lo, hi = t_a, r.t
+        # Bracket the first changed interior check, not the entire accepted
+        # step: a closed regime window may already have ended at r.t.
+        lo, hi = samples[-1][0], changed_at
         for _ in range(200):
             if hi - lo <= 1e-12 * max(1.0, abs(hi)):
                 break
             m = 0.5 * (lo + hi)
-            if sistema.firma(m, d(m)) == firma:
+            if _event_state(sistema, m, d(m))[0] == firma:
                 lo = m
             else:
                 hi = m
@@ -197,7 +264,15 @@ def integrar(sistema, y0, t_final, rtol=1e-8, atol=1e-10, max_step=np.inf, h_min
             sub.step()
             tray.tramos.append((t_s, sub.t, sub.dense_output()))
         y_e = sub.y.copy()
-        nueva = sistema.firma(hi, y_e)
+        nueva, current_margins = _event_state(sistema, hi, y_e)
+        if nueva == firma:
+            # Reintegrated dynamics can move the crossing relative to dense
+            # output. Retry without publishing a fictitious no-change event.
+            tray.tramos = [segment for segment in tray.tramos if segment[0] < t_a]
+            tray.rechazos += 1
+            r = _rk(sistema, t_a, y_a, t_final, rtol, atol, max((hi-t_a)/4, h_min), metodo)
+            current_margins = _event_state(sistema, t_a, y_a)[1]
+            continue
         tray.eventos.append(("cambio_firma", hi, firma, nueva, ""))
         motivo = sistema.admite(nueva) if hasattr(sistema, "admite") else None
         if motivo:

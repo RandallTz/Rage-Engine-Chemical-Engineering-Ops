@@ -203,7 +203,8 @@ class HydraulicSystem:
         est=model['estudio']
         if not est or est['tipo']!='temporal':raise NoSoportado('Reduced hydraulics requires a time study.')
         self.tf=datum(est['tiempoId'],'s','Final time')
-        self.method={'rk45':'RK45','bdf':'BDF','euler_implicito':'BDF',None:'RK45'}.get(est['metodoSolicitado'])
+        from .compilador import temporal_method
+        self.method=temporal_method(est['metodoSolicitado'])
         if self.method is None or self.tf<=0 or not 2<=est['muestras']<=2001 or est['rtol']<=0 or est['atol']['cantidad']<=0:raise NoSoportado('Invalid hydraulic time study.')
         self.atol=np.full(len(self.y0),est['atol']['cantidad'])
         self.initial=np.array(self.y0)

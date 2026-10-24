@@ -32,6 +32,7 @@ import numpy as np
 
 from core import expresiones_motor as ex
 from core import unidades as un
+from core.mezclas import FueraDeAlcance
 from core.modelo import leer_modelo_comun, relaciones
 from core.resultados import conjunto, eje, evento, serie
 from core.solvers import Detencion, integrar
@@ -41,6 +42,17 @@ from core.termodinamica.volumen import CierreVolumen
 
 class NoSoportado(Exception):
     pass
+
+
+def temporal_method(requested):
+    methods = {None: 'RK45', 'rk45': 'RK45', 'bdf': 'BDF'}
+    if requested not in methods:
+        message = ('Implicit Euler is not implemented by the common compiler. Select BDF explicitly; variable-order BDF is not implicit Euler.'
+                   if requested == 'euler_implicito' else f'Unsupported temporal method: {requested}')
+        error = NoSoportado(message)
+        error.diagnostics = [{'code': 'unsupported_method', 'message': message}]
+        raise error
+    return methods[requested]
 
 
 class _Dato:
@@ -214,6 +226,38 @@ class SistemaCompilado:
     def firma(self, t, y):
         return tuple((vid, e.firma) for vid, e in self._estados(t, y).items())
 
+    def event_state(self, t, y):
+        """Prefer certified regimes; retry unavailable probes with RHS seeds.
+
+        The generic solver sees only a discrete identity and scalar margins.
+        Appearance uses the package's existing candidate stability margin;
+        disappearance uses the smallest present phase fraction. Event probes
+        restore the numerical closures' seeds rather than altering integration.
+        A cold closure can fail near a phase boundary despite a valid seeded
+        state. Its failure alone is neither a physical stop nor a phase event.
+        """
+        seeds = [volume.cierre.semilla for volume in self.vols]
+        try:
+            try:
+                states = self._estados(t, y, rapido=False)
+            except FueraDeAlcance:
+                # Earlier volumes in the failed probe may have changed seeds.
+                # Retry from the integration context, not that partial probe.
+                for volume, seed in zip(self.vols, seeds):
+                    volume.cierre.semilla = seed
+                states = self._estados(t, y, rapido=True)
+            margins = []
+            for state in states.values():
+                stability = getattr(state.nativo, 'estabilidad', None)
+                appearance = stability.get('tm_nueva') if isinstance(stability, dict) else None
+                margins.append(float(appearance) if appearance is not None and np.isfinite(appearance) and appearance > 0 else None)
+                amounts = [phase.n for phase in state.fases]
+                margins.append(min(amounts)/sum(amounts) if len(amounts) > 1 else None)
+            return tuple((owner, state.firma) for owner, state in states.items()), tuple(margins)
+        finally:
+            for volume, seed in zip(self.vols, seeds):
+                volume.cierre.semilla = seed
+
     def _donante_volumen(self, s, v, e):
         """(x, h, M) de lo que sale de un volumen: mezcla o una fase."""
         ext = (s.get("extraccion") or {}).get(v.id, {"tipo": "mezcla_homogenea"})
@@ -367,10 +411,12 @@ def resolver(modelo):
     est = modelo["estudio"]
     if est is None or est["tipo"] != "temporal":
         raise NoSoportado("el modelo no pide un estudio temporal")
+    requested = est.get("metodoSolicitado")
+    sis.metodo = temporal_method(requested)
     tf = sis.dato(est["tiempoId"])(0.0)
     muestras = int(est["muestras"])
     y0 = sis.inicial()
-    sis.firma_inicial = sis.firma(0.0, y0)
+    sis.firma_inicial = sis.event_state(0.0, y0)[0]
     motivo = sis.admite(sis.firma_inicial)
     if motivo:
         raise NoSoportado(f"el estado inicial incumple la política de fases: {motivo}")
@@ -378,7 +424,7 @@ def resolver(modelo):
     for v in sis.vols:
         atol[v.i_E] = est["atol"].get("energia", 1e-6)
     atol[sis.i_aux_E] = est["atol"].get("energia", 1e-6)
-    tray = integrar(sis, y0, tf, rtol=est["rtol"], atol=atol, max_step=tf / (muestras - 1))
+    tray = integrar(sis, y0, tf, rtol=est["rtol"], atol=atol, max_step=tf / (muestras - 1), metodo=sis.metodo)
     t_fin = tray.t_fin
     ts = [x for x in np.linspace(0.0, tf, muestras) if x <= t_fin * (1 + 1e-12)]
     ts = sorted(set(ts) | {e[1] for e in tray.eventos if e[1] <= t_fin} | {t_fin})
@@ -440,7 +486,7 @@ def _publicar(sis, ts, filas, tray, y0):
         from .report import compilation_report
         provenance["compilation"] = compilation_report(m)
     return conjunto(m["id"], m["nombre"], estado,
-                    {"motor": "rage.compilador", "metodo": "RK45 con eventos de firma (core/solvers)", "firma": None,
+                    {"motor": "rage.compilador", "metodo": f"{sis.metodo} with signature events (core/solvers)", "firma": None,
                      **provenance,
                      **({"mensaje": tray.detenida.mensaje} if tray.detenida else {})},
                     [eje("t", "tiempo", "tiempo", "s", ts)], series, eventos, verif, modeloId=m["id"])

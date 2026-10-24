@@ -1,0 +1,952 @@
+{
+  "version": 1,
+  "model": {
+    "formato": "rage.modelo",
+    "version": 0,
+    "id": "m1-a",
+    "nombre": "M1-A balanced binary mixing and heating",
+    "componentes": [
+      {
+        "id": 1,
+        "nombre": "Component 1",
+        "simbolo": "C1"
+      },
+      {
+        "id": 2,
+        "nombre": "Component 2",
+        "simbolo": "C2"
+      }
+    ],
+    "termodinamica": {
+      "paquetes": []
+    },
+    "volumenes": [
+      {
+        "id": "mixture",
+        "componenteIds": [
+          1,
+          2
+        ],
+        "balances": {
+          "materia": true,
+          "energia": true,
+          "momento": false
+        },
+        "supuestos": {
+          "materia": {
+            "campo": {
+              "sinReaccion": true,
+              "sinDifusion": false,
+              "sinConveccion": false,
+              "estacionario": false,
+              "difusion": "flujo",
+              "sinGeneracion": false,
+              "sinConsumo": false,
+              "generacionUniforme": false,
+              "consumoUniforme": false
+            },
+            "coordenadas": "cartesianas",
+            "expandida": false,
+            "vista": "cantidad",
+            "uniforme": false,
+            "fija": true,
+            "sinAcumulacion": false,
+            "invariantes": [
+              false,
+              false,
+              false
+            ],
+            "generacionUniforme": false,
+            "consumoUniforme": false,
+            "restoImpermeable": true,
+            "cantidadVolumen": false,
+            "densidadMediaConstante": false,
+            "densidadComunPuertos": false,
+            "expandirProducto": false
+          },
+          "energia": {
+            "forma": "total",
+            "trabajoTotalHeredado": false,
+            "separarPresion": true,
+            "entalpia": true,
+            "sinCinetica": true,
+            "sinTrabajoViscoso": true,
+            "sinFuerzasVolumen": true,
+            "sinFuenteVolumetrica": true,
+            "sinConduccionLocal": false,
+            "adiabatico": false,
+            "estacionario": false,
+            "sinAcumulacionTotal": false,
+            "uniforme": true,
+            "presionUniforme": false,
+            "presionPrescrita": false,
+            "monofasico": true,
+            "sinCambioFase": true,
+            "densidadConstante": false,
+            "modelo": "u_lineal"
+          }
+        },
+        "frontera": {
+          "tipo": "rigida",
+          "datoId": "mixture.volume"
+        },
+        "inicial": {
+          "cantidades": {
+            "base": "masica",
+            "datoIds": {
+              "1": "mixture.mass",
+              "2": "mixture.secondMass"
+            }
+          },
+          "energia": {
+            "tipo": "T",
+            "datoId": "mixture.temperature"
+          }
+        },
+        "termodinamica": {
+          "tipo": "supuesto",
+          "supuesto": "u_lineal",
+          "motivo": "Declared constant caloric coefficient on the frozen temperature interval",
+          "parametros": {
+            "cId": "mixture.capacity",
+            "uRefId": "mixture.referenceEnergy",
+            "TRefId": "mixture.referenceTemperature",
+            "TMinId": "mixture.minimumTemperature",
+            "TMaxId": "mixture.maximumTemperature"
+          }
+        }
+      }
+    ],
+    "corrientes": [
+      {
+        "id": "feed",
+        "desde": null,
+        "hasta": "mixture",
+        "componenteIds": [
+          1,
+          2
+        ],
+        "mecanismo": "convectivo",
+        "constante": false,
+        "materia": {
+          "modo": "por_componente",
+          "base": "masica",
+          "caudalIds": {}
+        }
+      },
+      {
+        "id": "outlet",
+        "desde": "mixture",
+        "hasta": null,
+        "componenteIds": [
+          1,
+          2
+        ],
+        "mecanismo": "convectivo",
+        "constante": false,
+        "materia": {
+          "modo": "por_componente",
+          "base": "masica",
+          "caudalIds": {}
+        }
+      }
+    ],
+    "intercambios": [],
+    "datos": {
+      "mixture.volume": {
+        "magnitud": "volume",
+        "funcion": "geometria",
+        "declaracion": {
+          "texto": "1",
+          "unidad": "m3"
+        },
+        "origen": {
+          "propietarioId": "volumen:mixture",
+          "ruta": "volume"
+        }
+      },
+      "mixture.mass": {
+        "magnitud": "mass",
+        "funcion": "inicial",
+        "declaracion": {
+          "texto": "2",
+          "unidad": "kg"
+        },
+        "origen": {
+          "propietarioId": "volumen:mixture",
+          "ruta": "mass"
+        }
+      },
+      "mixture.temperature": {
+        "magnitud": "temperature",
+        "funcion": "inicial",
+        "declaracion": {
+          "texto": "300",
+          "unidad": "K"
+        },
+        "origen": {
+          "propietarioId": "volumen:mixture",
+          "ruta": "temperature"
+        }
+      },
+      "mixture.capacity": {
+        "magnitud": "capacity",
+        "funcion": "parametro",
+        "declaracion": {
+          "texto": "1000",
+          "unidad": "J/(kg*K)"
+        },
+        "origen": {
+          "propietarioId": "volumen:mixture",
+          "ruta": "capacity"
+        }
+      },
+      "mixture.referenceEnergy": {
+        "magnitud": "referenceEnergy",
+        "funcion": "parametro",
+        "declaracion": {
+          "texto": "0",
+          "unidad": "J/kg"
+        },
+        "origen": {
+          "propietarioId": "volumen:mixture",
+          "ruta": "referenceEnergy"
+        }
+      },
+      "mixture.referenceTemperature": {
+        "magnitud": "referenceTemperature",
+        "funcion": "parametro",
+        "declaracion": {
+          "texto": "300",
+          "unidad": "K"
+        },
+        "origen": {
+          "propietarioId": "volumen:mixture",
+          "ruta": "referenceTemperature"
+        }
+      },
+      "mixture.minimumTemperature": {
+        "magnitud": "minimumTemperature",
+        "funcion": "parametro",
+        "declaracion": {
+          "texto": "290",
+          "unidad": "K"
+        },
+        "origen": {
+          "propietarioId": "volumen:mixture",
+          "ruta": "minimumTemperature"
+        }
+      },
+      "mixture.maximumTemperature": {
+        "magnitud": "maximumTemperature",
+        "funcion": "parametro",
+        "declaracion": {
+          "texto": "360",
+          "unidad": "K"
+        },
+        "origen": {
+          "propietarioId": "volumen:mixture",
+          "ruta": "maximumTemperature"
+        }
+      },
+      "mixture.secondMass": {
+        "magnitud": "mass",
+        "funcion": "inicial",
+        "declaracion": {
+          "texto": "8",
+          "unidad": "kg"
+        },
+        "origen": {
+          "propietarioId": "volumen:mixture",
+          "ruta": "mass"
+        }
+      }
+    },
+    "matematico": null,
+    "estudio": null,
+    "motores": {
+      "materialDerivation": {
+        "format": "rage.material-derivation",
+        "version": 1,
+        "volumes": {
+          "mixture": {
+            "origin": "reviewed_rebuild",
+            "operations": [
+              {
+                "id": "step-1",
+                "title": "No chemical generation or consumption",
+                "changes": {
+                  "campo": {
+                    "sinReaccion": true,
+                    "sinDifusion": false,
+                    "sinConveccion": false,
+                    "estacionario": false,
+                    "difusion": "flujo",
+                    "sinGeneracion": false,
+                    "sinConsumo": false,
+                    "generacionUniforme": false,
+                    "consumoUniforme": false
+                  }
+                }
+              },
+              {
+                "id": "step-2",
+                "title": "Fixed control-volume boundary",
+                "changes": {
+                  "fija": true
+                }
+              },
+              {
+                "id": "step-3",
+                "title": "Integrate over the control volume \u00b7 Gauss and Reynolds",
+                "changes": {
+                  "vista": "integral"
+                }
+              },
+              {
+                "id": "step-4",
+                "title": "Define component inventories and partition the boundary into streams",
+                "changes": {
+                  "vista": "cantidad"
+                }
+              },
+              {
+                "id": "step-5",
+                "title": "Impermeable boundary outside the declared streams",
+                "changes": {
+                  "restoImpermeable": true
+                }
+              }
+            ]
+          }
+        }
+      },
+      "energyDerivation": {
+        "format": "rage.energy-derivation",
+        "version": 1,
+        "volumes": {
+          "mixture": {
+            "origin": "reviewed_rebuild",
+            "operations": [
+              {
+                "id": "step-1",
+                "title": "Separate pressure and viscous stress",
+                "changes": {
+                  "separarPresion": true
+                }
+              },
+              {
+                "id": "step-2",
+                "title": "Negligible kinetic energy",
+                "changes": {
+                  "sinCinetica": true
+                }
+              },
+              {
+                "id": "step-3",
+                "title": "Negligible viscous work",
+                "changes": {
+                  "sinTrabajoViscoso": true
+                }
+              },
+              {
+                "id": "step-4",
+                "title": "No body-force work",
+                "changes": {
+                  "sinFuerzasVolumen": true
+                }
+              },
+              {
+                "id": "step-5",
+                "title": "No volumetric energy source",
+                "changes": {
+                  "sinFuenteVolumetrica": true
+                }
+              },
+              {
+                "id": "step-6",
+                "title": "Integrate the local first law and apply Gauss",
+                "changes": {
+                  "forma": "integrada"
+                }
+              },
+              {
+                "id": "step-7",
+                "title": "Apply Reynolds transport theorem",
+                "changes": {
+                  "forma": "integral"
+                }
+              },
+              {
+                "id": "step-8",
+                "title": "Define total energy and oriented stream contributions",
+                "changes": {
+                  "forma": "total"
+                }
+              },
+              {
+                "id": "step-9",
+                "title": "Uniform temperature and specific internal energy",
+                "changes": {
+                  "uniforme": true
+                }
+              },
+              {
+                "id": "step-10",
+                "title": "Collect flow work into enthalpy",
+                "changes": {
+                  "entalpia": true
+                }
+              }
+            ]
+          }
+        }
+      },
+      "thermodynamicDerivation": {
+        "format": "rage.thermodynamic-derivation",
+        "version": 1,
+        "volumes": {
+          "mixture": {
+            "origin": "reviewed_rebuild",
+            "operations": [
+              {
+                "id": "step-1",
+                "title": "Assume a single phase",
+                "changes": {
+                  "monofasico": true
+                }
+              },
+              {
+                "id": "step-2",
+                "title": "Keep the initial phase set",
+                "changes": {
+                  "sinCambioFase": true
+                }
+              },
+              {
+                "id": "step-3",
+                "title": "Declare a linear specific internal-energy law",
+                "changes": {
+                  "modelo": "u_lineal"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "equationWorkbench": {
+        "format": "rage.equation-workbench",
+        "version": 1,
+        "operations": [
+          {
+            "kind": "declare_symbol",
+            "family": "matter",
+            "name": "feedRate",
+            "unit": "kg/s"
+          },
+          {
+            "kind": "declare_symbol",
+            "family": "matter",
+            "name": "feedFraction",
+            "unit": "1"
+          },
+          {
+            "kind": "declare_symbol",
+            "family": "matter",
+            "name": "feedTemperature",
+            "unit": "K"
+          },
+          {
+            "kind": "declare_symbol",
+            "family": "matter",
+            "name": "suppliedHeat",
+            "unit": "W"
+          },
+          {
+            "kind": "declare_symbol",
+            "family": "matter",
+            "name": "specificFlowWork",
+            "unit": "J/kg"
+          },
+          {
+            "kind": "declare_symbol",
+            "family": "matter",
+            "name": "molarMass1",
+            "unit": "kg/mol"
+          },
+          {
+            "kind": "declare_symbol",
+            "family": "matter",
+            "name": "molarMass2",
+            "unit": "kg/mol"
+          },
+          {
+            "kind": "declare_relation",
+            "family": "matter",
+            "left": "x2f6c7372d5",
+            "right": "feedRate*feedFraction",
+            "relationKind": "constraint",
+            "reason": "Balanced boundary mass rate; outlet has the well-mixed inventory composition"
+          },
+          {
+            "kind": "substitute",
+            "family": "matter",
+            "sources": [
+              "matter.mixture.1.fixed-volume-apply"
+            ],
+            "relation": "operation.8",
+            "symbol": "x2f6c7372d5",
+            "sourceSignatures": {
+              "matter.mixture.1.fixed-volume-apply": "d6cf500dafaf239cfe297ac9902356f6ce04c03a36056fb39534d1f54f8000f4",
+              "operation.8": "39a601076570924a0e93d15710716794afbc4038173e27193c2ebf504df0501f"
+            }
+          },
+          {
+            "kind": "declare_relation",
+            "family": "matter",
+            "left": "x224bfb806f",
+            "right": "feedRate*xe8a7a2a493/(xe8a7a2a493+x687ed1168e)",
+            "relationKind": "constraint",
+            "reason": "Balanced boundary mass rate; outlet has the well-mixed inventory composition"
+          },
+          {
+            "kind": "substitute",
+            "family": "matter",
+            "sources": [
+              "operation.9"
+            ],
+            "relation": "operation.10",
+            "symbol": "x224bfb806f",
+            "sourceSignatures": {
+              "operation.9": "255bf385ab45d720b63b21e18be5178fe3f15730c1318ea6afd5a581af01517d",
+              "operation.10": "f2c37a71fcded0711aa8b24bafd6217c2fe6b7f7d29de0d6032eb6b56e5804c9"
+            }
+          },
+          {
+            "kind": "declare_function",
+            "family": "matter",
+            "name": "amount1",
+            "unit": "mol",
+            "dependencies": [
+              "x8a44e00a1e"
+            ]
+          },
+          {
+            "kind": "declare_relation",
+            "family": "matter",
+            "left": "amount1",
+            "right": "xe8a7a2a493/molarMass1",
+            "relationKind": "definition",
+            "reason": "Define amount using the declared component molar mass"
+          },
+          {
+            "kind": "declare_relation",
+            "family": "matter",
+            "left": "xbf958d5f8e",
+            "right": "feedRate*(1-feedFraction)",
+            "relationKind": "constraint",
+            "reason": "Balanced boundary mass rate; outlet has the well-mixed inventory composition"
+          },
+          {
+            "kind": "substitute",
+            "family": "matter",
+            "sources": [
+              "matter.mixture.2.fixed-volume-apply"
+            ],
+            "relation": "operation.14",
+            "symbol": "xbf958d5f8e",
+            "sourceSignatures": {
+              "matter.mixture.2.fixed-volume-apply": "2b6f58248de66cacdf9e668503371625521a5c6f8aa59c9956663af24e033951",
+              "operation.14": "88d8b9ab8aa6a4f74dc6bcdcd19d86c707a4dbc76f49ccc5f58d3ec8cf8c91b4"
+            }
+          },
+          {
+            "kind": "declare_relation",
+            "family": "matter",
+            "left": "xf9a2801c55",
+            "right": "feedRate*x687ed1168e/(xe8a7a2a493+x687ed1168e)",
+            "relationKind": "constraint",
+            "reason": "Balanced boundary mass rate; outlet has the well-mixed inventory composition"
+          },
+          {
+            "kind": "substitute",
+            "family": "matter",
+            "sources": [
+              "operation.15"
+            ],
+            "relation": "operation.16",
+            "symbol": "xf9a2801c55",
+            "sourceSignatures": {
+              "operation.15": "6b78cb8029144358cb84b844b0139cf1e0729833dd56afee86395a315223aaf8",
+              "operation.16": "3996d29ecf37e528f7227046d12165897e2bbbfdac5512876b6bb9c779c601f8"
+            }
+          },
+          {
+            "kind": "declare_function",
+            "family": "matter",
+            "name": "amount2",
+            "unit": "mol",
+            "dependencies": [
+              "x8a44e00a1e"
+            ]
+          },
+          {
+            "kind": "declare_relation",
+            "family": "matter",
+            "left": "amount2",
+            "right": "x687ed1168e/molarMass2",
+            "relationKind": "definition",
+            "reason": "Define amount using the declared component molar mass"
+          },
+          {
+            "kind": "combine",
+            "family": "matter",
+            "sources": [
+              "operation.11",
+              "operation.17"
+            ],
+            "sourceSignatures": {
+              "operation.11": "aad06971a5a2f160bbf1ba8d70f982ffcd40bd8f98082439744e5d80df612d41",
+              "operation.17": "b83469b7e8ad587589b625e3222f36ea58766dbe19f339419c518a7cb230ef7c"
+            }
+          },
+          {
+            "kind": "declare_domain",
+            "family": "thermodynamics",
+            "sources": [
+              "thermodynamics.mixture.caloric-inventory"
+            ],
+            "symbol": "xe8a7a2a493",
+            "domain": "positive",
+            "reason": "Positive component inventory and caloric coefficient",
+            "sourceSignatures": {
+              "thermodynamics.mixture.caloric-inventory": "49617e66eb27918b80d5a6f85fe7e5bdd5dcdd1b7e77c8583c940acc06a7691d"
+            }
+          },
+          {
+            "kind": "declare_domain",
+            "family": "thermodynamics",
+            "sources": [
+              "thermodynamics.mixture.caloric-inventory"
+            ],
+            "symbol": "x687ed1168e",
+            "domain": "positive",
+            "reason": "Positive component inventory and caloric coefficient",
+            "sourceSignatures": {
+              "thermodynamics.mixture.caloric-inventory": "49617e66eb27918b80d5a6f85fe7e5bdd5dcdd1b7e77c8583c940acc06a7691d"
+            }
+          },
+          {
+            "kind": "declare_domain",
+            "family": "thermodynamics",
+            "sources": [
+              "thermodynamics.mixture.caloric-inventory"
+            ],
+            "symbol": "xbc589c7e4d",
+            "domain": "positive",
+            "reason": "Positive component inventory and caloric coefficient",
+            "sourceSignatures": {
+              "thermodynamics.mixture.caloric-inventory": "49617e66eb27918b80d5a6f85fe7e5bdd5dcdd1b7e77c8583c940acc06a7691d"
+            }
+          },
+          {
+            "kind": "declare_domain",
+            "family": "thermodynamics",
+            "sources": [
+              "thermodynamics.mixture.caloric-inventory"
+            ],
+            "symbol": "x1fe8510659",
+            "domain": "interval",
+            "lower": "290",
+            "upper": "360",
+            "lowerOpen": false,
+            "upperOpen": false,
+            "endpointUnit": "K",
+            "reason": "Frozen caloric validity interval",
+            "sourceSignatures": {
+              "thermodynamics.mixture.caloric-inventory": "49617e66eb27918b80d5a6f85fe7e5bdd5dcdd1b7e77c8583c940acc06a7691d"
+            }
+          },
+          {
+            "kind": "declare_domain",
+            "family": "matter",
+            "sources": [
+              "operation.13"
+            ],
+            "symbol": "molarMass1",
+            "domain": "positive",
+            "reason": "Positive constitutive datum in the regular reference regime",
+            "sourceSignatures": {
+              "operation.13": "3ea923df4426a0ea40cc4b4b2c9c665fecbf065a1bda41ca5bfa757874e830d0"
+            }
+          },
+          {
+            "kind": "declare_domain",
+            "family": "matter",
+            "sources": [
+              "operation.19"
+            ],
+            "symbol": "molarMass2",
+            "domain": "positive",
+            "reason": "Positive constitutive datum in the regular reference regime",
+            "sourceSignatures": {
+              "operation.19": "01cfd4309be9b5dac0949858a864d474e0b6e1b96e91e9b29f3ef3f9ced4acaf"
+            }
+          },
+          {
+            "kind": "declare_domain",
+            "family": "matter",
+            "sources": [
+              "operation.8"
+            ],
+            "symbol": "feedRate",
+            "domain": "positive",
+            "reason": "Positive constitutive datum in the regular reference regime",
+            "sourceSignatures": {
+              "operation.8": "39a601076570924a0e93d15710716794afbc4038173e27193c2ebf504df0501f"
+            }
+          },
+          {
+            "kind": "declare_domain",
+            "family": "matter",
+            "sources": [
+              "operation.8"
+            ],
+            "symbol": "feedFraction",
+            "domain": "interval",
+            "lower": "0",
+            "upper": "1",
+            "lowerOpen": true,
+            "upperOpen": true,
+            "reason": "Binary feed contains both components",
+            "sourceSignatures": {
+              "operation.8": "39a601076570924a0e93d15710716794afbc4038173e27193c2ebf504df0501f"
+            }
+          },
+          {
+            "kind": "substitute",
+            "family": "energy",
+            "sources": [
+              "energy.mixture.rates.11"
+            ],
+            "relation": "operation.8",
+            "symbol": "x2f6c7372d5",
+            "sourceSignatures": {
+              "energy.mixture.rates.11": "0f4384a3d35917e21ebb1905d06ba0eedd609e0db511ce226b73e21be51046e4",
+              "operation.8": "39a601076570924a0e93d15710716794afbc4038173e27193c2ebf504df0501f"
+            }
+          },
+          {
+            "kind": "substitute",
+            "family": "energy",
+            "sources": [
+              "operation.29"
+            ],
+            "relation": "operation.14",
+            "symbol": "xbf958d5f8e",
+            "sourceSignatures": {
+              "operation.29": "29668e148839aff9bf67c785304a77bc4bb2dd8482bd1535513c6380d3d86a6f",
+              "operation.14": "88d8b9ab8aa6a4f74dc6bcdcd19d86c707a4dbc76f49ccc5f58d3ec8cf8c91b4"
+            }
+          },
+          {
+            "kind": "declare_relation",
+            "family": "energy",
+            "left": "x6c67e1dead",
+            "right": "x066ba65891+xbc589c7e4d*(feedTemperature-x96fb658be6)+specificFlowWork",
+            "relationKind": "constitutive",
+            "reason": "Declared stream enthalpy closure: common caloric coefficient and equal flow-work offset"
+          },
+          {
+            "kind": "substitute",
+            "family": "energy",
+            "sources": [
+              "operation.30"
+            ],
+            "relation": "operation.31",
+            "symbol": "x6c67e1dead",
+            "sourceSignatures": {
+              "operation.30": "a12af5ff5f9ff788859a56a0c8111a61922edbdb4cb4a7eb6bd7f16522c088fc",
+              "operation.31": "7d42a7861ad695b639075cb130d3ce5a942fca8fd82596468544ae86c628317d"
+            }
+          },
+          {
+            "kind": "substitute",
+            "family": "energy",
+            "sources": [
+              "operation.32"
+            ],
+            "relation": "operation.10",
+            "symbol": "x224bfb806f",
+            "sourceSignatures": {
+              "operation.32": "fd548a1ace3c5318f68a8d87cf44f745843e866c4b7c3bde3cd4cd44321851d5",
+              "operation.10": "f2c37a71fcded0711aa8b24bafd6217c2fe6b7f7d29de0d6032eb6b56e5804c9"
+            }
+          },
+          {
+            "kind": "substitute",
+            "family": "energy",
+            "sources": [
+              "operation.33"
+            ],
+            "relation": "operation.16",
+            "symbol": "xf9a2801c55",
+            "sourceSignatures": {
+              "operation.33": "4db382302047873ea0713061c26a77bcbf20d48b99df3b343f26a906b7bea31d",
+              "operation.16": "3996d29ecf37e528f7227046d12165897e2bbbfdac5512876b6bb9c779c601f8"
+            }
+          },
+          {
+            "kind": "declare_relation",
+            "family": "energy",
+            "left": "xe2750e853a",
+            "right": "x066ba65891+xbc589c7e4d*(x1fe8510659-x96fb658be6)+specificFlowWork",
+            "relationKind": "constitutive",
+            "reason": "Declared stream enthalpy closure: common caloric coefficient and equal flow-work offset"
+          },
+          {
+            "kind": "substitute",
+            "family": "energy",
+            "sources": [
+              "operation.34"
+            ],
+            "relation": "operation.35",
+            "symbol": "xe2750e853a",
+            "sourceSignatures": {
+              "operation.34": "13412a5fea2634d92d1dbde4576c58fcf0890f7c6974f190c9757fafc883bea9",
+              "operation.35": "d2fa0758df6fbbce85a3e750f86dd0ceee10f6a6359b4d39cb3cf3cc437ea299"
+            }
+          },
+          {
+            "kind": "declare_relation",
+            "family": "energy",
+            "left": "xe59bdada7d",
+            "right": "suppliedHeat",
+            "relationKind": "constraint",
+            "reason": "Prescribed boundary heat input"
+          },
+          {
+            "kind": "substitute",
+            "family": "energy",
+            "sources": [
+              "operation.36"
+            ],
+            "relation": "operation.37",
+            "symbol": "xe59bdada7d",
+            "sourceSignatures": {
+              "operation.36": "432036dae5049fadb996d94f233a09b479d59badb5cd4c47ab3d07d198d67b08",
+              "operation.37": "55326bd4ecd7fcdf49abf482a7cc13fa70f0be79ec4b3770831375f8038d8b41"
+            }
+          },
+          {
+            "kind": "differentiate",
+            "family": "thermodynamics",
+            "sources": [
+              "thermodynamics.mixture.caloric-inventory"
+            ],
+            "symbol": "x8a44e00a1e",
+            "sourceSignatures": {
+              "thermodynamics.mixture.caloric-inventory": "49617e66eb27918b80d5a6f85fe7e5bdd5dcdd1b7e77c8583c940acc06a7691d"
+            }
+          },
+          {
+            "kind": "substitute",
+            "family": "thermodynamics",
+            "sources": [
+              "operation.39"
+            ],
+            "relation": "operation.11",
+            "symbol": "xe12b95a86e",
+            "sourceSignatures": {
+              "operation.39": "135101ffa31ebf1c08358aea00dc39f25b31437ad5690f22af79db6436403225",
+              "operation.11": "aad06971a5a2f160bbf1ba8d70f982ffcd40bd8f98082439744e5d80df612d41"
+            }
+          },
+          {
+            "kind": "substitute",
+            "family": "thermodynamics",
+            "sources": [
+              "operation.40"
+            ],
+            "relation": "operation.17",
+            "symbol": "x2b24bab1ae",
+            "sourceSignatures": {
+              "operation.40": "b150f1443e46f5ad37c00e006cdbcd48f4ddbf8d4302abbe04a736eedac31a7e",
+              "operation.17": "b83469b7e8ad587589b625e3222f36ea58766dbe19f339419c518a7cb230ef7c"
+            }
+          },
+          {
+            "kind": "substitute",
+            "family": "thermodynamics",
+            "sources": [
+              "operation.41"
+            ],
+            "relation": "operation.38",
+            "symbol": "x8ed0119302",
+            "sourceSignatures": {
+              "operation.41": "1efebeb0827c148cb27f8689fcc0c01ad6893529c68dafebb46253bf1c7798ba",
+              "operation.38": "72098a8b6ab1d06274210bc3442b23e8cb3d7411983f9869f4c22853956aaba8"
+            }
+          },
+          {
+            "kind": "isolate",
+            "family": "thermodynamics",
+            "sources": [
+              "operation.42"
+            ],
+            "symbol": "x2f7d3274c8",
+            "sourceSignatures": {
+              "operation.42": "5e38a2bd56b925e845a1757768fd78cda6e8d2521e219866ced54815530674d0"
+            }
+          }
+        ],
+        "cursor": 43
+      }
+    },
+    "procedencia": {
+      "tipo": "nuevo"
+    }
+  },
+  "selectedEquations": {
+    "feed.1": "operation.8",
+    "outlet.1": "operation.10",
+    "mass.1": "operation.11",
+    "amount.1": "operation.13",
+    "feed.2": "operation.14",
+    "outlet.2": "operation.16",
+    "mass.2": "operation.17",
+    "amount.2": "operation.19",
+    "totalMass": "operation.20",
+    "energy": "operation.38",
+    "temperature": "operation.43"
+  },
+  "reference": {
+    "initialMass": [
+      2,
+      8
+    ],
+    "molarMass": [
+      0.02,
+      0.05
+    ],
+    "massFlow": 0.1,
+    "feedMassFraction": 0.7,
+    "specificCapacity": 1000,
+    "initialTemperature": 300,
+    "feedTemperature": 330,
+    "heatRate": 2000,
+    "referenceTemperature": 300,
+    "specificFlowWork": 100,
+    "temperatureInterval": [
+      290,
+      360
+    ],
+    "horizon": 600,
+    "samples": 121,
+    "massScale": 10,
+    "moleScale": 500,
+    "compositionScale": 1,
+    "temperatureScale": 50,
+    "energyScale": 500000
+  }
+}

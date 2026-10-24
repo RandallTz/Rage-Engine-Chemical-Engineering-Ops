@@ -32,6 +32,23 @@ class LoweringError(NoSoportado):
                              **({'equationId': equation_id} if equation_id else {})}]
 
 
+def validate_selected_data(model):
+    """Diagnose missing numerical bindings before the strict model reader."""
+    if (not isinstance(model, dict) or not isinstance(model.get('motores'), dict)
+            or not isinstance(model.get('datos'), dict) or not selected(model)):
+        return
+    try:
+        selection = read_definition(model['motores']['derivedExecution'])
+    except (ValueError, KeyError, TypeError) as error:
+        raise LoweringError('invalid_derived_formulation', str(error)) from error
+    bindings = [data for field in ('parameters', 'initialValues', 'scaling')
+                for data in selection.get(field, {}).values()]
+    bindings += [row['scaleDataId'] for row in selection['checks']]
+    for key in bindings:
+        if key not in model.get('datos', {}):
+            raise LoweringError('missing_data', 'Missing selected numerical datum: ' + key)
+
+
 def selected(model):
     return model.get('motores', {}).get('derivedExecution') is not None
 
@@ -68,6 +85,7 @@ class DerivedSystem:
             raise LoweringError('invalid_derived_formulation', str(error)) from error
 
     def _initialize(self, model):
+        validate_selected_data(model)
         self.model = leer_modelo_comun(model)
         self.selection = read_definition(model['motores']['derivedExecution'], model)
         if model.get('matematico') is not None or model['motores'].get('adimensionalizacion') is not None:
@@ -126,9 +144,26 @@ class DerivedSystem:
         self.rates = {}
         for row, q in zip(self.selection['states'], self.states):
             equation = self._equation(row['equationId']).equation
-            if equation.lhs != sp.Derivative(q, self.time, evaluate=False):
-                raise LoweringError('unsupported_rate', 'The selected row is not an isolated first time derivative of this state.', row['equationId'])
-            self.rates[sp.Derivative(q, self.time, evaluate=False)] = self._expand(equation.rhs)
+            derivative = sp.Derivative(q, self.time, evaluate=False)
+            # Apply the selected algebraic reconstructions and product rule
+            # before isolating a regular, first-order scalar rate. This admits
+            # density-volume balances without inserting a replacement law.
+            expanded = sp.Eq(self._expand(equation.lhs).doit(),
+                             self._expand(equation.rhs).doit(), evaluate=False)
+            if expanded.atoms(sp.Derivative) != {derivative}:
+                raise LoweringError('unsupported_rate', 'The selected row must determine one first time derivative; coupled derivative constraints need another lowering.', row['equationId'])
+            if expanded.lhs == derivative:
+                self.rates[derivative] = expanded.rhs
+                continue
+            try:
+                residual = expanded.lhs-expanded.rhs
+                if sp.Poly(residual, derivative).degree() != 1:
+                    raise ValueError('The selected rate is not linear in its first derivative.')
+                rate, guards = solve_unique(expanded, derivative, self.graph.names)
+            except (ValueError, sp.PolynomialError) as error:
+                raise LoweringError('unsupported_rate', str(error), row['equationId']) from error
+            self.rates[derivative] = rate
+            self.guards.extend((guard, row['equationId']) for guard in guards)
         self.reconstructed = [(row, self._expand(self._quantity(row['quantityId']))) for row in self.selection['reconstructions']]
         self._initial_conditions()
         self.proof_conditions = []
@@ -353,19 +388,9 @@ class DerivedSystem:
         for key in self.replayed.selected:
             node = self.graph.nodes[key]; owner = self.replayed.owners.get(key)
             physical = {'matter': 'materia', 'energy': 'energia'}.get(node.family)
-            if physical and owner in active and active[owner][physical] and node.kind == 'balance' and not node.dependent:
+            if physical and owner in active and active[owner][physical] and node.kind in ('balance', 'constraint') and not node.dependent:
                 if self._normalize(node.equation.lhs-node.equation.rhs) != 0:
                     raise LoweringError('uncovered_balance', 'An active conservation balance is not represented by the selected rates and reconstructions.', key)
-        for key, node in self.graph.nodes.items():
-            if not key.startswith('operation.') or not isinstance(node.equation, sp.Equality):
-                continue
-            residual = self._normalize(node.equation.lhs-node.equation.rhs)
-            if residual == 0:
-                continue
-            numerical = si_magnitude(residual).subs(self.parameter_values)
-            if numerical.is_number is True and abs(float(numerical)) <= 1e-12:
-                continue
-            raise LoweringError('unsupported_operation', 'The recorded operation is not an identity, explicit closure or consequence of the selected rates. General constraints and integral/spatial operators are not lowered.', key)
         # Check evaluable parameter/geometry premises in the used ancestry too;
         # data binding is not permission to contradict a declared constitutive
         # premise (for example, independently supplied area and radius).
@@ -378,13 +403,26 @@ class DerivedSystem:
                 visit(parent)
         for row in [*self.selection['states'], *self.selection['reconstructions']]:
             visit(row['equationId'])
-        for key in used:
+        for key in self.graph.nodes:
+            if key not in used:
+                continue
             equation = self.graph.nodes[key].equation
             if not isinstance(equation, sp.Equality) or equation.has(sp.Derivative):
                 continue
             value = si_magnitude(self._expand(equation.lhs-equation.rhs)).subs(self.parameter_values)
             if value.is_number is True and abs(float(value)) > 1e-9:
                 raise LoweringError('inconsistent_parameter_premise', 'Numerical data contradict a replayed algebraic or geometric premise.', key)
+
+        for key, node in self.graph.nodes.items():
+            if not key.startswith('operation.') or not isinstance(node.equation, sp.Equality):
+                continue
+            residual = self._normalize(node.equation.lhs-node.equation.rhs)
+            if residual == 0:
+                continue
+            numerical = si_magnitude(residual).subs(self.parameter_values)
+            if numerical.is_number is True and abs(float(numerical)) <= 1e-12:
+                continue
+            raise LoweringError('unsupported_operation', 'The recorded operation is not an identity, explicit closure or consequence of the selected rates. General constraints and integral/spatial operators are not lowered.', key)
 
     def _conservation_checks(self):
         checks = []
@@ -638,6 +676,23 @@ class DerivedSystem:
             report['equations'] = scaling['equations']
             report['auxiliaryStates'] = len(self.checks) + self.scaled.size
             report['auxiliaryPurpose'] += ' The existing scaling path also integrates the original RHS as independent reconstruction diagnostics.'
+        labels = {key: math_latex(q, self.graph.names) for key, q in quantities.items()}
+        for q, parameter in self.parameter_symbols.items():
+            labels[str(parameter)] = math_latex(q, self.graph.names)
+        for atom, identity in self.ids.items():
+            if isinstance(atom, UnitBasis):
+                labels[identity] = math_latex(atom, self.graph.names)
+        for index in range(len(self.checks)):
+            labels['budget_'+str(index)] = r'B_{'+str(index+1)+'}'
+        if self.scaled is not None:
+            for variable in self.scaled.report['variables']:
+                labels[variable['id']] = r'\widehat{' + labels[variable['sourceId']] + '}'
+            labels[report['time']['id']] = r'\widehat{' + labels[self.ids[self.time]] + '}'
+            for symbol in self.scaled.formulation['simbolos']:
+                source = symbol.get('variableId')
+                if source in labels and symbol['id'] not in labels:
+                    labels[symbol['id']] = r'\left(' + labels[source] + r'\right)_{\mathrm{ref}}'
+        report['symbolLabels'] = labels
         report['strategy'] = solution_strategy(report, self.model)
         return report
 
