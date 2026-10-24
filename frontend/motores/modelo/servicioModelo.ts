@@ -2,6 +2,7 @@
 import type { ModeloComun } from "./contrato";
 import { leerResultados } from "../resultados/lector";
 import type { ConjuntoResultados } from "../resultados/contrato";
+import { readCompilationReport } from './compilation';
 
 const API = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8004") + "/modelo";
 
@@ -27,6 +28,18 @@ export const transporteHTTP: TransporteModelo = async (modelo, signal) => {
 
 export async function resolverModelo(modelo: ModeloComun, signal?: AbortSignal, transporte: TransporteModelo = transporteHTTP): Promise<ConjuntoResultados> {
   return leerResultados(await transporte(modelo, signal));
+}
+
+export async function describeCompilation(model: ModeloComun, signal?: AbortSignal) {
+  return requestCompilation({ modelo: model }, signal);
+}
+
+export async function requestCompilation(body: { modelo: ModeloComun } | { solicitudV2: unknown }, signal?: AbortSignal) {
+  const response = await fetch(`${API}/compilation`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body), cache: 'no-store', signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(60000)]) : AbortSignal.timeout(60000) });
+  const value = await response.json();
+  if (!response.ok) throw new Error(value?.detail?.mensaje ?? 'The selected formulation could not be compiled.');
+  return readCompilationReport(value);
 }
 
 /** Descripción termodinámica de un modelo (POST /modelo/termodinamica): cierre declarado, fases candidatas

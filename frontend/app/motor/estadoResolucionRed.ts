@@ -6,6 +6,7 @@ export function estadoResolucionRed(r?:RespuestaValidacionV2){
   const diagnostico=r?.diagnosticos[0];
   const completa=!!r&&['listo','redundante_compatible'].includes(r.recuento.estado);
   const puedeResolver=completa&&!!r.modeloId&&r.inicializacion.estado==='compatible'&&!diagnostico;
-  const estados:Record<string,string>={MOTOR_ENS_SUSTITUCION_INVALIDA:'Revisar propiedades del paquete',MOTOR_ENS_SUSTITUCION_NO_ADMITIDA:'Sustitución no admitida',MOTOR_ENS_REFERENCIAS_INCOMPATIBLES:'Referencias incompatibles'};
-  return {puedeResolver,diagnostico,estado:!r?'Validando…':diagnostico&&estados[diagnostico.codigo]?estados[diagnostico.codigo]:diagnostico&&DATOS_PAQUETE.has(diagnostico.codigo)?'Faltan datos del paquete':diagnostico?.estado==='no_soportado'?'Modelo no disponible':completa&&r.inicializacion.estado!=='compatible'?'Inicialización pendiente':r.recuento.estado.replaceAll('_',' ')};
+  const estados:Record<string,string>={MOTOR_ENS_SUSTITUCION_INVALIDA:'Review package properties',MOTOR_ENS_SUSTITUCION_NO_ADMITIDA:'Unsupported substitution',MOTOR_ENS_REFERENCIAS_INCOMPATIBLES:'Incompatible references'};
+  const counts:Record<string,string>={listo:'Ready',redundante_compatible:'Compatible redundant constraints',incompleto:'Incomplete',incompatible:'Incompatible',no_soportado:'Unsupported'};
+  return {puedeResolver,diagnostico,estado:!r?'Validating…':diagnostico&&estados[diagnostico.codigo]?estados[diagnostico.codigo]:diagnostico&&DATOS_PAQUETE.has(diagnostico.codigo)?'Missing package data':diagnostico?.estado==='no_soportado'?'Model unavailable':completa&&r.inicializacion.estado!=='compatible'?'Initialization pending':counts[r.recuento.estado]??r.recuento.estado.replaceAll('_',' ')};
 }

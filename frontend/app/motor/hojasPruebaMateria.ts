@@ -13,10 +13,11 @@ export const IDS_PRUEBA_MATERIA=Array.from({length:8},(_,i)=>`motor-prueba-mater
 
 function operar(h:RecorridoMateria,titulo:string,cambios:Partial<FormulacionMateria>){return recorridoMateria(h,{tipo:'cambiar',titulo,cambios});}
 function total(){
-  let h=operar(iniciarRecorrido(),'Declarar agua como única especie',{componentes:agua});
-  h=operar(h,'Expresar la conservación total',{vista:'cantidad'});
-  h=operar(h,'Retirar generación y consumo',{campo:{...h.pasos[h.activo].formulacion.campo,sinReaccion:true}});
-  return operar(h,'Declarar impermeable la frontera fuera de los puertos',{restoImpermeable:true});
+  let h=operar(iniciarRecorrido(),'Declare water as the only component',{componentes:agua});
+  h=operar(h,'Integrate local conservation · Gauss and Reynolds',{vista:'integral'});
+  h=operar(h,'Define total component inventory',{vista:'cantidad'});
+  h=operar(h,'No chemical generation or consumption',{campo:{...h.pasos[h.activo].formulacion.campo,sinReaccion:true}});
+  return operar(h,'Impermeable boundary outside the declared ports',{restoImpermeable:true});
 }
 function puertos(h:RecorridoMateria,entrada=true){return operar(h,'Declarar los caudales de frontera constantes',{fronteras:[...(entrada?[{id:1,sentido:'entrada' as const,constante:true}]:[]),{id:2,sentido:'salida',constante:true}]});}
 function temporal(masa:number,entrada:number,salida:number,tiempo:number,unidadTiempo='s'):ConfiguracionMotor{
@@ -31,7 +32,7 @@ function hoja(numero:number,nombre:string,historial:RecorridoMateria,config:Conf
 }
 function campo(componentes=agua){
   let h=operar(iniciarRecorrido(),'Declarar los componentes',{componentes});
-  h=operar(h,'Retirar generación y consumo',{campo:{...h.pasos[h.activo].formulacion.campo,sinReaccion:true}});
+  h=operar(h,'No chemical generation or consumption',{campo:{...h.pasos[h.activo].formulacion.campo,sinReaccion:true}});
   h=operar(h,'Declarar invariancia en y y z',{invariantes:[false,true,true],expandida:true});
   return operar(h,'Fijar los extremos del dominio',{fija:true});
 }
@@ -47,9 +48,10 @@ export function crearHojasPruebaMateria():HojaMotor[]{
   hojas.push(hoja(4,'Entradas y salidas iguales',puertos(total()),temporal(100,2,2,10,'min')));
   const vaciado=temporal(100,0,2,120);delete vaciado.datos.entrada_1_1;
   hojas.push(hoja(5,'Vaciado hasta agotarse',puertos(total(),false),vaciado));
-  let reaccion=operar(iniciarRecorrido(),'Declarar A y B',{componentes:mezcla});
-  reaccion=operar(reaccion,'Usar balances de cantidad por componente',{vista:'cantidad'});
-  reaccion=operar(reaccion,'Cerrar el dominio y retirar transporte',{fija:true,restoImpermeable:true,campo:{...reaccion.pasos[reaccion.activo].formulacion.campo,sinConveccion:true,sinDifusion:true}});
+  let reaccion=operar(iniciarRecorrido(),'Declare components A and B',{componentes:mezcla});
+  reaccion=operar(reaccion,'Integrate local component conservation',{vista:'integral'});
+  reaccion=operar(reaccion,'Define total component inventories',{vista:'cantidad'});
+  reaccion=operar(reaccion,'Fixed closed boundary with no convective or diffusive transport',{fija:true,restoImpermeable:true,campo:{...reaccion.pasos[reaccion.activo].formulacion.campo,sinConveccion:true,sinDifusion:true}});
   hojas.push(hoja(6,'Conversión de A en B',reaccion,{...iniciarConfiguracion(),rtol:1e-8,atol:1e-11,tiempo:dato(20,'s'),datos:{inicial_1:dato(1,'kg'),inicial_2:dato(0,'kg'),generacion_1:dato(0,'kg/s'),consumo_1:dato('0.2*m_A','kg/s'),generacion_2:dato('0.2*m_A','kg/s'),consumo_2:dato(0,'kg/s')}},[grafica('masas','Masas de A y B',['m_1','m_2'])]));
   const unoD={...iniciarConfiguracion(),frontera:'periodica' as const,celdas:80,rtol:1e-8,atol:1e-11};
   hojas.push(hoja(7,'Transporte por convección · 1D',campo(),{...unoD,tiempo:dato(.25,'s'),datos:{inicio:dato(0,'m'),fin:dato(1,'m'),velocidad:dato(1,'m/s'),inicial_1:dato('2+0.3*sin(2*pi*x)','kg/m3')}},[grafica('evolucion','Densidad en el centro',['celda_1_40']),grafica('perfil','Perfil espacial',['rho_1'],'perfil')]));

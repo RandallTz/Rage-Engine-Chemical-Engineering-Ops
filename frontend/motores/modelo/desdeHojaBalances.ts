@@ -1,3 +1,4 @@
+import { emptyEnergyJournal, energyJournalFromHistory, emptyThermodynamicJournal, thermodynamicJournalFromHistory } from '../../app/motor/physicalDerivation';
 /** Hoja del Engine -> modelo común SIN ecuaciones: supuestos, topología y datos.
  *
  * Las ecuaciones las genera el motor de balances del servidor (core/balances) a
@@ -20,6 +21,9 @@ import { balancesHoja } from "../../app/motor/seleccionBalances";
 import { firmaHoja } from "../../app/motor/modeloHojaMotor";
 import type { Corriente, Dato, ModeloComun, Volumen } from "./contrato";
 import { VERSION_MODELO } from "./contrato";
+import { emptyMaterialJournal, journalFromHistory } from '../../app/motor/materialDerivation';
+import {actualTermo} from '../../app/motor/recorridoTermodinamico';
+import {ENERGIA_FUNDAMENTAL} from '../../app/motor/recorridoEnergia';
 
 const RUTA = "config.datos.";
 const sinCF = (f: FormulacionMateria) => Object.fromEntries(Object.entries(f).filter(([k]) => k !== "componentes" && k !== "fronteras")) as Omit<FormulacionMateria, "componentes" | "fronteras">;
@@ -56,7 +60,7 @@ export function modeloBalancesDesdeHoja(h: HojaMotor): ModeloComun {
       const terminos: Record<string, string> = {};
       for (const c of ids) for (const rol of ["generacion", "consumo", "resto"]) if (hay(claveVolumen(v.id, `${rol}_${c}`))) terminos[`${rol}.${c}`] = claveVolumen(v.id, `${rol}_${c}`);
       return {
-        id: v.id, componenteIds: ids, balances: { materia: !!b.materia || !energia, energia: false, momento: false },
+        id: v.id, componenteIds: ids, balances: v.balances??{ materia: b.materia!==false, energia: false, momento: !!b.momento },
         supuestos: { materia: sinCF(f), energia: null }, frontera: { tipo: "sin_relacion" },
         inicial: { cantidades: { base: "masica", datoIds: Object.fromEntries(ids.map(c => [String(c), claveVolumen(v.id, `inicial_${c}`)])) } },
         termodinamica: { tipo: "supuesto", supuesto: "fase_no_evaluada", motivo },
@@ -82,7 +86,7 @@ export function modeloBalancesDesdeHoja(h: HojaMotor): ModeloComun {
     const geo = energia ? campoGeometria(h) : null;
     const volumenDatoId = hay("volumen") ? "volumen" : geo ? geo.id : undefined;
     volumenes = [{
-      id: V, componenteIds: ids, balances: { materia: b.materia !== false, energia, momento: false },
+      id: V, componenteIds: ids, balances: { materia: b.materia !== false, energia, momento: !!b.momento },
       supuestos: { materia: sinCF(f), energia: fe },
       frontera: fe && ctx && tienePresionPrescrita(fe, ctx) && hay("energia_p") ? { tipo: "presion_prescrita", presionId: "energia_p" } : { tipo: "sin_relacion" },
       inicial: { cantidades: { base: "masica", datoIds: Object.fromEntries(ids.map(c => [String(c), `inicial_${c}`])) },
@@ -101,12 +105,17 @@ export function modeloBalancesDesdeHoja(h: HojaMotor): ModeloComun {
       ...(energia && hay(`energia_T_${p.id}`) ? { estadoExterior: { temperaturaId: `energia_T_${p.id}` } } : {}),
     }) as Corriente);
   }
+  const thermoEntry=(!h.ensamblaje||h.hydraulicNetwork)&&h.recorridoTermodinamico?thermodynamicJournalFromHistory(h.recorridoTermodinamico):undefined;
+  if(h.hydraulicNetwork&&h.recorridoTermodinamico)volumenes=volumenes.map(v=>({...v,supuestos:{...v.supuestos,energia:{...ENERGIA_FUNDAMENTAL,...actualTermo(h.recorridoTermodinamico!).supuestos}}}));
+  const energyEntry=energia&&h.energia?energyJournalFromHistory(h.energia.historial):undefined;
   return {
     formato: "rage.modelo", version: VERSION_MODELO, id: h.id, nombre: h.nombre, componentes,
     termodinamica: { paquetes: [] }, volumenes, corrientes, intercambios: [], datos, matematico: null,
     estudio: { tipo: "temporal", tiempoId: "estudio.tf", metodoSolicitado: cfg.metodo, muestras: cfg.muestras, rtol: cfg.rtol,
       atol: { cantidad: cfg.atol, ...(energia ? { energia: h.energia?.atol ?? 1e-6 } : {}) } },
-    motores: {},
+    motores: { ...(h.equationWorkbench?{equationWorkbench:h.equationWorkbench}:{}), ...(h.hydraulicNetwork?{hydraulicNetwork:h.hydraulicNetwork}:{}), ...(h.momentumDerivation?{momentumDerivation:h.momentumDerivation}:{}), ...(h.dynamicDefinition ? {dynamicDefinition:h.dynamicDefinition}:{}), ...(thermoEntry?{thermodynamicDerivation:{...emptyThermodynamicJournal(),volumes:Object.fromEntries(volumenes.map(v=>[v.id,thermoEntry]))}}:{}), ...(energyEntry?{energyDerivation:{...emptyEnergyJournal(),volumes:{dominio:energyEntry}}}:{}), materialDerivation: { ...emptyMaterialJournal(), volumes: Object.fromEntries(h.ensamblaje
+      ? h.ensamblaje.volumenes.map(volume => [volume.id, journalFromHistory(volume.historial)])
+      : [['dominio', journalFromHistory(h.historial)]]) } },
     procedencia: { tipo: "hoja_motor_materia", hojaId: h.id, firmaHoja: firmaHoja(h), via: "motor_de_balances" },
   } as ModeloComun;
 }

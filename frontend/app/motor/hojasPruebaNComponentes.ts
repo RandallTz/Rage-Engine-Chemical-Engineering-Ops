@@ -1,3 +1,4 @@
+import { deriveNetworkTemplateMatter, deriveNetworkTemplateEnergy, deriveNetworkTemplateThermodynamics } from './materialNetworkTemplates';
 import ejemplos from './ejemplosNComponentes.json';
 import type {HojaMotor} from './hojasMotor';
 import type {SolicitudEnsamblajeV2} from './contratoEnsamblajeV2';
@@ -6,7 +7,7 @@ import {nuevaHoja} from './hojasMotor';
 /** Input-only examples: same coordinator, editable declarations, no stored solutions. */
 export function crearHojasPruebaNComponentes():HojaMotor[]{
   return ejemplos.map(e=>{
-    const s=structuredClone(e.solicitud) as unknown as SolicitudEnsamblajeV2;s.solicitudId='configuracion';
+    const s=structuredClone(e.solicitud) as unknown as SolicitudEnsamblajeV2;s.solicitudId='configuracion';deriveNetworkTemplateMatter(s);deriveNetworkTemplateEnergy(s, e.id==='par-ausente'?['A']:[]);deriveNetworkTemplateThermodynamics(s);
     return {...nuevaHoja(e.nombre),id:`motor-n-componentes-v1-${e.id}`,balances:{materia:true,energia:true,momento:false},redTermodinamica:{solicitud:s,nombres:Object.fromEntries([
       ...s.volumenes.map(v=>[`volumen:${v.id}`,`Volumen ${v.id}`]),
       ...s.corrientes.map(c=>[`corriente:${c.id}`,`Corriente ${c.id}`]),

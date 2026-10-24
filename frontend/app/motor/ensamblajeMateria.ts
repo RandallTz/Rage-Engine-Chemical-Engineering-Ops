@@ -8,7 +8,7 @@ import type {Componente,DatosCorriente,ResultadoCorriente} from './materiaEstado
 import {masaMolarKg} from './materiaEstado';
 import {analizarReglasEstado} from './reglasEstadoMateria';
 
-export type VolumenMateria={id:string;nombre:string;historial:RecorridoMateria;componentesIds?:number[];volumenDeclarado?:boolean};
+export type VolumenMateria={balances?:import('./seleccionBalances').SeleccionBalances;id:string;nombre:string;historial:RecorridoMateria;componentesIds?:number[];volumenDeclarado?:boolean};
 export type CorrienteMateria={id:number;nombre:string;desde:string|null;hasta:string|null;constante:boolean;componentesIds?:number[];mecanismo?:'convectivo'|'selectivo'|null;datos?:DatosCorriente;resultado?:ResultadoCorriente};
 /** componentes is the authoritative catalog. Absent only in legacy documents. */
 export type EnsamblajeMateria={version:1|2;componentes?:Componente[];volumenes:VolumenMateria[];corrientes:CorrienteMateria[];ultimoVolumen:number;ultimaCorriente:number;ordenDatosLegado?:string[]};
@@ -57,11 +57,11 @@ export function formulacionVolumen(e:EnsamblajeMateria,v:VolumenMateria):Formula
   const componentes=e.componentes?(v.componentesIds??e.componentes.map(s=>s.id)).map(id=>e.componentes!.find(s=>s.id===id)).filter((s):s is Componente=>!!s):f.componentes;
   return {...f,componentes,fronteras:e.corrientes.flatMap(s=>[...(s.hasta===v.id?[{id:s.id,sentido:'entrada' as const,constante:s.constante}]:[]),...(s.desde===v.id?[{id:s.id,sentido:'salida' as const,constante:s.constante}]:[])])};
 }
-export function actualizarPuertos(e:EnsamblajeMateria):EnsamblajeMateria{return {...e,volumenes:e.volumenes.map(v=>({...v,historial:recorridoMateria(v.historial,{tipo:'cambiar',titulo:'Actualizar las corrientes compartidas',cambios:{fronteras:formulacionVolumen(e,v).fronteras}})}))};}
+export function actualizarPuertos(e:EnsamblajeMateria):EnsamblajeMateria{return {...e,volumenes:e.volumenes.map(v=>({...v,historial:recorridoMateria(v.historial,{tipo:'cambiar',titulo:'Update shared material connections',cambios:{fronteras:formulacionVolumen(e,v).fronteras}})}))};}
 export function iniciarEnsamblaje(historial:RecorridoMateria,config:ConfiguracionMotor){
   const f=historial.pasos[historial.activo].formulacion;
-  const corrientes=f.fronteras.map(p=>({id:p.id,nombre:`Corriente ${p.id}`,desde:p.sentido==='salida'?'v1':null,hasta:p.sentido==='entrada'?'v1':null,constante:p.constante!==false}));
-  const ensamblaje:EnsamblajeMateria={version:1,volumenes:[{id:'v1',nombre:'Volumen 1',historial:structuredClone(historial)}],corrientes,ultimoVolumen:1,ultimaCorriente:Math.max(0,...corrientes.map(s=>s.id))};
+  const corrientes=f.fronteras.map(p=>({id:p.id,nombre:`Connection ${p.id}`,desde:p.sentido==='salida'?'v1':null,hasta:p.sentido==='entrada'?'v1':null,constante:p.constante!==false}));
+  const ensamblaje:EnsamblajeMateria={version:1,volumenes:[{id:'v1',nombre:'Region 1',historial:structuredClone(historial)}],corrientes,ultimoVolumen:1,ultimaCorriente:Math.max(0,...corrientes.map(s=>s.id))};
   const datos:ConfiguracionMotor['datos']={};
   for(const campo of camposMotor(f,config).campos){const d=config.datos[campo.id];if(!d)continue;const match=/^(entrada|salida)_(\d+)_(\d+)$/.exec(campo.id);const copia=structuredClone(d);
     if(match){const especie=f.componentes?.find(s=>s.id===Number(match[2]));const alias:Record<string,string>={m:`m_${especie?.simbolo}_v1`,rho:`rho_${especie?.simbolo}_v1`,m_total:'m_total_v1',rho_total:'rho_total_v1',V:'V_v1'};for(const s of f.componentes??[]){alias[`m_${s.simbolo}`]=`m_${s.simbolo}_v1`;alias[`rho_${s.simbolo}`]=`rho_${s.simbolo}_v1`;}copia.texto=copia.texto.replace(/\b[A-Za-z][A-Za-z0-9_]*\b/g,token=>alias[token]??token);}
@@ -71,9 +71,9 @@ export function iniciarEnsamblaje(historial:RecorridoMateria,config:Configuracio
 }
 export function agregarVolumen(e:EnsamblajeMateria):EnsamblajeMateria{
   const id=e.ultimoVolumen+1,componentes=catalogoComponentes(e);
-  const historial=recorridoMateria(iniciarRecorrido(),{tipo:'cambiar',titulo:'Declarar los componentes del ensamblaje',cambios:{componentes:structuredClone(componentes)}});
+  const historial=recorridoMateria(iniciarRecorrido(),{tipo:'cambiar',titulo:'Declare the model components',cambios:{componentes:structuredClone(componentes)}});
   historial.ultimoComponenteId=Math.max(historial.ultimoComponenteId??0,...e.volumenes.map(v=>v.historial.ultimoComponenteId??0));
-  return {...e,ultimoVolumen:id,volumenes:[...e.volumenes,{id:`v${id}`,nombre:`Volumen ${id}`,historial,...(e.componentes?{componentesIds:componentes.map(s=>s.id)}:{})}]};
+  return {...e,ultimoVolumen:id,volumenes:[...e.volumenes,{id:`v${id}`,nombre:`Region ${id}`,historial,...(e.componentes?{componentesIds:componentes.map(s=>s.id)}:{})}]};
 }
 type TerminoEnsamblado={fila:number;clave:string;signo:number;volumen:string;porVolumen:boolean;rol:string;corriente?:number};
 export type PlanEnsamblaje={analisis:AnalisisMotor;estados:EstadoAcoplado[];terminos:TerminoEnsamblado[];incidencia:number[][];especies:NonNullable<FormulacionMateria['componentes']>;volumenesConDato:string[]};

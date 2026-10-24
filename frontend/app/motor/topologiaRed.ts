@@ -1,6 +1,10 @@
+import { ENERGIA_FUNDAMENTAL } from './recorridoEnergia';
+import { emptyEnergyJournal, energyJournalInRequest, emptyThermodynamicJournal, thermodynamicJournalInRequest } from './physicalDerivation';
 import type {RedTermodinamica} from './redTermodinamica';
 import {datoRed,sincronizarHipotesis} from './redTermodinamica';
 import type {ModeloEstado} from './contratoTermodinamica';
+import { iniciarRecorrido } from './recorridoMateria';
+import { emptyMaterialJournal, journalInRequest, materialState } from './materialDerivation';
 
 export type TipoElementoRed='volumen'|'corriente'|'calor';
 const prefijos={volumen:'v',corriente:'s',calor:'q'} as const;
@@ -13,12 +17,26 @@ export function agregarElementoRed(red:RedTermodinamica,tipo:TipoElementoRed){
   const a=red.solicitud,n=maximoElementoRed(red,tipo)+1,id=prefijos[tipo]+n;
   if(!Number.isSafeInteger(n)||!a.volumenes.length)throw new Error('No se pudo crear el elemento.');
   red.ultimosElementos={...red.ultimosElementos,[tipo]:n};
-  red.nombres[`${tipo}:${id}`]=`${tipo==='volumen'?'Volumen':tipo==='corriente'?'Corriente':'Calor'} ${n}`;
+  red.nombres[`${tipo}:${id}`]=`${tipo==='volumen'?'Volume':tipo==='corriente'?'Stream':'Heat'} ${n}`;
   if(tipo==='volumen'){
     const v=structuredClone(a.volumenes[0]),base=v.inicial.cantidades.base,tipoInicial=v.inicial.energia.tipo;v.id=id;
+    v.formulacionEnergia=structuredClone(ENERGIA_FUNDAMENTAL);
+    v.politica={cantidad:'sin_restriccion',cambioInterno:'permitido',evaluacion:'equilibrio_estable'};
+    v.formulacionMateria = materialState(iniciarRecorrido().pasos[0].formulacion) as typeof v.formulacionMateria;
     v.inicial={cantidades:{base,datoIds:Object.fromEntries(v.componenteIds.map(cid=>[cid,datoRed(a,`volumen.${id}.n0.${cid}`,base==='masica'?'masa':'cantidad',base==='masica'?'kg':'mol',`volumen:${id}`,'inicial')]))},energia:{tipo:tipoInicial,datoId:datoRed(a,`volumen.${id}.${tipoInicial}0`,tipoInicial==='T'?'temperatura':'energia',tipoInicial==='T'?'K':'J',`volumen:${id}`,'inicial')}};
     v.frontera=v.frontera.tipo==='presion_prescrita'?{tipo:'presion_prescrita',presionId:datoRed(a,`volumen.${id}.P`,'presion','Pa',`volumen:${id}`)}:{tipo:'rigida',datoId:datoRed(a,`volumen.${id}.V`,'volumen','m3',`volumen:${id}`,'geometria')};
     sincronizarHipotesis(v);a.volumenes.push(v);
+    const journal = structuredClone(journalInRequest(a.derivacion) ?? emptyMaterialJournal());
+    journal.volumes[id] = { origin: 'recorded', operations: v.formulacionMateria.fija ? [{
+      id: 'configured-boundary', title: 'Configure a fixed mechanical boundary', changes: { fija: true },
+    }] : [] };
+    a.derivacion = { ...(a.derivacion && typeof a.derivacion === 'object' ? a.derivacion : {}), materialDerivation: journal };
+    const energy=structuredClone(energyJournalInRequest(a.derivacion)??emptyEnergyJournal());
+    energy.volumes[id]={origin:'recorded',operations:v.formulacionEnergia.presionPrescrita?[{id:'configured-pressure',title:'Configure prescribed uniform pressure',changes:{presionPrescrita:true,presionUniforme:true}}]:[]};
+    a.derivacion={...(a.derivacion as Record<string,unknown>),energyDerivation:energy};
+    const thermo=structuredClone(thermodynamicJournalInRequest(a.derivacion)??emptyThermodynamicJournal());
+    thermo.volumes[id]={origin:'recorded',operations:[]};
+    a.derivacion={...(a.derivacion as Record<string,unknown>),thermodynamicDerivation:thermo};
   }
   if(tipo==='corriente')a.corrientes.push({id,desde:a.volumenes[0].id,hasta:a.volumenes[1]?.id??null,componenteIds:a.volumenes[0].componenteIds.filter(cid=>!a.volumenes[1]||a.volumenes[1].componenteIds.includes(cid)),mecanismo:'convectivo',materia:{modo:'total_desde_donante',base:'masica',caudalId:datoRed(a,`corriente.${id}.F`,'caudal','kg/s',`corriente:${id}`)}});
   if(tipo==='calor')a.intercambiosTermicos.push({id,desde:null,hasta:a.volumenes[0].id,ley:{tipo:'impuesto',potenciaId:datoRed(a,`calor.${id}.Q`,'potencia','W',`calor:${id}`)}});
@@ -33,6 +51,16 @@ export function quitarElementoRed(red:RedTermodinamica,tipo:TipoElementoRed,id:s
     // Reserve IDs before connected elements leave the active document.
     red.ultimosElementos.corriente=maximoElementoRed(red,'corriente');red.ultimosElementos.calor=maximoElementoRed(red,'calor');
     a.volumenes=a.volumenes.filter(v=>v.id!==id);
+    const meta = a.derivacion as { materialDerivation?: import('./materialDerivation').MaterialJournal;
+      previousMaterialFormulations?: Record<string, unknown> } | undefined;
+    if (meta?.materialDerivation) delete meta.materialDerivation.volumes[id];
+    if (meta?.previousMaterialFormulations) delete meta.previousMaterialFormulations[id];
+    const energyMeta=a.derivacion as {energyDerivation?:import('./physicalDerivation').EnergyJournal;previousEnergyFormulations?:Record<string,unknown>}|undefined;
+    if(energyMeta?.energyDerivation)delete energyMeta.energyDerivation.volumes[id];
+    if(energyMeta?.previousEnergyFormulations)delete energyMeta.previousEnergyFormulations[id];
+    const thermoMeta=a.derivacion as {thermodynamicDerivation?:import('./physicalDerivation').ThermodynamicJournal;previousThermodynamicFormulations?:Record<string,unknown>}|undefined;
+    if(thermoMeta?.thermodynamicDerivation)delete thermoMeta.thermodynamicDerivation.volumes[id];
+    if(thermoMeta?.previousThermodynamicFormulations)delete thermoMeta.previousThermodynamicFormulations[id];
     a.corrientes=a.corrientes.filter(c=>c.desde!==id&&c.hasta!==id);
     a.intercambiosTermicos=a.intercambiosTermicos.filter(q=>q.desde!==id&&q.hasta!==id);
   }else if(tipo==='corriente'){

@@ -10,6 +10,7 @@ import {analizarExpresion,evaluarExpresion} from './expresionesMotor';
 import {UNIDADES_MOTOR} from './unidadesMotor';
 import {claveCorriente} from './ensamblajeMateria';
 import {estructuraSolicitudDinamica} from './estructuraTermodinamica';
+import {ensureInventoryExecution} from '../models/dynamicDefinition';
 export function puedeExtraerDinamica(c:CorrienteDinamica,volumenId:string,datos:Record<string,DatoEnsamblaje>){
   const ids=c.materia.modo==='por_componente'?Object.values(c.materia.caudalIds):[c.materia.caudalId],signo=c.hasta===volumenId?1:-1;
   return ids.some(id=>{try{return signo*evaluarExpresion(analizarExpresion(datos[id].declaracion.texto,[]),{})<0;}catch{return true;}});
@@ -26,6 +27,7 @@ export function declararCierreDinamico(h:HojaMotor,volumenId:string,cierre:Cierr
 export function prepararEnsamblajeTermodinamico(h:HojaMotor,solicitudId:string):PreparacionDinamica{
   const vs=volumenesControl(h),diagnosticos:DiagnosticoPreparacion[]=[],owner=vs[0]?.id??'dominio';
   const problema=(codigo:string,estado:DiagnosticoPreparacion['estado'],mensaje:string,ruta:string,variableIds:string[]=[],propietarioId=`volumen:${owner}`)=>diagnosticos.push({codigo,estado,mensaje,variableIds,origen:{propietarioId,ruta}});
+  try{ensureInventoryExecution(h);}catch(error){problema('MOTOR_ENS_INVENTORY_CONSTRAINT','no_soportado',(error as Error).message,'/dynamicDefinition');return {solicitud:null,diagnosticos};}
   if(vs.length!==1){problema('MOTOR_ENS_ALCANCE','no_soportado','El primer contrato dinámico admite un volumen; no se omiten los otros.','/ensamblaje/volumenes');return {solicitud:null,diagnosticos};}
   const v=vs[0],f=v.f,e=formulacionEnergiaHoja(h),ctx=contextoEnergiaHoja(h),cierre=h.cierresDinamicos?.[v.id],balances=balancesHoja(h);
   if(!cierre){problema('MOTOR_ENS_CIERRE_PENDIENTE','incompleto','Selecciona un cierre dinámico explícito; una consulta no lo selecciona.',`/cierresDinamicos/${v.id}`);return {solicitud:null,diagnosticos};}

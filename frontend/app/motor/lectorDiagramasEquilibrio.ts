@@ -36,7 +36,7 @@ export function leerDiagramaEquilibrio(raw:unknown,s:SolicitudDiagrama):Respuest
   if(!r||r.revision!==1||r.solicitudId!==s.solicitudId||!['completo','parcial','incompleto','invalido','no_soportado','no_convergente'].includes(r.estado)||!r.identidad||!texto(r.identidad.trazador?.id)||!texto(r.identidad.trazador.version)||![r.ramas,r.puntos,r.puntosEspeciales,r.candidatosDescartados,r.incidencias,r.diagnosticos].every(Array.isArray))fallo('identidad o estructura');
   for(const d of r.diagnosticos)if(!texto(d.codigo)||!texto(d.ruta)||!texto(d.mensaje)||!['invalido','incompleto','no_soportado','aviso'].includes(d.estado)||!Array.isArray(d.componenteIds))fallo('diagnóstico sin referencia');
   if(['invalido','incompleto','no_soportado'].includes(r.estado)){
-    if(r.puntos.length||r.ramas.length||r.puntosEspeciales.length||r.cobertura!==null||!r.diagnosticos.length)fallo('rechazo con resultados');return r;
+    if(r.puntos.length||r.ramas.length||r.puntosEspeciales.length||r.cobertura!==null||!r.diagnosticos.length||r.liquidoLiquido!==undefined)fallo('rechazo con resultados');return r;
   }
   const c=r.condicion,ids=s.componentes.map(c=>String(c.id));
   if(s.componentes.length!==2||new Set(ids).size!==2||!c||r.identidad.modelo?.id!==s.modelo.id||r.identidad.modelo.version!==s.modelo.version||!texto(r.identidad.huellaModelo)||!texto(r.identidad.firmaConsulta)||s.huellaModeloEsperada&&s.huellaModeloEsperada!==r.identidad.huellaModelo||!texto(r.metodo)||!r.evidencia||!texto(r.evidencia.nivel)||!texto(r.evidencia.motivo))fallo('modelo, huella o evidencia');
@@ -81,5 +81,45 @@ export function leerDiagramaEquilibrio(raw:unknown,s:SolicitudDiagrama):Respuest
     if(p.puntoId){const q=r.puntos.find(q=>q.id===p.puntoId)!;if(!cerca(p.T,q.T,1e-6)||!cerca(p.P,q.P,1e-3)||!cerca(p.xEje,q.xEje))fallo('punto especial distinto de su referencia');
       if(p.tipo==='azeotropo'&&(p.xEje<=0||p.xEje>=1||!cerca(q.fases[0].composicionMolar[s.componenteEjeId],q.fases[1].composicionMolar[s.componenteEjeId],1e-7)))fallo('azeótropo sin coincidencia de composiciones');}
   }
+  if(r.liquidoLiquido!==undefined)leerLiquidoLiquido(r,s);
   return r;
+}
+
+/** Validate the additive F8 block before projecting certified points. */
+function leerLiquidoLiquido(r:RespuestaDiagrama,s:SolicitudDiagrama){
+  const block=r.liquidoLiquido!,ids=s.componentes.map(item=>String(item.id));
+  if(!block||!texto(block.trazador?.id)||!texto(block.trazador.version)||!['completo','parcial'].includes(block.estado)||![block.ramas,block.puntos,block.puntosEspeciales,block.incidencias].every(Array.isArray)||!texto(block.metodo))fallo('liquid-liquid structure');
+  const budget=block.presupuesto;
+  if(!budget||![budget.evaluaciones,budget.limiteEvaluaciones,budget.segundos,budget.limiteSegundos].every(value=>fin(value)&&value>=0)||budget.limiteEvaluaciones<=0||budget.limiteSegundos<=0)fallo('liquid-liquid budget');
+  if(block.evidencia!==null&&(!block.evidencia||block.evidencia.combinacion!=='liquido_liquido'||!texto(block.evidencia.nivel)||!texto(block.evidencia.motivo)))fallo('liquid-liquid evidence');
+  const branches=new Set(block.ramas.map(row=>row.id)),points=new Map(block.puntos.map(row=>[row.id,row]));
+  if(branches.size!==block.ramas.length||points.size!==block.puntos.length)fallo('duplicate liquid-liquid identity');
+  const fixed=s.corte.tipo==='Txy'?normalizarCantidad(s.corte.P,'P'):normalizarCantidad(s.corte.T,'T');
+  const state=(T:number,P:number)=>fin(T)&&T>0&&fin(P)&&P>0&&cerca(s.corte.tipo==='Txy'?P:T,fixed,64*Number.EPSILON*fixed);
+  for(const point of block.puntos){
+    if(!texto(point.id)||!branches.has(point.ramaId)||!state(point.T,point.P)||!intervalo(point.xEje)||!['semilla_por_flash','continuacion'].includes(point.origen)||!Array.isArray(point.fases)||point.fases.length!==2)fallo('liquid-liquid point');
+    for(const [i,phase] of point.fases.entries())if(phase.id!==['liquido-a','liquido-b'][i]||phase.tipo!=='liquido'||!composicion(phase.composicionMolar,ids)||!cerca(phase.composicionMolar[s.componenteEjeId],point.xEje[i]))fallo('liquid-liquid composition');
+    certificado(point.certificado);
+  }
+  const referred=new Set<string>();
+  for(const branch of block.ramas){
+    if(!texto(branch.id)||branch.tipo!=='LL'||branch.variable!==(s.corte.tipo==='Txy'?'T':'P')||!lista(branch.puntoIds)||!branch.puntoIds.length||!Array.isArray(branch.intervalo)||branch.intervalo.length!==2||!branch.intervalo.every(fin)||branch.intervalo[0]>branch.intervalo[1])fallo('liquid-liquid branch');
+    const values=branch.puntoIds.map(id=>{const point=points.get(id);if(!point||point.ramaId!==branch.id||referred.has(id))fallo('liquid-liquid branch reference');referred.add(id);return s.corte.tipo==='Txy'?point.T:point.P;});
+    if(!cerca(Math.min(...values),branch.intervalo[0],1e-6)||!cerca(Math.max(...values),branch.intervalo[1],1e-6))fallo('liquid-liquid branch interval');
+  }
+  if(referred.size!==points.size)fallo('unreferenced liquid-liquid point');
+  const specialIds=new Set<string>();
+  for(const point of block.puntosEspeciales){
+    if(!texto(point.id)||specialIds.has(point.id)||!branches.has(point.ramaId)||!texto(point.descripcion))fallo('liquid-liquid special identity');specialIds.add(point.id);
+    if(point.tipo==='limite_dominio'){if(point.T!==null&&(!fin(point.T)||point.T<=0)||point.P!==null&&(!fin(point.P)||point.P<=0))fallo('liquid-liquid domain limit');continue;}
+    if(!state(point.T,point.P))fallo('liquid-liquid special condition');
+    if(point.tipo==='critico_ll'){
+      const cert=point.certificado;
+      if(!fin(point.xEje)||point.xEje<0||point.xEje>1||!composicion(point.composiciones?.['liquido-critico'],ids)||!cerca(point.xEje,point.composiciones['liquido-critico'][s.componenteEjeId])||!cert||!['cumple','no_cumple'].includes(cert.estado)||!Array.isArray(cert.residuos)||cert.residuos.length!==1||cert.residuos.some(row=>row.id!=='criticidad'||!fin(row.valor)||row.valor<0||!fin(row.tolerancia)||row.tolerancia<=0||!texto(row.escala)||!['cumple','no_cumple'].includes(row.estado)||cert.estado==='cumple'&&(row.estado!=='cumple'||row.valor>row.tolerancia))||!cert.estabilidad||!['estable','inestable','no_evaluable'].includes(cert.estabilidad.estado)||cert.estabilidad.tmMinimo!==null&&!fin(cert.estabilidad.tmMinimo)||!fin(cert.estabilidad.tolerancia)||cert.estabilidad.tolerancia<=0||cert.estado==='cumple'&&(cert.estabilidad.estado!=='estable'||!fin(cert.estabilidad.tmMinimo)||cert.estabilidad.tmMinimo < -cert.estabilidad.tolerancia))fallo('liquid-liquid critical certificate');
+    }else if(point.tipo==='tres_fases'){
+      if(!intervalo(point.xEje)||!['liquido-a','liquido-b','vapor'].every(id=>composicion(point.composiciones?.[id as keyof typeof point.composiciones],ids))||!cerca(point.xEje[0],point.composiciones['liquido-a'][s.componenteEjeId])||!cerca(point.xEje[1],point.composiciones['liquido-b'][s.componenteEjeId]))fallo('three-phase compositions');
+      certificado(point.certificado);
+    }else fallo('liquid-liquid special type');
+  }
+  for(const incidence of block.incidencias)if(!texto(incidence.id)||incidence.ramaId!==null&&!branches.has(incidence.ramaId)||!['presupuesto','no_convergente','fase_competidora'].includes(incidence.tipo)||!texto(incidence.causa)||!texto(incidence.accion))fallo('liquid-liquid incidence');
 }

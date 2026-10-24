@@ -22,7 +22,7 @@ function datoDeEdicion(e:Edicion){
 function Contenido({modelo,componentes,datos,originales,alcance,cambiar}:Props){
   const [catalogo,setCatalogo]=useState<CatalogoMotor|null>(null),[error,setError]=useState(''),[intento,setIntento]=useState(0),[edicion,setEdicion]=useState<Edicion|null>(null);
   useEffect(()=>{const c=new AbortController();catalogoMotor(c.signal).then(x=>{if(!c.signal.aborted)setCatalogo(x);}).catch(e=>{if(!c.signal.aborted)setError((e as Error).message);});return()=>c.abort();},[intento]);
-  if(error)return <div role="alert">{error}<button type="button" onClick={()=>{setError('');setIntento(n=>n+1);}}>Reintentar catálogo</button></div>;
+  if(error)return <div role="alert">{error}<button type="button" onClick={()=>{setError('');setIntento(n=>n+1);}}>Retry catalog</button></div>;
   if(!catalogo)return <p role="status">Cargando datos originales…</p>;
   const paquete=catalogo.paquetes.find(p=>mismoModelo(p.modelo,modelo)),admite=!!paquete&&!paquete.requisitos.porEspecie.includes('formulacion_iapws95');
   const identidades=new Set([...(admite?componentes.flatMap(c=>c.identidadQuimica?.cas?[c.identidadQuimica.cas]:[]):[]),...Object.keys(datos??{})]);
@@ -44,17 +44,17 @@ function Contenido({modelo,componentes,datos,originales,alcance,cambiar}:Props){
   return <div className={styles.content}>
     {alcance&&<p>{alcance}</p>}
     {admite&&<small>h, s, Cp del líquido y densidad se derivan de estas entradas del potencial.</small>}
-    {!admite&&<p>{paquete?'Este paquete usa una formulación completa; no admite sustituciones de datos puros.':'Paquete sin publicar en el catálogo.'}</p>}
+    {!admite&&<p>{paquete?"This package uses a complete formulation and does not accept pure-property overrides.":"Package not published in the catalog."}</p>}
     {[...identidades].map(cas=>{
       const s=catalogo.sustancias.find(s=>s.cas===cas),nombre=componentes.find(c=>c.identidadQuimica?.cas===cas)?.nombre??s?.nombre??cas;
       const dentro=componentes.some(c=>c.identidadQuimica?.cas===cas),base=originales?.[cas]??s?.datosPuros.propiedades;
       return <section key={cas}><h3>{nombre}<small>{cas}{!dentro?' · Fuera de la selección actual':''}</small></h3>
         {(['volumen_liquido','cp_gas_ideal','presion_vapor'] as const).filter(id=>admite||datos?.[cas]?.[id]).map(id=>{
           const original=base?.find(p=>p.id===id),actual=datos?.[cas]?.[id],activa=edicion?.cas===cas&&edicion.id===id;
-          return <div className={styles.property} key={id}><header><strong>{nombresDatosPuros[id]}</strong><span>{actual?'Sustitución activa':'Registro'}</span></header>
+          return <div className={styles.property} key={id}><header><strong>{nombresDatosPuros[id]}</strong><span>{actual?"Active substitution":'Registro'}</span></header>
             {original&&<details><summary>{originales?.[cas]?'Registro al crear las sustituciones':'Registro actual'} · {descripcionDatoOriginal(original)}</summary><p>{original.fuente}</p>{'coeficientes'in original&&<p className={styles.coefficients}>{Object.entries(original.coeficientes).map(([k,v])=>`${k} = ${v}`).join(' · ')}</p>}</details>}
             {actual&&<details><summary>Dato aplicado · {actual.fuente}</summary><pre>{JSON.stringify(actual,null,2)}</pre></details>}
-            <div className={styles.actions}><button type="button" aria-label={`${actual?'Editar':'Sustituir'} ${nombresDatosPuros[id]} de ${nombre}`} disabled={!admite||!dentro||!original} onClick={()=>editar(cas,id)}>{actual?'Editar sustitución':'Sustituir'}</button>{actual&&<button type="button" aria-label={`Usar registro para ${nombresDatosPuros[id]} de ${nombre}`} onClick={()=>{if(cambiar(sustituirDatoPuro(datos,cas,id,undefined),originales??{}))setEdicion(null);}}>Usar registro</button>}</div>
+            <div className={styles.actions}><button type="button" aria-label={`${actual?"Edit":'Sustituir'} ${nombresDatosPuros[id]} de ${nombre}`} disabled={!admite||!dentro||!original} onClick={()=>editar(cas,id)}>{actual?"Edit override":'Sustituir'}</button>{actual&&<button type="button" aria-label={`Usar registro para ${nombresDatosPuros[id]} de ${nombre}`} onClick={()=>{if(cambiar(sustituirDatoPuro(datos,cas,id,undefined),originales??{}))setEdicion(null);}}>Usar registro</button>}</div>
             {activa&&<div className={styles.form}>
               {id==='volumen_liquido'?<>{entrada('valor','Volumen molar del líquido')}<label>Unidad<select aria-label="Unidad del volumen molar" value={edicion.campos.unidad} onChange={e=>setEdicion({...edicion,campos:{...edicion.campos,unidad:e.target.value}})}>{['m3/mol','cm3/mol','L/mol'].map(u=><option key={u}>{u}</option>)}</select></label></>:<>
                 {id==='presion_vapor'&&<label>Forma<select aria-label="Forma de presión de vapor" value={edicion.campos.forma} onChange={e=>setEdicion({...edicion,campos:{...edicion.campos,forma:e.target.value}})}><option>WagnerPoling</option><option>WagnerMcGarry</option></select></label>}
@@ -62,19 +62,19 @@ function Contenido({modelo,componentes,datos,originales,alcance,cambiar}:Props){
                 {(id==='cp_gas_ideal'?['a0','a1','a2','a3','a4']:['A','B','C','D','Tc','Pc']).map(k=>entrada(k,k==='Tc'?'Tc [K]':k==='Pc'?'Pc [Pa]':k))}
                 {entrada('Tmin','Tmin [K]')}{entrada('Tmax','Tmax [K]')}
               </>}
-              {entrada('fuente','Fuente de la sustitución')}
+              {entrada('fuente',"Override source")}
               {problema&&<small role="status">{problema}</small>}
-              <div className={styles.actions}><button type="button" disabled={!!problema} onClick={aplicar}>Aplicar sustitución</button><button type="button" onClick={()=>setEdicion(null)}>Descartar borrador</button></div>
+              <div className={styles.actions}><button type="button" disabled={!!problema} onClick={aplicar}>Apply override</button><button type="button" onClick={()=>setEdicion(null)}>Descartar borrador</button></div>
             </div>}
           </div>;
         })}
       </section>;
     })}
-    {admite&&!identidades.size&&<p>Declara la identidad de los componentes para consultar sus datos.</p>}
+    {admite&&!identidades.size&&<p>Specify component identities to look up their data.</p>}
     <small>El backend valida el potencial y sus derivadas al comprobar o evaluar el modelo.</small>
   </div>;
 }
 export default function EditorDatosPuros(props:Props){
   const [abierto,setAbierto]=useState(false),n=Object.values(props.datos??{}).reduce((n,x)=>n+Object.keys(x).length,0);
-  return <details id={props.id} tabIndex={-1} className={styles.editor} onToggle={e=>setAbierto(e.currentTarget.open)}><summary>Propiedades del paquete{n?` · ${n} ${n===1?'sustitución':'sustituciones'}`:''}</summary>{abierto&&<Contenido key={JSON.stringify(props.modelo)} {...props}/>}</details>;
+  return <details id={props.id} tabIndex={-1} className={styles.editor} onToggle={e=>setAbierto(e.currentTarget.open)}><summary>Package properties{n?` · ${n} ${n===1?'sustitución':'sustituciones'}`:''}</summary>{abierto&&<Contenido key={JSON.stringify(props.modelo)} {...props}/>}</details>;
 }

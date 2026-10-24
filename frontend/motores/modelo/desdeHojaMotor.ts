@@ -16,6 +16,7 @@ import { leerHojaMotor } from "../../app/adimensionalizacion/desdeMotor";
 import type { Componente } from "../../app/motor/materiaEstado";
 import type { Corriente, Dato, ModeloComun } from "./contrato";
 import { VERSION_MODELO } from "./contrato";
+import { emptyMaterialJournal, journalFromHistory } from '../../app/motor/materialDerivation';
 
 export const VOLUMEN_HOJA = "dominio";
 const RUTA_DATOS = "config.datos.";
@@ -60,7 +61,7 @@ export function modeloDesdeHojaMotor(hoja: HojaMotor): ModeloComun {
     componentes: structuredClone(cs),
     termodinamica: { paquetes: [] },
     volumenes: [{
-      id: VOLUMEN_HOJA, componenteIds: cs.map(c => c.id), balances: { materia: true, energia: false, momento: false },
+      id: VOLUMEN_HOJA, componenteIds: cs.map(c => c.id), balances: { materia: true, energia: false, momento: !!hoja.balances?.momento },
       supuestos: { materia: structuredClone(supuestos), energia: null },
       frontera: f.vista === "campo" && !f.invariantes.every(Boolean) ? { tipo: "malla_1d" } : { tipo: "sin_relacion" },
       inicial: { tipo: "por_datos" },
@@ -76,7 +77,7 @@ export function modeloDesdeHojaMotor(hoja: HojaMotor): ModeloComun {
       tipo: "temporal", tiempoId: "estudio.tf", metodoSolicitado: cfg.metodo, muestras: cfg.muestras, rtol: cfg.rtol, atol: { cantidad: cfg.atol },
       espacial: { celdas: cfg.celdas, frontera: cfg.frontera }, ...(cfg.cierre !== undefined ? { cierreMasico: cfg.cierre } : {}),
     },
-    motores: {},
+    motores: { ...(hoja.equationWorkbench?{equationWorkbench:hoja.equationWorkbench}:{}), ...(hoja.momentumDerivation?{momentumDerivation:hoja.momentumDerivation}:{}), ...(hoja.dynamicDefinition ? {dynamicDefinition:hoja.dynamicDefinition}:{}), materialDerivation: { ...emptyMaterialJournal(), volumes: { [VOLUMEN_HOJA]: journalFromHistory(hoja.historial) } } },
     procedencia: {
       tipo: "hoja_motor_materia", hojaId: hoja.id, firmaHoja: firmaHoja(hoja),
       pasos: hoja.historial.pasos.map(p => ({ titulo: p.titulo, operacion: p.operacion })),

@@ -1,10 +1,5 @@
 .page { width: 100%; max-width: 1460px; margin: 0 auto; padding: 40px clamp(24px, 5.5vw, 88px) 64px; color: var(--motor-tinta, #293222); }
 .header { padding-bottom: 32px; }
-.documentBar { display:flex; align-items:center; gap:22px; border-bottom:1px solid var(--motor-borde, #d7dbcf); padding-bottom:16px; margin-bottom:26px; font-size:11px; color:var(--motor-acento, #49643a); }
-.documentBar form { display:flex; align-items:center; gap:20px; flex:1; min-width:0; }
-.documentBar input { min-width:0; flex:1; font-size:13px; color:var(--motor-tinta, #293222); background:transparent; border:1px solid transparent; padding:7px; }
-.documentBar input:hover,.documentBar input:focus { border-color:#cdd3c3; border-radius:4px; }
-.documentBar button { cursor:pointer; white-space:nowrap; }
 .eyebrow { color: #6a7263; font-size: 11px; letter-spacing: .09em; text-transform: uppercase; }
 .header h1 { margin: 10px 0 8px; font-size: clamp(26px, 3vw, 36px); font-weight: 500; letter-spacing: -.045em; line-height: 1.2; }
 .scope { font-size: 12px; color: #6a7263; }
@@ -66,6 +61,19 @@
 .branchOrigin { display: inline-block; margin-top: 8px; color: #747c6c; font-size: 10px; text-decoration: underline; text-underline-offset: 3px; }
 .operationsPanel { max-height: calc(100dvh - 120px); overflow-y: auto; scrollbar-width: thin; padding: 20px; }
 .operationsPanel h2 { font-size: 18px; }
+.assumptionControls.assumptionControls { display:block; padding:0; margin:0; border:0; min-width:0; }
+.assumptionBody.assumptionBody { position:static; padding:0; margin:0; border:0; border-radius:0; background:transparent; }
+.configurationControls { border-bottom:1px solid var(--motor-borde); padding-bottom:16px; margin-bottom:20px; font-size:11px; }
+.configurationControls > summary { cursor:pointer; font-size:12px; color:var(--motor-acento); }
+.configurationContent { padding-top:16px; min-width:0; overflow-wrap:anywhere; }
+.configurationContent :global([class*="page"]),.configurationContent :global([class*="paper"]) { padding:0; margin:0; width:100%; min-width:0; }
+.configurationContent :global([class*="layout"]),.configurationContent :global([class*="Layout"]),.configurationContent :global([class*="modeGrid"]) { display:grid; grid-template-columns:minmax(0,1fr); gap:12px; }
+.configurationContent input:not([type=checkbox]),.configurationContent select { width:100%; min-width:0; max-width:100%; }
+.configurationContent h1,.configurationContent h2 { font-size:14px; letter-spacing:0; }
+.configurationContent :global([class*="connectionRow"]),.configurationContent :global([class*="volumeTools"]) { display:grid; grid-template-columns:minmax(0,1fr); gap:8px; }
+.modelVolumes { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 24px; font-size:11px; }
+.modelVolumes button { padding:9px 12px; border:1px solid var(--motor-borde); border-radius:4px; cursor:pointer; }
+.modelVolumes button[aria-pressed=true] { background:var(--motor-acento-suave); border-color:var(--motor-acento-borde); }
 .assumptions .operationGroup { padding: 14px 0; margin: 0; border: 0; border-top: 1px solid var(--motor-borde, #d7dbcf); }
 .operationGroup legend { font-size: 12px; font-weight: 500; padding: 0 8px 0 0; }
 .formChoices { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 5px; }
@@ -123,6 +131,7 @@
 .expandedOperators summary { font-size: 11px; cursor: pointer; }
 .diffusionChoice { display: block; font-size: 11px; margin-bottom: 20px; }
 .diffusionChoice select { width: 100%; min-height: 40px; margin-top: 8px; border: 1px solid #cdd3c3; border-radius: 5px; background: var(--motor-fondo, #f6f4ef); padding: 7px; font-size: 11px; }
+.diffusionChoice input { width: 100%; min-width: 0; min-height: 40px; margin-top: 8px; border: 1px solid #cdd3c3; border-radius: 5px; background: var(--motor-fondo, #f6f4ef); padding: 7px; font-size: 11px; }
 .directionOptions { margin: 0 0 24px; font-size: 12px; }
 .directionOptions h3 { margin: 0 0 14px; font-size: 13px; font-weight: 500; }
 .directionOptions > span { display: block; color: #747c6c; margin-bottom: 10px; }
@@ -156,37 +165,8 @@
 .boundaryNotice { padding: 12px; margin-top: 14px; border-left: 2px solid #b39357; font-size: 11px; color: #7a6540; }
 .quantitySolution { border-top: 1px solid #e0e3d8; padding-top: 18px; }
 .quantitySolution > span { font-size: 10px; color: #747c6c; }
-.modular { border-top: 1px solid var(--motor-borde, #d7dbcf); padding: 22px 0 28px; }
-.moduleHeader, .family header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-.moduleHeader h2 { font-size: 15px; font-weight: 500; }
-.moduleHeader button, .family button, .connectionControls button { font-size: 11px; color: var(--motor-acento, #49643a); cursor: pointer; }
-.modular button:disabled { opacity: .4; cursor: default; }
-.volumeTabs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
-.volumeTabs button { padding: 8px 12px; border: 1px solid #d6dbce; border-radius: 5px; font-size: 11px; cursor: pointer; }
-.volumeTabs button[aria-pressed='true'] { background: var(--motor-acento-suave, #e7ebdf); border-color: var(--motor-acento-borde, #899a78); }
-.assembled { padding: 24px 8px; font-size: 17px; overflow-x: auto; }
-.familyList { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 0 24px; }
-.family { padding: 14px 0; border-top: 1px solid #e0e3d8; min-width: 0; }
-.family h3 { font-size: 12px; font-weight: 500; }
-.family h3 > span { color: #7c8972; padding-right: 10px; }
-.emptyFamily { display: block; font-size: 10px; color: #818877; margin: 10px 0; }
-.contribution { display: grid; grid-template-columns: 62px minmax(0,1fr) 20px; align-items: center; gap: 8px; margin-top: 12px; font-size: 12px; }
-.contributionDefinition { font-size: 10px; min-width: 0; }
-.contributionDefinition summary { cursor: pointer; }
-.contributionDefinition details > div { overflow-x: auto; margin-top: 8px; }
-.contribution small { display: block; color: #818877; font-size: 9px; margin-top: 3px; }
-.contribution > button { font-size: 18px; }
-.contribution[data-inactive='true'] { opacity: .5; }
-.addChoices { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-.addChoices button { padding: 6px 8px; background: #e9eddf; border-radius: 4px; }
-.connectionControls { border-top: 1px solid #e0e3d8; padding-top: 16px; }
-.coupling { margin-top: 22px; border-left: 2px solid var(--motor-acento-borde, #899a78); padding: 4px 0 4px 16px; }
-.coupling h3 { font-size: 12px; margin-bottom: 14px; }
-.sharedFlow { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 11px; margin-bottom: 12px; }
-.cancellation { margin-left: auto; color: var(--motor-acento, #49643a); }
-.coupling summary, .continuous summary { font-size: 11px; cursor: pointer; color: var(--motor-acento, #60734f); }
-.coupledEquation { margin-top: 16px; overflow-x: auto; font-size: 13px; }
-.coupledEquation h4, .continuous h3 { font-size: 11px; font-weight: 500; }
+ .continuous summary { font-size: 11px; cursor: pointer; color: var(--motor-acento, #60734f); }
+ .continuous h3 { font-size: 11px; font-weight: 500; }
 .continuous { border-top: 1px solid var(--motor-borde, #d7dbcf); padding-top: 20px; margin-top: 24px; }
 .continuous h3 { margin-top: 24px; }
 .continuousSymbols { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; font-size: 10px; }
@@ -226,8 +206,6 @@
 .page :focus-visible { outline: 2px solid var(--motor-acento, #647354); outline-offset: 4px; }
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 @media (max-width: 800px) {
-  .documentBar { flex-wrap:wrap; gap:14px; }
-  .documentBar form { flex-wrap:wrap; }
   .coordinateChoices button { padding: 8px; gap: 6px; flex-direction: column; text-align: center; }
   .page { padding: 24px 20px 40px; }
   .layout { grid-template-columns: minmax(0, 1fr); gap: 26px; }
@@ -243,7 +221,7 @@
   .variableColumns { grid-template-columns: minmax(0,1fr); }
 }
 @media (max-width: 480px) {
-  .familyList, .continuousSymbols { grid-template-columns: minmax(0,1fr); }
+ .continuousSymbols { grid-template-columns: minmax(0,1fr); }
   .symbols dl { grid-template-columns: minmax(0, 1fr); }
   .equation header { gap: 8px; }
 }

@@ -7,9 +7,10 @@ import type {EnsamblajeMateria,CorrienteMateria} from './ensamblajeMateria';
 const dato=(texto:string|number,unidad:string)=>({texto:String(texto),unidad});
 const agua=[{id:1,nombre:'Agua',simbolo:'A'}],ab=[{id:1,nombre:'A',simbolo:'A'},{id:2,nombre:'B',simbolo:'B'}];
 function preparar(numero:number,nombre:string,nv:number,especies=agua){
-  let h=iniciarRecorrido();h=recorridoMateria(h,{tipo:'cambiar',titulo:'Declarar componentes',cambios:{componentes:especies}});
-  h=recorridoMateria(h,{tipo:'cambiar',titulo:'Usar conservación total temporal',cambios:{vista:'cantidad'}});
-  h=recorridoMateria(h,{tipo:'cambiar',titulo:'Retirar fuentes y cerrar la superficie restante',cambios:{restoImpermeable:true,campo:{...h.pasos[h.activo].formulacion.campo,sinReaccion:true}}});
+  let h=iniciarRecorrido();h=recorridoMateria(h,{tipo:'cambiar',titulo:'Declare components',cambios:{componentes:especies}});
+  h=recorridoMateria(h,{tipo:'cambiar',titulo:'Integrate local conservation · Gauss and Reynolds',cambios:{vista:'integral'}});
+  h=recorridoMateria(h,{tipo:'cambiar',titulo:'Define total component inventories',cambios:{vista:'cantidad'}});
+  h=recorridoMateria(h,{tipo:'cambiar',titulo:'No chemical generation or consumption; impermeable boundary remainder',cambios:{restoImpermeable:true,campo:{...h.pasos[h.activo].formulacion.campo,sinReaccion:true}}});
   const e:EnsamblajeMateria={version:1,volumenes:Array.from({length:nv},(_,i)=>({id:`v${i+1}`,nombre:`Volumen ${i+1}`,historial:structuredClone(h)})),corrientes:[],ultimoVolumen:nv,ultimaCorriente:0};
   return {...nuevaHoja(`Acoplado ${numero} · ${nombre}`,h),id:`motor-prueba-acoplado-v1-${numero}`,ensamblaje:e,volumenActivo:'v1',config:{...iniciarConfiguracion(),rtol:1e-8,atol:1e-11,tiempo:dato(10,'s')}};
 }

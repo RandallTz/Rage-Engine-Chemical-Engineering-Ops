@@ -13,6 +13,7 @@ export type SolicitudNucleo = {
 export type DiagnosticoNucleo = { ruta: string; codigo: string; severidad: "error" | "aviso"; mensaje: string; simbolos?: string[] };
 export type FormulacionNucleo = {
   id?: string;
+  objetivosAplicados?: string[];
   simbolos: { id: string; nombre: string; rol: "escala" | "variable_adimensional"; variableId: string; dimension: Dimension; rolOrigen?: string; papel?: string; estado?: string; valor?: Expresion | null; dependeDe?: string[]; signo?: string }[];
   escalas: { simboloId: string; escalaId: string; papel: string; estado: string; valor: Expresion }[];
   libres: string[];

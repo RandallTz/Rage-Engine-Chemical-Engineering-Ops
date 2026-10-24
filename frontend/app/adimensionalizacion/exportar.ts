@@ -162,7 +162,8 @@ function signo(e: Expresion): { negativo: boolean; magnitud: Expresion } {
   }
   return { negativo: false, magnitud: e };
 }
-export function latexExpresion(e: Expresion): string {
+export function latexExpresion(e: Expresion, labels: Record<string, string> = {}): string {
+  const nombre = (id: string) => labels[id] ?? nombreLatex(id);
   function l(e: Expresion, contexto = 0): string {
     let texto: string, prioridad = 4;
     switch (e.tipo) {

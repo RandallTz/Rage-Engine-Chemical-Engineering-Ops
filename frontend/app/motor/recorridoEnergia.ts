@@ -8,20 +8,20 @@ export const ENERGIA_FUNDAMENTAL:FormulacionEnergia={forma:'local',trabajoTotalH
 /** Only sheets written before this distinction inherit the old imposed-pressure semantics.
  * Spatial uniformity alone never prescribes pressure in a new formulation. */
 export const tienePresionPrescrita=(f:FormulacionEnergia,c:ContextoEnergia)=>f.presionPrescrita??(f.presionUniforme&&(!c.fija||c.puertos.length>0));
-export type PasoEnergia={titulo:string;formulacion:FormulacionEnergia;contexto:ContextoEnergia;relaciones:string[]};
+export type PasoEnergia={titulo:string;formulacion:FormulacionEnergia;contexto:ContextoEnergia;relaciones:string[];operation?:{changes:Partial<FormulacionEnergia>}|null};
 export type RecorridoEnergia={version:1;pasos:PasoEnergia[];rehacer:PasoEnergia[]};
 export type TerminoEnergia={id:string;rol:'corriente'|'calor'|'presion'|'viscoso'|'fuerzas'|'fuente'|'resto';signo:1|-1;unidad:'W';latex:string;puertoId?:number;sentido?:'entrada'|'salida'};
 export function contextoEnergia(f:FormulacionMateria,volumenId='dominio'):ContextoEnergia{
   const transporte=terminosTotalesMateria(f);
   return {volumenId,fija:f.fija,restoCerrado:!transporte.some(t=>t.rol==='resto'),puertos:transporte.filter(t=>t.rol==='entrada'||t.rol==='salida').map(t=>({id:t.puertoId!,sentido:t.rol as 'entrada'|'salida',constante:f.fronteras.find(p=>p.id===t.puertoId)?.constante!==false})),componentesIds:(f.componentes??[]).map(c=>c.id)};
 }
-export const iniciarEnergia=(contexto:ContextoEnergia):RecorridoEnergia=>({version:1,pasos:[{titulo:'Conservación local de energía',formulacion:{...ENERGIA_FUNDAMENTAL},contexto,relaciones:[String.raw`e=u+\frac{\mathbf v\cdot\mathbf v}{2}`,String.raw`\mathbf q:\ \text{flujo energético no convectivo}`]}],rehacer:[]});
+export const iniciarEnergia=(contexto:ContextoEnergia):RecorridoEnergia=>({version:1,pasos:[{titulo:'Local energy conservation',formulacion:{...ENERGIA_FUNDAMENTAL},contexto,relaciones:[String.raw`e=u+\frac{\mathbf v\cdot\mathbf v}{2}`,String.raw`\mathbf q:\ \text{nonconvective energy flux}`],operation:null}],rehacer:[]});
 export const actualEnergia=(h:RecorridoEnergia)=>h.pasos[h.pasos.length-1];
 export function operarEnergia(h:RecorridoEnergia,titulo:string,cambios:Partial<FormulacionEnergia>,relaciones:string[]=[],contexto=actualEnergia(h).contexto):RecorridoEnergia{
   const previa=actualEnergia(h).formulacion,f={...previa,...cambios};
-  if(f.entalpia&&!f.separarPresion)throw new Error('Separa primero el esfuerzo de presión.');
+  if(f.entalpia&&!f.separarPresion)throw new Error('Separate pressure stress before collecting flow work into enthalpy.');
   if(JSON.stringify(f)===JSON.stringify(previa)&&JSON.stringify(contexto)===JSON.stringify(actualEnergia(h).contexto))return h;
-  return {version:1,pasos:[...h.pasos,{titulo,formulacion:f,contexto:structuredClone(contexto),relaciones}],rehacer:[]};
+  return {version:1,pasos:[...h.pasos,{titulo,formulacion:f,contexto:structuredClone(contexto),relaciones,operation:{changes:structuredClone(cambios)}}],rehacer:[]};
 }
 export function volverEnergia(h:RecorridoEnergia,indice:number):RecorridoEnergia{
   if(!Number.isInteger(indice)||indice<0||indice>=h.pasos.length)return h;
@@ -31,12 +31,12 @@ export const rehacerEnergia=(h:RecorridoEnergia):RecorridoEnergia=>h.rehacer.len
 /** Every macro reduction retains the intervening mathematical identities in the journal. */
 export function transformarEnergia(h:RecorridoEnergia,forma:FormaEnergia):RecorridoEnergia{
   const orden:FormaEnergia[]=['local','integrada','integral','total'],actual=orden.indexOf(actualEnergia(h).formulacion.forma),destino=orden.indexOf(forma);
-  if(destino<actual)return operarEnergia(h,`Reexpresar en forma ${forma}`,{forma});
+  if(destino<actual)return operarEnergia(h,`Reexpress the balance in ${forma} form`,{forma});
   let r=h;
   for(let i=actual+1;i<=destino;i++){
-    if(orden[i]==='integrada')r=operarEnergia(r,'Integrar sobre V(t) y aplicar Gauss',{forma:'integrada'},[String.raw`\int_{V(t)}\nabla\cdot\mathbf F\,dV=\oint_{\partial V(t)}\mathbf F\cdot\mathbf n\,dA`]);
-    if(orden[i]==='integral')r=operarEnergia(r,'Aplicar el teorema de transporte de Reynolds',{forma:'integral'},[String.raw`\frac{d}{dt}\int_{V(t)}\rho e\,dV=\int_{V(t)}\frac{\partial(\rho e)}{\partial t}\,dV+\oint_{\partial V(t)}\rho e\mathbf v_b\cdot\mathbf n\,dA`,String.raw`E(t)=\int_{V(t)}\rho e\,dV`]);
-    if(orden[i]==='total')r=operarEnergia(r,'Particionar la frontera en puertos y superficie restante',{forma:'total'},[String.raw`\partial V=\left(\bigcup_p A_p\right)\cup S_{\mathrm{resto}},\quad A_p\cap A_q=\varnothing\ (p\ne q)`,String.raw`\dot m_p=\varepsilon_p\int_{A_p}\rho(\mathbf v-\mathbf v_b)\cdot\mathbf n\,dA,\quad\varepsilon_{\mathrm{ent}}=-1,\ \varepsilon_{\mathrm{sal}}=1`,String.raw`\dot m_p\bar h_p=\varepsilon_p\int_{A_p}\rho h(\mathbf v-\mathbf v_b)\cdot\mathbf n\,dA`]);
+    if(orden[i]==='integrada')r=operarEnergia(r,'Integrate over V(t) and apply Gauss',{forma:'integrada'},[String.raw`\int_{V(t)}\nabla\cdot\mathbf F\,dV=\oint_{\partial V(t)}\mathbf F\cdot\mathbf n\,dA`]);
+    if(orden[i]==='integral')r=operarEnergia(r,'Apply Reynolds transport theorem',{forma:'integral'},[String.raw`\frac{d}{dt}\int_{V(t)}\rho e\,dV=\int_{V(t)}\frac{\partial(\rho e)}{\partial t}\,dV+\oint_{\partial V(t)}\rho e\mathbf v_b\cdot\mathbf n\,dA`,String.raw`E(t)=\int_{V(t)}\rho e\,dV`]);
+    if(orden[i]==='total')r=operarEnergia(r,'Partition the boundary into streams and the remaining surface',{forma:'total'},[String.raw`\partial V=\left(\bigcup_p A_p\right)\cup S_{\mathrm{resto}},\quad A_p\cap A_q=\varnothing\ (p\ne q)`,String.raw`\dot m_p=\varepsilon_p\int_{A_p}\rho(\mathbf v-\mathbf v_b)\cdot\mathbf n\,dA,\quad\varepsilon_{\mathrm{ent}}=-1,\ \varepsilon_{\mathrm{sal}}=1`,String.raw`\dot m_p\bar h_p=\varepsilon_p\int_{A_p}\rho h(\mathbf v-\mathbf v_b)\cdot\mathbf n\,dA`]);
   }
   return r;
 }

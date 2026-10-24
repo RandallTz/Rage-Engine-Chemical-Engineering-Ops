@@ -1,3 +1,4 @@
+import { configuredClosure, thermodynamicJournalInRequest, thermodynamicJournalMatches, emptyEnergyJournal, energyJournalFromHistory, energyJournalInRequest, energyJournalMatches, energyState, sameDocument, derivationFingerprint } from './physicalDerivation';
 import type {HojaMotor} from './hojasMotor';
 import {duplicarHoja} from './hojasMotor';
 import type {DatoV2,SolicitudEnsamblajeV2,VolumenV2,ExtraccionV2} from './contratoEnsamblajeV2';
@@ -6,15 +7,50 @@ import {formulacionEnergiaHoja,contextoEnergiaHoja} from './estadoEnergiaHoja';
 import {prepararEnsamblajeTermodinamico} from './prepararEnsamblajeTermodinamico';
 import {balancesHoja} from './seleccionBalances';
 import type {PropiedadPura} from './contratoCatalogo';
+import { emptyMaterialJournal, journalFromHistory, journalInRequest, journalMatches } from './materialDerivation';
 
 /** The v2 document is authoritative once explicitly adopted. Legacy derivations
  * remain archived on the worksheet; they never supply a second set of inputs. */
 export type RedTermodinamica={solicitud:SolicitudEnsamblajeV2;nombres:Record<string,string>;originalesDatosPuros?:Record<string,Record<string,PropiedadPura[]>>;ultimoComponenteId?:number;ultimosElementos?:Partial<Record<'volumen'|'corriente'|'calor',number>>};
-export const firmaRed=(s:SolicitudEnsamblajeV2)=>JSON.stringify({...s,solicitudId:'',derivacion:undefined});
+export const firmaRed=(s:SolicitudEnsamblajeV2)=>{return JSON.stringify({...s,solicitudId:'',derivacion:derivationFingerprint(s.derivacion)});};
 export const solicitudRed=(h:HojaMotor,id:string):SolicitudEnsamblajeV2=>({...structuredClone(h.redTermodinamica!.solicitud),solicitudId:id});
 export function cambiarRed(h:HojaMotor,fn:(r:RedTermodinamica)=>void):HojaMotor{
   if(!h.redTermodinamica)throw new Error('Sin ensamblaje multifásico.');
   const red=structuredClone(h.redTermodinamica);fn(red);
+  // A deliberate mechanical-boundary edit records its material consequence.
+  // Existing stale journals are never repaired from final flags automatically.
+  const journal = journalInRequest(red.solicitud.derivacion), previousJournal = journalInRequest(h.redTermodinamica.solicitud.derivacion);
+  if (journal && previousJournal) for (const volume of red.solicitud.volumenes) {
+    const previous = h.redTermodinamica.solicitud.volumenes.find(item => item.id === volume.id);
+    const entry = journal.volumes[volume.id], before = previousJournal.volumes[volume.id];
+    if (previous && entry && before && previous.frontera.tipo !== volume.frontera.tipo
+      && previous.formulacionMateria.fija !== volume.formulacionMateria.fija
+      && JSON.stringify(entry) === JSON.stringify(before) && journalMatches(before, previous.formulacionMateria)) {
+      const ids = new Set(entry.operations.map(operation => operation.id));
+      let index = entry.operations.length + 1;
+      while (ids.has(`mechanical-boundary-${index}`)) index++;
+      entry.operations.push({ id: `mechanical-boundary-${index}`, title: 'Update the material boundary with the declared mechanical boundary', changes: { fija: volume.formulacionMateria.fija } });
+    }
+  }
+  const energy=energyJournalInRequest(red.solicitud.derivacion),oldEnergy=energyJournalInRequest(h.redTermodinamica.solicitud.derivacion);
+  if(energy&&oldEnergy)for(const volume of red.solicitud.volumenes){
+    const previous=h.redTermodinamica.solicitud.volumenes.find(item=>item.id===volume.id),entry=energy.volumes[volume.id],before=oldEnergy.volumes[volume.id];
+    if(previous&&entry&&before&&sameDocument(entry,before)&&energyJournalMatches(before,previous.formulacionEnergia)){
+      const changes=Object.fromEntries(Object.entries(energyState(volume.formulacionEnergia)).filter(([key,value])=>!sameDocument(value,(energyState(previous.formulacionEnergia) as Record<string,unknown>)[key])));
+      if(Object.keys(changes).length){let id=entry.operations.length+1;while(entry.operations.some(op=>op.id===`model-edit-${id}`))id++;entry.operations.push({id:`model-edit-${id}`,title:'Record the first-law consequence of the explicit model edit',changes});}
+    }
+  }
+  const thermodynamics=thermodynamicJournalInRequest(red.solicitud.derivacion),oldThermodynamics=thermodynamicJournalInRequest(h.redTermodinamica.solicitud.derivacion);
+  if(thermodynamics&&oldThermodynamics)for(const volume of red.solicitud.volumenes){
+    const previous=h.redTermodinamica.solicitud.volumenes.find(item=>item.id===volume.id),entry=thermodynamics.volumes[volume.id],before=oldThermodynamics.volumes[volume.id];
+    if(previous&&entry&&before&&sameDocument(entry,before)&&thermodynamicJournalMatches(before,previous.formulacionEnergia,configuredClosure(h.redTermodinamica.solicitud,previous))){
+      const changes={...Object.fromEntries(Object.entries(volume.formulacionEnergia).filter(([key])=>['monofasico','sinCambioFase','densidadConstante','modelo'].includes(key))),closure:configuredClosure(red.solicitud,volume)};
+      if(!thermodynamicJournalMatches(entry,volume.formulacionEnergia,changes.closure)){
+        let id=entry.operations.length+1;while(entry.operations.some(op=>op.id===`state-edit-${id}`))id++;
+        entry.operations.push({id:`state-edit-${id}`,title:'Record the explicit thermodynamic package, policy or state-assumption edit',changes});
+      }
+    }
+  }
   const usados=new Set<string>();const recorrer=(v:unknown)=>{if(typeof v==='string'&&Object.hasOwn(red.solicitud.datos,v))usados.add(v);else if(Array.isArray(v))v.forEach(recorrer);else if(v&&typeof v==='object')Object.values(v).forEach(recorrer);};
   const {datos:_,...estructura}=red.solicitud;void _;recorrer(estructura);
   red.solicitud.datos=Object.fromEntries(Object.entries(red.solicitud.datos).filter(([id])=>usados.has(id)));
@@ -26,14 +62,14 @@ export function datoRed(s:SolicitudEnsamblajeV2,id:string,magnitud:DatoV2['magni
   s.datos[id]={magnitud,funcion,declaracion:{texto,unidad},origen:{propietarioId,ruta:`/redTermodinamica/solicitud/datos/${id}/declaracion`}};return id;
 }
 export function nombreDatoRed(s:SolicitudEnsamblajeV2,id:string){
-  for(const v of s.volumenes){for(const [cid,k] of Object.entries(v.inicial.cantidades.datoIds))if(k===id)return `Cantidad inicial · ${s.componentes.find(c=>c.id===Number(cid))?.nombre??cid}`;
-    if(v.inicial.energia.datoId===id)return v.inicial.energia.tipo==='T'?'Temperatura inicial':'Energía interna inicial';
-    if(v.frontera.tipo==='rigida'&&v.frontera.datoId===id)return 'Volumen geométrico';
-    if(v.frontera.tipo==='rigida'&&v.frontera.presionRestriccionId===id)return 'Presión impuesta · restricción';
-    if(v.frontera.tipo==='presion_prescrita'&&v.frontera.presionId===id)return 'Presión absoluta';}
-  for(const c of s.corrientes)if(c.materia.modo==='por_componente')for(const [cid,k] of Object.entries(c.materia.caudalIds))if(k===id)return `Caudal · ${s.componentes.find(c=>c.id===Number(cid))?.nombre??cid}`;
+  for(const v of s.volumenes){for(const [cid,k] of Object.entries(v.inicial.cantidades.datoIds))if(k===id)return `Initial amount · ${s.componentes.find(c=>c.id===Number(cid))?.nombre??cid}`;
+    if(v.inicial.energia.datoId===id)return v.inicial.energia.tipo==='T'?'Initial temperature':'Initial internal energy';
+    if(v.frontera.tipo==='rigida'&&v.frontera.datoId===id)return 'Vessel volume';
+    if(v.frontera.tipo==='rigida'&&v.frontera.presionRestriccionId===id)return 'Additional prescribed pressure constraint';
+    if(v.frontera.tipo==='presion_prescrita'&&v.frontera.presionId===id)return 'Absolute pressure';}
+  for(const c of s.corrientes)if(c.materia.modo==='por_componente')for(const [cid,k] of Object.entries(c.materia.caudalIds))if(k===id)return `Flow · ${s.componentes.find(c=>c.id===Number(cid))?.nombre??cid}`;
   const mag=s.datos[id]?.magnitud;
-  return ({caudal:'Caudal total',caudal_molar:'Caudal total',potencia:'Calor transferido',conductancia:'Conductancia térmica',tiempo:'Tiempo final',temperatura:id.endsWith('.Tf')?'Temperatura de la frontera':'Temperatura exterior',presion:'Presión exterior'} as Record<string,string>)[mag]??id;
+  return ({caudal:'Total flow',caudal_molar:'Total flow',potencia:'Heat transferred',conductancia:'Thermal conductance',tiempo:'Final time',temperatura:s.intercambiosTermicos.some(exchange=>exchange.temperaturaFronteraId===id)?'Boundary temperature':'External temperature',presion:'External pressure'} as Record<string,string>)[mag]??id;
 }
 export const unidadesRed=(d:DatoV2):string[]=>({cantidad:['mol','kmol'],conductancia:['W/K','kW/K'],masa:['kg','g'],energia:['J','kJ'],temperatura:['K','degC','degF'],presion:['Pa','kPa','bar'],volumen:['m3','L'],potencia:['W','kW'],tiempo:['s','min','h'],caudal:['kg/s','g/s','kg/h','g/h'],caudal_molar:['mol/s','kmol/h','mol/h']} as Record<string,string[]>)[d.magnitud]??[d.declaracion.unidad];
 export function sincronizarHipotesis(v:VolumenV2){
@@ -68,5 +104,15 @@ export function copiarARed(h:HojaMotor):HojaMotor{
   for(const v of s.volumenes)if(!v.formulacionEnergia.adiabatico&&vs.length===1){const d=h.energia?.datos.energia_Q,id=`Q-${v.id}`;s.intercambiosTermicos.push({id,desde:null,hasta:v.id,ley:{tipo:'impuesto',potenciaId:datoRed(s,`calor.${id}.Q`,'potencia',d?.unidad??'W',`calor:${id}`,'frontera',d?.texto??'')}});}
   datoRed(s,'estudio.tf','tiempo',h.config.tiempo.unidad,'estudio','estudio',h.config.tiempo.texto);
   for(const [id,d] of Object.entries(s.datos))d.origen.ruta=`/redTermodinamica/solicitud/datos/${id}/declaracion`;
+  const material = emptyMaterialJournal();
+  for (const volume of s.volumenes) {
+    const source = h.ensamblaje?.volumenes.find(item => item.id === volume.id)?.historial ?? h.historial;
+    const entry = journalFromHistory(source);
+    if (!journalMatches(entry, volume.formulacionMateria)) throw new Error('The adopted network changes material assumptions without a recorded operation.');
+    material.volumes[volume.id] = entry;
+  }
+  const energy=emptyEnergyJournal();
+  if(h.energia){const entry=energyJournalFromHistory(h.energia.historial);if(entry)for(const volume of s.volumenes)if(energyJournalMatches(entry,volume.formulacionEnergia))energy.volumes[volume.id]=structuredClone(entry);}
+  s.derivacion = { materialDerivation: material, ...(Object.keys(energy.volumes).length?{energyDerivation:energy}:{}) };
   return {...out,nombre:`${h.nombre} · multifásico`,redTermodinamica:{solicitud:s,nombres},graficas:[],tableroIniciado:false};
 }

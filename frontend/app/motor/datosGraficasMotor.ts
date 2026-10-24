@@ -19,7 +19,7 @@ export function limitesGraficaMotor(filas:Record<string,number>[],ids:string[],d
   return Number.isFinite(min)&&max-min<1e-6*escala?[(min+max)/2-.01*escala,(min+max)/2+.01*escala]:defecto;
 }
 export function datosGraficasMotor(h:HojaMotor,r:ResultadoMotor,tipo:'tiempo'|'perfil',instante=0):DatosGraficaMotor {
-  if(r.seriesEvaluadas){const series=[...r.seriesEvaluadas,...fraccionesFaseGraficas(r),...seriesFasesV2(r)];return {variables:[{id:'t',nombre:'Tiempo',unidad:'s',grupo:'Dominio'},...series.map(({id,nombre,unidad,grupo})=>({id,nombre,unidad,grupo}))],filas:r.tiempos.map((t,k)=>Object.fromEntries([['t',t],...series.map(q=>[q.id,q.valores[k]])]))};}
+  if(r.seriesEvaluadas){const series=[...r.seriesEvaluadas,...fraccionesFaseGraficas(r),...seriesFasesV2(r)];return {variables:[{id:'t',nombre:'Time',unidad:'s',grupo:'Domain'},...series.map(({id,nombre,unidad,grupo})=>({id,nombre,unidad,grupo}))],filas:r.tiempos.map((t,k)=>Object.fromEntries([['t',t],...series.map(q=>[q.id,q.valores[k]])]))};}
   if(h.ensamblaje&&r.estadosAcoplados)return datosGraficasEnsamblaje(h,r);
   const f=h.historial.pasos[h.historial.activo].formulacion,c=h.config,campos=analizarMotor(f,c).campos;
   const eje=COORDENADAS[f.coordenadas].ejes.find((_,i)=>!f.invariantes[i])??'x';
@@ -35,7 +35,7 @@ export function datosGraficasMotor(h:HojaMotor,r:ResultadoMotor,tipo:'tiempo'|'p
     r.x.forEach((x,j)=>{const fila:Record<string,number>={x};const alias=aliasEstados(f,r.componentes.map((_,i)=>r.valores[k][i][j]),'densidad');r.componentes.forEach((s,i)=>fila[`rho_${s.id}`]=r.valores[k][i][j]);compiled.forEach(q=>{const i=r.componentes.findIndex(s=>q.campo.id.endsWith(`_${s.id}`));fila[`dato_${q.campo.id}`]=evaluarExpresion(q.e,{t,[eje]:x,rho:i<0?0:r.valores[k][i][j],...alias})*q.factor;});filas.push(fila);});
     return {variables,filas};
   }
-  add('t','Tiempo','s','Dominio');
+  add('t','Time','s','Domain');
   if(r.modo==='temporal') {
     const volumenEstado=r.unidadEstado==='m3';
     const densidadDada=compiled.some(q=>q.campo.id==='densidad');

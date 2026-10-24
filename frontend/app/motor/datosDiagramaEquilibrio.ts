@@ -20,6 +20,18 @@ export function curvasDiagrama(r:RespuestaDiagrama,ejeId:number,unidadT:'K'|'deg
   const mapa=new Map(r.puntos.map(p=>[p.id,p]));
   return r.ramas.flatMap(rama=>rama.segmentos.flatMap(seg=>(['liquido','vapor'] as const).map(fase=>({id:`${rama.id}/${seg.id}/${fase}`,fase,segmentoId:seg.id,puntos:seg.puntoIds.map(id=>{const p=mapa.get(id);if(!p)throw new Error('Referencia de punto ausente.');return {x:p.fases.find(f=>f.tipo===fase)!.composicionMolar[ejeId],valor:valor(p.T,p.P),puntoId:id};})}))));
 }
+
+/** Plot certified L-L branch order and special-point compositions verbatim. */
+export function liquidLiquidPlot(r:RespuestaDiagrama,ejeId:number,unidadT:'K'|'degC',unidadP:'Pa'|'kPa'|'bar'){
+  if(!r.condicion?.componentes.some(component=>component.id===ejeId))throw new Error('The diagram does not contain this component axis.');
+  const block=r.liquidoLiquido;
+  const value=(T:number,P:number)=>r.condicion!.corte.tipo==='Txy'?(unidadT==='K'?T:T-273.15):P/(unidadP==='bar'?1e5:unidadP==='kPa'?1000:1);
+  const points=new Map(block?.puntos.map(point=>[point.id,point]));
+  const branches=block?.ramas.flatMap(branch=>(['liquido-a','liquido-b'] as const).map(phase=>({id:`${branch.id}/${phase}`,phase,points:branch.puntoIds.map(id=>{const point=points.get(id);if(!point)throw new Error('Missing liquid-liquid point reference.');return {x:point.fases.find(item=>item.id===phase)!.composicionMolar[ejeId],valor:value(point.T,point.P),puntoId:id};})})))??[];
+  const critical=block?.puntosEspeciales.flatMap(point=>point.tipo==='critico_ll'&&point.certificado.estado==='cumple'?[{x:point.composiciones['liquido-critico'][ejeId],valor:value(point.T,point.P),puntoId:point.id}]:[])??[];
+  const triple=block?.puntosEspeciales.flatMap(point=>point.tipo==='tres_fases'&&point.certificado.estado==='cumple'?(['liquido-a','liquido-b','vapor'] as const).map(phase=>({x:point.composiciones[phase][ejeId],valor:value(point.T,point.P),puntoId:point.id,phase})):[])??[];
+  return {branches,critical,triple};
+}
 export function marcadoresMuestra(c:ContextoMuestraEquilibrio,r:RespuestaDiagrama,ejeId:number,unidadT:'K'|'degC',unidadP:'Pa'|'kPa'|'bar'){
   const corte=r.condicion?.corte;if(!corte)return {estado:'sin_corte' as const,puntos:[]};
   if(c.modelo.id!==r.identidad.modelo.id||c.modelo.version!==r.identidad.modelo.version||c.componentes.length!==r.condicion!.componentes.length||c.componentes.some(x=>r.condicion!.componentes.find(q=>q.id===x.id)?.cas!==x.identidadQuimica?.cas)||c.huellaParametros&&c.huellaParametros!==r.identidad.huellaModelo)return {estado:'otro_modelo' as const,puntos:[]};
@@ -60,7 +72,15 @@ export class MemoriaDiagramas{
     while(this.entradas.size>this.limite)this.entradas.delete(this.entradas.keys().next().value!);
   }
 }
-export function csvDiagrama(r:RespuestaDiagrama){
+export function csvDiagrama(r:RespuestaDiagrama,includeLiquidLiquid=false){
+  if(includeLiquidLiquid&&(r.liquidoLiquido?.puntos.length||r.liquidoLiquido?.puntosEspeciales.some(point=>point.tipo!=='limite_dominio'))){
+    const ids=r.condicion?.componentes.map(component=>component.id)??[];
+    const rows:(string|number)[][]=[['branch','point','coexistence','phase','T [K]','P [Pa]',...ids.map(id=>`composition_${id} [mol/mol]`),'certificate']];
+    for(const branch of r.ramas)for(const segment of branch.segmentos)for(const id of segment.puntoIds){const point=r.puntos.find(item=>item.id===id)!;for(const phase of point.fases)rows.push([branch.id,id,'LV',phase.tipo,point.T,point.P,...ids.map(id=>phase.composicionMolar[id]),point.certificado.estado]);}
+    for(const point of r.liquidoLiquido.puntos)for(const phase of point.fases)rows.push([point.ramaId,point.id,'LL',phase.id,point.T,point.P,...ids.map(id=>phase.composicionMolar[id]),point.certificado.estado]);
+    for(const point of r.liquidoLiquido.puntosEspeciales){if(point.tipo==='limite_dominio')continue;for(const [phase,composition] of Object.entries(point.composiciones))rows.push([point.ramaId,point.id,point.tipo,phase,point.T,point.P,...ids.map(id=>composition[id]),point.certificado.estado]);}
+    return rows.map(row=>row.map(value=>typeof value==='number'?String(value):`"${value.replaceAll('"','""')}"`).join(',')).join('\n');
+  }
   const ids=r.condicion?.componentes.map(c=>c.id)??[],cabecera=['rama','segmento','punto','T [K]','P [Pa]',...ids.map(id=>`x_${id} [mol/mol]`),...ids.map(id=>`y_${id} [mol/mol]`),'certificado'];
   const mapa=new Map(r.puntos.map(p=>[p.id,p])),filas=r.ramas.flatMap(b=>b.segmentos.flatMap(seg=>seg.puntoIds.map(id=>{const p=mapa.get(id);if(!p)throw new Error('Referencia de punto ausente.');const L=p.fases.find(f=>f.tipo==='liquido')!,V=p.fases.find(f=>f.tipo==='vapor')!;return [b.id,seg.id,p.id,p.T,p.P,...ids.map(id=>L.composicionMolar[id]),...ids.map(id=>V.composicionMolar[id]),p.certificado.estado];})));
   const celda=(v:string|number)=>typeof v==='number'?String(v):`"${v.replaceAll('"','""')}"`;

@@ -1,4 +1,7 @@
 import Link from 'next/link';
-import {urlEnfoqueRed} from './destinoDiagnosticoRed';
+import { modelUrl, WORKSPACES } from '../models/workflow';
 import styles from './trabajoMotor.module.css';
-export default function NavegacionHoja({id,actual,propietarioId}:{id:string;propietarioId?:string;actual:'ecuaciones'|'estado'|'resolver'|'resultados'}){return <nav className={styles.workNav} aria-label="Vistas de la hoja"><Link href="/motor/hojas">← Hojas</Link><Link aria-current={actual==='ecuaciones'?'page':undefined} href={`/motor/hojas/${id}`}>Ecuaciones</Link><Link aria-current={actual==='estado'?'page':undefined} href={propietarioId?urlEnfoqueRed(id,'estado',{propietarioId}):`/motor/hojas/${id}/estado`}>Estado</Link><Link aria-current={actual==='resolver'?'page':undefined} href={propietarioId&&propietarioId!=='componentes'?urlEnfoqueRed(id,'resolver',{propietarioId}):`/motor/hojas/${id}/resolver`}>Resolver</Link><Link aria-current={actual==='resultados'?'page':undefined} href={`/motor/hojas/${id}/resultados`}>Gráficos</Link></nav>;}
+export default function NavegacionHoja({ id, actual, propietarioId }: { id: string; propietarioId?: string; actual: 'ecuaciones' | 'estado' | 'resolver' | 'resultados' }) {
+  const active = actual === 'resolver' ? 'solve' : actual === 'resultados' ? 'results' : 'model';
+  return <nav className={styles.workNav} aria-label="Model workflow"><Link href="/models">← Models</Link>{WORKSPACES.map(stage => { const owner = propietarioId && (stage.id === 'model' || stage.id === 'solve' && propietarioId !== 'componentes'); const href = modelUrl(id, stage.id) + (stage.id === 'model' && owner ? '/state' : '') + (owner ? `?${new URLSearchParams({elemento:propietarioId!})}` : ''); return <Link key={stage.id} href={href} aria-current={active === stage.id ? 'page' : undefined}>{stage.name}</Link>; })}</nav>;
+}

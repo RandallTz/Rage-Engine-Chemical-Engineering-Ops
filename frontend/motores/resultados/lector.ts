@@ -2,6 +2,7 @@
  * identidades y forma de los valores frente a sus ejes. La validez de las
  * unidades la garantiza el servidor (core/resultados/formato.py). */
 import type { ConjuntoResultados } from "./contrato";
+import { readCompilationReport } from '../modelo/compilation';
 
 export class ErrorResultados extends Error { constructor(public ruta: string, motivo: string) { super(`${ruta}: ${motivo}`); } }
 const fallo = (ruta: string, motivo: string): never => { throw new ErrorResultados(ruta, motivo); };
@@ -17,6 +18,8 @@ export function leerResultados(dato: unknown): ConjuntoResultados {
   const r = dato as Obj;
   if (!r || typeof r !== "object" || r.formato !== "rage.resultados" || r.version !== 0) fallo("resultados", "se esperaba rage.resultados v0");
   if (!["resuelto", "parcial", "fallido"].includes(r.estado as string)) fallo("estado", "valor no admitido");
+  const provenance = r.procedencia as Obj;
+  if (provenance?.compilation !== undefined) readCompilationReport(provenance.compilation);
   const largo = new Map<string, number>();
   (r.ejes as Obj[]).forEach((e, i) => {
     if (largo.has(e.id as string)) fallo(`ejes[${i}].id`, "identidad repetida");

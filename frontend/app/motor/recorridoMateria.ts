@@ -2,7 +2,7 @@ import { CAMPO_GENERAL, COORDENADAS, ecuacionCampoReducida, estacionarioLocalDed
 import type { Coordenadas, FronteraConstante, OpcionesCampo } from './operadores';
 
 export type FormaMateria = 'campo' | 'integral' | 'cantidad';
-export const FORMAS_MATERIA: Record<FormaMateria, string> = { campo: 'Diferencial', integral: 'Integral', cantidad: 'Total' };
+export const FORMAS_MATERIA: Record<FormaMateria, string> = { campo: "Differential", integral: 'Integral', cantidad: 'Total' };
 import type {Componente,ReglasEstadoMateria} from './materiaEstado';
 import {concentracionConstante} from './reglasEstadoMateria';
 export type ComponenteMateria = Componente;
@@ -36,7 +36,7 @@ export type AccionMateria =
   | { tipo: 'reiniciar' };
 
 export function iniciarRecorrido(): RecorridoMateria {
-  return { activo: 0, rehacer: [], ultimoComponenteId: 0, pasos: [{ titulo: 'Conservación local', origen: null, operacion: null, formulacion: {
+  return { activo: 0, rehacer: [], ultimoComponenteId: 0, pasos: [{ titulo: "Local conservation", origen: null, operacion: null, formulacion: {
     componentes: [], campo: { ...CAMPO_GENERAL }, coordenadas: 'cartesianas', expandida: false, vista: 'campo',
     fronteras: [], uniforme: false, fija: false, sinAcumulacion: false, invariantes: [false, false, false],
     generacionUniforme: false, consumoUniforme: false, restoImpermeable: false,

@@ -1,31 +1,41 @@
+'use client';
 import Link from 'next/link';
+import {useEffect,useState} from 'react';
 import type {HojaMotor} from './hojasMotor';
 import {balancesHoja} from './seleccionBalances';
-import {formulacionHoja} from './modeloHojaMotor';
-import {ecuacionesEnsamblaje} from './ensamblajeMateria';
-import {balancesComponentes} from './recorridoMateria';
-import {formulacionEnergiaHoja,contextoEnergiaHoja} from './estadoEnergiaHoja';
-import {ecuacionEnergia} from './recorridoEnergia';
-import {relacionesSistemaEnergia} from './ecuacionesSistemaEnergia';
-import FormulaMateria from './FormulaMateria';
+import {equationSource} from '../models/modelRequest';
+import {readEquationWorkbenchReport,type EquationWorkbenchReport} from '../models/equationWorkbench';
+import EquationRows from '../models/EquationRows';
 import styles from './ecuacionesFinales.module.css';
 
-/** Presentation only: equations keep the same structured formulation used by the compiler. */
+/** Solve presents the exact Model graph; no browser formula recipe or fallback. */
 export default function EcuacionesFinales({hoja:h}:{hoja:HojaMotor}){
-  const b=balancesHoja(h),e=formulacionEnergiaHoja(h);
-  const relaciones=relacionesSistemaEnergia(h),activas=relaciones.filter(q=>!q.definicion),definiciones=relaciones.filter(q=>q.definicion);
-  const relacion=(q:typeof relaciones[number])=><div id={q.id} className={styles.relation} key={q.id}><span>{q.nombre}</span><FormulaMateria latex={q.latex} lectura={q.nombre} bloque/>{q.datos.length>0&&<Link href={`/motor/hojas/${h.id}/resolver#dato-${q.datos[0]}`} aria-label={`Definir datos de ${q.nombre}`}>Datos →</Link>}</div>;
-  const materia=h.ensamblaje?ecuacionesEnsamblaje(h.ensamblaje).flatMap(v=>v.ecuaciones.map(q=>({id:`${v.id}_${q.componente.id}`,ancla:`balance-materia-${v.id}-${q.componente.id}`,nombre:`${v.nombre} · ${q.componente.nombre}`,latex:q.latex}))):balancesComponentes(formulacionHoja(h)).map(q=>({id:String(q.componente?.id??'i'),ancla:`balance-materia-dominio-${q.componente?.id??'i'}`,nombre:q.componente?.nombre??'Componente i',latex:q.latex}));
-  return <section className={styles.paper} aria-label="Ecuaciones finales">
-    <header className={styles.heading}><h2>Ecuaciones finales</h2><Link href={`/motor/hojas/${h.id}`}>Ver derivación →</Link></header>
-    {b.materia&&materia.map(q=><div id={q.ancla} className={styles.balance} data-familia="materia" key={q.id}>
-      <div className={styles.label}><span className={styles.family}>Materia</span><span>{q.nombre}</span></div>
-      <div className={styles.formula}><FormulaMateria latex={q.latex} lectura={`Balance de materia · ${q.nombre}`} bloque/></div>
-    </div>)}
-    {b.energia&&<div id="balance-energia" className={styles.balance} data-familia="energia">
-      <div className={styles.label}><span className={styles.family}>Energía</span><span>Volumen de control</span></div>
-      <div className={styles.formula}><FormulaMateria latex={ecuacionEnergia(e,contextoEnergiaHoja(h))} lectura="Balance de energía del volumen" bloque/></div>
-    </div>}
-    {b.energia&&<section className={styles.relations} aria-label="Relaciones activas del sistema"><h3>Relaciones activas</h3>{activas.map(relacion)}{definiciones.length>0&&<details className={styles.definitions}><summary>Definiciones de los términos</summary>{definiciones.map(relacion)}</details>}</section>}
+  let source='',preparation='';
+  try{source=JSON.stringify(equationSource(h));}catch(error){preparation=(error as Error).message;}
+  const [state,setState]=useState<{source:string;report?:EquationWorkbenchReport;error?:string}>();
+  useEffect(()=>{
+    if(!source)return;
+    const controller=new AbortController();
+    void fetch(`${process.env.NEXT_PUBLIC_API_URL??'http://localhost:8004'}/modelo/equation-workbench`,{
+      method:'POST',headers:{'Content-Type':'application/json'},body:source,cache:'no-store',
+      signal:AbortSignal.any([controller.signal,AbortSignal.timeout(60000)])
+    }).then(async response=>{
+      const value=await response.json();
+      if(!response.ok)throw new Error(value?.detail?.message??'The current equation graph is unavailable.');
+      const report=readEquationWorkbenchReport(value),envelope=JSON.parse(source);
+      if(report.modelId!==(envelope.modelo?.id??envelope.solicitudV2?.solicitudId??envelope.draft?.modelId))throw new Error('Unexpected equation source.');
+      if(!controller.signal.aborted)setState({source,report});
+    }).catch(error=>{if(!controller.signal.aborted)setState({source,error:(error as Error).message});});
+    return()=>controller.abort();
+  },[source]);
+  const current=state?.source===source?state:undefined,b=balancesHoja(h);
+  const active={matter:b.materia,energy:b.energia,momentum:b.momento,thermodynamics:true};
+  const error=preparation||current?.error;
+  return <section className={styles.paper} aria-label="Final equations">
+    <header className={styles.heading}><h2>Final equations</h2><Link href={`/models/${h.id}/model`}>View derivation →</Link></header>
+    {error&&<p role="alert">{error} Review Model; no earlier equations have been substituted.</p>}
+    {!current&&!error&&<p role="status">Reading the current Model equations…</p>}
+    {current?.report?.replay&&<p role="alert">The saved equation history needs review. The valid source remains visible; numerical execution is blocked.</p>}
+    {current?.report&&<EquationRows label="Final physical equations" steps={current.report.equations.filter(row=>row.current&&active[row.family])}/>}
   </section>;
 }

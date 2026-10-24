@@ -1,2 +1,3 @@
-import HojaGuardada from '../../HojaGuardada';
-export default async function PaginaHoja({params}:{params:Promise<{id:string}>}){const {id}=await params;return <HojaGuardada id={id}/>;}
+import { redirect } from 'next/navigation';
+import { legacyModelUrl } from '../../../models/workflow';
+export default async function Page({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) { const { id } = await params; redirect(legacyModelUrl(id, '', await searchParams)); }

@@ -14,5 +14,5 @@ export function bloqueosBalances(h:Pick<HojaMotor,'balances'>):string[]{
 export function seleccionarBalance(h:HojaMotor,familia:FamiliaBalance,activo:boolean):HojaMotor{
   const balances=balancesHoja(h);
   if(balances[familia]===activo)return h;
-  return {...h,balances:{...balances,[familia]:activo},resultado:undefined,resultadoRef:undefined};
+  return {...h,balances:{...balances,[familia]:activo},...(h.ensamblaje?.volumenes.some(v=>v.balances)?{ensamblaje:{...h.ensamblaje,volumenes:h.ensamblaje.volumenes.map(v=>v.balances?{...v,balances:{...v.balances,[familia]:activo}}:v)}}:{}),resultado:undefined,resultadoRef:undefined};
 }

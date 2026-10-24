@@ -3,6 +3,7 @@ import type { Igualdad } from '../../app/adimensionalizacion/contrato';
 import {readEquationWorkbenchReport,type EquationWorkbenchReport} from '../../app/models/equationWorkbench';
 import {readDerivedExecution,type DerivedExecution} from './derivedExecution';
 export type CompilationReport = {
+  symbolLabels?: Record<string, string>;
   derivedExecution?:{version:1;sourceSignature:string;selection:DerivedExecution;proofConditions:{equationId:string;sourceEquationId:string;kind:'interval_identity'|'eliminated_coordinate_premise';latex:string}[];runtimeConditions:{equationId:string;strict:boolean;latex:string}[];reconstructions:DerivedExecution['reconstructions']};
   equationWorkbench?:EquationWorkbenchReport;
   format: 'rage.compilation'; version: 1; formulation: 'physical' | 'scaled';
@@ -40,6 +41,8 @@ export function readCompilationReport(value: unknown): CompilationReport {
     readDerivedExecution(derived.selection);
     if(derived.sourceSignature!==derived.selection.sourceSignature||JSON.stringify(derived.reconstructions)!==JSON.stringify(derived.selection.reconstructions))throw new Error('Derived execution provenance disagrees with its selection.');
   }
+  optional.push('symbolLabels');
+  if (report.symbolLabels !== undefined && (!report.symbolLabels || typeof report.symbolLabels !== 'object' || Array.isArray(report.symbolLabels) || Object.values(report.symbolLabels).some(label => typeof label !== 'string' || !label))) throw new Error('Invalid compiler symbol labels.');
   if(report.equationWorkbench!==undefined)readEquationWorkbenchReport(report.equationWorkbench);
   if (required.some(key => !Object.hasOwn(report, key)) || Object.keys(report).some(key => !required.includes(key) && !optional.includes(key))) throw new Error('Unknown or missing compilation report fields.');
   if (report.format !== 'rage.compilation' || report.version !== 1 || !['physical', 'scaled'].includes(report.formulation)

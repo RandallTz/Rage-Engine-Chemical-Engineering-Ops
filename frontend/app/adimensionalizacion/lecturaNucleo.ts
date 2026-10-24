@@ -144,6 +144,7 @@ export function leerRespuestaNucleo(dato: unknown, entrada: SolicitudNucleo | So
   if (r.terminos) revisarArboles(r.terminos, originales, independientes, "terminos");
   function formulacion(v: unknown, p: string): void {
     const f = obj(v, p); claves(f, p, camposFormulacion, ["id", "objetivosAplicados", "subconjuntos", "propuestas", "funcionesAdimensionales"]);
+    if (f.objetivosAplicados !== undefined) strings(f.objetivosAplicados, p + '.objetivosAplicados');
     const simbolos = arr(f.simbolos, p + ".simbolos"), nuevos = unicos(simbolos, p);
     if ([...nuevos].some(i => originales.has(i) || funciones.has(i))) fallo(p, "símbolo nuevo colisiona con el original");
     const ids = new Set([...originales, ...nuevos]), indep = new Set(independientes);

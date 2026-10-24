@@ -2,6 +2,8 @@ import path from "node:path";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Isolate integration-test builds from the user's running development server.
+  distDir: process.env.RAGE_BUILD_DIR ?? '.next',
   // Sin esto, Turbopack busca hacia arriba un package-lock.json y acaba
   // infiriendo el directorio HOME del usuario como raiz del proyecto
   // (avisa en cada build). La raiz es esta carpeta, no el repo entero:

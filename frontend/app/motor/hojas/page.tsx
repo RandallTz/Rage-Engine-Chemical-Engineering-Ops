@@ -1,2 +1,2 @@
-import BibliotecaHojas from '../BibliotecaHojas';
-export default function PaginaHojas(){return <BibliotecaHojas/>;}
+import { redirect } from 'next/navigation';
+export default function Page() { redirect('/models'); }

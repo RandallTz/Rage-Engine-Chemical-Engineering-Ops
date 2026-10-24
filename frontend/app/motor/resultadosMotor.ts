@@ -1,6 +1,8 @@
 import type {ResultadoMotor} from './modeloNumerico';
+import {readCompilationReport} from '../../motores/modelo/compilation';
 function abrir():Promise<IDBDatabase>{return new Promise((resolve,reject)=>{const r=indexedDB.open('rage-motor-resultados',1);r.onupgradeneeded=()=>r.result.createObjectStore('resultados');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(new Error('No se pudo abrir el almacenamiento de resultados.'));});}
 export async function guardarResultadoMotor(id:string,resultado:ResultadoMotor,signal?:AbortSignal){
+  if(resultado.compilation)readCompilationReport(resultado.compilation);
   signal?.throwIfAborted();const db=await abrir();
   try{signal?.throwIfAborted();await new Promise<void>((resolve,reject)=>{
     const t=db.transaction('resultados','readwrite');
@@ -14,4 +16,4 @@ export async function guardarResultadoMotor(id:string,resultado:ResultadoMotor,s
     catch(error){terminar();try{t.abort();}catch{/* Preserve the original storage error. */}reject(error);}
   });}finally{db.close();}
 }
-export async function leerResultadoMotor(id:string,firma:string):Promise<ResultadoMotor|undefined>{const db=await abrir();try{return await new Promise((resolve,reject)=>{const t=db.transaction('resultados'),r=t.objectStore('resultados').get([id,firma]);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(new Error('No se pudo leer el resultado.'));});}finally{db.close();}}
+export async function leerResultadoMotor(id:string,firma:string):Promise<ResultadoMotor|undefined>{const db=await abrir();try{return await new Promise((resolve,reject)=>{const t=db.transaction('resultados'),r=t.objectStore('resultados').get([id,firma]);r.onsuccess=()=>{try{if(r.result?.compilation)readCompilationReport(r.result.compilation);resolve(r.result);}catch(error){reject(error);}};r.onerror=()=>reject(new Error('No se pudo leer el resultado.'));});}finally{db.close();}}

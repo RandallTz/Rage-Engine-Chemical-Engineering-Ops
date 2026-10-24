@@ -1,0 +1,47 @@
+.development { min-width:0; }
+.structure { margin:16px 0 28px; border-bottom:1px solid #d7dbcf; padding-bottom:20px; }
+.structure h3 { font-size:14px; font-weight:500; margin:0; }
+.structure p,.readiness p { font-size:12px; color:#687363; line-height:1.6; }
+.regions { display:flex; flex-wrap:wrap; gap:8px; margin:14px 0; }
+.regions button { text-align:left; background:transparent; border:1px solid #d7dbcf; padding:12px 16px; border-radius:4px; cursor:pointer; transition:background 160ms,border-color 160ms; }
+.regions button[aria-pressed=true] { background:#e6ede5; border-color:#82a493; }
+.regions span { display:block; font-size:10px; color:#687363; margin-bottom:5px; }
+.regions strong { font-size:12px; font-weight:500; }
+.structure summary,.readiness summary { font-size:12px; cursor:pointer; }
+.connections { list-style:none; padding:0; }
+.connections li { display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:8px 0; font-size:12px; }
+.connections button,.readiness button { border:0; background:none; text-decoration:underline; cursor:pointer; font:inherit; color:inherit; }
+.readiness { border-left:2px solid #a27a48; margin:16px 0; padding:8px 12px; }
+.readiness ul { padding-left:15px; font-size:12px; }
+.regions button:focus-visible,.structure button:focus-visible { outline:2px solid #49643a; outline-offset:3px; }
+.development nav { display:flex; flex-wrap:wrap; gap:10px 20px; }
+.stage { scroll-margin-top:110px; padding-top:28px; }
+.stage > header > span { font-size:10px; color:#75816f; letter-spacing:.06em; text-transform:uppercase; }
+.stage h2 { font-size:18px; font-weight:500; letter-spacing:-.02em; margin:8px 0; }
+.stage p { font-size:12px; line-height:1.7; color:#687363; max-width:75ch; }
+.stage > header p { margin:8px 0 0; }
+.result { border-top:2px solid var(--motor-acento-borde,#899a78); margin-top:32px; }
+.useEquation { display:inline-flex; align-items:center; gap:8px; font-size:10px; color:#687363; cursor:pointer; min-height:32px; }
+.useEquation input { accent-color:var(--motor-acento,#49643a); }
+.srOnly { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+.tools { border-top:1px solid var(--motor-borde,#d7dbcf); margin-top:24px; padding:18px 0; font-size:12px; }
+.tools > summary { cursor:pointer; display:list-item; font-size:13px; }
+.tools summary > span { font-size:10px; color:#75816f; margin-left:8px; }
+.toolGroup { margin:16px 0; }
+.toolGroup h3 { font-size:11px; font-weight:500; margin:0 0 8px; }
+.toolGroup > div { display:flex; flex-wrap:wrap; gap:6px; }
+.toolGroup button { font-size:11px; padding:8px 10px; border:1px solid var(--motor-borde,#d7dbcf); border-radius:4px; cursor:pointer; text-align:left; }
+.toolGroup button[aria-pressed=true] { background:var(--motor-acento-suave,#dde5d3); border-color:var(--motor-acento-borde,#899a78); }
+.selected { margin:10px 0; padding-left:16px; font-size:11px; line-height:1.7; }
+.selected button { margin-left:8px; padding:3px 6px; cursor:pointer; }
+.historyActions { display:flex; flex-wrap:wrap; gap:8px 16px; margin:12px 0; }
+.historyActions button,.recovery button { padding:8px 10px; border:1px solid var(--motor-borde,#d7dbcf); border-radius:4px; cursor:pointer; font-size:11px; }
+.historyActions button:disabled,.tools button:disabled { opacity:.45; cursor:default; }
+.apply { width:100%; padding:10px 12px; background:var(--motor-acento-suave,#dde5d3); border:1px solid var(--motor-acento-borde,#899a78); border-radius:4px; font-size:12px; cursor:pointer; margin-top:16px; }
+.recovery { border-left:2px solid #a27a48; padding:8px 16px; margin:22px 0; font-size:12px; line-height:1.7; background:#f0eadf; }
+.recovery h3 { font-size:14px; font-weight:500; }
+.recovery p { margin:8px 0; }
+.quantities { border-top:1px solid var(--motor-borde,#d7dbcf); padding-top:20px; margin-top:24px; font-size:12px; }
+.quantities summary { cursor:pointer; }
+.development :is(a,button,input,summary):focus-visible,.tools :is(button,input,select,summary):focus-visible { outline:2px solid var(--motor-acento,#49643a); outline-offset:4px; }
+@media (max-width:700px) { .development nav { gap:8px 12px; } .stage { scroll-margin-top:150px; } }

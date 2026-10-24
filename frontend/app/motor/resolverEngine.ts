@@ -1,3 +1,4 @@
+import {selectedDerivedModel} from '../models/derivedSelection';
 /** Resolver del Engine: el cálculo lo hace el Engine común del servidor (motor de balances +
  * compilador + solvers, POST /modelo/resolver) para toda hoja que llega a él; el solver del
  * navegador queda solo para lo que todavía no llega (campos 1D y sustitución por volumen).
@@ -15,21 +16,61 @@ import type { SistemaEnergia } from './modeloEnergia';
 import { cabeEnBalances, modeloBalancesDesdeHoja } from '../../motores/modelo/desdeHojaBalances';
 import { resolverModelo, type TransporteModelo } from '../../motores/modelo/servicioModelo';
 import type { ConjuntoResultados } from '../../motores/resultados/contrato';
+import { selectedTransformedModel } from '../models/transformationSelection';
+import { importarHojaMotor } from '../adimensionalizacion/desdeMotor';
+import { igualdadProfunda } from '../adimensionalizacion/lecturaNucleo';
 
 export const MOTOR_ENGINE_COMUN = 'rage.compilador.explicito';
 export type OpcionesResolver = { signal?: AbortSignal; progreso?: (v: number) => void; transporte?: TransporteModelo };
 
 /** ¿Resuelve esta hoja el Engine común? */
-export const resuelveEngineComun = (h: HojaMotor) => cabeEnBalances(h);
+export const resuelveEngineComun = (h: HojaMotor) => !!h.transformation || cabeEnBalances(h);
 
 export async function resolverHojaEngine(h: HojaMotor, opciones: OpcionesResolver = {}): Promise<ResultadoMotor> {
+  if(h.commonModel){const result=await resolverModelo(selectedDerivedModel(h),opciones.signal,opciones.transporte);return derivedResult(h,result);}
+  const { ensureInventoryExecution } = await import('../models/dynamicDefinition');
+  ensureInventoryExecution(h);
+  if (h.transformation) {
+    const common = selectedTransformedModel(h);
+    const result = await resolverModelo(common, opciones.signal, opciones.transporte);
+    opciones.progreso?.(1);
+    return transformedResult(h, result);
+  }
   if (!resuelveEngineComun(h)) return resolverHoja(h, opciones);
   const bloqueos = [...bloqueosBalances(h), ...bloqueosCierreTermodinamico(h)];
   if (bloqueos.length) throw new Error(bloqueos[0]);
-  const s = compilarHoja(h);                       // identidad de los estados; no integra
-  const c = await resolverModelo(modeloBalancesDesdeHoja(h), opciones.signal, opciones.transporte);
+  // Local compilation supplies display identities only. Workbench operations
+  // are always replayed and admitted by Python, including new constraints.
+  const s = compilarHoja({...h,equationWorkbench:undefined});
+  const common=modeloBalancesDesdeHoja(h);
+  if(h.equationWorkbench)common.motores={...common.motores,equationWorkbench:h.equationWorkbench};
+  const c = await resolverModelo(common, opciones.signal, opciones.transporte);
   opciones.progreso?.(1);
   return resultadoDesdeComun(h, s, c);
+}
+
+function transformedResult(model: HojaMotor, result: ConjuntoResultados): ResultadoMotor {
+  const imported = importarHojaMotor(model);
+  const report = result.procedencia.compilation;
+  if (result.procedencia.motor !== 'rage.compilador.transformed' || !report || report.formulation !== 'scaled') throw new Error('The server did not execute the selected transformation.');
+  if (result.modeloId !== model.id || report.sourceModelId !== `model-equations-${model.id}`
+    || !igualdadProfunda(report.selection, { formId: model.transformation!.config.activaId, execution: model.transformation!.config.execution })) throw new Error('The returned execution does not match the selected formulation.');
+  const physicalSeries = new Map(result.series.map(item => [item.id, item.valores]));
+  const values = (id: string) => {
+    const data = physicalSeries.get(id);
+    if (!Array.isArray(data) || data.some(value => typeof value !== 'number' || !Number.isFinite(value))) throw new Error(`Missing reconstructed physical series: ${id}.`);
+    return data as number[];
+  };
+  const fields = imported.origen.componentes.map(item => item.campoId);
+  const states = fields.map(field => values('campo.' + field));
+  const end = result.ejes[0].valores.length - 1;
+  return { version: 1, motor: result.procedencia.motor, modo: 'temporal', metodo: `Scaled formulation · ${result.procedencia.metodo}`,
+    tiempos: result.ejes[0].valores, x: [], dx: 1, valores: result.ejes[0].valores.map((_, index) => states.map(state => [state[index]])),
+    componentes: formulacionHoja(model).componentes!, estado: result.estado === 'resuelto' ? 'resuelto' : 'parcial', mensaje: result.procedencia.mensaje ?? '',
+    pasos: result.procedencia.pasos ?? 0, rechazados: result.procedencia.rechazos ?? 0,
+    conservacion: fields.map((field, index) => states[index][end] - states[index][0] - values('budget.' + field)[end]),
+    unidadEstado: imported.origen.estado === 'masa' ? 'kg' : imported.origen.estado === 'volumen' ? 'm3' : 'kg/m3',
+    firma: firmaHoja(model), compilation: report };
 }
 
 function idsEstados(h: HojaMotor, s: ReturnType<typeof compilarHoja>): string[] {
@@ -54,6 +95,7 @@ export function resultadoDesdeComun(h: HojaMotor, s: ReturnType<typeof compilarH
     estado: c.estado === 'parcial' ? 'parcial' : 'resuelto', mensaje,
     pasos: Number(c.procedencia.pasos ?? 0), rechazados: Number(c.procedencia.rechazos ?? 0),
     conservacion, unidadEstado: s.unidadEstado, firma: firmaHoja(h),
+    ...(c.procedencia.compilation ? { compilation: c.procedencia.compilation } : {}),
     ...(s.variablesNumericas ? { variablesNumericas: s.variablesNumericas } : {}),
     ...(s.evaluacionReglas ? { evaluacionReglas: s.evaluacionReglas } : {}),
   };
@@ -81,4 +123,14 @@ export function resultadoDesdeComun(h: HojaMotor, s: ReturnType<typeof compilarH
     r.seriesEvaluadas = e.catalogoSeries.map((q): SerieEvaluadaMotor => ({ ...q, valores: de(q.id) }));
   }
   return r;
+}
+
+/** Preserve the common result's series, units and exact compiler provenance. */
+export function derivedResult(model:HojaMotor,result:ConjuntoResultados):ResultadoMotor {
+  const report=result.procedencia.compilation;
+  if(result.modeloId!==model.id||result.procedencia.motor!=='rage.compilador.derived'||!report?.derivedExecution||!igualdadProfunda(report.derivedExecution.selection,model.derivedSelection?.selection))throw new Error('The result does not match the selected derived formulation.');
+  const times=result.ejes[0].valores;
+  const series=result.series.map(row=>{if(!Array.isArray(row.valores)||row.valores.length!==times.length||row.valores.some(value=>typeof value!=='number'||!Number.isFinite(value)))throw new Error('Invalid published derived trajectory.');return {id:row.id,nombre:row.nombre,unidad:row.unidadSI,grupo:row.id.startsWith('budget.')?'Conservation budgets':row.id.startsWith('transformed.')?'Scaled quantities':'Physical quantities',valores:row.valores as number[]};});
+  const states=report.variables.map(variable=>{const row=series.find(item=>item.id==='campo.'+variable.sourceId);if(!row)throw new Error('Missing retained physical state.');return row;});
+  return {version:1,motor:result.procedencia.motor,modo:'temporal',metodo:String(result.procedencia.metodo),tiempos:times,x:[],dx:1,valores:times.map((_,i)=>states.map(state=>[state.valores[i]])),componentes:states.map((state,i)=>({id:i+1,nombre:state.nombre,simbolo:report.variables[i].sourceId})),estado:result.estado==='resuelto'?'resuelto':'parcial',mensaje:String(result.procedencia.mensaje??''),pasos:Number(result.procedencia.pasos??0),rechazados:Number(result.procedencia.rechazos??0),conservacion:[],verificationChecks:result.verificaciones,unidadEstado:'mixta',firma:firmaHoja(model),seriesEvaluadas:series,compilation:report};
 }
