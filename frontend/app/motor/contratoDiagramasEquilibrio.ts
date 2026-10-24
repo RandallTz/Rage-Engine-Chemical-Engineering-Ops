@@ -112,7 +112,48 @@ export type RespuestaDiagrama = {revision: 1; solicitudId: string; estado: Estad
   /** pares: null en un paquete sin parametros binarios (mezcla ideal). */
   evidencia: {combinacion: string; nivel: string; motivo: string; pares: {componentesCAS: string[]; evidencia: string;
     procedencia: string}[] | null} | null;
-  diagnosticos: DiagnosticoDiagrama[]};
+  diagnosticos: DiagnosticoDiagrama[];
+  /** F8 (aditivo en la revision 1): ramas L-L, punto critico L-L y punto L-L-V del corte. Ausente en respuestas
+   * anteriores; un lector de la revision 1 puede ignorarlo. */
+  liquidoLiquido?: LiquidoLiquidoDiagrama};
+
+/** F8: fase liquida de un par L-L (dos liquidos coexistentes, cada uno con su composicion; sin fracciones de fase). */
+export type FaseLiquidaLL = {id: 'liquido-a' | 'liquido-b'; tipo: 'liquido'; composicionMolar: Record<string, number>};
+
+/** Par L-L certificado. Cada par es un estado: el intervalo de composicion pedido no lo recorta. */
+export type PuntoLiquidoLiquido = {id: string; ramaId: string; T: number; P: number;
+  /** Fraccion molar del componente del eje en liquido-a y liquido-b (liquido-a tiene la menor). */
+  xEje: [number, number]; fases: [FaseLiquidaLL, FaseLiquidaLL]; certificado: CertificadoPunto;
+  origen: 'semilla_por_flash' | 'continuacion'};
+
+/** Rama L-L recorrida por pseudo-longitud de arco; puntoIds en orden creciente de la variable libre (T en Txy,
+ * P en Pxy). Las lineas entre puntos consecutivos son interpolacion visual. */
+export type RamaLiquidoLiquido = {id: string; tipo: 'LL'; variable: 'T' | 'P'; puntoIds: string[];
+  intervalo: [number, number]};
+
+export type ResiduoCriticidad = {id: 'criticidad'; valor: number; tolerancia: number; escala: string;
+  estado: 'cumple' | 'no_cumple'};
+
+export type PuntoEspecialLiquidoLiquido =
+  | {id: string; ramaId: string; tipo: 'critico_ll'; T: number; P: number; xEje: number;
+      composiciones: {'liquido-critico': Record<string, number>};
+      certificado: {estado: 'cumple' | 'no_cumple'; residuos: ResiduoCriticidad[]; estabilidad: EstabilidadPunto};
+      descripcion: string}
+  | {id: string; ramaId: string; tipo: 'tres_fases'; T: number; P: number; xEje: [number, number];
+      composiciones: {'liquido-a': Record<string, number>; 'liquido-b': Record<string, number>;
+        vapor: Record<string, number>};
+      certificado: CertificadoPunto; descripcion: string}
+  | {id: string; ramaId: string; tipo: 'limite_dominio'; T: number | null; P: number | null; descripcion: string};
+
+export type IncidenciaLiquidoLiquido = {id: string; ramaId: string | null;
+  tipo: 'presupuesto' | 'no_convergente' | 'fase_competidora'; causa: string; accion: string};
+
+export type LiquidoLiquidoDiagrama = {trazador: {id: string; version: string}; estado: 'completo' | 'parcial';
+  ramas: RamaLiquidoLiquido[]; puntos: PuntoLiquidoLiquido[]; puntosEspeciales: PuntoEspecialLiquidoLiquido[];
+  incidencias: IncidenciaLiquidoLiquido[];
+  presupuesto: {evaluaciones: number; limiteEvaluaciones: number; segundos: number; limiteSegundos: number};
+  evidencia: {combinacion: 'liquido_liquido'; nivel: string; motivo: string} | null;
+  metodo: string};
 
 /** Codigos estables: MOTOR_DIAG_REVISION, MOTOR_DIAG_DATO_INVALIDO, MOTOR_DIAG_UNIDAD, MOTOR_DIAG_PAQUETE_NO_DISPONIBLE,
  * MOTOR_DIAG_PARAMETRO_AUSENTE, MOTOR_DIAG_COMPONENTES_NO_SOPORTADO, MOTOR_DIAG_COMPONENTE_NO_SOPORTADO,

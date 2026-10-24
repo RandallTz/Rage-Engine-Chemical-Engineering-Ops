@@ -3460,7 +3460,7 @@
   "presupuesto": {
    "evaluaciones": 138,
    "limiteEvaluaciones": 6000,
-   "segundos": 1.086,
+   "segundos": 0.97,
    "limiteSegundos": 60.0
   },
   "reproducibilidad": {
@@ -3485,5 +3485,28 @@
    }
   ]
  },
- "diagnosticos": []
+ "diagnosticos": [],
+ "liquidoLiquido": {
+  "trazador": {
+   "id": "trazador-ll-binario",
+   "version": "1"
+  },
+  "estado": "completo",
+  "ramas": [],
+  "puntos": [],
+  "puntosEspeciales": [],
+  "incidencias": [],
+  "presupuesto": {
+   "evaluaciones": 312,
+   "limiteEvaluaciones": 6000,
+   "segundos": 0.503,
+   "limiteSegundos": 60.0
+  },
+  "evidencia": {
+   "combinacion": "liquido_liquido",
+   "nivel": "cualitativa",
+   "motivo": "mismo algoritmo de estabilidad que el paquete LLE; los parametros ChemSep estan ajustados a VLE: la solubilidad mutua predicha no esta contrastada"
+  },
+  "metodo": "Semillas por flash TP certificado en una malla de la condicion libre, solo donde la prueba de plano tangente de un liquido de referencia encuentra otro liquido; continuacion por pseudo-longitud de arco en (T/10 K, logit x_a, logit x_b) sobre la igualdad de mu del paquete entre los dos liquidos, en los dos sentidos, de modo que un pliegue de la condicion libre se sigue. Cada par se certifica (igualdad de mu <= 1e-10 RT, normalizacion, condicion fija, fases distintas y plano tangente con la mu comun frente a vapor y liquido). Terminaciones: punto critico (h' = h'' = 0), punto de tres fases L-L-V (Newton en cuatro incognitas, certificado), limite del dominio o presupuesto. Cada par es un estado: el intervalo de composicion pedido no lo recorta."
+ }
 }

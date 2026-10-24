@@ -73,14 +73,16 @@
    "combinacionesDetectadas": [
     "liquido_vapor (ramas y segmentos certificados)",
     "azeotropo (x = y refinado)",
-    "encuentro_otra_fase (liquido competidor identificado; LL/LLV no se traza)",
+    "encuentro_otra_fase (liquido competidor identificado)",
+    "liquidoLiquido: ramas L-L certificadas, punto critico L-L y punto L-L-V",
     "limite_dominio",
     "extremo_puro"
    ],
    "limites": [
     "vapor ideal: P <= 500000 Pa",
     "T dentro del dominio del par (rangos de Psat y cp, T <= 0.9 Tc)",
-    "variable de continuacion: x del liquido (no hay continuacion por longitud de arco: un pliegue en x se declararia, no se sigue)"
+    "L-V: variable de continuacion x del liquido (un pliegue en x se declararia, no se sigue)",
+    "L-L: continuacion por pseudo-longitud de arco; el pliegue en el punto critico se localiza y la rama termina alli"
    ]
   },
   {
@@ -265,14 +267,16 @@
    "combinacionesDetectadas": [
     "liquido_vapor (ramas y segmentos certificados)",
     "azeotropo (x = y refinado)",
-    "encuentro_otra_fase (liquido competidor identificado; LL/LLV no se traza)",
+    "encuentro_otra_fase (liquido competidor identificado)",
+    "liquidoLiquido: ramas L-L certificadas, punto critico L-L y punto L-L-V",
     "limite_dominio",
     "extremo_puro"
    ],
    "limites": [
     "vapor ideal: P <= 500000 Pa",
     "T dentro del dominio del par (rangos de Psat y cp, T <= 0.9 Tc)",
-    "variable de continuacion: x del liquido (no hay continuacion por longitud de arco: un pliegue en x se declararia, no se sigue)"
+    "L-V: variable de continuacion x del liquido (un pliegue en x se declararia, no se sigue)",
+    "L-L: continuacion por pseudo-longitud de arco; el pliegue en el punto critico se localiza y la rama termina alli"
    ]
   },
   {
@@ -315,14 +319,16 @@
    "combinacionesDetectadas": [
     "liquido_vapor (ramas y segmentos certificados)",
     "azeotropo (x = y refinado)",
-    "encuentro_otra_fase (liquido competidor identificado; LL/LLV no se traza)",
+    "encuentro_otra_fase (liquido competidor identificado)",
+    "liquidoLiquido: ramas L-L certificadas, punto critico L-L y punto L-L-V",
     "limite_dominio",
     "extremo_puro"
    ],
    "limites": [
     "vapor ideal: P <= 500000 Pa",
     "T dentro del dominio del par (rangos de Psat y cp, T <= 0.9 Tc)",
-    "variable de continuacion: x del liquido (no hay continuacion por longitud de arco: un pliegue en x se declararia, no se sigue)"
+    "L-V: variable de continuacion x del liquido (un pliegue en x se declararia, no se sigue)",
+    "L-L: continuacion por pseudo-longitud de arco; el pliegue en el punto critico se localiza y la rama termina alli"
    ]
   },
   {
@@ -523,14 +529,16 @@
    "combinacionesDetectadas": [
     "liquido_vapor (ramas y segmentos certificados)",
     "azeotropo (x = y refinado)",
-    "encuentro_otra_fase (liquido competidor identificado; LL/LLV no se traza)",
+    "encuentro_otra_fase (liquido competidor identificado)",
+    "liquidoLiquido: ramas L-L certificadas, punto critico L-L y punto L-L-V",
     "limite_dominio",
     "extremo_puro"
    ],
    "limites": [
     "vapor ideal: P <= 500000 Pa",
     "T dentro del dominio del par (rangos de Psat y cp, T <= 0.9 Tc)",
-    "variable de continuacion: x del liquido (no hay continuacion por longitud de arco: un pliegue en x se declararia, no se sigue)"
+    "L-V: variable de continuacion x del liquido (un pliegue en x se declararia, no se sigue)",
+    "L-L: continuacion por pseudo-longitud de arco; el pliegue en el punto critico se localiza y la rama termina alli"
    ]
   },
   {
@@ -731,14 +739,16 @@
    "combinacionesDetectadas": [
     "liquido_vapor (ramas y segmentos certificados)",
     "azeotropo (x = y refinado)",
-    "encuentro_otra_fase (liquido competidor identificado; LL/LLV no se traza)",
+    "encuentro_otra_fase (liquido competidor identificado)",
+    "liquidoLiquido: ramas L-L certificadas, punto critico L-L y punto L-L-V",
     "limite_dominio",
     "extremo_puro"
    ],
    "limites": [
     "vapor ideal: P <= 500000 Pa",
     "T dentro del dominio del par (rangos de Psat y cp, T <= 0.9 Tc)",
-    "variable de continuacion: x del liquido (no hay continuacion por longitud de arco: un pliegue en x se declararia, no se sigue)"
+    "L-V: variable de continuacion x del liquido (un pliegue en x se declararia, no se sigue)",
+    "L-L: continuacion por pseudo-longitud de arco; el pliegue en el punto critico se localiza y la rama termina alli"
    ]
   },
   {
@@ -933,14 +943,16 @@
    "combinacionesDetectadas": [
     "liquido_vapor (ramas y segmentos certificados)",
     "azeotropo (x = y refinado)",
-    "encuentro_otra_fase (liquido competidor identificado; LL/LLV no se traza)",
+    "encuentro_otra_fase (liquido competidor identificado)",
+    "liquidoLiquido: ramas L-L certificadas, punto critico L-L y punto L-L-V",
     "limite_dominio",
     "extremo_puro"
    ],
    "limites": [
     "vapor ideal: P <= 500000 Pa",
     "T dentro del dominio del par (rangos de Psat y cp, T <= 0.9 Tc)",
-    "variable de continuacion: x del liquido (no hay continuacion por longitud de arco: un pliegue en x se declararia, no se sigue)"
+    "L-V: variable de continuacion x del liquido (un pliegue en x se declararia, no se sigue)",
+    "L-L: continuacion por pseudo-longitud de arco; el pliegue en el punto critico se localiza y la rama termina alli"
    ]
   }
  ],
@@ -950,8 +962,8 @@
    "motivo": "el trazador inicial es binario; no se elimina ni renormaliza un tercer componente"
   },
   {
-   "elemento": "diagramas LL, LLV y SLE completos",
-   "motivo": "se detecta y explica el encuentro con otra fase; trazar sus regiones queda para otra entrega"
+   "elemento": "diagramas SLE y regiones L-L de mas de dos componentes",
+   "motivo": "las ramas L-L, su punto critico y el punto L-L-V binarios se publican en liquidoLiquido; solidos y cortes multicomponente quedan para otra entrega"
   },
   {
    "elemento": "agua-iapws95 y agua-iapws95-hielo-ih",
