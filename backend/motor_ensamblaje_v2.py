@@ -10,7 +10,8 @@ conductancia); paquetes de mezcla; evidencia de potenciales quimicos y
 verificacion de la segunda ley cuando hay datos para ella.
 
 Las rutas son las de la revision 1; backend/motor_ensamblaje.py despacha a
-este modulo cuando revision == 2. La revision 1 no cambia.
+este modulo cuando revision == 2. La revision 1 se retiro (dec-r5-legacy-v1,
+23 de octubre de 2026): recibe MOTOR_ENS_REVISION_RETIRADA.
 """
 
 import functools
@@ -29,7 +30,7 @@ from core import ensamblaje_red as er
 from core import expresiones_motor as ex
 from core import mezclas as mz
 from core import paquetes_volumen as pv
-from core.ensamblaje_dinamico import Funcion, Detencion
+from core.dynamic_common import Funcion, Detencion
 
 REVISION = 2
 VOLUMENES_VERIFICADOS = 3
@@ -217,7 +218,7 @@ def capacidades_v2():
             paq["coberturaGrupos"] = cobertura_unifac(mid)
         paquetes.append(paq)
     return {
-        "revision": REVISION, "revisionesAdmitidas": [1, 2], "disponible": publicable,
+        "revision": REVISION, "revisionesAdmitidas": [2], "disponible": publicable,
         "motivo": None if publicable else motivo,
         "paquetes": paquetes if publicable else [],
         "volumenesMaximos": VOLUMENES_VERIFICADOS, "componentesMaximos": COMPONENTES_VERIFICADOS,

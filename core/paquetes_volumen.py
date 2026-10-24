@@ -22,7 +22,34 @@ import numpy as np
 
 from core import agua_iapws95 as agua
 from core import mezclas as mz
-from core import ensamblaje_dinamico as dyn
+
+
+_CACHE_TP = {}
+
+
+def _h_TP_agua(T, P):
+    """h [J/kg] of exterior water at (T, P): the same branch and checks as the H1 TP evaluation (domain, critical
+    band, undetermined saturation). Moved unchanged from the retired core/ensamblaje_dinamico.py (dec-r5-legacy-v1)."""
+    clave = (T, P)
+    if clave in _CACHE_TP:
+        return _CACHE_TP[clave]
+    if not (agua.T_MIN <= T <= agua.T_MAX and agua.P_MIN <= P <= agua.P_MAX):
+        raise agua.FueraDeAlcance("fuera_de_dominio", f"Donante exterior T = {T:.6g} K, P = {P:.6g} Pa fuera del dominio.")
+    if agua.T_CRITICA[0] <= T <= agua.T_CRITICA[1] and agua.P_CRITICA[0] <= P <= agua.P_CRITICA[1]:
+        raise agua.FueraDeAlcance("region_critica", f"Donante exterior T = {T:.6g} K, P = {P:.6g} Pa en la banda critica.")
+    ramas_T, sat = agua.ramas(T)
+    if sat is not None:
+        if abs(P / sat.Psat - 1.0) <= agua.TOL_SATURACION:
+            raise agua.FueraDeAlcance("saturacion", f"Donante exterior en saturacion a {T:.6g} K: T y P no fijan su h.")
+        nombre = "liquido" if P > sat.Psat else "vapor"
+    else:
+        nombre = "fluido"
+    _, lo, hi = next(r for r in ramas_T if r[0] == nombre)
+    h = agua.propiedades(T, agua.densidad(T, P, lo, hi)).h
+    if len(_CACHE_TP) > 10000:
+        _CACHE_TP.clear()
+    _CACHE_TP[clave] = h
+    return h
 
 
 class PaqueteNoAplicable(Exception):
@@ -103,7 +130,7 @@ class PaqueteAgua:
     def transporte_TP(self, T, P, x):
         """(h, s) molares del agua exterior a (T, P)."""
         try:
-            h = dyn.h_TP(T, P)
+            h = _h_TP_agua(T, P)
             e = agua.evaluar_TP(T, P)
         except agua.FueraDeAlcance as x_:
             raise mz.FueraDeAlcance(x_.motivo, x_.mensaje, **x_.datos)

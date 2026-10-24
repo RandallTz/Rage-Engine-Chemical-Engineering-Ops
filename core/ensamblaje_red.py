@@ -25,7 +25,7 @@ Integrales auxiliares (y[k] despues de los estados):
   (corrientes + calor con el exterior); W_v = int P_v dV_v/dt dt por volumen;
   flujo de entropia exterior int (sum ndot s + Q/T_frontera) dt.
 
-Eventos, reintentos y muestras como core/ensamblaje_dinamico.py (v1):
+Eventos, reintentos y muestras como el ensamblaje v1 retirado (core/ensamblaje_dinamico.py, dec-r5-legacy-v1):
 vigilancia del conjunto de fases de cada volumen en 3 puntos interiores y el
 extremo de cada paso aceptado, biseccion, re-integracion hasta el evento y
 reinicio; un flash que falla no reutiliza propiedades anteriores. Si el estado
@@ -41,7 +41,7 @@ import numpy as np
 from scipy.integrate import RK45
 
 from core import mezclas as mz
-from core.ensamblaje_dinamico import Funcion, Detencion
+from core.dynamic_common import Funcion, Detencion
 
 
 @dataclass

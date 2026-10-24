@@ -97,7 +97,7 @@ def activa(n):
 if activa("0"):
     seccion("0. Capacidades v2 y compatibilidad de la revision 1")
     c2 = v2.capacidades_v2()
-    check(c2["revision"] == 2 and c2["revisionesAdmitidas"] == [1, 2], "capacidades v2: revisiones")
+    check(c2["revision"] == 2 and c2["revisionesAdmitidas"] == [2], "capacidades v2: revisiones (la 1 se retiro, dec-r5-legacy-v1)")
     ids_paq = [p["modelo"]["id"] for p in c2["paquetes"]]
     check({"agua-iapws95", "mezcla-ideal", "nrtl-chemsep", "nrtl-lle-agua-butanol"} <= set(ids_paq),
           f"capacidades v2: paquetes {ids_paq}")
@@ -107,7 +107,8 @@ if activa("0"):
           "capacidades v2: limites verificados")
     check("agua-iapws95-hielo-ih" not in ids_paq, "el hielo no se declara en la dinamica (sin pruebas dinamicas)")
     c1 = me.capacidades()
-    check(c1.get("revision", 1) == 1, "capacidades v1 por omision siguen siendo la revision 1")
+    check(c1.get("revision") == 1 and c1.get("estado") == "retirada" and c1["sustituta"]["revision"] == 2,
+          "capacidades por omision: aviso estructurado de la revision 1 retirada")
 
     async def http():
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://v") as cl:
@@ -117,7 +118,7 @@ if activa("0"):
             t = (await cl.get("/motor/termodinamica/capacidades")).json()
             return a, b, d, t
     a, b, d, t = asyncio.run(http())
-    check(a == c1, "HTTP capacidades sin parametro = revision 1 intacta")
+    check(a == c1, "HTTP capacidades sin parametro = aviso de la revision 1 retirada")
     check(b["revision"] == 2, "HTTP capacidades?revision=2")
     check(d["estado"] == "evaluado" and len(d["diagrama"]["lineas"]) == 3, "HTTP diagrama P-T del hielo")
     check([m["id"] for m in t["modelos"]] == ["agua-iapws95", "mezcla-ideal", "nrtl-chemsep",

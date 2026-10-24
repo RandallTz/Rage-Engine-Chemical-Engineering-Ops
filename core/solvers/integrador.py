@@ -67,8 +67,12 @@ class Trayectoria:
         raise ValueError(f"t = {t} fuera de la trayectoria [0, {self.t_fin}]")
 
 
-def _rk(sistema, t0, y0, tf, rtol, atol, max_step, metodo="RK45"):
-    return METODOS[metodo](sistema.rhs, t0, np.array(y0, dtype=float), tf, rtol=rtol, atol=atol, max_step=max_step)
+def _rk(sistema, t0, y0, tf, rtol, atol, max_step, metodo="RK45", first_step=None):
+    # first_step skips scipy's initial-step probe, which evaluates the right-hand side one guessed step ahead: after
+    # a stop raised beyond the current point that probe could land past the same stop.
+    extra = {"first_step": min(first_step, tf - t0)} if first_step is not None and tf - t0 > 0 else {}
+    return METODOS[metodo](sistema.rhs, t0, np.array(y0, dtype=float), tf, rtol=rtol, atol=atol, max_step=max_step,
+                           **extra)
 
 
 def _fuera(sistema, t, y):
@@ -117,6 +121,16 @@ def integrar(sistema, y0, t_final, rtol=1e-8, atol=1e-10, max_step=np.inf, h_min
         try:
             r.step()
         except Detencion as d:
+            # A trial stage can lie beyond a physical stop (e.g. a withdrawn phase already exhausted) while the
+            # accepted point t_a is far before it. Shorten the step, as for any failed stage evaluation, so the
+            # stop is located to within h_min instead of being published at the last accepted point.
+            h_try = getattr(r, "h_abs", None)
+            h_try = min(paso_max, h_try if h_try is not None and np.isfinite(h_try) and h_try > 0 else t_final)
+            if h_try / 4 >= h_min:
+                tray.rechazos += 1
+                paso_max = h_try / 4
+                r = _rk(sistema, t_a, y_a, t_final, rtol, atol, paso_max, metodo, first_step=paso_max)
+                continue
             tray.detenida = d
             tray.eventos.append((d.codigo, t_a, firma, None, d.mensaje))
             tray.t_fin, tray.y_fin = t_a, y_a
