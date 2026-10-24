@@ -13,6 +13,7 @@ import math
 
 from backend import motor_mezclas
 from backend import motor_termodinamica as mt
+from core import coexistencia_ll as ll
 from core import coexistencia_lv as co
 from core import diagramas_equilibrio as dg
 from core import mezclas as mz
@@ -46,18 +47,21 @@ def capacidades():
                        "procedencia": p["procedencia"]} for p in pares] if pares is not None else None,
             "combinacionesDetectadas": ["liquido_vapor (ramas y segmentos certificados)",
                                         "azeotropo (x = y refinado)",
-                                        "encuentro_otra_fase (liquido competidor identificado; LL/LLV no se traza)",
+                                        "encuentro_otra_fase (liquido competidor identificado)",
+                                        "liquidoLiquido: ramas L-L certificadas, punto critico L-L y punto L-L-V",
                                         "limite_dominio", "extremo_puro"],
             "limites": [f"vapor ideal: P <= {mz.P_MAX:g} Pa", "T dentro del dominio del par (rangos de Psat y cp, "
-                        "T <= 0.9 Tc)", "variable de continuacion: x del liquido (no hay continuacion por longitud de "
-                        "arco: un pliegue en x se declararia, no se sigue)"]})
+                        "T <= 0.9 Tc)", "L-V: variable de continuacion x del liquido (un pliegue en x se declararia, no se "
+                        "sigue)", "L-L: continuacion por pseudo-longitud de arco; el pliegue en el punto critico se "
+                        "localiza y la rama termina alli"]})
     return {"revision": REVISION, "trazador": dict(dg.TRAZADOR), "operaciones": ["Txy", "Pxy"], "componentes": 2,
             "perfiles": [dict(p) for p in dg.PERFILES.values()], "paquetes": paquetes,
             "noSoportado": [
                 {"elemento": "mas de dos componentes", "motivo": "el trazador inicial es binario; no se elimina ni "
                  "renormaliza un tercer componente"},
-                {"elemento": "diagramas LL, LLV y SLE completos", "motivo": "se detecta y explica el encuentro con otra "
-                 "fase; trazar sus regiones queda para otra entrega"},
+                {"elemento": "diagramas SLE y regiones L-L de mas de dos componentes", "motivo": "las ramas L-L, su "
+                 "punto critico y el punto L-L-V binarios se publican en liquidoLiquido; solidos y cortes "
+                 "multicomponente quedan para otra entrega"},
                 {"elemento": "agua-iapws95 y agua-iapws95-hielo-ih", "motivo": "un solo componente: su diagrama es P-T "
                  "(GET /motor/termodinamica/diagrama para el hielo)"},
                 {"elemento": "region critica", "motivo": "excluida por los paquetes (T <= 0.9 Tc)"},
@@ -253,7 +257,107 @@ def trazar(cuerpo):
     a, b = inter
     inter0 = (a, b) if k_eje == 0 else (1.0 - b, 1.0 - a)
     tr = dg.trazar(sis, tipo, fijo, inter0, perfil)
-    return _respuesta(sid, cuerpo, sis, mid, ver, huella, tipo, fijo, ids, cas, eje, k_eje, inter, perfil, tr, lec)
+    r = _respuesta(sid, cuerpo, sis, mid, ver, huella, tipo, fijo, ids, cas, eje, k_eje, inter, perfil, tr, lec)
+    r["liquidoLiquido"] = _liquido_liquido(sis, mid, tipo, fijo, ids, k_eje, perfil)
+    return r
+
+
+def _liquido_liquido(sis, mid, tipo, fijo, ids, k_eje, perfil):
+    """Additive block (F8): liquid-liquid branches of the slice, their critical points (the binodal's fold) and
+    the liquid-liquid-vapor three-phase points, from core/coexistencia_ll.py with its own budget. Each pair is
+    one state: the requested composition interval does not clip it."""
+    pres = dg._Presupuesto(dg.PERFILES[perfil])
+    ramas_c = ll.trace(sis, tipo, fijo, ll.PROFILES[perfil], spend=pres.gastar, exhausted=lambda: pres.agotado)
+    xe = (lambda x0: float(x0)) if k_eje == 0 else (lambda x0: float(1.0 - x0))
+    clave = "T" if tipo == "Txy" else "P"
+
+    def comp(x0):
+        return {str(ids[0]): float(x0), str(ids[1]): float(1.0 - x0)}
+
+    def est_pub(e):
+        e = dict(e)
+        if "competidora" in e:
+            c = e.pop("competidora")
+            e["competidora"] = {"tipo": c["tipo"], "composicionMolar": comp(c["composicion"][0]), "tm": c["tm"]}
+        return e
+
+    def cert_pub(c):
+        return {"estado": c["estado"], "residuos": c["residuos"], "estabilidad": est_pub(c["estabilidad"])}
+
+    def par_eje(xa, xb):
+        return sorted((xa, xb), key=xe)
+
+    ramas, puntos, especiales, incid = [], [], [], []
+    for k, b in enumerate(ramas_c, 1):
+        rid = f"ll-{k}"
+        orden = sorted(b.points, key=lambda p: p["q"])
+        pids = []
+        for p in orden:
+            pid = f"{rid}-p{len(pids) + 1:04d}"
+            pids.append(pid)
+            a, c = par_eje(p["xa"], p["xb"])
+            puntos.append({"id": pid, "ramaId": rid, "T": float(p["T"]), "P": float(p["P"]),
+                           "xEje": [xe(a), xe(c)],
+                           "fases": [{"id": "liquido-a", "tipo": "liquido", "composicionMolar": comp(a)},
+                                     {"id": "liquido-b", "tipo": "liquido", "composicionMolar": comp(c)}],
+                           "certificado": cert_pub(p["cert"]), "origen": p["origen"]})
+        ramas.append({"id": rid, "tipo": "LL", "variable": clave, "puntoIds": pids,
+                      "intervalo": [float(orden[0][clave]), float(orden[-1][clave])]})
+        for e in b.ends:
+            eid = f"ll-e{len(especiales) + 1:03d}"
+            if e["tipo"] == "critico":
+                ok = e["residuo"] <= 1e-8 and e["estabilidad"]["estado"] == "estable"
+                especiales.append({
+                    "id": eid, "ramaId": rid, "tipo": "critico_ll", "T": float(e["T"]), "P": float(e["P"]),
+                    "xEje": xe(e["x"]), "composiciones": {"liquido-critico": comp(e["x"])},
+                    "certificado": {"estado": "cumple" if ok else "no_cumple", "residuos": [
+                        {"id": "criticidad", "valor": float(e["residuo"]), "tolerancia": 1e-8,
+                         "escala": "max(|x(1-x) h'|, |[x(1-x)]^2 h''|), h = (mu_0 - mu_1)/RT del liquido",
+                         "estado": "cumple" if e["residuo"] <= 1e-8 else "no_cumple"}],
+                        "estabilidad": est_pub(e["estabilidad"])},
+                    "descripcion": "punto critico liquido-liquido: las dos fases se funden; pliegue de la binodal en "
+                                   + clave + ", localizado con h' = h'' = 0 (diferencias de cinco puntos)"})
+            elif e["tipo"] == "tres_fases":
+                a, c = par_eje(e["xa"], e["xb"])
+                especiales.append({
+                    "id": eid, "ramaId": rid, "tipo": "tres_fases", "T": float(e["T"]), "P": float(e["P"]),
+                    "xEje": [xe(a), xe(c)],
+                    "composiciones": {"liquido-a": comp(a), "liquido-b": comp(c), "vapor": comp(e["y"])},
+                    "certificado": cert_pub(e["cert"]),
+                    "descripcion": "punto de tres fases L-L-V (invariante del binario en este corte): aparece vapor y "
+                                   "la rama L-L termina; igualdad de mu entre las tres fases y estabilidad certificadas"})
+            elif e["tipo"] == "fuera_de_dominio":
+                ult = e.get("ultimo")
+                ext = ult if ult is not None else (orden[0] if orden else None)
+                especiales.append({"id": eid, "ramaId": rid, "tipo": "limite_dominio",
+                                   "T": float(ext["T"]) if ext else None, "P": float(ext["P"]) if ext else None,
+                                   "descripcion": "limite del dominio del paquete; mas alla no se evalua ni se "
+                                                  "extrapola. " + e.get("mensaje", "")[:300]})
+            else:
+                incid.append({"id": f"ll-i{len(incid) + 1:03d}", "ramaId": rid,
+                              "tipo": {"presupuesto": "presupuesto", "no_convergente": "no_convergente"}.get(
+                                  e["tipo"], "fase_competidora"),
+                              "causa": str(e.get("mensaje", e["tipo"]))[:400],
+                              "accion": "la rama se publica hasta su ultimo punto certificado; sin extrapolar"})
+    if pres.agotado and not any(i["tipo"] == "presupuesto" for i in incid):
+        incid.append({"id": f"ll-i{len(incid) + 1:03d}", "ramaId": None, "tipo": "presupuesto",
+                      "causa": "presupuesto de evaluaciones o tiempo agotado durante la busqueda L-L",
+                      "accion": "se publica lo calculado"})
+    par = _pares(mid)[2]
+    return {"trazador": dict(ll.TRAZADOR), "estado": "parcial" if incid else "completo",
+            "ramas": ramas, "puntos": puntos, "puntosEspeciales": especiales, "incidencias": incid,
+            "presupuesto": pres.resumen(),
+            "evidencia": ({"combinacion": "liquido_liquido", "nivel": par["evidencia"], "motivo": par["motivo"]}
+                          if par else None),
+            "metodo": ("Semillas por flash TP certificado en una malla de la condicion libre, solo donde la prueba de "
+                       "plano tangente de un liquido de referencia encuentra otro liquido; continuacion por "
+                       "pseudo-longitud de arco en (" + ("T/10 K" if tipo == "Txy" else "ln P") + ", logit x_a, "
+                       "logit x_b) sobre la igualdad de mu del paquete entre los dos liquidos, en los dos sentidos, "
+                       "de modo que un pliegue de la condicion libre se sigue. Cada par se certifica (igualdad de mu "
+                       "<= 1e-10 RT, normalizacion, condicion fija, fases distintas y plano tangente con la mu comun "
+                       "frente a vapor y liquido). Terminaciones: punto critico (h' = h'' = 0), punto de tres fases "
+                       "L-L-V (Newton en cuatro incognitas, certificado), limite del dominio o presupuesto. Cada par "
+                       "es un estado: el intervalo de composicion pedido no lo recorta.")}
 
 
 def _firma(mid, ver, huella, cas, tipo, fijo, k_eje, inter, perfil):
@@ -405,7 +509,7 @@ def _respuesta(sid, cuerpo, sis, mid, ver, huella, tipo, fijo, ids, cas, eje, k_
                 e["composiciones"]["competidora"] = comp(c["composicion"][0])
             e["descripcion"] = ("limite de la rama L-V: a partir de aqui otra fase (" + (c["tipo"] if c else "?") +
                                 ") es mas estable; con la competidora es un encuentro de tres fases (p. ej. L-L-V). "
-                                "La region L-L/L-L-V no se traza en esta entrega.")
+                                "La region L-L y el punto L-L-V se publican en liquidoLiquido.")
             e["estabilidad"] = est_pub(malo.cert) if malo.cert else None
         else:
             e["descripcion"] = "limite del dominio del paquete; mas alla no se evalua ni se extrapola"
