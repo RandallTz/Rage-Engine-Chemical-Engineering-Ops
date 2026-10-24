@@ -681,6 +681,26 @@ class Sistema:
                 quedan = intento(add)
                 if len(quedan) >= 2:
                     break
+        def directo():
+            """Next to a phase boundary the new phase can be ~1e-8 mol: its G gain (~ amount x tm, of order 1e-17 RT n)
+            is below the minimizer's resolution, which leaves it at ~0 (dropped) or at a poor composition from which
+            the polish collapses to the trivial split, so the state was published as one phase within the TOL_TM band
+            (F9-R9). The equal-potential Newton resolves such amounts when seeded with the trial composition at small
+            amounts. The caller still certifies the result by the tangent-plane test; a trivial or non-converged split
+            is rejected below as before."""
+            if len(fases) != 1:
+                return None
+            for beta in (1e-6, 1e-8, 1e-10):
+                add = np.minimum(beta * nz.sum() * w, 0.5 * fases[0][1])
+                if not np.all(add > 0):
+                    continue
+                ps = self._pulir(T, P, tipos, [fases[0][1] - add, add], nz, idx)
+                if ps is not None and all(p.min() > 0 for p in ps) and \
+                        self._res_partes(T, P, tipos, ps, idx) <= TOL_MU:
+                    return list(zip(tipos, ps))
+            return None
+        if len(quedan) < 2:
+            quedan = directo() or quedan
         if len(quedan) < 2:
             return None
         tipos_q = [t for t, _ in quedan]
@@ -701,6 +721,10 @@ class Sistema:
                     mejor = (g, tipos_s, ps)
             if mejor is not None:
                 _, tipos_q, partes = mejor
+        if partes is None or self._res_partes(T, P, tipos_q, partes, idx) > TOL_MU:
+            alternativa = directo()
+            if alternativa is not None:
+                tipos_q, partes = [t for t, _ in alternativa], [nf for _, nf in alternativa]
         if partes is None or self._res_partes(T, P, tipos_q, partes, idx) > TOL_MU:
             # El reparto no converge: tipicamente la fase nueva quiere anularse (a ~1e-12 K de una
             # frontera, cantidad ~1e-9 mol y ln n -> -inf). Se descarta y el conjunto previo se certifica
@@ -1014,21 +1038,29 @@ class Sistema:
             return None
         nz = n[idx]
         T0 = 0.5 * (sides[0].T + sides[1].T)
-        seed = self._semilla_de(T0, P, n, idx, [(t, x * nz.sum() / len(phases)) for t, x in phases])
-        e = None
-        for _ in range(3):
-            try:
-                e = self._newton(spec, P, target, n, seed)
-                break
-            except _NuevaSemilla as retry:
-                seed = retry.semilla
-            except (_Completo, FueraDeAlcance, np.linalg.LinAlgError, FloatingPointError, OverflowError, ValueError):
-                return None
-        if e is None or abs(offset(e)) > 1e-10 * max(abs(target), R * e.T * n.sum()):
-            return None
-        if any(not (residual <= tolerance) for residual, tolerance, _ in e.verificaciones.values()):
-            return None
-        return e
+        # A side state that already holds every phase is the closest seed (e.g. just past a bubble point, a vapor
+        # of order 1e-10 mol; an equal split would start the Newton about 0.5 mol away). The equal split remains
+        # the fallback.
+        seeds = [s for s in sides if len(s.fases) == len(phases)]
+        seeds.append(self._semilla_de(T0, P, n, idx, [(t, x * nz.sum() / len(phases)) for t, x in phases]))
+        for seed in seeds:
+            e = None
+            for _ in range(3):
+                try:
+                    e = self._newton(spec, P, target, n, seed, escala_objetivo=True)
+                    break
+                except _NuevaSemilla as retry:
+                    seed = retry.semilla
+                except (_Completo, FueraDeAlcance, np.linalg.LinAlgError, FloatingPointError, OverflowError,
+                        ValueError):
+                    e = None
+                    break
+            if e is None or abs(offset(e)) > 1e-10 * max(abs(target), R * e.T * n.sum()):
+                continue
+            if any(not (residual <= tolerance) for residual, tolerance, _ in e.verificaciones.values()):
+                continue
+            return e
+        return None
 
     def _recalificar(self, e, espec):
         e.especificacion = espec
@@ -1364,8 +1396,11 @@ def flash_rapido(self, espec, a, b, n, semilla):
         return self.equilibrio_UV(a, b, n)
 
 
-def _newton(self, espec, a, b, n, semilla):
-    """Newton con semilla (ver flash_rapido); _Completo si no converge o cambia el conjunto de fases."""
+def _newton(self, espec, a, b, n, semilla, escala_objetivo=False):
+    """Newton con semilla (ver flash_rapido); _Completo si no converge o cambia el conjunto de fases.
+    escala_objetivo: the energy residual is scaled by max(RT n, |target|), the scale of the PH/UP acceptance
+    tolerance, instead of RT n. Only the isobaric phase-amount fallback uses it, where the RT n scale lies
+    below the rounding of H for some mixtures; certification tolerances are unchanged."""
     n = np.asarray(n, dtype=float)
     idx = [i for i in range(len(n)) if n[i] > 0]
     if True:
@@ -1426,7 +1461,7 @@ def _newton(self, espec, a, b, n, semilla):
                 fs = [self.fase("x", t, Tv, Pv, p, idx) for t, p in zip(tipos, ps)]
                 Hs = sum(f.n * f.h for f in fs)
                 Vs = sum(f.n * f.v for f in fs)
-                escala = RT * nz.sum()
+                escala = max(RT * nz.sum(), abs(b)) if escala_objetivo else RT * nz.sum()
                 if espec == "PH":
                     res.append((Hs - b) / escala)
                 elif espec == "UP":
@@ -1835,15 +1870,24 @@ def _jacobiano_reparto(self, T, P, tipos, z, nz, idx, m, k):
             up[j] += h
             um[j] -= h
             D_ult[:, j] = (mu_de(tipos[-1], up) - mu_de(tipos[-1], um)) / (2 * h)
+        # mu of a phase depends only on its composition (homogeneous of degree zero in its amounts), so exactly
+        # sum_j n_j dmu_i/dn_j = 0. The differences above carry rounding noise of order eps |mu| / step along that
+        # direction; for a phase of 1e-10 mol at a bubble or dew point that noise exceeds the true coupling through
+        # the other phase (proportional to its amount), and the Newton stalled with amount errors of 1e-10 mol
+        # (H errors of 1e-5 J, F9-R9). The identity is imposed by projecting out that component.
+        D_ult = D_ult - np.outer(D_ult @ ult, ult) / float(ult @ ult)
         J = np.zeros(((k - 1) * m, (k - 1) * m))
         for a in range(k - 1):
+            B = np.empty((m, m))
             for j in range(m):
                 d = 1e-6
                 pp, pm = ps[a].copy(), ps[a].copy()
                 pp[j] *= math.exp(d)
                 pm[j] *= math.exp(-d)
-                col = (mu_de(tipos[a], pp) - mu_de(tipos[a], pm)) / (2 * d) / RT
-                J[a * m:(a + 1) * m, a * m + j] += col
+                B[:, j] = (mu_de(tipos[a], pp) - mu_de(tipos[a], pm)) / (2 * d) / RT
+            # in ln n the same identity reads sum_j dmu_i/d ln n_j = 0: every row of the own-phase block sums to zero
+            B -= B.sum(axis=1, keepdims=True) / m
+            J[a * m:(a + 1) * m, a * m:(a + 1) * m] += B
             for b in range(k - 1):
                 for j in range(m):
                     J[a * m:(a + 1) * m, b * m + j] += ps[b][j] * D_ult[:, j] / RT
