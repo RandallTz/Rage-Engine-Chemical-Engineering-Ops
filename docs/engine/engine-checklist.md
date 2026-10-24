@@ -139,9 +139,10 @@ Workspace: Model · shared state-closure service
 - [x] Pure-property sources, units, domains and fingerprints; coherent liquid-volume, ideal-Cp and vapor-pressure substitutions.
 - [x] Material streams between mixture packages sharing a compatible reference; binary T–xy and P–xy diagrams.
 - [x] Binary L–L branches by arc-length continuation, located L–L critical points (the binodal's fold) and certified L–L–V three-phase points in T–xy/P–xy diagrams (liquidoLiquido), checked against an analytic Margules binodal, the package's TP flash and cross-slice consistency.
+- [x] Ternary L–L at fixed T and P (tie lines by arc length, plait point, binary-edge ends, certified L–L–V triangle) and multicomponent composition-line slices keeping every species, as core operations checked against an analytic Margules plait point, the TP flash and the binary branch.
 - [ ] Material streams between IAPWS and mixture packages; nonideal vapor and high-pressure mixtures.
 - [ ] Critical regions beyond the current domain, mixture solid–liquid equilibrium and reaction equilibrium.
-- [ ] Solid–liquid diagrams, arc-length continuation of L–V branches, L–L regions of more than two components and multicomponent equilibrium surfaces; drawing the L–L block in the interface.
+- [ ] Solid–liquid diagrams, arc-length continuation of L–V branches, three-liquid ternary regions and multicomponent equilibrium surfaces; an HTTP route and contract for ternary L–L and line slices, and drawing the L–L results in the interface.
 - [ ] Broader phase-search/domain reliability in large UNIFAC networks; the located-event publication/work incident has a targeted correction. Volume scaling of network runs is not yet benchmarked.
 - [ ] *Deferred:* Experimental validation of UNIFAC predictions, after Engine validation.
 - [ ] *Deferred:* NRTL extensions and additional parameter coverage are outside the current priority.

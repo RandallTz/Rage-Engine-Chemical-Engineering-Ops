@@ -152,10 +152,49 @@ just below and vapor just above; a Pxy slice at 360 K gives P* = 77,345 Pa and t
 UNIFAC original and Dortmund water–1-butanol (three-phase 366.18 K and 365.89 K), water–benzene (342.33 K; water-rich
 liquid with 1.75e-3 benzene) and water–ethyl acetate, Txy and Pxy, both profiles: every pair certified, 0.8–4.2 s.
 
+## 6c. Ternary liquid–liquid and multicomponent line slices (F8, 23 October 2026)
+
+Core operations only; no HTTP route or contract yet (see §7).
+
+**`core/ternary_liquid_liquid.py`** (fixed T and P). A liquid is x = softmax(z0, z1, 0), so every species stays
+positive and traces are represented. A tie line (za0, za1, zb0, zb1) satisfies three μ equalities: a curve,
+followed by pseudo-arclength from certified-flash seeds on a lattice pulled 2 % inside the simplex, in both
+directions. Every tie line carries the certificate (μ equality ≤ 1e-10 RT, normalization, distinct liquids,
+tangent plane with the common μ). A branch ends at:
+- the **plait point**, located with det H = 0 and the cubic form along H's null vector (H = ∂h/∂x,
+  h_i = (μ_i − μ_2)/RT, central differences); a step that crosses it is detected because the liquids exchange
+  sides, and is shortened until it is located;
+- a **binary edge**, when one species falls below 1e-9 in both liquids; the end is the binary pair of the other
+  two species solved directly and certified;
+- the **L–L–V triangle**, when a vapor trial lowers the tangent plane: (x_a, x_b, y) from six μ equalities,
+  certified;
+- budget or no convergence, published as such.
+
+**`core/composition_slices.py`** (any number of species). The feeds z(l) = (1 − l) z_A + l z_B are closed by the
+package's certified TP equilibrium, each seeded with the previous state; where the phase set changes the
+boundary l* is bisected. Every species is kept: a species absent from both ends is rejected, never dropped.
+
+Evidence (`tests/test_ternary_liquid_liquid.py`, 5 tests; `tests/test_composition_slices.py`, 4 tests):
+- a Margules liquid g^E/RT = A x0 x1 (A = 3) gives the exact plait point x0 = x1 = 1/A within 1e-6, its binary edge
+  satisfies the binary Margules binodal within 1e-10, and every tie line is the 0–1 mirror of itself within 1e-8;
+- benzene–water–ethanol (UNIFAC original, 300 K, 1 atm): tie lines equal the package's TP flash within 1e-7; the
+  plait point (0.580, 0.036, 0.384) is stable and the binodal approaches it; the binary-edge pair equals the binary
+  branch of `core/coexistencia_ll.py` within 1e-8; at 340 K the L–L–V triangle equals the TP flash of a feed inside
+  it within 1e-7;
+- a line slice along a traced tie line crosses the binodal at its ends within 1e-8 in l, with the incipient phase
+  equal to the other end; a binary slice across the water–1-butanol gap gives the binary pair within 1e-6;
+- probes: UNIFAC Dortmund and water–1-butanol–ethanol ternaries (plait point and binary edge, 5–9 s); a five-species
+  line (water, ethanol, benzene, toluene, 1-butanol, 300 K) crosses a three-liquid region, every row certified, 38 s.
+
+**Finding.** Within about 0.004 of a plait point the TP flash may publish one liquid inside its certification
+band: at benzene–water–ethanol, 300 K, the single liquid has tm = −4.4e-11 (> −TOL_TM) while the traced split
+lowers G by 2e-11 RT. Both statements are within the declared tolerance; a diagram near a critical point should
+take the traced tie lines, not that flash.
+
 ## 7. Pending limits
 
 - Binaries only. A three-component sheet receives `MOTOR_DIAG_COMPONENTES_NO_SOPORTADO`; no component is removed or renormalized.
-- L–L branches and L–L–V points are binary only; SLE regions are not plotted.
+- Ternary L–L regions, plait points, L–L–V triangles and multicomponent line slices are core operations without an HTTP route or contract; the binary L–L block is published. Three-liquid regions in a ternary are not traced (line slices do detect them). SLE regions are not plotted.
 - The L–V continuation is in the liquid's x; a fold in x would show up as a declared failure or gap. The L–L branch uses arc length, and a binary pair branch turns only at its critical point, where it ends.
 - Stability is a grid test with refinement, not a proof of the global minimum.
 - Critical region: excluded by the packages (T ≤ 0.9 Tc), never extrapolated. Ideal vapor up to 5 bar.
