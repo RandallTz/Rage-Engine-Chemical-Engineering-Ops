@@ -138,9 +138,10 @@ Workspace: Model · shared state-closure service
 - [x] Static water ice/solid–liquid–vapor equilibrium and the water pressure–temperature diagram.
 - [x] Pure-property sources, units, domains and fingerprints; coherent liquid-volume, ideal-Cp and vapor-pressure substitutions.
 - [x] Material streams between mixture packages sharing a compatible reference; binary T–xy and P–xy diagrams.
+- [x] Binary L–L branches by arc-length continuation, located L–L critical points (the binodal's fold) and certified L–L–V three-phase points in T–xy/P–xy diagrams (liquidoLiquido), checked against an analytic Margules binodal, the package's TP flash and cross-slice consistency.
 - [ ] Material streams between IAPWS and mixture packages; nonideal vapor and high-pressure mixtures.
 - [ ] Critical regions beyond the current domain, mixture solid–liquid equilibrium and reaction equilibrium.
-- [ ] Complete LL/LLV/solid–liquid diagrams, continuation through folds and multicomponent equilibrium surfaces.
+- [ ] Solid–liquid diagrams, arc-length continuation of L–V branches, L–L regions of more than two components and multicomponent equilibrium surfaces; drawing the L–L block in the interface.
 - [ ] Broader phase-search/domain reliability in large UNIFAC networks; the located-event publication/work incident has a targeted correction. Volume scaling of network runs is not yet benchmarked.
 - [ ] *Deferred:* Experimental validation of UNIFAC predictions, after Engine validation.
 - [ ] *Deferred:* NRTL extensions and additional parameter coverage are outside the current priority.

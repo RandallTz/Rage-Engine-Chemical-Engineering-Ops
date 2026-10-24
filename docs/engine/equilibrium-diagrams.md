@@ -69,6 +69,7 @@ The lines between points are visual interpolation; segments never cross a gap. T
 | Pure ends from the same package's saturation | implemented |
 | Homogeneous azeotropes (crossing and tangent contact), minimum/maximum class | implemented |
 | Detection of competition from another liquid, located boundary and identified competing phase | implemented |
+| L–L branches, L–L critical point (the binodal's fold) and L–L–V three-phase point, in `liquidoLiquido` (F8, §6b) | implemented |
 | Domain limits by bisection, without extrapolating | implemented |
 | Partial composition interval, axis on either component | implemented |
 | Published reproducibility between directions of travel | implemented |
@@ -118,11 +119,44 @@ Measured cost (this machine, cold):
 
 Others: `node tests/verificar_contrato_diagramas.mjs` compiles the 11 example pairs against the contract, with negative controls, and checks each response's invariants (285 points). The examples are in `docs/ejemplos/motor-diagramas/` and are generated with `python tests/generar_ejemplos_motor_diagramas.py`.
 
+## 6b. Liquid–liquid and three-phase points (F8, 23 October 2026)
+
+`core/coexistencia_ll.py` is the shared operation; like the L–V one it uses only the package's public interface and
+contains no activity formula. The response gains the optional block `liquidoLiquido` (contract type
+`LiquidoLiquidoDiagrama`, additive in revision 1: a revision-1 reader ignores it, and `frontend/verificar_diagramas_equilibrio.mjs`
+passes unchanged). Drawing it in the interface is D4 work (Codex).
+
+- **Seeds.** On a grid of the free condition (24 temperatures in Txy, 12 pressures in Pxy), a single-liquid reference
+  at 13 compositions is tested with the tangent plane; only where another liquid lowers it is the package's certified
+  TP flash run, and a two-liquid result becomes a seed. A seed on an already traced branch is skipped, so separate
+  L–L regions give separate branches.
+- **Continuation.** Pseudo-arclength in (q, logit x_a, logit x_b), q = T/10 K (Txy) or ln P (Pxy), on
+  μ_i^L(x_a) = μ_i^L(x_b), in both directions with tangent orientation kept; a turning point of the free condition is
+  followed, not declared. Steps halve on a failed corrector and grow after fast ones (`dsMax` 0.25 exploratory,
+  0.08 refined). Every pair is certified: μ equality ≤ 1e-10 RT, normalization, fixed condition, distinct liquids and
+  the tangent plane with the common μ against vapor and liquid trials.
+- **Ends.** (1) Critical point: when the liquids come within 2e-3, h' = h'' = 0 with h = (μ_0 − μ_1)/RT of one liquid
+  (five-point differences) is solved in (q, logit x): the binodal's fold, published as `critico_ll` with its residual
+  and stability. (2) Three-phase point: when a vapor trial lowers the tangent plane, (q, x_a, x_b, y) is solved from
+  the four μ equalities and certified as `tres_fases`. (3) The package's domain (`limite_dominio`). (4) Budget or no
+  convergence, as incidences; the branch is published up to its last certified pair, never extrapolated.
+- **Pxy.** g^E does not depend on P and the pure-liquid Poynting terms cancel between two liquids, so a Pxy branch is
+  vertical; it ends at the three-phase pressure.
+
+Evidence, `python tests/test_diagram_liquid_liquid.py` (7 tests): a two-suffix Margules liquid reproduces its analytic
+binodal (ln((1−x)/x) = (a/T)(1−2x), x_b = 1 − x_a, residual ≤ 1e-10) and its critical point T = a/2, x = 1/2 within
+1e-6; water–1-butanol (NRTL-LLE) pairs equal the package's TP flash within 1e-7; its three-phase point, 367.283865 K at
+1 atm, equals the L–V tracer's meeting within 1e-4 K and the earlier multiphase plateau (367.2839 K), with two liquids
+just below and vapor just above; a Pxy slice at 360 K gives P* = 77,345 Pa and the Txy slice at P* returns 360 K within
+1e-6; a miscible pair has no branch; the axis on the other component mirrors every pair. Probes (`.tmp/claude-f8/`):
+UNIFAC original and Dortmund water–1-butanol (three-phase 366.18 K and 365.89 K), water–benzene (342.33 K; water-rich
+liquid with 1.75e-3 benzene) and water–ethyl acetate, Txy and Pxy, both profiles: every pair certified, 0.8–4.2 s.
+
 ## 7. Pending limits
 
 - Binaries only. A three-component sheet receives `MOTOR_DIAG_COMPONENTES_NO_SOPORTADO`; no component is removed or renormalized.
-- The meeting with another phase is detected and explained, but the L–L, L–L–V and SLE regions are not plotted.
-- The continuation is in the liquid's x; there is no arc length. A fold in x would show up as a declared failure or gap; it would not be followed.
+- L–L branches and L–L–V points are binary only; SLE regions are not plotted.
+- The L–V continuation is in the liquid's x; a fold in x would show up as a declared failure or gap. The L–L branch uses arc length, and a binary pair branch turns only at its critical point, where it ends.
 - Stability is a grid test with refinement, not a proof of the global minimum.
 - Critical region: excluded by the packages (T ≤ 0.9 Tc), never extrapolated. Ideal vapor up to 5 bar.
 - `agua-iapws95` and ice are single-component: their diagram is P–T (the existing route).
