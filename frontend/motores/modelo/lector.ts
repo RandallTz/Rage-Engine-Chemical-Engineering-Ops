@@ -1,9 +1,17 @@
+import {readEquationWorkbench} from '../../app/models/equationWorkbench';
+import {readDerivedExecution} from './derivedExecution';
+import { readThermodynamicJournal, thermodynamicJournalMatches } from '../../app/motor/physicalDerivation';
+import { readEnergyJournal, energyJournalMatches } from '../../app/motor/physicalDerivation';
 /** Lector estricto del modelo común en el cliente: las reglas estructurales de
  * core/modelo/lector.py (claves, identidades, referencias y cierre
  * termodinámico obligatorio). La validación matemática completa y la de la
  * configuración de cada motor las hace el servidor. */
 import type { ModeloComun } from "./contrato";
 import { VERSION_MODELO } from "./contrato";
+import { readMaterialJournal, journalMatches } from '../../app/motor/materialDerivation';
+import { readDynamicDefinition } from '../../app/models/dynamicDefinition';
+import { readMomentumJournal } from '../../app/models/momentumDerivation';
+import { readHydraulicNetwork } from '../../app/models/hydraulicDefinition';
 
 const CLAVES = ["formato", "version", "id", "nombre", "componentes", "termodinamica", "volumenes", "corrientes",
   "intercambios", "datos", "matematico", "estudio", "motores", "procedencia"];
@@ -88,7 +96,46 @@ export function leerModeloComun(dato: unknown): ModeloComun {
       }
     });
   }
-  for (const k of Object.keys(obj(m.motores, "motores"))) if (k !== "adimensionalizacion") fallo(`motores.${k}`, "motor desconocido");
+  for (const k of Object.keys(obj(m.motores, "motores"))) if (!['adimensionalizacion', 'materialDerivation', 'energyDerivation', 'thermodynamicDerivation', 'dynamicDefinition', 'momentumDerivation','hydraulicNetwork','equationWorkbench','derivedExecution'].includes(k)) fallo(`motores.${k}`, "motor desconocido");
+  if((m.motores as Obj).derivedExecution!==undefined)readDerivedExecution((m.motores as Obj).derivedExecution,m.datos as Record<string,unknown>);
+  if((m.motores as Obj).equationWorkbench!==undefined)readEquationWorkbench((m.motores as Obj).equationWorkbench);
+  if((m.motores as Obj).hydraulicNetwork!==undefined)readHydraulicNetwork((m.motores as Obj).hydraulicNetwork,m as unknown as ModeloComun);
+  if ((m.motores as Obj).momentumDerivation !== undefined) readMomentumJournal((m.motores as Obj).momentumDerivation, m as unknown as ModeloComun);
+  if ((m.motores as Obj).dynamicDefinition !== undefined) readDynamicDefinition((m.motores as Obj).dynamicDefinition, m as unknown as ModeloComun);
+  if ((m.motores as Obj).thermodynamicDerivation !== undefined) {
+    const model=m as unknown as ModeloComun,journal=readThermodynamicJournal((m.motores as Obj).thermodynamicDerivation);
+    for(const [id,entry] of Object.entries(journal.volumes)){
+      const volume=model.volumenes.find(v=>v.id===id),thermo=volume?.termodinamica;
+      const selected=thermo?.tipo==='equilibrio'?model.termodinamica.paquetes.find(p=>p.id===thermo.paqueteId):undefined;
+      const closure=thermo?.tipo==='equilibrio'&&selected?{packageId:thermo.paqueteId,model:selected.modelo,policy:thermo.politica}:null;
+      if(!volume||thermo?.tipo==='equilibrio'&&!closure||!thermodynamicJournalMatches(entry,volume.supuestos.energia??{},closure))fallo('motores.thermodynamicDerivation','The journal does not produce the effective thermodynamic closure.');
+    }
+  }
+  if ((m.motores as Obj).energyDerivation !== undefined) {
+    const journal = readEnergyJournal((m.motores as Obj).energyDerivation);
+    for (const [id,entry] of Object.entries(journal.volumes)) {
+      const volume = (m as unknown as ModeloComun).volumenes.find(v=>v.id===id);
+      if(!volume?.supuestos.energia||!energyJournalMatches(entry,volume.supuestos.energia))fallo('motores.energyDerivation','The energy journal does not produce the effective first law.');
+    }
+  }
+  if ((m.motores as Obj).materialDerivation !== undefined) {
+    const journal = readMaterialJournal((m.motores as Obj).materialDerivation);
+    for (const [owner, entry] of Object.entries(journal.volumes)) {
+      const volume = (m.volumenes as ModeloComun['volumenes']).find(volume => volume.id === owner);
+      if (!volume || !journalMatches(entry, volume.supuestos.materia)) fallo('motores.materialDerivation', 'The material journal does not produce the formulation being compiled.');
+    }
+  }
+  const scaling = (m.motores as Obj).adimensionalizacion;
+  if (scaling && 'execution' in obj(scaling, 'motores.adimensionalizacion')) {
+    const execution = claves((scaling as Obj).execution, 'execution', ['version', 'objectives', 'freeScales']);
+    if (execution.version !== 1) fallo('execution.version', 'Expected execution version 1.');
+    const objectives = lista(execution.objectives, 'execution.objectives');
+    if (objectives.some(id => typeof id !== 'string' || !id.trim()) || new Set(objectives).size !== objectives.length) fallo('execution.objectives', 'Expected unique term identifiers.');
+    for (const [id, value] of Object.entries(obj(execution.freeScales, 'execution.freeScales'))) {
+      const quantity = claves(value, 'execution.freeScales.' + id, ['value', 'unit']);
+      if (typeof quantity.value !== 'number' || !Number.isFinite(quantity.value) || quantity.value <= 0 || typeof quantity.unit !== 'string') fallo('execution.freeScales.' + id, 'Expected a positive finite scale with a unit.');
+    }
+  }
   if (!["documento_adimensional", "ensamblaje_v2", "hoja_motor_materia", "nuevo"].includes(obj(m.procedencia, "procedencia").tipo as string)) fallo("procedencia.tipo", "valor no admitido");
   return m as unknown as ModeloComun;
 }

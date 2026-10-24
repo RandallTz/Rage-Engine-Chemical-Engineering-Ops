@@ -18,6 +18,18 @@ from core.termodinamica.descripcion import describir
 router = APIRouter(prefix="/modelo", tags=["modelo"])
 
 
+@router.post('/derived-execution-source')
+def derived_execution_source(body: Any = Body(...)):
+    """Read-only pin for selecting the exact Transform graph in Solve."""
+    from core.compilador.derived import source_signature
+    try:
+        model = leer_modelo_comun(desde_ensamblaje_v2(body['solicitudV2'])) if isinstance(body, dict) and set(body) == {'solicitudV2'} else _modelo(body)
+        return {'format': 'rage.derived-execution-source', 'version': 1,
+                'modelId': model['id'], 'sourceSignature': source_signature(model)}
+    except (ErrorModelo, ValueError, KeyError, TypeError, NotImplementedError) as error:
+        raise HTTPException(422, {'message': str(error)}) from error
+
+
 def _modelo(cuerpo):
     if not isinstance(cuerpo, dict) or "modelo" not in cuerpo:
         raise HTTPException(422, "se espera {'modelo': <modelo común v0>}")

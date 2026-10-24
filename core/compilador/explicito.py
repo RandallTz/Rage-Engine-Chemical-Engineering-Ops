@@ -104,6 +104,16 @@ class SistemaExplicito:
         for c in mat["condiciones"]:
             _simbolos(c["ecuacion"]["izquierda"], usados)
             _simbolos(c["ecuacion"]["derecha"], usados)
+        # A parameter used only by a reconstructed observable or a validity
+        # condition is still a numerical input of this same explicit system.
+        for item in self.modelo.get('observables', []):
+            _simbolos(item['expresion'], usados)
+        for item in self.modelo.get('restricciones', []):
+            if 'expresion' in item:
+                _simbolos(item['expresion'], usados)
+        for item in self.modelo.get('verificaciones', []):
+            _simbolos(item['expresion'], usados)
+            _simbolos(item['escala'], usados)
         self.valores = {}
         for sid in sorted(usados):
             s = sim.get(sid)
@@ -246,6 +256,7 @@ class SistemaExplicito:
 
 
 def resolver_explicito(modelo):
+    source_model = modelo
     if modelo.get("matematico") is None:
         from core.balances import NoGenerable, generar
         try:
@@ -275,9 +286,13 @@ def resolver_explicito(modelo):
     eventos = []
     for codigo, t, _a, _d, msg in tray.eventos:
         eventos.append(evento(codigo, "t", t, msg))
+    provenance = {}
+    if any(source_model.get("motores", {}).get(key) for key in ("materialDerivation", "energyDerivation", "thermodynamicDerivation")):
+        from .report import compilation_report
+        provenance["compilation"] = compilation_report(source_model)
     return conjunto(m["id"], m["nombre"], "parcial" if tray.detenida else "resuelto",
                     {"motor": "rage.compilador.explicito", "metodo": _NOMBRE_METODO[sis.metodo], "firma": None,
-                     "pasos": tray.pasos, "rechazos": tray.rechazos,
+                     "pasos": tray.pasos, "rechazos": tray.rechazos, **provenance,
                      **({"mensaje": tray.detenida.mensaje} if tray.detenida else {})},
                     [eje("t", "tiempo", "tiempo", sis.unidad_t, ts)], series, eventos, verif, modeloId=m["id"])
 

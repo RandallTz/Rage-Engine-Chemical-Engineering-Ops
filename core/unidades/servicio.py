@@ -119,6 +119,35 @@ def a_SI(valor, unidad):
     return i["factor"] * valor + i["desplazamiento"]
 
 
+def _require_rational_definitions(registry, units):
+    """Reject rounded mathematical constants anywhere in Pint's definition graph.
+
+    Pint's mathematical constants are decimal literals even in a Fraction
+    registry. Inspect dependencies before base-unit reduction erases them.
+    These are the mathematical constants in Pint's constants_en.txt, including
+    the numerical Wien roots; empirical catalog values keep their usual scope.
+    """
+    nonrational = {'pi', 'tansec', 'ln10', 'wien_x', 'wien_u', 'eulers_number'}
+    visited = set()
+
+    def visit(name):
+        if name.startswith('['):
+            return
+        definition = registry._units[registry.get_name(name)]
+        if definition.name in nonrational:
+            raise ValueError('Nonrational Pint constant: ' + definition.name)
+        if definition.name in visited:
+            return
+        visited.add(definition.name)
+        if not isinstance(definition.converter.scale, (int, Fraction)):
+            raise ValueError('A Pint definition has a nonrational scale.')
+        for dependency in definition.reference:
+            visit(dependency)
+
+    for name in units:
+        visit(name)
+
+
 @functools.lru_cache(maxsize=4096)
 def exact_conversion(unit):
     """Rational SI conversion from the same Pint definitions, without float rounding.
@@ -132,6 +161,7 @@ def exact_conversion(unit):
         if _EXACT_UREG is None:
             import pint
             _EXACT_UREG = pint.UnitRegistry(non_int_type=Fraction)
+        _require_rational_definitions(_EXACT_UREG, _EXACT_UREG.parse_units(normalizar(unit))._units)
         zero = _EXACT_UREG.Quantity(Fraction(0), normalizar(unit)).to_base_units().magnitude
         one = _EXACT_UREG.Quantity(Fraction(1), normalizar(unit)).to_base_units().magnitude
         if not all(isinstance(value, (int, Fraction)) for value in (zero, one)):

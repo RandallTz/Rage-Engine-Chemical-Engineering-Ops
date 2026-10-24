@@ -20,7 +20,7 @@ FUNCIONES_DATO = ["inicial", "frontera", "geometria", "estudio", "parametro"]
 FRONTERAS = ["rigida", "presion_prescrita", "sin_relacion", "malla_1d"]
 SUPUESTOS_CIERRE = ["fase_no_evaluada", "u_lineal"]
 PROCEDENCIAS = ["documento_adimensional", "ensamblaje_v2", "hoja_motor_materia", "nuevo"]
-MOTORES = ["adimensionalizacion"]
+MOTORES = ["adimensionalizacion", "materialDerivation", "energyDerivation", "thermodynamicDerivation", "dynamicDefinition", "momentumDerivation", "hydraulicNetwork", "equationWorkbench", "derivedExecution"]
 
 
 class ErrorModelo(Exception):
@@ -192,6 +192,53 @@ def leer_modelo_comun(dato):
         _opcion(nombre, f"motores.{nombre}", MOTORES)
     if "adimensionalizacion" in motores:
         _leer_adim(motores["adimensionalizacion"], m)
+    if 'equationWorkbench' in motores:
+        from .equation_workbench import read_definition
+        try:read_definition(motores['equationWorkbench'])
+        except ValueError as error:_fallo('motores.equationWorkbench',str(error))
+    if 'derivedExecution' in motores:
+        from .derived_execution import read_definition
+        try:read_definition(motores['derivedExecution'], m)
+        except ValueError as error:_fallo('motores.derivedExecution',str(error))
+    if 'hydraulicNetwork' in motores:
+        from core.balances.hydraulic_definition import read_definition
+        try:read_definition(motores['hydraulicNetwork'],m)
+        except ValueError as error:_fallo('motores.hydraulicNetwork',str(error))
+    if "dynamicDefinition" in motores:
+        from core.modelo.dynamic_definition import read_definition
+        try:
+            read_definition(motores["dynamicDefinition"], m)
+        except ValueError as error:
+            _fallo("motores.dynamicDefinition", str(error))
+    if "momentumDerivation" in motores:
+        from core.balances.momentum_derivation import validate_model_journal
+        from core.modelo.operation_journal import JournalError
+        try:
+            validate_model_journal(m)
+        except JournalError as error:
+            _fallo("motores.momentumDerivation", str(error))
+    if "materialDerivation" in motores:
+        from core.balances.material_derivation import MaterialDerivationError, validate_model_journal
+        try:
+            validate_model_journal(m)
+        except MaterialDerivationError as error:
+            _fallo("motores.materialDerivation", str(error))
+
+    if "energyDerivation" in motores:
+        from core.balances.energy_derivation import validate_model_journal as validate_energy
+        from core.modelo.operation_journal import JournalError
+        try:
+            validate_energy(m)
+        except JournalError as error:
+            _fallo("motores.energyDerivation", str(error))
+
+    if "thermodynamicDerivation" in motores:
+        from core.termodinamica.derivation import validate_model_journal as validate_thermodynamics
+        from core.modelo.operation_journal import JournalError
+        try:
+            validate_thermodynamics(m)
+        except JournalError as error:
+            _fallo("motores.thermodynamicDerivation", str(error))
 
     proc = _obj(m["procedencia"], "procedencia")
     _opcion(proc.get("tipo"), "procedencia.tipo", PROCEDENCIAS)
@@ -386,7 +433,7 @@ def _leer_restricciones(m):
 
 
 def _leer_adim(cfg, m):
-    o = _claves(cfg, "motores.adimensionalizacion", ["version", "formas", "activaId"], ["exploracion"])
+    o = _claves(cfg, "motores.adimensionalizacion", ["version", "formas", "activaId"], ["exploracion", "execution"])
     if m["matematico"] is None:
         _fallo("motores.adimensionalizacion", "la configuración de adimensionalización necesita el modelo matemático")
     doc = {"formato": "adimensionalizacion", "version": o["version"], "id": m["id"], "nombre": m["nombre"],
@@ -396,3 +443,21 @@ def _leer_adim(cfg, m):
         adim.leer_documento(doc)
     except adim.ErrorContrato as e:
         _fallo("motores.adimensionalizacion." + e.ruta, e.mensaje)
+    if "execution" in o:
+        path = "motores.adimensionalizacion.execution"
+        execution = _claves(o["execution"], path, ["version", "objectives", "freeScales"])
+        if type(execution["version"]) is not int or execution["version"] != 1:
+            _fallo(path + ".version", "Expected execution version 1.")
+        objectives = _lista(execution["objectives"], path + ".objectives")
+        for index, term_id in enumerate(objectives):
+            _texto(term_id, f"{path}.objectives[{index}]")
+        if len(set(objectives)) != len(objectives):
+            _fallo(path + ".objectives", "Duplicate normalization terms.")
+        for symbol_id, quantity in _obj(execution["freeScales"], path + ".freeScales").items():
+            _texto(symbol_id, path + ".freeScales")
+            _claves(quantity, path + ".freeScales." + symbol_id, ["value", "unit"])
+            _numero(quantity["value"], path + ".freeScales." + symbol_id + ".value")
+            if quantity["value"] <= 0:
+                _fallo(path + ".freeScales." + symbol_id + ".value", "A scale must be positive.")
+            if not isinstance(quantity["unit"], str):
+                _fallo(path + ".freeScales." + symbol_id + ".unit", "Expected a unit string.")

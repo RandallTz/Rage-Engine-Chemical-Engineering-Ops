@@ -1,4 +1,4 @@
-/** Modelo común v0 (docs/CONTRATO_MODELO_COMUN.md). Tipos del lado del cliente.
+/** Modelo común v0 (docs/contracts/common-model.md). Tipos del lado del cliente.
  * El lector canónico es core/modelo/lector.py; lector.ts aplica las mismas reglas
  * estructurales para rechazar en el cliente lo que el servidor rechazaría. */
 import type { Modelo as ModeloMatematico, Expresion } from "../../app/adimensionalizacion/contrato";
@@ -62,7 +62,8 @@ export type Estudio = {
   cierreMasico?: "densidad" | "volumen" | "";
 };
 
-export type ConfigAdimensionalizacion = { version: 1 | 2; formas: Forma[]; activaId: string; exploracion?: ConfigExploracion };
+export type TransformExecution = { version: 1; objectives: string[]; freeScales: Record<string, { value: number; unit: string }> };
+export type ConfigAdimensionalizacion = { version: 1 | 2; formas: Forma[]; activaId: string; exploracion?: ConfigExploracion; execution?: TransformExecution };
 
 export type Procedencia = { tipo: "documento_adimensional" | "ensamblaje_v2" | "hoja_motor_materia" | "nuevo"; [clave: string]: unknown };
 
@@ -87,6 +88,6 @@ export type ModeloComun = {
   /** Expresiones que deben ser ~0 en cada muestra (cierres de presupuesto): max|expresion| / max|escala|. */
   verificaciones?: { id: string; descripcion: string; expresion: Expresion; escala: Expresion; tolerancia?: number }[];
   estudio: Estudio | null;
-  motores: { adimensionalizacion?: ConfigAdimensionalizacion };
+  motores: { derivedExecution?: import('./derivedExecution').DerivedExecution; equationWorkbench?: import("../../app/models/equationWorkbench").EquationWorkbench; hydraulicNetwork?: import('../../app/models/hydraulicDefinition').HydraulicNetwork; momentumDerivation?: import('../../app/models/momentumDerivation').MomentumJournal; dynamicDefinition?: import('../../app/models/dynamicDefinition').DynamicDefinition; adimensionalizacion?: ConfigAdimensionalizacion; materialDerivation?: import('../../app/motor/materialDerivation').MaterialJournal; energyDerivation?: import('../../app/motor/physicalDerivation').EnergyJournal; thermodynamicDerivation?: import('../../app/motor/physicalDerivation').ThermodynamicJournal };
   procedencia: Procedencia;
 };

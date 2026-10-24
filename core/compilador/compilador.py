@@ -91,11 +91,42 @@ class SistemaCompilado:
             if v["termodinamica"]["tipo"] != "equilibrio":
                 raise NoSoportado(f"volumen {v['id']}: su estado es un supuesto ({v['termodinamica']['supuesto']}); el compilador necesita el cierre de equilibrio")
             campo = v["supuestos"]["materia"].get("campo", {})
+            fm = v["supuestos"]["materia"]
+            if fm.get("vista") != "cantidad" or fm.get("cantidadVolumen"):
+                raise NoSoportado(f"Volume {v['id']}: this thermodynamic compiler requires total component inventories; spatial and volumetric formulations need their own Transform path.")
+            if fm.get("sinAcumulacion") or fm.get("fija") and campo.get("estacionario"):
+                raise NoSoportado(f"Volume {v['id']}: zero accumulation produces algebraic constraints; a steady-state/DAE solver is not connected yet.")
+            if not fm.get("restoImpermeable"):
+                raise NoSoportado(f"Volume {v['id']}: an unclosed boundary remainder needs a material flux law; this compiler accepts exchange through declared streams only.")
+            if fm.get("fija") != (v["frontera"]["tipo"] == "rigida"):
+                raise NoSoportado(f"Volume {v['id']}: the material boundary assumption disagrees with the mechanical boundary.")
+            if campo.get("sinConveccion") and any(v['id'] in (s['desde'], s['hasta']) for s in m['corrientes']):
+                raise NoSoportado(f"Volume {v['id']}: the declared streams require convective transport; a moving-boundary sweep or selective transfer needs its own supported law.")
             if not (campo.get("sinReaccion") or (campo.get("sinGeneracion") and campo.get("sinConsumo"))):
                 raise NoSoportado(f"volumen {v['id']}: fuentes materiales (reacción): pendientes del motor de constitutivas")
             if not (v["balances"]["materia"] and v["balances"]["energia"]) or v["balances"]["momento"]:
                 raise NoSoportado(f"volumen {v['id']}: esta versión ejecuta materia + energía, sin momento")
+            fe = v["supuestos"]["energia"] or {}
+            policy = v["termodinamica"]["politica"]
+            if fe.get("modelo") == "u_lineal" or fe.get("densidadConstante"):
+                raise NoSoportado(f"Volume {v['id']}: a manual caloric/density law conflicts with the selected equilibrium package.")
+            if bool(fe.get("monofasico")) != (policy["cantidad"] == "monofasico") or bool(fe.get("sinCambioFase")) != (policy["cambioInterno"] == "prohibido"):
+                raise NoSoportado(f"Volume {v['id']}: thermodynamic phase assumptions disagree with the active closure policy.")
+            if fe.get("forma") != "total" or not all(fe.get(key) is True for key in (
+                    "uniforme", "sinCinetica", "separarPresion", "sinTrabajoViscoso", "sinFuerzasVolumen", "sinFuenteVolumetrica")) or fe.get("trabajoTotalHeredado"):
+                raise NoSoportado(f"Volume {v['id']}: the equilibrium compiler needs a uniform total first law with explicit pressure work and negligible kinetic, viscous, body-force and volumetric-source terms.")
+            if fe.get("estacionario") or fe.get("sinAcumulacionTotal"):
+                raise NoSoportado(f"Volume {v['id']}: zero energy accumulation requires a steady-state/DAE method.")
+            heat_links = [q for q in m["intercambios"] if v["id"] in (q["desde"], q["hasta"])]
+            if (fe.get("adiabatico") or fe.get("sinConduccionLocal")) and heat_links:
+                raise NoSoportado(f"Volume {v['id']}: a zero-heat assumption conflicts with a declared heat exchange.")
+            if not heat_links and not (fe.get("adiabatico") or fe.get("sinConduccionLocal")):
+                raise NoSoportado(f"Volume {v['id']}: declare a heat exchange (including an explicit zero) or an adiabatic boundary.")
             rigida = v["frontera"]["tipo"] == "rigida"
+            if rigida and (fe.get("presionPrescrita") or v["frontera"].get("presionRestriccionId")):
+                raise NoSoportado(f"Volume {v['id']}: the common UV compiler does not enforce an additional prescribed-pressure constraint on a rigid boundary.")
+            if not rigida and (fe.get("presionUniforme") is not True or fe.get("presionPrescrita") is False):
+                raise NoSoportado(f"Volume {v['id']}: a prescribed-pressure boundary requires uniform prescribed pressure in the first law.")
             nc = len(v["componenteIds"])
             self.vols.append(_Vol(v["id"], list(v["componenteIds"]), rigida,
                                   None if rigida else self.dato(v["frontera"]["presionId"]),
@@ -108,9 +139,20 @@ class SistemaCompilado:
         self.tam = self.i_aux_E + 1
         self.por_id = {v.id: v for v in self.vols}
         for s in m["corrientes"]:
+            if s["mecanismo"] == "selectivo":
+                raise NoSoportado(f"Stream {s['id']}: selective transfer needs a coupled material and energy law.")
             if s["materia"]["base"] == "volumetrica":
                 raise NoSoportado(f"corriente {s['id']}: caudal volumétrico: pendiente")
         self._ultimo_estado = {}
+        from core.balances.energy_equations import lower_equilibrium_rate
+        from core.modelo.operation_journal import JournalError
+        self.energy_graph_terms={}
+        for volume in m['volumenes']:
+            # Legacy inputs remain explicitly unrecorded. A recorded model
+            # always lowers its current proof; failed lowering never falls back.
+            if volume['id'] in m.get('motores',{}).get('energyDerivation',{}).get('volumes',{}):
+                try:self.energy_graph_terms[volume['id']]=lower_equilibrium_rate(m,volume['id'])
+                except JournalError as error:raise NoSoportado(str(error)) from error
         self.politicas = {v["id"]: v["termodinamica"]["politica"] for v in m["volumenes"]}
         self.firma_inicial = None
 
@@ -208,6 +250,7 @@ class SistemaCompilado:
         est = self._estados(t, y)
         self._ultimo_estado = est
         dy = np.zeros(self.tam)
+        stream_powers={};heat_powers={v.id:0.0 for v in self.vols}
         for s in self.modelo["corrientes"]:
             mat = s["materia"]
             de, ha = (self.por_id.get(s["desde"]), self.por_id.get(s["hasta"]))
@@ -238,6 +281,8 @@ class SistemaCompilado:
                 else:
                     _, h, _ = self._donante_exterior(s, t, destino) if ndot > 0 else (None, 0.0, None)
                 comp_ids = ref.comp
+            orientation=1.0 if (origen.id if origen else None)==s['desde'] else -1.0
+            stream_powers[s['id']]=orientation*ndot*h
             for v, sg in ((origen, -1.0), (destino, 1.0)):
                 if v is None:
                     for j, c in enumerate(comp_ids):
@@ -263,16 +308,41 @@ class SistemaCompilado:
                     dy[self.i_aux_E] -= sg * Q
                 else:
                     dy[v.i_E] += sg * Q
+                    heat_powers[v.id]+=sg*Q
         for v in self.vols:
             if not v.rigida:
                 w = est[v.id].V * v.dato_P.d_dt(t)
                 dy[v.i_E] += w
                 dy[self.i_aux_E] += w
+        for v in self.vols:
+            if v.id in self.energy_graph_terms:
+                values={'stream':stream_powers,'heat':heat_powers,
+                        'pressure':{v.id:0.0 if v.rigida else est[v.id].V*v.dato_P.d_dt(t)}}
+                dy[v.i_E]=sum(factor*values[kind][key] for kind,key,factor in self.energy_graph_terms[v.id])
         return dy
 
 
 def compilar(modelo):
+    if modelo.get('motores', {}).get('derivedExecution') is not None:
+        from .derived import DerivedSystem
+        return DerivedSystem(modelo)
+    _check_inventory_execution(modelo)
+    if modelo.get('motores',{}).get('hydraulicNetwork') is not None:
+        from .hydraulics import HydraulicSystem
+        return HydraulicSystem(modelo)
     return SistemaCompilado(modelo)
+
+
+def _check_inventory_execution(modelo):
+    from core.modelo.dynamic_definition import ensure_executable
+    from core.balances.momentum_derivation import ensure_executable as ensure_momentum
+    from core.modelo.equation_workbench import ensure_executable as ensure_equations
+    try:
+        ensure_executable(leer_modelo_comun(modelo))
+        ensure_momentum(modelo)
+        ensure_equations(modelo)
+    except ValueError as error:
+        raise NoSoportado(str(error)) from error
 
 
 def resolver(modelo):
@@ -281,6 +351,16 @@ def resolver(modelo):
     Dos entradas: la estructural (volúmenes con cierre de equilibrio, este
     archivo) y la de ecuaciones explícitas (`matematico`, explicito.py)."""
     from .explicito import es_explicito, resolver_explicito
+    from .transformed import selected_execution, resolve_transformed
+    if modelo.get('motores', {}).get('derivedExecution') is not None:
+        from .derived import resolve
+        return resolve(modelo)
+    _check_inventory_execution(modelo)
+    if modelo.get('motores',{}).get('hydraulicNetwork') is not None:
+        from .hydraulics import resolve
+        return resolve(modelo)
+    if selected_execution(leer_modelo_comun(modelo)) is not None:
+        return resolve_transformed(modelo)
     if es_explicito(leer_modelo_comun(modelo)):
         return resolver_explicito(modelo)
     sis = compilar(modelo)
@@ -355,7 +435,12 @@ def _publicar(sis, ts, filas, tray, y0):
              {"id": "conservacion.energia", "valor": resid_E, "tolerancia": 1e-9, "descripcion": "max |sum E - E0 - intercambio exterior| / |E|"},
              {"id": "complementariedad", "valor": max(e["complementariedad"] for cert in datos.values() for e in cert), "tolerancia": 1e-8,
               "descripcion": "max |beta tm|, -beta, -tm en las muestras"}]
+    provenance = {}
+    if any(m.get("motores", {}).get(key) for key in ("materialDerivation", "energyDerivation", "thermodynamicDerivation")):
+        from .report import compilation_report
+        provenance["compilation"] = compilation_report(m)
     return conjunto(m["id"], m["nombre"], estado,
                     {"motor": "rage.compilador", "metodo": "RK45 con eventos de firma (core/solvers)", "firma": None,
+                     **provenance,
                      **({"mensaje": tray.detenida.mensaje} if tray.detenida else {})},
                     [eje("t", "tiempo", "tiempo", "s", ts)], series, eventos, verif, modeloId=m["id"])
