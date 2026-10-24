@@ -506,7 +506,7 @@ class Sistema:
             W = np.array(puntos)
             tml = self._tm_liquido_lote(T, P, W, mu_ref, idx)
             tms = sorted(zip(tml.tolist(), puntos), key=lambda z: z[0])
-            semillas = [w for _, w in tms[:12]]
+            semillas = tms[:12]
             def f(zz):
                 # A trial whose composition underflows to an exact zero is outside the representable simplex
                 # (the binary search bounds |u| for the same reason); reject it instead of evaluating log(0).
@@ -514,10 +514,19 @@ class Sistema:
                 if not np.all(w > 0):
                     return math.inf
                 return self._tm_liquido(T, P, w, mu_ref, idx)
-            for w0 in semillas:
-                z0 = np.log(w0[:2] / w0[2])
-                r = minimize(f, z0, method="Nelder-Mead", options={"xatol": 1e-11, "fatol": 1e-15, "maxiter": 4000})
-                sal.append(("liquido", _softmax3(r.x), float(r.fun)))
+            # Each of the 12 lowest lattice points is refined to its local minimum (F9-R6): gradient descent on
+            # Michelsen's tm*, then a Newton polish of the stationarity conditions in log amounts. Seeds that
+            # descend to an already polished minimum reuse it, so the published trial list keeps one entry per
+            # seed. A seed whose refinement does not end in a valid, lower point falls back to Nelder-Mead.
+            pulidos = []
+            for tm0, w0 in semillas:
+                ref = _refinar_ternario(self, T, P, mu_ref, idx, np.asarray(w0, dtype=float), tm0, pulidos)
+                if ref is None:
+                    z0 = np.log(w0[:2] / w0[2])
+                    r = minimize(f, z0, method="Nelder-Mead",
+                                 options={"xatol": 1e-11, "fatol": 1e-15, "maxiter": 4000})
+                    ref = (_softmax3(r.x), float(r.fun))
+                sal.append(("liquido", ref[0], ref[1]))
             return sal
         return sal + self._estabilidad_general(T, P, mu_ref, idx)
 
@@ -1085,6 +1094,10 @@ class Sistema:
 
     def equilibrio_UV(self, U, V, n):
         n = np.asarray(n, dtype=float)
+        e = _uv_acotado(self, U, V, n)
+        if e is not None:
+            e.especificacion = "UV"
+            return e
         T_lo, T_hi = self.T_rango
 
         ult = [None]
@@ -1145,9 +1158,163 @@ class Sistema:
         return e
 
 
+def _uv_acotado(self, U, V, n, iteraciones=6):
+    """Certified UV state from the seeded Newton UV path, or None (the caller runs the nested search).
+
+    With vaporization energy positive, U_eq(T) at fixed V lies between the all-liquid and the ideal all-vapor
+    energies, so U = U_vapor(T_v) = U_liquid(T_l) gives a bracket hint [T_v, T_l] (liquid at P0, clamped to the
+    package range; it is not assumed to contain the root). Regula falsi (Illinois) on U_TV(T) - U uses loose
+    TV closures (rtol 1e-6), each seeded with the previous one; from each TV state the Newton UV in (T, ln P,
+    phase amounts) is attempted, following its phase-set corrections. The first Newton that converges returns,
+    with the same verifications as every Newton UV state: phase equality and the full stability test at its
+    (T, P). A TP-stable state with the requested U and V is the UV equilibrium, so the seed decides only the
+    cost. Any rejection or numerical failure returns None, never a different answer.
+    """
+    idx = [i for i in range(len(n)) if n[i] > 0]
+    if not idx or np.any(n < 0):
+        return None
+    lo, hi = self.T_rango
+
+    def raiz(fun):
+        if fun(lo) >= 0:
+            return lo
+        if fun(hi) <= 0:
+            return hi
+        return brentq(fun, lo, hi, xtol=1e-3)
+
+    def newton_uv(semilla):
+        for _ in range(8):
+            try:
+                return self._newton("UV", U, V, n, semilla)
+            except _NuevaSemilla as x:
+                semilla = x.semilla
+            except (_Completo, np.linalg.LinAlgError, FloatingPointError, OverflowError, ValueError):
+                return None
+        return None
+
+    try:
+        a = raiz(lambda T: sum(n[i] * (self.esp[i].h_ig(T) - R * T) for i in idx) - U)
+        b = raiz(lambda T: sum(n[i] * self.esp[i].h_L(T, P0) for i in idx)
+                 - P0 * float(np.sum(n[idx] * self.vL[idx])) - U)
+        if b < a:
+            a, b = b, a
+        Fa = Fb = None
+        lado = 0
+        T = 0.5 * (a + b)
+        semilla = None
+        for _ in range(iteraciones):
+            estado = self.equilibrio_TV(T, V, n, semilla=semilla, rtol=1e-6)
+            semilla = estado
+            e = newton_uv(estado)
+            if e is not None:
+                return e
+            F = estado.U - U
+            if F > 0:
+                b, Fb = T, F
+                if lado == 1 and Fa is not None:
+                    Fa *= 0.5
+                lado = 1
+            else:
+                a, Fa = T, F
+                if lado == -1 and Fb is not None:
+                    Fb *= 0.5
+                lado = -1
+            T = (a * Fb - b * Fa) / (Fb - Fa) if Fa is not None and Fb is not None else 0.5 * (a + b)
+    except (FueraDeAlcance, _Completo, np.linalg.LinAlgError, FloatingPointError, OverflowError, ValueError,
+            ZeroDivisionError):
+        return None
+    return None
+
+
 def _softmax3(zz):
     e = np.exp(np.array([zz[0], zz[1], 0.0]) - max(zz[0], zz[1], 0.0))
     return e / e.sum()
+
+
+def _refinar_ternario(self, T, P, mu_ref, idx, w0, tm0, pulidos):
+    """(w, tm) at the local minimum of tm(w) reached from a ternary lattice seed, or None (Nelder-Mead fallback).
+
+    tm*(y) = 1 + sum W_i (r_i - 1), with W = exp(y), w = W / sum W, d = (mu_ref - g_L) / RT and
+    r = y + ln gamma(w) - d, has the stationary compositions of tm(w) (r = 0 there, tm*(y) = 1 - exp(-tm)), and
+    its gradient W_i r_i needs no derivative of ln gamma (Gibbs-Duhem). Descent starts at y0 = ln w0 - tm(w0), the
+    optimal amount on the seed's ray. Each step takes the Newton direction of r = 0 (Jacobian I + d ln gamma / dy
+    by central differences) when it descends tm*, otherwise -r, the successive-substitution direction, which
+    always descends (gradient . (-r) = -sum W r^2). A step is accepted by the Armijo rule on tm*, or, once tm*
+    no longer changes beyond rounding, when it lowers |r| without raising tm*; it is also shortened until no
+    mole fraction moves by more than 0.05, so the descent stays in the seed's basin, while trace components,
+    whose fractions barely change, move freely in y and are resolved exactly. The result is accepted only at a stationary point (|r| <= 1e-9) not above the seed.
+    `pulidos` holds the minima of earlier seeds: a descent that comes within 1e-6 of one reuses it.
+    """
+    RT = R * T
+    gL = self._g_puros(T, P)[1][idx]
+    d = (np.asarray(mu_ref, dtype=float) - gL) / RT
+    modelo = self._modelo_sub(idx)
+
+    def evaluar(y):
+        """(w, r, tm*) at y, or None outside the representable simplex."""
+        if not np.all(np.isfinite(y)) or np.max(y) > 700.0:
+            return None
+        W = np.exp(y)
+        w = W / W.sum()
+        if not (np.all(w > 0) and np.all(np.isfinite(w))):
+            return None
+        r = y + modelo.lngamma(T, w) - d
+        f = 1.0 + float(np.sum(W * (r - 1.0)))
+        return (w, r, f) if np.all(np.isfinite(r)) and math.isfinite(f) else None
+
+    h = 1e-5
+    try:
+        y = np.log(w0) - tm0
+        actual = evaluar(y)
+        if actual is None:
+            return None
+        for _ in range(60):
+            w, r, f = actual
+            if np.max(np.abs(r)) < 1e-13:
+                break
+            for wp, tmp in pulidos:
+                if np.max(np.abs(w - wp)) < 1e-6:
+                    return wp.copy(), tmp
+            gradiente = np.exp(y) * r
+            Y = np.vstack([y + h * np.eye(3), y - h * np.eye(3)])
+            Wl = np.exp(Y - Y.max(axis=1, keepdims=True))
+            Wl /= Wl.sum(axis=1, keepdims=True)
+            if not np.all(Wl > 0):
+                paso = -r
+            else:
+                lg = modelo.lngamma_lote(T, Wl)
+                J = np.eye(3) + (lg[:3] - lg[3:]).T / (2 * h)
+                try:
+                    paso = np.linalg.solve(J, -r)
+                except np.linalg.LinAlgError:
+                    paso = -r
+                if not np.all(np.isfinite(paso)) or float(gradiente @ paso) >= 0:
+                    paso = -r
+            largo = float(np.max(np.abs(paso)))
+            al = min(1.0, 700.0 / largo) if largo > 0 else 1.0       # within exp's range; Armijo decides
+            pendiente = float(gradiente @ paso)
+            for _ in range(40):
+                nuevo = evaluar(y + al * paso)
+                # |dw| <= 0.05 keeps the descent in the seed's basin; trace components move freely in y
+                if nuevo is not None and np.max(np.abs(nuevo[0] - w)) <= 0.05 and (
+                        nuevo[2] <= f + 1e-4 * al * pendiente
+                        or (np.max(np.abs(nuevo[1])) < np.max(np.abs(r))
+                            and nuevo[2] <= f + 1e-14 * (1.0 + abs(f)))):
+                    y, actual = y + al * paso, nuevo
+                    break
+                al *= 0.5
+            else:
+                break
+    except (ValueError, FloatingPointError, OverflowError):
+        return None
+    w, r, _ = actual
+    if not np.max(np.abs(r)) <= 1e-9:
+        return None
+    tm = self._tm_liquido(T, P, w, mu_ref, idx)
+    if not math.isfinite(tm) or tm > tm0:
+        return None
+    pulidos.append((w.copy(), tm))
+    return w, tm
 
 
 def _T_saturacion(self, P, i):
