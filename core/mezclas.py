@@ -925,6 +925,7 @@ class Sistema:
         self.dominio(T_lo, P)
         idx = [i for i in range(len(n)) if n[i] > 0]
         Ts_puro = [None]
+        lado_puro = None
         if len(idx) == 1:
             # Componente puro: meseta explicita en Tsat(P) (palanca); fuera de ella, una fase
             # con T a un lado u otro de Tsat (TP alli esta bien determinado).
@@ -936,19 +937,22 @@ class Sistema:
                     return self._recalificar(e, espec)
                 f = self.fase("x", "liquido", Ts, P, n[idx], idx)
                 yL = f.n * (f.h if y_nombre == "h" else f.h - P * f.v)
+                # el intervalo termina en Ts mismo, evaluado con la fase de su lado: un extremo Ts(1 -+ 1e-9)
+                # dejaba fuera los estados de una fase entre el y Ts (H a menos de ~1e-9 |H| de la meseta)
                 if objetivo < yL:
-                    T_hi = Ts * (1 - 1e-9)
+                    T_hi, lado_puro = Ts, "liquido"
                 else:
-                    T_lo = Ts * (1 + 1e-9)
+                    T_lo, lado_puro = Ts, "vapor"
 
         ult = {}
         previa = [semilla if semilla is not None and len(idx) > 1 else None]
 
         def Y(T):
-            if len(idx) == 1 and Ts_puro[0] is not None and T != Ts_puro[0]:
-                # componente puro a un lado conocido de Tsat(P): la banda de saturacion del TP (|P/Pe-1| <= 1e-6,
-                # ~1e-7 relativo en T) contiene el extremo Ts(1 -+ 1e-9) del intervalo; aqui el lado no es ambiguo
-                e = self._puro_TP(T, P, n, idx, "TP", lado="liquido" if T < Ts_puro[0] else "vapor")
+            if lado_puro is not None:
+                # componente puro a un lado conocido de Tsat(P): dentro de la banda de saturacion del TP
+                # (|P/Pe-1| <= 1e-6, ~1e-7 relativo en T), y en Ts mismo, el lado no es ambiguo
+                lado = "liquido" if T < Ts_puro[0] else "vapor" if T > Ts_puro[0] else lado_puro
+                e = self._puro_TP(T, P, n, idx, "TP", lado=lado)
                 ult[T] = e
                 return (e.H if y_nombre == "h" else e.U) - objetivo
             if previa[0] is not None:
@@ -1113,6 +1117,15 @@ class Sistema:
         lnP = brentq(lambda q: f(math.exp(q)), math.log(P_lo), math.log(P_hi), xtol=rtol, rtol=max(rtol, 1e-15),
                      maxiter=300)
         e = tp(math.exp(lnP))
+        if abs(e.V - V) > max(1e-9, 100 * rtol) * V and rtol > 1e-15:
+            # V(P) puede ser muy empinada sin salto (cerca de un punto de burbuja, con poco vapor): el error en V que
+            # deja la tolerancia holgada en ln P no es entonces una coexistencia. Se estrecha el intervalo que la
+            # busqueda ya encerro antes de probar la meseta
+            d = 2 * rtol * (1 + abs(lnP))
+            a_, b_ = lnP - d, lnP + d
+            if math.log(P_lo) <= a_ and b_ <= math.log(P_hi) and f(math.exp(a_)) >= 0 >= f(math.exp(b_)):
+                lnP = brentq(lambda q: f(math.exp(q)), a_, b_, xtol=1e-300, rtol=1e-15, maxiter=300)
+                e = tp(math.exp(lnP))
         if abs(e.V - V) > max(1e-9, 100 * rtol) * V:
             # salto en P: coexistencia invariante a esta T (p. ej. LLV de un binario o la curva de un puro)
             # los lados del salto deben abarcar la tolerancia de la busqueda (holgada en la semilla de UV)
