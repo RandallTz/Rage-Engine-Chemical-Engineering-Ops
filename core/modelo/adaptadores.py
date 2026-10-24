@@ -49,6 +49,9 @@ def desde_ensamblaje_v2(sol):
     if "derivacion" in s:
         proc["derivacion"] = s["derivacion"]
     m = _vacio(s["solicitudId"], s["solicitudId"], proc)
+    for namespace in ("materialDerivation", "energyDerivation", "thermodynamicDerivation", "dynamicDefinition", "momentumDerivation", "hydraulicNetwork", "equationWorkbench"):
+        if isinstance(s.get("derivacion"), dict) and namespace in s["derivacion"]:
+            m["motores"][namespace] = copy.deepcopy(s["derivacion"][namespace])
     m["componentes"] = s["componentes"]
     m["termodinamica"]["paquetes"] = s["paquetes"]
     m["volumenes"] = [{
@@ -82,4 +85,7 @@ def a_ensamblaje_v2(modelo):
            "estudio": m["estudio"]}
     if "derivacion" in proc:
         sol["derivacion"] = proc["derivacion"]
+    for namespace in ("materialDerivation", "energyDerivation", "thermodynamicDerivation", "dynamicDefinition", "momentumDerivation", "hydraulicNetwork", "equationWorkbench"):
+        if namespace in m["motores"]:
+            sol.setdefault("derivacion", {})[namespace] = copy.deepcopy(m["motores"][namespace])
     return sol
