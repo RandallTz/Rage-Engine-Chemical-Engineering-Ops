@@ -177,20 +177,42 @@ def saturacion(T):
     condiciones con la EOS y se devuelve el residuo
 
         max( |g' - g''|/(R T),  |P(rho'') - Psat|/Psat,
-             |P(rho') - Psat| / (rho' (dP/drho)_T') )
+             |P(rho') - Psat| / max(Psat, rho' (dP/drho)_T') )
 
     El residuo del liquido se escala con su modulo de compresibilidad
     isoterma porque su presion es rigida: un error de 1e-12 en rho' mueve
-    P(rho') mucho mas que Psat."""
+    P(rho') mucho mas que Psat. Junto a T_c ese modulo tiende a cero y deja
+    de ser rigida; entonces manda Psat, como en _residuo_maxwell (lejos de
+    T_c el modulo es miles de veces Psat y el residuo no cambia).
+
+    Cerca de T_c los ajustes pierden exactitud (residuo ~1e-9 a 16 mK de
+    T_c, ~1e-6 a 10 microK). Solo cuando su residuo supera
+    TOL_SATURACION_MAXWELL se pulen con el mismo Newton de Maxwell de
+    coexistencia() y Psat pasa a ser P(rho''); donde el ajuste ya cumple, sus
+    valores se conservan sin cambio. Si el Newton sale de sus ramas o no
+    mejora, quedan los valores del ajuste y su residuo."""
     if not T < TC:
         raise ValueError("Por encima de T_c no hay saturacion")
+
+    def residuo_de(Psat, rl, rv):
+        pl, pv = propiedades(T, rl), propiedades(T, rv)
+        return max(abs(pl.g - pv.g) / (R * T),
+                   abs(pv.P - Psat) / Psat,
+                   abs(pl.P - Psat) / max(Psat, rl * pl.dP_drho_T))
     Psat = float(_w.iapws95_Psat(T))
     rl = float(_w.iapws95_rhol_sat(T))
     rv = float(_w.iapws95_rhog_sat(T))
-    pl, pv = propiedades(T, rl), propiedades(T, rv)
-    residuo = max(abs(pl.g - pv.g) / (R * T),
-                  abs(pv.P - Psat) / Psat,
-                  abs(pl.P - Psat) / (rl * pl.dP_drho_T))
+    if not (rl > RHOC > rv and _dP_drho(T, rl) > 0 and _dP_drho(T, rv) > 0):
+        # a fracciones de ulp de T_c las dos ramas se juntan en rho_c y (dP/drho)_T = 0: la campana no se
+        # resuelve en coma flotante y, como por encima de T_c, no hay saturacion que publicar
+        raise ValueError(f"Saturacion no resoluble a T = {T!r} K (junto a T_c)")
+    residuo = residuo_de(Psat, rl, rv)
+    if residuo > TOL_SATURACION_MAXWELL:
+        pulido = _newton_maxwell(T, rl, rv)
+        if pulido is not None and pulido[5] > 0:
+            r_pulido = residuo_de(pulido[3].P, pulido[0], pulido[1])
+            if r_pulido < residuo:
+                rl, rv, Psat, residuo = pulido[0], pulido[1], pulido[3].P, r_pulido
     return Saturacion(T=T, Psat=Psat, rho_l=rl, rho_v=rv, residuo=residuo)
 
 
@@ -216,6 +238,16 @@ def _densidad_suelo(T, P_objetivo):
     return rho
 
 
+def _campana(T):
+    """saturacion(T), o None por encima de T_c o donde la campana no se resuelve en coma flotante."""
+    if not T < TC:
+        return None
+    try:
+        return saturacion(T)
+    except ValueError:
+        return None
+
+
 def ramas(T):
     """Intervalos de densidad [kg/m3] de las ramas monofasicas a T.
 
@@ -225,8 +257,8 @@ def ramas(T):
     ningun estado homogeneo de esa region es estable frente a la
     separacion en las dos fases saturadas. Por encima de T_c: una rama.
     """
-    if T < TC:
-        sat = saturacion(T)
+    sat = _campana(T)
+    if sat is not None:
         tope = _densidad_tope(T, sat.rho_l, P_LIMITE_FORMULACION)
         return [("vapor", _densidad_suelo(T, P_MIN) * 1e-3, sat.rho_v),
                 ("liquido", sat.rho_l, tope)], sat
@@ -567,6 +599,32 @@ def _residuo_maxwell(T, pl, pv):
                abs(pl.P - pv.P) / max(pv.P, pl.rho * pl.dP_drho_T))
 
 
+def _newton_maxwell(T, rl, rv):
+    """Newton en (rho', rho'') sobre P(T, rho') = P(T, rho'') y g(T, rho') = g(T, rho''), con T comun por
+    construccion. Jacobiano analitico: dP/drho = (dP/drho)_T y dg/drho = (dP/drho)_T / rho a T fija. Itera hasta
+    que el residuo de Maxwell deja de bajar (limite de coma flotante) o 30 iteraciones. Devuelve
+    (rho', rho'', propiedades', propiedades'', residuo, iteraciones), o None si un paso sale de sus ramas
+    (rho' > rho_c > rho'' > 0)."""
+    pl, pv = propiedades(T, rl), propiedades(T, rv)
+    residuo = _residuo_maxwell(T, pl, pv)
+    it = 0
+    while residuo > 0.0 and it < 30:
+        it += 1
+        a, b = pl.dP_drho_T, -pv.dP_drho_T
+        c, d = pl.dP_drho_T / rl, -pv.dP_drho_T / rv
+        F1, F2 = pl.P - pv.P, pl.g - pv.g
+        det = a * d - b * c
+        nl, nv = rl - (F1 * d - b * F2) / det, rv - (a * F2 - c * F1) / det
+        if not nl > RHOC > nv > 0:
+            return None
+        nuevo = (propiedades(T, nl), propiedades(T, nv))
+        r_nuevo = _residuo_maxwell(T, *nuevo)
+        if r_nuevo >= residuo:      # limite de coma flotante: no empeorar
+            break
+        rl, rv, (pl, pv), residuo = nl, nv, nuevo, r_nuevo
+    return rl, rv, pl, pv, residuo, it
+
+
 @lru_cache(maxsize=20000)        # funcion pura de T: la cache no cambia resultados
 def coexistencia(T):
     """Equilibrio liquido-vapor del agua pura a T en [T_TRIPLE, T_COEX_MAX].
@@ -583,24 +641,10 @@ def coexistencia(T):
         raise FueraDeAlcance("region_critica" if T > T_COEX_MAX else "fuera_de_dominio",
                              f"Coexistencia publicada solo para T en [{T_TRIPLE}, {T_COEX_MAX:.6g}] K.")
     sat = saturacion(T)
-    rl, rv = sat.rho_l, sat.rho_v
-    pl, pv = propiedades(T, rl), propiedades(T, rv)
-    residuo = _residuo_maxwell(T, pl, pv)
-    it = 0
-    while residuo > 0.0 and it < 30:
-        it += 1
-        a, b = pl.dP_drho_T, -pv.dP_drho_T
-        c, d = pl.dP_drho_T / rl, -pv.dP_drho_T / rv
-        F1, F2 = pl.P - pv.P, pl.g - pv.g
-        det = a * d - b * c
-        nl, nv = rl - (F1 * d - b * F2) / det, rv - (a * F2 - c * F1) / det
-        if not nl > RHOC > nv > 0:
-            raise FueraDeAlcance("no_convergente", f"El Newton de coexistencia salio de sus ramas a T = {T:.6g} K.")
-        nuevo = (propiedades(T, nl), propiedades(T, nv))
-        r_nuevo = _residuo_maxwell(T, *nuevo)
-        if r_nuevo >= residuo:      # limite de coma flotante: no empeorar
-            break
-        rl, rv, (pl, pv), residuo = nl, nv, nuevo, r_nuevo
+    resultado = _newton_maxwell(T, sat.rho_l, sat.rho_v)
+    if resultado is None:
+        raise FueraDeAlcance("no_convergente", f"El Newton de coexistencia salio de sus ramas a T = {T:.6g} K.")
+    rl, rv, pl, pv, residuo, it = resultado
     if residuo > TOL_SATURACION_MAXWELL:
         raise FueraDeAlcance("no_convergente", f"Coexistencia sin converger a T = {T:.6g} K (residuo {residuo:.3g}).")
     return Coexistencia(T=T, P=pv.P, liquido=pl, vapor=pv, residuo=residuo, iteraciones=it)
@@ -689,7 +733,7 @@ def _densidad_rama(T, P, nombre):
 
 
 def _rama_isobara(T, P, lado):
-    return "fluido" if T >= TC else lado
+    return "fluido" if _campana(T) is None else lado
 
 
 def _dominio(T, P, ruta=""):
@@ -898,12 +942,12 @@ def _u_candidato_UV(T, v):
     campana las dos expresiones coinciden. Para T en (T_COEX_MAX, T_c) la
     campana se toma de los ajustes: solo sirve para clasificar, y cualquier
     raiz ahi es region critica."""
-    if T < TC:
+    sat = _campana(T) if T_COEX_MAX < T else None
+    if T <= T_COEX_MAX or sat is not None:
         if T <= T_COEX_MAX:
             c = coexistencia(T)
             pl, pv = c.liquido, c.vapor
         else:
-            sat = saturacion(T)
             pl, pv = propiedades(T, sat.rho_l), propiedades(T, sat.rho_v)
         if pl.v < v < pv.v:
             q = (v - pl.v) / (pv.v - pl.v)
@@ -983,15 +1027,15 @@ def evaluar_UV(u, v, T_semilla=None, certificar=True):
                     candidatos.append(_bifasico("UV", c, min(max(q, 0.0), 1.0), None, objetivo, unicidad,
                                                 certificar))
                     continue
-            elif T < TC:
-                sat = saturacion(T)
+            elif _campana(T) is not None:
+                sat = _campana(T)
                 if 1 / sat.rho_l < v < 1 / sat.rho_v:
                     raise FueraDeAlcance("region_critica",
                                          f"Coexistencia a T = {T:.6g} K, en la banda critica excluida.")
             # Fuera de la campana la rama la decide el lado de rho_c (no los
             # ajustes de rho', que junto a la frontera difieren ~1e-13).
             rho = 1.0 / v
-            nombre = "fluido" if T >= TC else ("liquido" if rho > RHOC else "vapor")
+            nombre = "fluido" if _campana(T) is None else ("liquido" if rho > RHOC else "vapor")
             p = propiedades(T, rho)
             candidatos.append(_monofasico(
                 "UV", T, rho, nombre, None,
@@ -1058,10 +1102,10 @@ def evaluar_TV(T, v):
             def objetivo(m):
                 return {"volumen": (m["v"], v, v)}
             return _bifasico("TV", c, min(max(q, 0.0), 1.0), None, objetivo, unicidad)
-    elif T < TC:
-        sat = saturacion(T)
+    elif _campana(T) is not None:
+        sat = _campana(T)
         if 1 / sat.rho_l < v < 1 / sat.rho_v:
             raise FueraDeAlcance("region_critica", f"Coexistencia a T = {T:.6g} K, en la banda critica excluida.")
     rho = 1.0 / v
-    nombre = "fluido" if T >= TC else ("liquido" if rho > RHOC else "vapor")
+    nombre = "fluido" if _campana(T) is None else ("liquido" if rho > RHOC else "vapor")
     return _monofasico("TV", T, rho, nombre, None, {"volumen": 0.0}, unicidad)
