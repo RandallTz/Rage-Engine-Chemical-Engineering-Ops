@@ -183,3 +183,131 @@ export type CapacidadesDiagramas = {revision: 1;
     coberturaGrupos?: CoberturaGrupos;
     combinacionesDetectadas: string[]; limites: string[]}[];
   noSoportado: {elemento: string; motivo: string}[]};
+
+// --- Multicomponent diagrams (F8, additive; own protocol revision 1, 24 October 2026) -------------------------
+// Routes: GET /motor/termodinamica/diagramas/multicomponent/capabilities,
+// POST /motor/termodinamica/diagramas/ternary-liquid-liquid, POST /motor/termodinamica/diagramas/composition-line.
+// Service: backend/multicomponent_diagrams.py. The binary types above are unchanged. Compositions are keyed by
+// component ID (as text); every declared species is kept. Lines between published points are visual interpolation.
+
+export const MULTICOMPONENT_DIAGRAM_REVISION = 1;
+
+export type MulticomponentOperation = 'ternary_liquid_liquid' | 'composition_line';
+
+/** Fixed condition of both operations. Absence of T or P does not mean zero. */
+export type MulticomponentCondition = {T: CantidadEstado; P: CantidadEstado};
+
+export type TernaryLiquidLiquidRequest = {
+  revision: 1;
+  requestId: string;
+  /** Exactly three, with a verifiable chemical identity (CAS). */
+  components: Componente[];
+  /** The volume's package identity; it is never replaced by another. */
+  model: ModeloEstado;
+  /** Optional precondition: a different current fingerprint rejects the query (MOTOR_DIAG_HUELLA_DISTINTA). */
+  expectedModelFingerprint?: string;
+  pureData?: SustitucionDatosPuros;
+  condition: MulticomponentCondition;
+  resolution: PerfilResolucion;
+};
+
+/** Ends of the line z(l) = (1 - l) start + l end, l in [0, 1]: one mole fraction per declared component ID,
+ * each end summing to 1. A component absent from both ends is rejected (MOTOR_DIAG_COMPONENTE_AUSENTE). */
+export type CompositionLineRequest = Omit<TernaryLiquidLiquidRequest, 'components'> & {
+  /** Two or more. */
+  components: Componente[];
+  line: {start: Record<string, number>; end: Record<string, number>};
+};
+
+export type MulticomponentStatus = 'complete' | 'partial' | 'no_coexistence' | 'invalid' | 'incomplete' | 'unsupported';
+
+export type MulticomponentResidual = {id: 'mu_equality' | 'normalization' | 'fixed_condition' | 'distinct_phases';
+  value: number; tolerance: number; scale: string; status: 'pass' | 'fail'};
+
+export type MulticomponentStability = {status: 'stable' | 'unstable'; tmMinimum: number; tolerance: number;
+  candidates: ('liquid' | 'vapor')[]; trials: number; method: string;
+  competitor?: {kind: 'liquid' | 'vapor'; composition: Record<string, number>; tm: number}};
+
+export type MulticomponentCertificate = {status: 'pass' | 'fail'; residuals: MulticomponentResidual[];
+  stability: MulticomponentStability};
+
+export type PublishedPhase = {id: 'liquid-a' | 'liquid-b' | 'vapor'; kind: 'liquid' | 'vapor';
+  composition: Record<string, number>};
+
+/** One tie line: two liquids with equal mu at (T, P), with its certificate. */
+export type TieLine = {id: string; branchId: string; phases: [PublishedPhase, PublishedPhase];
+  certificate: MulticomponentCertificate; origin: 'flash_seed' | 'continuation'};
+
+/** A binodal branch: tie lines in continuation order. Its liquid-a and liquid-b compositions are the two sides of
+ * the binodal; ends name the special point or incidence where each direction of the walk stopped. */
+export type TernaryBranch = {id: string; tieLineIds: string[];
+  ends: ({side: 'start' | 'end'; specialPointId: string} | {side: 'start' | 'end'; incidenceId: string})[]};
+
+export type TernarySpecialPoint =
+  | {id: string; branchId: string; side: 'start' | 'end'; kind: 'plait_point'; composition: Record<string, number>;
+      certificate: {status: 'pass' | 'fail';
+        residuals: {id: 'criticality'; value: number; tolerance: number; scale: string; status: 'pass' | 'fail'}[];
+        stability: {status: 'stable' | 'unstable'; tmOtherPhase: number | null; tolerance: number; method: string}};
+      description: string}
+  | {id: string; branchId: string; side: 'start' | 'end'; kind: 'binary_edge'; absentComponentId: number;
+      phases: [PublishedPhase, PublishedPhase]; certificate: MulticomponentCertificate; description: string}
+  | {id: string; branchId: string; side: 'start' | 'end'; kind: 'three_phase';
+      phases: [PublishedPhase, PublishedPhase, PublishedPhase]; certificate: MulticomponentCertificate;
+      description: string};
+
+export type MulticomponentIncidence = {id: string; branchId: string | null; side: 'start' | 'end' | null;
+  kind: 'budget' | 'no_convergence' | 'competing_phase'; cause: string; action: string};
+
+export type MulticomponentBudget = {evaluations: number; limitEvaluations: number; seconds: number;
+  limitSeconds: number};
+
+/** Stable codes: those of the binary protocol plus MOTOR_DIAG_COMPONENTE_AUSENTE (composition line). */
+export type MulticomponentDiagnostic = {code: string; status: 'invalid' | 'incomplete' | 'unsupported' | 'aviso';
+  path: string; message: string; componentIds: number[]};
+
+export type MulticomponentIdentity = {model: ModeloEstado; modelFingerprint: string | null;
+  /** Physical key: package, fingerprint, sorted CAS, T and P in SI, profile, tracer (and line ends by CAS). */
+  querySignature: string | null; tracer: {id: string; version: string}};
+
+export type MulticomponentResponseCondition = {input: MulticomponentCondition; T: number; P: number;
+  components: {id: number; cas: string}[]; resolution: PerfilResolucion};
+
+export type MulticomponentRejection = {revision: 1; requestId: string; status: 'invalid' | 'incomplete' | 'unsupported';
+  identity: MulticomponentIdentity; condition: null; diagnostics: MulticomponentDiagnostic[]};
+
+export type TernaryLiquidLiquidResponse =
+  | (MulticomponentRejection & {operation: 'ternary_liquid_liquid'})
+  | {revision: 1; requestId: string; operation: 'ternary_liquid_liquid';
+      status: 'complete' | 'partial' | 'no_coexistence'; identity: MulticomponentIdentity;
+      condition: MulticomponentResponseCondition; branches: TernaryBranch[]; tieLines: TieLine[];
+      specialPoints: TernarySpecialPoint[]; incidences: MulticomponentIncidence[]; budget: MulticomponentBudget;
+      evidence: {combination: 'liquido_liquido'; level: string; reason: string} | null; method: string;
+      diagnostics: MulticomponentDiagnostic[]};
+
+/** One closed feed on the line. Phases carry their mole fraction of the feed; they are sorted by kind and first
+ * composition, so phase identity is not tracked between rows. */
+export type LineRow = {id: string; l: number; feed: Record<string, number>;
+  phases: {kind: 'liquid' | 'vapor'; fraction: number; composition: Record<string, number>}[];
+  phaseSet: ('liquid' | 'vapor')[]; certified: boolean;
+  checks: {id: string; residual: number; tolerance: number}[]; tmMinimum: number | null};
+
+/** A change of phase set located by bisection inside lInterval; before/after are the closed states at its ends. */
+export type LineBoundary = {id: string; lInterval: [number, number]; before: LineRow; after: LineRow};
+
+export type CompositionLineResponse =
+  | (MulticomponentRejection & {operation: 'composition_line'})
+  | {revision: 1; requestId: string; operation: 'composition_line'; status: 'complete' | 'partial';
+      identity: MulticomponentIdentity;
+      condition: MulticomponentResponseCondition & {line: {start: Record<string, number>; end: Record<string, number>}};
+      rows: LineRow[]; boundaries: LineBoundary[];
+      failures: {l: number; reason: string; message: string}[]; completion: 'complete_walk' | 'budget';
+      budget: MulticomponentBudget; method: string; diagnostics: MulticomponentDiagnostic[]};
+
+export type MulticomponentCapabilities = {revision: 1;
+  operations: {id: MulticomponentOperation; route: string; components: {min: number; max: number | null};
+    tracer: {id: string; version: string}; publishes: string[]}[];
+  profiles: {id: PerfilResolucion; limitEvaluations: number; limitSeconds: number; ternaryLattice: number;
+    ternaryMaxStep: number; lineBasePoints: number; lineBisections: number; muTolerance: number;
+    stabilityTolerance: number}[];
+  packages: {model: ModeloEstado; componentsCAS: string[]; domain: {T: [number, number]; P: [number, number]}}[];
+  unsupported: {element: string; reason: string}[]};

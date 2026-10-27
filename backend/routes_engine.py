@@ -50,6 +50,29 @@ def motor_diagramas_trazar(cuerpo: Any = Body(...)):
     return trazar(cuerpo)
 
 
+@router.get("/motor/termodinamica/diagramas/multicomponent/capabilities",
+         summary="Ternary liquid-liquid diagrams and composition-line slices: operations, profiles and packages")
+def multicomponent_diagram_capabilities():
+    from backend.multicomponent_diagrams import capabilities
+    return capabilities()
+
+
+@router.post("/motor/termodinamica/diagramas/ternary-liquid-liquid",
+          summary="Ternary liquid-liquid diagram at fixed T and P with the declared package; no side effects")
+def ternary_liquid_liquid_diagram(body: Any = Body(...)):
+    """Every known rejection is a protocol response with diagnostics and a path, not a 422."""
+    from backend.multicomponent_diagrams import ternary_liquid_liquid
+    return ternary_liquid_liquid(body)
+
+
+@router.post("/motor/termodinamica/diagramas/composition-line",
+          summary="Equilibrium along a composition line at fixed T and P, every species kept; no side effects")
+def composition_line_diagram(body: Any = Body(...)):
+    """Every known rejection is a protocol response with diagnostics and a path, not a 422."""
+    from backend.multicomponent_diagrams import composition_line
+    return composition_line(body)
+
+
 @router.get("/motor/termodinamica/diagrama",
          summary="Diagrama P-T del cierre de un modelo con fases solidas (curvas y triple); sin efectos")
 def motor_termodinamica_diagrama(modelo: str = "agua-iapws95-hielo-ih", version: str = "1"):
@@ -68,7 +91,8 @@ def motor_termodinamica_evaluar(cuerpo: Any = Body(...)):
     return evaluar_motor_termodinamica(cuerpo)
 
 # --- Motor independiente: ensamblaje dinamico (protocolo de ensamblaje, revision 1) ---
-# Ver backend/motor_ensamblaje.py y docs/MOTOR_ENSAMBLAJE_DINAMICO.md.
+# Revision 2: backend/motor_ensamblaje_v2.py. Revision 1 retired (dec-r5-legacy-v1): backend/motor_ensamblaje.py
+# answers it with MOTOR_ENS_REVISION_RETIRADA; docs/engine/dynamic-assembly.md.
 @router.get("/motor/ensamblajes/capacidades",
          summary="Alcance verificado del ensamblador dinamico independiente")
 def motor_ensamblajes_capacidades(revision: int = 1):
