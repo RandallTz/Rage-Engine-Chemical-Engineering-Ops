@@ -413,6 +413,8 @@ class DerivedSystem:
             if value.is_number is True and abs(float(value)) > 1e-9:
                 raise LoweringError('inconsistent_parameter_premise', 'Numerical data contradict a replayed algebraic or geometric premise.', key)
 
+        self._check_declared_port_relations(used)
+
         for key, node in self.graph.nodes.items():
             if not key.startswith('operation.') or not isinstance(node.equation, sp.Equality):
                 continue
@@ -423,6 +425,44 @@ class DerivedSystem:
             if numerical.is_number is True and abs(float(numerical)) <= 1e-12:
                 continue
             raise LoweringError('unsupported_operation', 'The recorded operation is not an identity, explicit closure or consequence of the selected rates. General constraints and integral/spatial operators are not lowered.', key)
+
+    def _check_declared_port_relations(self, used):
+        """A substituted physical flow remains a datum, not a free premise.
+
+        Read the producer's physical bindings and the actual constitutive rows
+        in the selected conservation ancestry. Never reconstruct a port formula
+        from configuration flags or replace the selected differential equations.
+        """
+        from core.balances.material_equations import equation_graph
+        relations = {key: self.graph.nodes[key] for key in used
+                     if self.graph.nodes[key].family == 'matter'
+                     and self.graph.nodes[key].rule == 'constitutive_relation'}
+        if not relations:
+            return
+        bindings = {}
+        for volume in self.model['volumenes']:
+            if any(self.replayed.owners.get(key) == volume['id'] for key in relations):
+                _, _, physical = equation_graph(self.model, volume['id'], volume['supuestos']['materia'])
+                bindings.update(physical)
+        streams = {stream['id']: stream for stream in self.model['corrientes']}
+        for key, node in relations.items():
+            quantity = node.equation.lhs
+            binding = bindings.get(quantity)
+            if binding is None or binding[0] != 'stream':
+                continue
+            matter = streams[binding[1]]['materia']
+            if matter['modo'] != 'por_componente' or matter['base'] != 'masica':
+                raise LoweringError('unsupported_physical_binding',
+                    'A substituted component port relation currently requires a declared component mass-flow datum.', key)
+            data_id = matter['caudalIds'][str(binding[2])]
+            expected = self._datum(data_id, self._dim(quantity))
+            actual = si_magnitude(self._normalize(node.equation.rhs)).subs(self.parameter_values)
+            if actual.is_number is not True:
+                raise LoweringError('unsupported_physical_binding',
+                    'The substituted port relation must resolve to a constant before its declared datum can be certified: '+data_id, key)
+            if not math.isclose(float(actual), float(expected), rel_tol=1e-12, abs_tol=1e-12):
+                raise LoweringError('inconsistent_physical_binding',
+                    'The declared stream datum contradicts the replayed port relation: '+data_id, key)
 
     def _conservation_checks(self):
         checks = []

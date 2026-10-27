@@ -339,6 +339,40 @@ class MatterLoweringTests(unittest.TestCase):
         from matter_lowering_inputs import matter_case
         cls.models = {name: matter_case(name) for name in ('decay', 'filling', 'dilution')}
 
+    def test_filling_rejects_a_stream_datum_contradicting_the_derived_port_relation(self):
+        model = copy.deepcopy(self.models['filling'])
+        model['datos']['flow']['declaracion']['texto'] = '0.9'
+        with self.assertRaises(LoweringError) as caught:
+            DerivedSystem(model)
+        diagnostic = caught.exception.diagnostics[0]
+        self.assertEqual(diagnostic['code'], 'inconsistent_physical_binding')
+        self.assertEqual(diagnostic['equationId'], 'matter.region.7.common-density-1')
+        self.assertIn('flow', diagnostic['message'])
+        from backend.api_modelo import describe_compilation, resolver_modelo
+        from fastapi import HTTPException
+        for endpoint in (describe_compilation, resolver_modelo):
+            with self.assertRaises(HTTPException) as caught:
+                endpoint({'modelo': model})
+            self.assertEqual(caught.exception.status_code, 422)
+            self.assertEqual(caught.exception.detail['diagnostics'][0], diagnostic)
+
+    def test_filling_checks_stream_data_in_si_against_independent_mass_accounting(self):
+        model = copy.deepcopy(self.models['filling'])
+        # The declared feed and the independently computed inventory must agree
+        # after changing both the port data and their displayed units.
+        model['datos']['flow']['declaracion'].update(texto='900', unidad='g/s')
+        model['datos']['volumeFlow']['declaracion']['texto'] = '0.3'
+        for method in ('rk45', 'bdf'):
+            model['estudio']['metodoSolicitado'] = method
+            system = DerivedSystem(model)
+            result = leer_resultados(resolve_system(system))
+            self.assertEqual(result['estado'], 'resuelto')
+            times = np.array(result['ejes'][0]['valores'])
+            mass_id = next(row['quantityId'] for row in system.selection['reconstructions']
+                           if str(system._quantity(row['quantityId'])) == 'm__region__7(t)')
+            mass = next(row['valores'] for row in result['series'] if row['id'] == 'observable.'+mass_id)
+            np.testing.assert_allclose(mass, 6+0.9*times, rtol=2e-8, atol=1e-10)
+
     def test_malformed_envelopes_keep_strict_reader_diagnostics(self):
         from backend.api_modelo import describe_compilation
         from fastapi import HTTPException
