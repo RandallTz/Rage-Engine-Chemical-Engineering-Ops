@@ -271,6 +271,263 @@ On 2026-10-19 the user accepted the proposals and left the open choice (D4) to t
       - Frontend: TypeScript (0 errors outside the dev server's generated `.next/types`, which still list the deleted pages until Next regenerates them), scoped ESLint, the narrowed `npm test`, `verificar_physical_journals`, `verificar_equation_workbench`, `verificar_workspace_handoffs` and `test:motor-fundamental` pass.
       - The dev server on 3000 and the backend on 8004 were not touched; 8004 keeps serving the old laboratory routes until an authorized restart.
 
+### Audited Codex checkpoints (24 October 2026)
+
+The user authorized commits of Codex work only, with no push and no shared-document commit. Each path was added separately; every commit used `git commit --only -- <paths>`. The non-target Git index entries were compared before and after each commit and preserved, including the already staged roadmap rename. These checkpoints cover **207 distinct files** (208 file entries because the historical hydraulic fixture was restored in a separate follow-up). Tests ran on the shared working tree, not a clean isolated checkout.
+
+| Commit | Message | Files |
+|---|---|---|
+| `8394c971e7e8d8cb6acdf72eca68a4452a3bc252` | Engine: preserve typed equation kernel and recorded physical deductions | 31 |
+| `20b47ce9f06c1ca488abc7e556ef0f9e22c180c1` | Frontend: preserve the shared Model Transform Solve Results workspaces | 155 |
+| `0cf4ad5cb1bab02a7a280af4b53bb83aac34e361` | Tests: preserve the frozen M1-B source method during execution checks | 1 |
+| `e392e4dcd09df959953d4c34323471908e8429e8` | Engine: commit M1 lowering acceptance and common solver event margins | 21 |
+
+<details>
+<summary>8394c97 — exact files and verification</summary>
+
+173 tests: 135 passed initially; the 38-test workbench suite passed after selecting BDF explicitly in its fixture.
+
+- `core/balances/energy_derivation.py`
+- `core/balances/energy_equations.py`
+- `core/balances/hydraulic_definition.py`
+- `core/balances/material_derivation.py`
+- `core/balances/material_equations.py`
+- `core/balances/momentum_derivation.py`
+- `core/balances/momentum_reductions.py`
+- `core/balances/momentum_transport.py`
+- `core/mathematics/__init__.py`
+- `core/mathematics/constants.py`
+- `core/mathematics/contract.py`
+- `core/mathematics/dimensions.py`
+- `core/mathematics/domains.py`
+- `core/mathematics/errors.py`
+- `core/mathematics/graph.py`
+- `core/mathematics/operators.py`
+- `core/mathematics/provenance.py`
+- `core/mathematics/validity.py`
+- `core/modelo/adaptadores.py`
+- `core/modelo/dynamic_definition.py`
+- `core/modelo/equation_manipulation.py`
+- `core/modelo/operation_journal.py`
+- `tests/test_dynamic_definition.py`
+- `tests/test_energy_derivation.py`
+- `tests/test_equation_manipulation.py`
+- `tests/test_equation_workbench.py`
+- `tests/test_material_derivation.py`
+- `tests/test_mathematical_domains.py`
+- `tests/test_mathematical_kernel.py`
+- `tests/test_momentum_derivation.py`
+- `tests/test_physical_equation_graphs.py`
+
+</details>
+
+<details>
+<summary>20b47ce — exact files and verification</summary>
+
+TypeScript and scoped ESLint pass; physical journals, model and material derivations, hydraulic references, phase discovery, transformed execution (60), workspace handoffs, LLE (504), workbench readers (11655 formulas), derived lifecycle (78) pass.
+
+- `frontend/app/adimensionalizacion/contratoNucleo.ts`
+- `frontend/app/adimensionalizacion/exportar.ts`
+- `frontend/app/adimensionalizacion/lecturaNucleo.ts`
+- `frontend/app/models/CommonModelContent.tsx`
+- `frontend/app/models/CompilationPanel.tsx`
+- `frontend/app/models/CompilationSummary.tsx`
+- `frontend/app/models/DeducedModelSummary.tsx`
+- `frontend/app/models/DerivedExecution.tsx`
+- `frontend/app/models/DerivedSolve.tsx`
+- `frontend/app/models/DynamicModelDefinition.tsx`
+- `frontend/app/models/EnergyJournalEditor.tsx`
+- `frontend/app/models/EquationRows.tsx`
+- `frontend/app/models/EquationWorkbenchPanel.tsx`
+- `frontend/app/models/FormulationExecution.tsx`
+- `frontend/app/models/HydraulicSolve.tsx`
+- `frontend/app/models/MaterialJournalEditor.tsx`
+- `frontend/app/models/ModelDefinition.tsx`
+- `frontend/app/models/ModelDerivationStatus.tsx`
+- `frontend/app/models/ModelDomainControls.tsx`
+- `frontend/app/models/ModelLibrary.tsx`
+- `frontend/app/models/ModelReadiness.tsx`
+- `frontend/app/models/ModelWorksheet.tsx`
+- `frontend/app/models/ModelWorkspace.tsx`
+- `frontend/app/models/MomentumCoupling.tsx`
+- `frontend/app/models/MomentumJournalEditor.tsx`
+- `frontend/app/models/NetworkModelDerivation.tsx`
+- `frontend/app/models/RecordedDerivation.tsx`
+- `frontend/app/models/ThermodynamicJournalEditor.tsx`
+- `frontend/app/models/TransformWorkspace.tsx`
+- `frontend/app/models/WorkspaceVisual.tsx`
+- `frontend/app/models/[id]/[[...workspace]]/page.tsx`
+- `frontend/app/models/[id]/layout.tsx`
+- `frontend/app/models/chartLayout.ts`
+- `frontend/app/models/derivedSelection.ts`
+- `frontend/app/models/dynamicDefinition.ts`
+- `frontend/app/models/english.ts`
+- `frontend/app/models/equationWorkbench.module.css`
+- `frontend/app/models/equationWorkbench.ts`
+- `frontend/app/models/error.tsx`
+- `frontend/app/models/formulationRequests.ts`
+- `frontend/app/models/hydraulicDefinition.ts`
+- `frontend/app/models/layout.tsx`
+- `frontend/app/models/modelDerivationAudit.ts`
+- `frontend/app/models/modelDiagnostics.ts`
+- `frontend/app/models/modelImport.ts`
+- `frontend/app/models/modelRequest.ts`
+- `frontend/app/models/modelTopology.ts`
+- `frontend/app/models/momentumDerivation.ts`
+- `frontend/app/models/page.tsx`
+- `frontend/app/models/transformationSelection.ts`
+- `frontend/app/models/useBrowserReady.ts`
+- `frontend/app/models/useChartDrag.ts`
+- `frontend/app/models/workflow.ts`
+- `frontend/app/models/workspace.module.css`
+- `frontend/app/motor/AlcancePaqueteRed.tsx`
+- `frontend/app/motor/AvisoCertificacionRed.tsx`
+- `frontend/app/motor/BarraHojaMotor.tsx`
+- `frontend/app/motor/BibliotecaHojas.tsx`
+- `frontend/app/motor/CoberturaGruposPaquete.tsx`
+- `frontend/app/motor/DefinirVolumen.tsx`
+- `frontend/app/motor/DerivacionVolumenRed.tsx`
+- `frontend/app/motor/DetallesEnsamblaje.tsx`
+- `frontend/app/motor/DetallesRedTermodinamica.tsx`
+- `frontend/app/motor/EcuacionesFinales.tsx`
+- `frontend/app/motor/EditorBalanceModular.tsx`
+- `frontend/app/motor/EditorComponentesRed.tsx`
+- `frontend/app/motor/EditorDatosPuros.tsx`
+- `frontend/app/motor/EditorEnsamblajeMateria.tsx`
+- `frontend/app/motor/EditorEstadoTermodinamico.tsx`
+- `frontend/app/motor/ElegirCierreEnergia.tsx`
+- `frontend/app/motor/EnergiaFundamental.tsx`
+- `frontend/app/motor/EquilibrioHoja.tsx`
+- `frontend/app/motor/EspacioRedTermodinamica.tsx`
+- `frontend/app/motor/EstadoSistema.tsx`
+- `frontend/app/motor/FundamentoBalance.tsx`
+- `frontend/app/motor/FundamentoCierreEnsamblado.tsx`
+- `frontend/app/motor/GestorComponentesMateria.tsx`
+- `frontend/app/motor/GraficaCorteEquilibrio.tsx`
+- `frontend/app/motor/HojaGuardada.tsx`
+- `frontend/app/motor/MateriaFundamental.tsx`
+- `frontend/app/motor/ModelAssumptions.tsx`
+- `frontend/app/motor/NavegacionHoja.tsx`
+- `frontend/app/motor/PanelesBalances.tsx`
+- `frontend/app/motor/PaquetesEjecutadosRed.tsx`
+- `frontend/app/motor/ProgresoMateria.tsx`
+- `frontend/app/motor/ReconstruccionMateriaRed.tsx`
+- `frontend/app/motor/ResolverEnsamblaje.tsx`
+- `frontend/app/motor/ResolverHoja.tsx`
+- `frontend/app/motor/ResultadosHoja.tsx`
+- `frontend/app/motor/SelectorSustanciaCatalogo.tsx`
+- `frontend/app/motor/TableroMotor.tsx`
+- `frontend/app/motor/VariablesDelVolumen.tsx`
+- `frontend/app/motor/VariablesMateria.tsx`
+- `frontend/app/motor/datosDiagramaEquilibrio.ts`
+- `frontend/app/motor/datosGraficasMotor.ts`
+- `frontend/app/motor/ecuacionesFinales.module.css`
+- `frontend/app/motor/energia/page.tsx`
+- `frontend/app/motor/ensamblajeMateria.ts`
+- `frontend/app/motor/estadoResolucionRed.ts`
+- `frontend/app/motor/hojas/[id]/estado/page.tsx`
+- `frontend/app/motor/hojas/[id]/page.tsx`
+- `frontend/app/motor/hojas/[id]/resolver/page.tsx`
+- `frontend/app/motor/hojas/[id]/resultados/page.tsx`
+- `frontend/app/motor/hojas/page.tsx`
+- `frontend/app/motor/hojasDemostracion.ts`
+- `frontend/app/motor/hojasMotor.ts`
+- `frontend/app/motor/hojasPruebaAcoplamiento.ts`
+- `frontend/app/motor/hojasPruebaEnergia.ts`
+- `frontend/app/motor/hojasPruebaMateria.ts`
+- `frontend/app/motor/hojasPruebaMultifasico.ts`
+- `frontend/app/motor/hojasPruebaNComponentes.ts`
+- `frontend/app/motor/hojasPruebaUNIFAC.ts`
+- `frontend/app/motor/lectorDiagramasEquilibrio.ts`
+- `frontend/app/motor/materia/page.tsx`
+- `frontend/app/motor/materialDerivation.ts`
+- `frontend/app/motor/materialNetworkTemplates.ts`
+- `frontend/app/motor/metadatosRed.ts`
+- `frontend/app/motor/modeloHojaMotor.ts`
+- `frontend/app/motor/modeloNumerico.ts`
+- `frontend/app/motor/momento/page.tsx`
+- `frontend/app/motor/motor.module.css`
+- `frontend/app/motor/networkEnergyJournal.ts`
+- `frontend/app/motor/networkMaterialJournal.ts`
+- `frontend/app/motor/networkThermodynamicJournal.ts`
+- `frontend/app/motor/page.tsx`
+- `frontend/app/motor/phaseDiscoveryExample.ts`
+- `frontend/app/motor/physicalDerivation.ts`
+- `frontend/app/motor/prepararEnsamblajeTermodinamico.ts`
+- `frontend/app/motor/recorridoEnergia.ts`
+- `frontend/app/motor/recorridoMateria.ts`
+- `frontend/app/motor/redTermodinamica.ts`
+- `frontend/app/motor/resolverEngine.ts`
+- `frontend/app/motor/resultadosMotor.ts`
+- `frontend/app/motor/seleccionBalances.ts`
+- `frontend/app/motor/topologiaRed.ts`
+- `frontend/app/motor/trabajoMotor.module.css`
+- `frontend/app/motor/useHojasMotor.ts`
+- `frontend/motores/modelo/compilation.ts`
+- `frontend/motores/modelo/desdeHojaBalances.ts`
+- `frontend/motores/modelo/desdeHojaMotor.ts`
+- `frontend/motores/modelo/servicioModelo.ts`
+- `frontend/motores/resultados/lector.ts`
+- `frontend/next.config.ts`
+- `frontend/testing/modelFixtures.ts`
+- `frontend/testing/pressureExamples.ts`
+- `frontend/verificar_derived_lifecycle.mjs`
+- `frontend/verificar_equation_workbench.mjs`
+- `frontend/verificar_hydraulics.mjs`
+- `frontend/verificar_liquido_liquido.mjs`
+- `frontend/verificar_material_journals.mjs`
+- `frontend/verificar_model_derivations.mjs`
+- `frontend/verificar_phase_discovery.mjs`
+- `frontend/verificar_physical_journals.mjs`
+- `frontend/verificar_transform_execution.mjs`
+- `frontend/verificar_workspace_handoffs.mjs`
+
+</details>
+
+<details>
+<summary>0cf4ad5 — exact files and verification</summary>
+
+Fresh shared authoring reproduces frozen M1-A/B exactly; hydraulic execution references and TypeScript pass. Execution tests select BDF explicitly while the historical source remains unchanged.
+
+- `frontend/testing/pressureExamples.ts`
+
+</details>
+
+<details>
+<summary>e392e4d — exact files and verification</summary>
+
+73 acceptance/compiler tests: 72 passed initially and the frozen A/B reproduction test passed after restoring the historical fixture; 8 common-phase/margin tests and 6 stage-stop/margin tests passed. Frozen A/B/C files unchanged.
+
+- `core/compilador/compilador.py`
+- `core/compilador/derived.py`
+- `core/compilador/explicito.py`
+- `core/compilador/hydraulics.py`
+- `core/compilador/presentation.py`
+- `core/compilador/transformed.py`
+- `core/solvers/integrador.py`
+- `tests/m1_acceptance.py`
+- `tests/matter_lowering_inputs.py`
+- `tests/reference_data/m1-a.json`
+- `tests/reference_data/m1-b.json`
+- `tests/reference_data/m1-c.json`
+- `tests/test_common_phase_window.py`
+- `tests/test_derived_execution.py`
+- `tests/test_hydraulic_execution.py`
+- `tests/test_m1_coupled_acceptance.py`
+- `tests/test_m1_thermal_acceptance.py`
+- `tests/test_m1_u1_acceptance.py`
+- `tests/test_solver_stability_margins.py`
+- `tests/test_transformed_execution.py`
+- `tests/test_workspace_handoffs.py`
+
+</details>
+
+**Ownership exceptions retained locally.** `backend/api_modelo.py`, `core/balances/generador.py`, `frontend/app/motor/TermodinamicaHoja.tsx`, `familiasBalance.ts`, `recorridoTermodinamico.ts`, `ubicacionEcuaciones.ts`, `frontend/motores/resultados/contrato.ts`, `frontend/app/motor/resultadoEnsamblajeV2.ts` and `frontend/package.json` include both Codex work and Claude documentation/retirement/cleanup hunks. They were not committed wholesale or temporarily rewritten to remove another author's work. The remaining legacy application shell, laboratory/history artifacts and unrelated changes were also excluded: this checkpoint does not assert authorship of the whole dirty tree. Shared roadmap/board/Checklist/workspace/architecture/agent documents remain for the user-requested joint commit later. `core/solvers/integrador.py` was initially mixed; after Claude committed stage-stop retry in `5c18fe1`, its remaining Codex margin diff was verified and included in `e392e4d`.
+
+**Verification repair.** Workbench execution tests now request BDF explicitly. The shared historical hydraulic source retains `euler_implicito` so fresh M1-B authoring remains byte-for-byte consistent with the frozen document; execution tests select a supported method independently. An attempted fixture change caused one frozen-source comparison failure, was restored in `0cf4ad5`, and the fresh A/B authoring comparison passed. A/B/C remain 43/31/25 operations, with their original SHA-256 values recorded in the M1 acceptance source. Five verifier-local module bindings were renamed to satisfy scoped ESLint; the affected verifiers were rerun. No frozen fixture was regenerated.
+
+**Risk status.** `risk-uncommitted` remains high and open because mixed/shared and other unreviewed files still exist only locally. The immediate post-checkpoint status had 448 entries; that is a live working-tree count and can change with concurrent Claude work. No push was performed. The next separate decision concerns [v2 parity and retirement](../engine/dynamic-assembly.md#12-v2-retirement-parity-audit), not deletion authorized by these commits.
+
 ## 8. Regenerating the inventory
 
 ```bash
