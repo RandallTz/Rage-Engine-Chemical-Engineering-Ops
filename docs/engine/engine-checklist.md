@@ -1,6 +1,6 @@
 # Engine capabilities
 
-Reviewed: 2026-10-23. Scope inventory, not an individual-run certificate.
+Reviewed: 2026-10-27. Scope inventory, not an individual-run certificate.
 
 Source: frontend/app/checklist/datos.ts. The live page and download use this same registry.
 
@@ -11,7 +11,7 @@ Workspace: Shared · below multiphysics
 - [x] Equipment-independent Python kernel for typed equation graphs, algebra/calculus, explicit units, conditions and ordered replay; no imports from physical producers, packages, compilers or solvers.
 - [x] Arbitrary equation groups and dimension-compatible cross-group operations; independent product/chain, mechanical and electrical reference tests use the same kernel.
 - [x] Copied replay inputs and immutable operation receipts with actual before/after equations and transitive conditions; atomic append, Undo/Redo and history branching.
-- [x] New operations pin input equation content, conditions and units, including substitution relations; changed algebra behind the same ID requires review. Legacy unsigned histories remain unsigned.
+- [x] New operations pin input equation content, conditions and units, including substitution relations; changed algebra behind the same ID requires review. Legacy/unsigned histories are explicitly marked, never backfilled, and blocked from compilation until Undo/Rewind and reviewed re-recording; receipts distinguish recorded and calculated signatures.
 - [x] Conditional isolation and substitution retain nonzero linear coefficients lost by cancellation; unsupported or ambiguous branches are rejected.
 - [x] Generated denominator, isolation, even-root and logarithm guards are typed predicates, separate from explanatory prose. Substitution checks inherited guards and recorded domains; non-finite/non-real numeric expressions and proved contradictions are rejected. Claude independently verified N1 on revision 7.
 - [x] Calculus requires declared coordinate dependence and records an interval-identity premise. Real logarithmic primitives retain absolute values and excluded zeros; new operation validity conditions block Solve until numerical enforcement exists.
@@ -19,10 +19,10 @@ Workspace: Shared · below multiphysics
 - [x] Domain contradictions, unresolved membership, empty/multiple admitted branches and unsupported inversions are rejected. Domain edits invalidate dependent derivations and block numerical fallback.
 - [x] Bounded exact rational intervals and zero domains in the shared controls; open/closed endpoints, intersections and scoped univariate inequality proofs without numerical sampling.
 - [x] Explicit singleton parameter-case substitution rows before inversion; zero coefficients can reduce polynomial degree. Identity, inconsistent and unresolved residual cases remain distinct diagnostics.
-- [x] Typed nonzero dimensioned singleton constants retain units through substitution, roots and calculus; explicit interval units produce original/conversion rows using exact rational factors from the shared units service.
+- [x] Typed nonzero dimensioned singleton constants retain units through substitution, roots and calculus; explicit interval units produce original/conversion rows using exact rational factors from the shared units service, rejecting Pint dependencies on irrational mathematical constants without approximations.
 - [x] Graph replay preserves unevaluated equations and independent node metadata, including an impossible real equality that must not collapse into a boolean while copied.
-- [ ] M1 deduction-readiness gate (D1): D1(1) awaits independent review of the B1 storage-ancestry repair and freshly frozen A/B/C inputs. Energy commutation is enforced without changing its producer; the wall is an explicit constitutive premise. Claude accepted D1(2)–D1(5); their verdicts are retained.
-- [ ] General implication/enforcement of validity predicates, migration of legacy free-text physical premises, irrational catalog-conversion detection and visible unsigned-history status remain pending after the independent audit.
+- [x] Independent D1 verification approved all five criteria for the frozen M1-A/B/C suite on 23 October 2026; this does not certify general symbolic completeness or U1 usability.
+- [ ] General implication/enforcement of validity predicates and migration of legacy free-text physical premises remain pending after the independent audit.
 - [ ] Extend beyond bounded rational intervals and explicit singleton cases: arbitrary typed-literal authoring, affine references, nonrational conversions, unbounded or symbolic bounds, general inequalities, exhaustive parameter partitions, coalescing regimes, higher degrees and nonpolynomial inversions.
 - [ ] Chronological physical-control-to-proof mapping for unused adapters and remaining wall/passage bridges; the M1 energy dependency proof retains separately verified operation commutation.
 - [ ] General residual/DAE numerical lowering and adapters for additional disciplines; symbolic kernel references do not certify new product solver families.
@@ -46,8 +46,9 @@ Workspace: Model → Transform → Solve → Results
 - [x] One canonical Model worksheet for every family, blank or legacy document, ordinary/coupled model and network example: development on the left, assumptions and physical configuration on the right; alternate editors removed.
 - [x] Journal and physical-input changes invalidate dependent transformations and results. Editing notes or archived formulations does not change execution identity.
 - [x] Component-free symbolic formulations pass unchanged from Model into Transform; Solve displays the same strict Python graph, while missing species or unsupported lowering still blocks execution.
+- [x] Pinned identity formulations of the fixed M1-A/B/C graphs lower their exact expressions to the shared explicit ODE AST and RK45/BDF; unit-bearing data, algebraic reconstruction, dependent totals, runtime validity, net-rate budgets and exact Transform rows are retained. M1-C also uses the existing optional multiplicative scaling path.
+- [x] U1 acceptance for fixed M1-A/B/C: tenfold RK45/BDF tolerance refinement against analytic/matrix references, scaled conservation checks, explicit located diagnostics, versioned product selection and storage invalidation, and an isolated coupled-model browser cycle through Model → Transform → Solve → Results. This certifies only the admitted fixed suite.
 - [x] The multiphysics battery records solved cases, intentional diagnostics and unsupported spatial cases separately.
-- [ ] M1 end-to-end usability gate (U1): compile the exact three accepted derived graphs, verify reference/conservation errors and invalidation, and complete an isolated browser walkthrough. Current scoped solver tests do not certify this whole gate.
 - [ ] Hierarchical multiphysics model instances with pinned revisions, independent state and typed physical interfaces; the current flat-region assembly is not this capability.
 - [ ] Complete auxiliary wall and unused storage/passage provenance bridges beyond the verified workbench path; the M1 wall remains an explicit constitutive premise with no fundamental-law projection claimed.
 - [ ] Explicitly rebuild legacy saved models that lack operation history; no invented retrospective derivations.
@@ -64,6 +65,7 @@ Workspace: Model · shared with Solve and Results
 - [x] Per-volume recorded assumptions, full mathematical development, undo and reversible legacy rebuilds.
 - [x] Physical assumptions update Python equations before components are declared: actual journals, boundary declarations and Undo/Redo drive a versioned symbolic draft with generic index i.
 - [x] Typed density–volume/product reductions, uniform sources, Fick flux substitution and existing orthogonal-coordinate operators; common-density port relations and explicit constant/uniform-flow conditions. These authoring operations do not add spatial numerical execution.
+- [x] Selected density–volume balances lowered through the shared Transform/RK45/BDF bridge: fixed-volume quadratic consumption, constant-density volumetric filling and prescribed-volume dilution, with independent analytic references, regular-coefficient guards and reconstructed dependent mass. Substituted constant component mass-flow relations are checked against the declared stream datum in SI; contradictions produce a located lowering diagnostic.
 - [x] Component identities, per-component flows or total donor flows, accumulation, filling and draining.
 - [x] Connected-volume material balances and global conservation checks.
 - [x] Total mass balances derived from component sums and marked dependent; domain sums cancel shared internal streams. Supported total-mass compilers consume the actual material expression graph.
@@ -74,7 +76,7 @@ Workspace: Model · shared with Solve and Results
 - [ ] Thermodynamically coupled selective mass-transfer laws and reaction kinetics.
 - [ ] Volumetric stream flows in the equilibrium assembly and general momentum/real-fluid flow coupling.
 - [ ] General steady-state/DAE balances and inverse problems.
-- [ ] General numerical lowering for density–volume and spatial expression graphs; Model and Transform expose the derivation without claiming these forms are universally executable.
+- [ ] Coupled derivative/mass-matrix and general density–volume constraint lowering, nonconstant or non-mass component port-datum certification, spatial expression graphs and equilibrium volumetric closures remain unsupported by the derived explicit bridge; locating a prescribed-volume zero remains non-blocking MD-2.
 - [ ] *Deferred:* Additional spatial geometries and coupled spatial transport; current priority is nonspatial thermodynamics.
 
 ## Energy
@@ -127,6 +129,7 @@ Workspace: Model · shared state-closure service
 - [x] Explicit constitutive selection: empirical package data are not claimed to follow from conservation laws.
 - [x] Python-developed Euler/Gibbs–Duhem, normalized phase partition and activity/excess-potential caloric relations, displayed in the existing Model worksheet.
 - [x] Located phase events retain their numerical state for certified publication; exact event samples preserve incipient phase IDs and independent boundary-work verification.
+- [x] Transient phase windows shorter than the requested output spacing are published by the network coordinator and common RK45/BDF solver using phase-stability margins and the first changed interior bracket; the narrow water-butanol window is independently checked with 2 and 11 samples. Cold event probes that raise FueraDeAlcance retry from the original RHS seeds; the exact four-component Dortmund bubble-edge regression and all R5 paths pass. Margin resolution is about 1e-8; arbitrary windows are not guaranteed.
 - [x] Pure water with IAPWS-95; supported TP, PH, UP and UV state closures with published domains.
 - [x] Ideal mixtures and existing NRTL data; verified flash examples up to seven ideal and four NRTL components.
 - [x] UNIFAC original, Dortmund and LLE in the common thermodynamic layer and compiler, with independent reference checks.
@@ -135,15 +138,18 @@ Workspace: Model · shared state-closure service
 - [x] Property-driven phase discovery in a closed rigid water–1-butanol vessel: one unrestricted policy and one UNIFAC package through heating, with TV/UV closure and independent implementation checks.
 - [x] Finite, inventory-bounded Newton trials and package-domain checks before normalization; float-range-bounded invariant-point (heteroazeotrope) polishing; trace-safe ternary stability search and phase seeds down to 1e-300; small-phase and invariant-pressure initialization regressions.
 - [x] Single-closure UNIFAC performance within the accepted budgets up to eight species and 1e-300 traces (benchmark, 23 October): seeded dynamic step median <= 0.017 s, TP <= 0.40 s, PH <= 0.23 s, UV <= 2.2 s, with unchanged certification tolerances.
+- [x] The TP flash resolves incipient phases of 1e-12 to 1e-8 mol at bubble points (vapor amount within 5e-12 mol of the linear law, mu residual 1e-15), so PH closures meet their 1e-10 |H| tolerance at the edge (F9-R9).
 - [x] Static water ice/solid–liquid–vapor equilibrium and the water pressure–temperature diagram.
 - [x] Pure-property sources, units, domains and fingerprints; coherent liquid-volume, ideal-Cp and vapor-pressure substitutions.
 - [x] Material streams between mixture packages sharing a compatible reference; binary T–xy and P–xy diagrams.
 - [x] Binary L–L branches by arc-length continuation, located L–L critical points (the binodal's fold) and certified L–L–V three-phase points in T–xy/P–xy diagrams (liquidoLiquido), checked against an analytic Margules binodal, the package's TP flash and cross-slice consistency.
+- [x] The existing binary diagram view validates and draws the optional liquid–liquid block: separate liquid-a/b branch series, certified L–L critical and L–L–V markers, both component axes, display units, cache and phase-labelled CSV/JSON export; legacy L–V responses remain compatible.
 - [x] Ternary L–L at fixed T and P (tie lines by arc length, plait point, binary-edge ends, certified L–L–V triangle) and multicomponent composition-line slices keeping every species, as core operations checked against an analytic Margules plait point, the TP flash and the binary branch.
+- [x] HTTP routes, a typed contract and the Results view for ternary L–L diagrams and composition-line slices of volumes with three or more components: structured rejections, a strict reader and SVG tie lines, binodal sides, plait point, binary edge, L–L–V triangle and line boundaries drawn from the response, checked against analytic equal activity, the TP flash and a server render of the real charts, and exercised in the browser against a live backend (every drawn mark matched the responses; structured rejections).
 - [ ] Material streams between IAPWS and mixture packages; nonideal vapor and high-pressure mixtures.
 - [ ] Critical regions beyond the current domain, mixture solid–liquid equilibrium and reaction equilibrium.
-- [ ] Solid–liquid diagrams, arc-length continuation of L–V branches, three-liquid ternary regions and multicomponent equilibrium surfaces; an HTTP route and contract for ternary L–L and line slices, and drawing the L–L results in the interface.
-- [ ] Broader phase-search/domain reliability in large UNIFAC networks; the located-event publication/work incident has a targeted correction. Volume scaling of network runs is not yet benchmarked.
+- [ ] Solid–liquid diagrams, arc-length continuation of L–V branches, three-liquid ternary regions and multicomponent equilibrium surfaces.
+- [ ] Broader phase-search/domain reliability in large UNIFAC networks; the legacy v1 assembly was retired on 24 October (dec-r5-legacy-v1), and the common compiler now survives unavailable cold event probes through a seeded retry. The located-event publication/work incident has a targeted correction. Volume scaling of network runs is not yet benchmarked.
 - [ ] *Deferred:* Experimental validation of UNIFAC predictions, after Engine validation.
 - [ ] *Deferred:* NRTL extensions and additional parameter coverage are outside the current priority.
 
@@ -165,10 +171,13 @@ Workspace: Solve → Results
 - [x] Numerical data, supported method selection, missing-data diagnostics and structural degree-of-freedom inspection.
 - [x] Common Python RK45 and BDF paths within their published scopes; time integration belongs to Solve.
 - [x] Supported explicit first-order ODE systems and nested UV/PH equilibrium closures.
+- [x] Equilibrium-network admission checks role dimensions, inventories, identity, topology, donor extraction and physical assumptions; temporal data require finite interval bounds over the complete horizon and the declared sign, with structured rejection when bounds cannot be established. Runtime closure failures retain a certified prefix.
+- [x] Common equilibrium results reuse shared work, entropy, stream, heat, potential and package-provenance calculations; physical certification is separate from numerical completion, with failed-work and second-law controls and aligned certified-prefix publication.
 - [x] Compilation reports distinguish the outer differential system, nested closures and method-dependent Jacobian assembly.
 - [x] Transform starts with a Python-replayed summary of matter, energy, momentum status and thermodynamics; Solve starts with the selected formulation, variable maps and compiled balance equations.
 - [x] Automatic compilation inspection publishes compatible time integrators and a mathematical solution plan: initialization, conserved states, local equilibrium/donor coupling, time stepping, phase events and verification. It is a plan, not an iteration transcript.
 - [x] Shared charts with animated drag-to-swap layout, saved ordering, keyboard movement and reduced-motion support; tables, events, physical reconstruction, conservation diagnostics and recorded derivation signatures.
 - [ ] General nonlinear algebraic/DAE systems, sparse solver-dependent assembly and a universal matrix inspector.
 - [ ] Constrained dynamic integration and consistent initialization for fixed inventories; current compilers reject those constraints explicitly. Persistent real-time sessions and perturbation timelines remain future work.
+- [ ] V2 compatibility adapter: steps (a)-(c) independently reviewed and supercritical-water control passing without an expected failure; isolated common-path adapter, identity aliases, five-code draft rejection and supplemental certification controls implemented. The complete 25-request matrix and independent adapter review remain pending; no route switch or solver deletion.
 - [ ] Universal rank/invertibility proofs and general inverse simulation; structural counts alone are not such proofs.
