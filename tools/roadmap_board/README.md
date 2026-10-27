@@ -40,13 +40,28 @@ In the same change that delivers it:
    - **Claude** publishes the board refresh (next section).
    - **Codex** cannot publish to claude.ai. After the registries pass validation, Codex states in its final summary: "Project board registries updated; board refresh pending." The user asks any Claude session to refresh it.
 
+## Working in parallel (claims)
+
+Claude and Codex work at the same time, and either may continue in a new chat or, for Codex, on another account. A new session starts from the board, not from memory of an earlier chat. Claims make it visible who is working on what and stop two agents from editing the same files.
+
+1. **Look.** Run `node tools/roadmap_board/build_board.mjs --check`. Its `Claims:` line lists every active claim with its paths. The `Unclaimed active items` line lists items that are in progress but that nobody has claimed yet.
+2. **Pick.** Take an item whose `owner` is you, or one the user assigns. A new session of the same agent continues that agent's own claim; for Codex this holds on either account. Do not take an item that the other agent has claimed.
+3. **Claim before editing.** In the same edit that sets the milestone to `active`, add `claim: {agent, since, files, note}`. List every file or directory (ending in `/`) that the work will create or change, and keep the list narrow. The check fails when:
+   - claims of different agents overlap;
+   - a claim covers a path in the other agent's `ownership`;
+   - a claim covers a `sharedFiles` entry;
+   - a claimed milestone is not `active`.
+4. **Stay inside the claim.** Edit only your claimed paths and files no one has claimed. If you need a path that the other agent claims or owns, stop and ask the user.
+5. **Shared files.** Both agents edit the `sharedFiles` (this registry, the Checklist registry and snapshot, the roadmap, the workspace specification, ARCHITECTURE.md, AGENTS.md and the cleanup plan). Never claim them. Re-read them immediately before each edit and change them only by exact replacement of the lines you own. Never reformat, reorder or rewrite a whole file.
+6. **Release.** When the work stops, finished or not, remove the claim in the same edit that records the result. If unfinished, write the exact next step in `nextAction`, so the next session can resume.
+
 ## Refreshing the board (Claude sessions)
 
-1. Run `node tools/roadmap_board/build_board.mjs`. It writes `tools/roadmap_board/out/{capabilities,milestones,gates,decisions,risks}.json` (git-ignored).
+1. Run `node tools/roadmap_board/build_board.mjs`. It writes `tools/roadmap_board/out/{capabilities,milestones,gates,decisions,risks,reviews,ownership}.json` (git-ignored).
 2. For each changed file, upload it as an asset of the board (Artifact tool, `url` = the board, `asset: true`, `file_path` = the file), one call per JSON file.
 3. Read `datasets/<id>` with ArtifactData. Then `update` its `source.url` with the new `/_blob/...` url and `source.name`, and set `updated: {at, by}`. Pin each write with `if_version` and use one batch.
 4. Read `data/users/me/check` until it is no longer `checking`. No document means the page passed.
-5. The page source is `tools/roadmap_board/page.html`, which the generator also packs as `out/page.json`. Change it only for layout or new sections. Then write `files/index.html` from `out/page.json`, pinned with `if_version`. The dataset ids are `capabilities`, `milestones`, `gates`, `decisions` and `risks`. Follow the dashboard type's own instructions for marks.
+5. The page source is `tools/roadmap_board/page.html`, which the generator also packs as `out/page.json`. Change it only for layout or new sections. Then write `files/index.html` from `out/page.json`, pinned with `if_version`. The dataset ids are `capabilities`, `milestones`, `gates`, `decisions`, `risks`, `reviews` and `ownership`. Follow the dashboard type's own instructions for marks.
 
 ## Schema of `docs/engine/project-board.json`
 
@@ -61,7 +76,12 @@ In the same change that delivers it:
   - `later`: intentionally at the end.
   - `decision`: waits on the user.
 - `gates[]`: `id`, `gate` (`D1` or `U1`), `title`, `status` (`passed`, `review`, `open`), `evidence`.
+- `claim` (optional on a milestone, only while `active`): `agent` (`codex` or `claude`), `since` (YYYY-MM-DD), `files` (repository-relative paths; a directory ends in `/`), `note`. See "Working in parallel".
+- `ownership` (top level): `{claude: [paths], codex: [paths]}`, the standing file ownership decided by the user. A claim may not cover the other agent's paths.
+- `sharedFiles` (top level): paths that both agents edit by exact replacement and that no one claims.
 - `decisions[]`: `id`, `date`, `status` (`taken` or `open`), `owner`, `title`, `detail`, `source`.
 - `risks[]`: `id`, `severity` (`high`, `medium`, `low`), `owner`, `title`, `mitigation`, `status` (`open` or `closed`).
+
+Generated datasets beyond the registry collections: `reviews` (one row per registry with its review date: `reviewDate` here and `capabilityReviewDate` in `datos.ts`) and `ownership` (one row per `ownership` or `sharedFiles` path, with its agent). Milestone rows carry `owner_code`, the registry's owner value.
 
 A new field or status value needs the generator, the board page and this document updated together. Registry text is English. The board page translates statuses and owners for the user.

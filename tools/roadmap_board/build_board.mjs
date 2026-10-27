@@ -65,6 +65,26 @@ function enumField(kind, item, field, values) {
   if (!values.includes(item[field])) problem(`${kind} ${item.id}: ${field} "${item[field]}" is not one of ${values.join(', ')}`);
 }
 
+// Claims: which agent is working on a milestone now and which repository paths it may edit for it.
+// A path is a file or a directory prefix ending in '/'. Two paths overlap when one is a prefix of the other.
+const AGENTS = ['codex', 'claude'];
+const normalizePath = (p) => p.replace(/\\/g, '/').replace(/^\.\//, '');
+const overlaps = (a, b) => {
+  const [x, y] = [normalizePath(a), normalizePath(b)];
+  return x === y || (x.endsWith('/') && y.startsWith(x)) || (y.endsWith('/') && x.startsWith(y));
+};
+function checkPathList(kind, list) {
+  if (!Array.isArray(list) || !list.length || list.some((p) => typeof p !== 'string' || !p.trim() || path.isAbsolute(p) || p.includes('..'))) {
+    problem(`${kind}: paths must be a non-empty list of repository-relative paths`);
+    return [];
+  }
+  for (const p of list) {
+    const full = path.join(root, normalizePath(p));
+    if (!fs.existsSync(full) && !fs.existsSync(path.dirname(full))) problem(`${kind}: neither ${p} nor its parent directory exists`);
+  }
+  return list.map(normalizePath);
+}
+
 const registry = loadRegistry();
 const board = JSON.parse(fs.readFileSync(path.join(root, 'docs/engine/project-board.json'), 'utf8'));
 if (board.format !== 'rage.project-board' || board.version !== 1) problem('project-board.json: unsupported format or version');
@@ -100,11 +120,50 @@ const milestones = board.milestones.map((m) => {
     const target = board.milestones.find((x) => x.id === id);
     return target && target.status !== 'done' && m.status !== 'done';
   });
+  const claim = m.claim || null;
   return { id: m.id, track: LABEL.track[m.track], track_code: m.track, order: m.order, name: m.title,
-    status: LABEL.status[m.status], status_code: m.status, owner: LABEL.owner[m.owner],
+    status: LABEL.status[m.status], status_code: m.status, owner: LABEL.owner[m.owner], owner_code: m.owner,
     depends_on: (m.dependsOn || []).join(', '), blocked_by: blockedBy.join(', '),
-    note: m.summary, next_action: m.nextAction, source: m.source };
+    note: m.summary, next_action: m.nextAction, source: m.source,
+    claimed_by: claim ? LABEL.owner[claim.agent] || claim.agent : '', claim_since: claim ? claim.since : '',
+    claim_files: claim && Array.isArray(claim.files) ? claim.files.join(', ') : '', claim_note: claim ? claim.note || '' : '' };
 });
+
+// Coexistence rules (tools/roadmap_board/README.md, "Working in parallel").
+const ownership = board.ownership || {};
+for (const agent of Object.keys(ownership)) if (!AGENTS.includes(agent)) problem(`ownership: unknown agent ${agent}`);
+const owned = Object.fromEntries(AGENTS.map((a) => [a, ownership[a] ? checkPathList(`ownership.${a}`, ownership[a]) : []]));
+const shared = board.sharedFiles ? checkPathList('sharedFiles', board.sharedFiles) : [];
+const claims = [];
+for (const m of board.milestones) {
+  if (!m.claim) continue;
+  const c = m.claim;
+  requireFields(`milestone ${m.id} claim`, { id: m.id, ...c }, ['agent', 'since', 'files']);
+  if (!AGENTS.includes(c.agent)) problem(`milestone ${m.id}: claim agent "${c.agent}" is not one of ${AGENTS.join(', ')}`);
+  if (m.status !== 'active') problem(`milestone ${m.id}: only an active milestone can be claimed (status ${m.status}); release the claim when it stops`);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(c.since || '')) problem(`milestone ${m.id}: claim since must be YYYY-MM-DD`);
+  const files = checkPathList(`milestone ${m.id} claim`, c.files);
+  for (const f of files) {
+    const s = shared.find((x) => overlaps(f, x));
+    if (s) problem(`milestone ${m.id}: claim path ${f} overlaps the shared file ${s}; shared files are edited by exact replacement, never claimed`);
+    for (const other of AGENTS.filter((a) => a !== c.agent)) {
+      const o = owned[other].find((x) => overlaps(f, x));
+      if (o) problem(`milestone ${m.id}: ${c.agent} claims ${f}, owned by ${other} (${o}); coordinate through the user first`);
+    }
+  }
+  claims.push({ id: m.id, agent: c.agent, files });
+}
+for (let i = 0; i < claims.length; i++) for (let j = i + 1; j < claims.length; j++) {
+  const [a, b] = [claims[i], claims[j]];
+  if (a.agent === b.agent) continue;
+  for (const f of a.files) for (const g of b.files) if (overlaps(f, g)) problem(`claims collide: ${a.agent} on ${a.id} (${f}) and ${b.agent} on ${b.id} (${g})`);
+}
+// Standing file ownership and shared files, one row per path, for the board's "who works on what" view.
+const ownershipRows = [
+  ...AGENTS.flatMap((a) => owned[a].map((p, i) => ({ id: `${a}-${i + 1}`, agent: LABEL.owner[a], agent_code: a, kind: 'Propio', kind_code: 'owned', path: p }))),
+  ...shared.map((p, i) => ({ id: `shared-${i + 1}`, agent: LABEL.owner.shared, agent_code: 'shared', kind: 'Compartido', kind_code: 'shared', path: p })),
+];
+const unclaimed = board.milestones.filter((m) => m.status === 'active' && AGENTS.includes(m.owner) && !m.claim).map((m) => m.id);
 for (const track of ENUMS.track) {
   const orders = board.milestones.filter((m) => m.track === track).map((m) => m.order).sort((a, b) => a - b);
   if (orders.some((order, index) => order !== index + 1)) problem(`track ${track}: order must run 1..${orders.length} without gaps`);
@@ -135,6 +194,12 @@ const risks = board.risks.map((r) => {
   return { id: r.id, severity: LABEL.severity[r.severity], severity_code: r.severity, owner: LABEL.owner[r.owner], risk: r.title, mitigation: r.mitigation, status: LABEL.status[r.status], status_code: r.status };
 });
 
+if (!/^\d{4}-\d{2}-\d{2}$/.test(registry.capabilityReviewDate || '')) problem('datos.ts: capabilityReviewDate must be YYYY-MM-DD');
+const reviews = [
+  { id: 'registry', name: 'Hitos, gates, decisiones y riesgos', source: 'docs/engine/project-board.json', date: board.reviewDate },
+  { id: 'checklist', name: 'Inventario de capacidades', source: 'frontend/app/checklist/datos.ts', date: registry.capabilityReviewDate },
+];
+
 if (problems.length) {
   console.error('Project board: ' + problems.length + ' problem(s)');
   for (const p of problems) console.error('  - ' + p);
@@ -148,6 +213,8 @@ const summary = [
   `M1 current step: ${current ? `${current.title} [${current.status}, ${current.owner}]` : 'complete'}`,
   `Open decisions: ${board.decisions.filter((d) => d.status === 'open').map((d) => d.title).join('; ') || 'none'}`,
   `Open risks: ${board.risks.filter((r) => r.status === 'open').length}`,
+  `Claims: ${claims.map((c) => `${c.agent} on ${c.id} [${c.files.join(', ')}]`).join('; ') || 'none'}`,
+  ...(unclaimed.length ? [`Unclaimed active items (claim before editing their files): ${unclaimed.join(', ')}`] : []),
 ].join('\n');
 if (process.argv.includes('--check')) { console.log(summary + '\nValidation passed.'); process.exit(0); }
 
@@ -159,7 +226,9 @@ write('milestones', milestones);
 write('gates', gates);
 write('decisions', decisions);
 write('risks', risks);
+write('reviews', reviews);
+write('ownership', ownershipRows);
 fs.writeFileSync(path.join(out, 'summary.txt'), summary + '\n');
 // The dashboard stores its page as a document {text}; page.html is its source.
 fs.writeFileSync(path.join(out, 'page.json'), JSON.stringify({ text: fs.readFileSync(path.join(root, 'tools/roadmap_board/page.html'), 'utf8') }));
-console.log(summary + `\nWrote ${['capabilities', 'milestones', 'gates', 'decisions', 'risks'].map((n) => n + '.json').join(', ')} to tools/roadmap_board/out/`);
+console.log(summary + `\nWrote ${['capabilities', 'milestones', 'gates', 'decisions', 'risks', 'reviews', 'ownership'].map((n) => n + '.json').join(', ')} to tools/roadmap_board/out/`);
