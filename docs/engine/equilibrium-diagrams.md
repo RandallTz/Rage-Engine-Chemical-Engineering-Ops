@@ -1,6 +1,6 @@
 # The engine's T–xy / P–xy equilibrium diagrams (D0–D3 and the physics part of D5)
 
-Backend implementation of [docs/history/frontend/plan-diagrams-equilibrium-engine.md](../history/frontend/plan-diagrams-equilibrium-engine.md). D4 (reading and view) and the integration belong to Codex. The frontend, `/laboratorio` and `thermodynamics/proveedor.py` were not touched. No commit or push. **Reload:** restart the service (`uvicorn backend.main:app`); `backend/main.py` only receives the two new routes (additive).
+Backend implementation of [docs/history/frontend/plan-diagrams-equilibrium-engine.md](../history/frontend/plan-diagrams-equilibrium-engine.md). The original backend delivery left the frontend, `/laboratorio` and `thermodynamics/proveedor.py` untouched. The subsequent D4 reader/view integration is recorded in §6b below. No commit or push. **Reload:** restart the service (`uvicorn backend.main:app`); `backend/main.py` only receives the two new routes (additive).
 
 ## 1. What the frontend has to do
 
@@ -124,7 +124,7 @@ Others: `node tests/verificar_contrato_diagramas.mjs` compiles the 11 example pa
 `core/coexistencia_ll.py` is the shared operation; like the L–V one it uses only the package's public interface and
 contains no activity formula. The response gains the optional block `liquidoLiquido` (contract type
 `LiquidoLiquidoDiagrama`, additive in revision 1: a revision-1 reader ignores it, and `frontend/verificar_diagramas_equilibrio.mjs`
-passes unchanged). Drawing it in the interface is D4 work (Codex).
+passes unchanged). D4 now reads and draws it in the existing diagram view (Codex; 23 October 2026).
 
 - **Seeds.** On a grid of the free condition (24 temperatures in Txy, 12 pressures in Pxy), a single-liquid reference
   at 13 compositions is tested with the tangent plane; only where another liquid lowers it is the package's certified
@@ -152,9 +152,15 @@ just below and vapor just above; a Pxy slice at 360 K gives P* = 77,345 Pa and t
 UNIFAC original and Dortmund water–1-butanol (three-phase 366.18 K and 365.89 K), water–benzene (342.33 K; water-rich
 liquid with 1.75e-3 benzene) and water–ethyl acetate, Txy and Pxy, both profiles: every pair certified, 0.8–4.2 s.
 
+**D4 frontend delivery (Codex, 23 October 2026).** The strict reader validates the optional block before display: branch and point references, the fixed condition, normalized phase compositions, certificates, budgets and special-point identities. Missing blocks remain compatible. Each L–L branch is projected as two separate phase series, preserving backend point order and branch ends. The existing chart adds L–L critical stars and L–L–V triangles at the actual published compositions; uncertified critical candidates are not drawn as certified equilibrium. The other-component axis and display units change presentation only. No equilibrium, continuation or phase fractions are calculated in TypeScript, and no branches are joined across their ends.
+
+The existing view displays diagrams even when only certified L–L points are available, exposes their certificates/ending diagnostics and retains the block in JSON download and cache. Its CSV download opts into phase-labelled rows for L–V, both liquids, critical points and all three L–L–V compositions. The legacy `csvDiagrama(response)` default is unchanged; the extended phase export is explicit (`csvDiagrama(response,true)`).
+
+Verification: `node frontend/verificar_liquido_liquido.mjs` passes 504 checks against actual Txy/Pxy service publications and the independent analytic Margules critical point (330 K, composition 1/2), including malformed-block rejection, phase/branch identity, other-component projection, display units and export. The existing `frontend/verificar_diagramas_equilibrio.mjs` passes 2,453 checks. TypeScript and scoped ESLint pass. The isolated browser imports the existing water–butanol regression document through the normal product UI, runs a one-second trajectory and displays the actual Txy/Pxy L–L branches and three-phase markers (44/31 certified pairs); screenshot `.tmp/f8-d4-browser.png`. The backend thermodynamics and optional-block protocol are unchanged. The broader F8 continuation, ternary and multicomponent work remains independently scoped.
+
 ## 6c. Ternary liquid–liquid and multicomponent line slices (F8, 23 October 2026)
 
-Core operations only; no HTTP route or contract yet (see §7).
+Core operations; their HTTP routes, contract and view are §6d.
 
 **`core/ternary_liquid_liquid.py`** (fixed T and P). A liquid is x = softmax(z0, z1, 0), so every species stays
 positive and traces are represented. A tie line (za0, za1, zb0, zb1) satisfies three μ equalities: a curve,
@@ -191,16 +197,68 @@ band: at benzene–water–ethanol, 300 K, the single liquid has tm = −4.4e-11
 lowers G by 2e-11 RT. Both statements are within the declared tolerance; a diagram near a critical point should
 take the traced tie lines, not that flash.
 
+## 6d. Ternary and composition-line routes, contract and view (F8, 24 October 2026)
+
+`backend/multicomponent_diagrams.py` publishes the two §6c operations over HTTP as their own protocol (revision 1;
+the binary protocol is unchanged). Routes (`backend/routes_engine.py`, additive):
+`GET /motor/termodinamica/diagramas/multicomponent/capabilities`,
+`POST /motor/termodinamica/diagramas/ternary-liquid-liquid` and `POST /motor/termodinamica/diagramas/composition-line`.
+Types: the "Multicomponent diagrams" section of `docs/contratos/contratoDiagramasEquilibrio.ts` (identical copy in
+`frontend/app/motor/`).
+
+- **Requests.** `components` (exactly three for the ternary; two or more for a line), `model` (never replaced),
+  `condition` `{T, P}` with units, `resolution` (`exploratoria` | `refinada`), optional `expectedModelFingerprint` and
+  `pureData`; the line adds `line: {start, end}`, one mole fraction per component ID. Extra fields are rejected.
+- **Ternary response.** `branches` (tie-line IDs in continuation order and the two `ends`, each naming a special point
+  or an incidence), `tieLines` (liquid-a and liquid-b compositions by component ID, certificate, origin),
+  `specialPoints` (`plait_point` with its criticality residual and stability; `binary_edge` with the absent component
+  and its certified pair; `three_phase` with both liquids and the vapor), `incidences`, `budget`, `evidence`, `method`,
+  identity (`modelFingerprint`, `querySignature`) and `diagnostics`. Status `complete`, `partial` (an incidence),
+  `no_coexistence` (no seed split on the profile's lattice; not a proof of miscibility) or a rejection.
+- **Line response.** `rows` ordered by l (feed, every phase with its fraction and composition, `phaseSet`,
+  `certified` and its checks), `boundaries` (`lInterval` from the bisection and the closed states at its ends),
+  `failures` and `completion`.
+- **Rejections** (status 200, diagnostic with path): wrong species count (`MOTOR_DIAG_COMPONENTES_NO_SOPORTADO`),
+  package or version without diagrams (`MOTOR_DIAG_PAQUETE_NO_DISPONIBLE`), species without data or parameters, T or
+  P outside the package's domain (`MOTOR_DIAG_FUERA_DE_DOMINIO` at `condition.T` / `condition.P`), units, null data,
+  revision, extra fields, fingerprint mismatch and, for a line, ends not covering every component, not summing to 1,
+  or a component absent from both ends (`MOTOR_DIAG_COMPONENTE_AUSENTE`; it is never dropped).
+- **View.** In the Results equilibrium view a volume with three or more components now opens
+  `MulticomponentEquilibrium.tsx` instead of the binary-only notice: the ternary diagram (three components) and a
+  composition line (any count), at the sample's T and P or a prescribed condition; the line starts at the sample's
+  published feed. `multicomponentDiagrams.ts` is the strict reader (references, normalization, certificate statuses
+  consistent with their own residuals and stability, branch ends, ordered rows, phase-fraction sums, status
+  consistency) and selects published compositions; `TernaryLiquidLiquidChart.tsx` draws them in plain SVG: every
+  certified tie line, the liquid-a and liquid-b binodal sides as separate lines in tie-line order (never joined across
+  an end or the plait point), certified plait points, binary-edge pairs and L–L–V triangles, and, when the line has
+  the same T, P and fingerprint, its boundary feeds. The line chart draws one marker per published phase of each
+  certified row (rows are not joined; phase identity is not tracked between rows) and each boundary as its bisection
+  interval. No equilibrium, projection of a phase or normalization is computed in TypeScript.
+
+Evidence. `python tests/test_multicomponent_diagram_route.py` (14 tests, about 1 min, through the ASGI route): every
+tie line of an analytic Margules liquid satisfies the equal-activity condition written in the test within 1e-9, its
+plait point is (1/3, 1/3, 1/3) within 1e-6 and its edge pair satisfies the binary Margules binodal within 1e-10;
+benzene–water–ethanol (UNIFAC original, 1 atm): 175 tie lines at 300 K with equal x_i γ_i from the liquid model
+directly within 1e-9, equal to the TP flash at mid-line feeds within 1e-7, plait point and binary edge certified and
+the edge pair equal to the binary branch within 1e-8; at 340 K the L–L–V triangle equals the TP flash of its centroid
+within 1e-7; a line along a published tie line has its boundaries at the tie-line ends within 1e-8 in l; 17 structured
+rejections; strict JSON. `node frontend/verify_multicomponent_diagrams.mjs` (1,079 checks): actual service
+publications (300 K and 340 K, two vertex orders, the analytic Margules publication, a line along a tie line and a
+four-species line) through the reader and a server render of the real SVG charts; every mark is at the published
+composition under the verifier's own barycentric map within 2e-3 px, each binodal side joins its own liquids in
+tie-line order, special marks appear exactly when certified, 11 malformed or contradictory ternary and 6 line
+publications per case are rejected, a rejection draws nothing, the view mounts, and the client modules contain no thermodynamic computation.
+
 ## 7. Pending limits
 
 - Binaries only. A three-component sheet receives `MOTOR_DIAG_COMPONENTES_NO_SOPORTADO`; no component is removed or renormalized.
-- Ternary L–L regions, plait points, L–L–V triangles and multicomponent line slices are core operations without an HTTP route or contract; the binary L–L block is published. Three-liquid regions in a ternary are not traced (line slices do detect them). SLE regions are not plotted.
+- Ternary L–L diagrams and composition-line slices have routes, a contract and a view (§6d). Three-liquid regions in a ternary are not traced (line slices do detect them). SLE regions are not plotted. The view has not been exercised against a live backend in a browser; its verifier renders the real components on the server.
 - The L–V continuation is in the liquid's x; a fold in x would show up as a declared failure or gap. The L–L branch uses arc length, and a binary pair branch turns only at its critical point, where it ends.
 - Stability is a grid test with refinement, not a proof of the global minimum.
 - Critical region: excluded by the packages (T ≤ 0.9 Tc), never extrapolated. Ideal vapor up to 5 bar.
 - `agua-iapws95` and ice are single-component: their diagram is P–T (the existing route).
 - There are no persistent jobs or streamed progress: the measured slices take under 3 s. The budget is cooperative between points; aborting the HTTP request does not stop the calculation in progress.
-- D4 (reader, view, markers, cache, export) and end-to-end validation with the interface belong to Codex.
+- D4 (reader, view, markers, cache, export) of the binary diagrams belongs to Codex; the multicomponent view (§6d) was delivered by Claude under the F8 claim.
 
 ## 8. Files
 
