@@ -66,9 +66,10 @@ def _compilation_report(model):
                          "finalTime": system.tf, "physicalFinalTime": system.tf},
                 "matrix": "BDF estimates its Jacobian numerically; RK45 does not assemble a global solve matrix.",
                 **provenance}
-    if model['estudio']['metodoSolicitado'] not in (None, 'rk45'):
-        raise NoSoportado('The nested-equilibrium compiler currently supports RK45 only. Select RK45 or use a supported explicit formulation.')
+    from .compilador import temporal_method
     system = compilar(model)
+    method = temporal_method(model['estudio']['metodoSolicitado'])
+    system.inicial()
     variables = []
     for volume in system.vols:
         variables.extend({"id": f"{volume.id}.n.{component}", "sourceId": f"{volume.id}.n.{component}",
@@ -80,12 +81,12 @@ def _compilation_report(model):
     final_time = system.dato(model["estudio"]["tiempoId"])(0.0)
     from .presentation import compiled_balance_equations
     return {"format": "rage.compilation", "version": 1, "formulation": "physical", "sourceModelId": model["id"],
-            "sourceRevision": None, "signature": _signature(model), "method": "RK45", "closureStrategy": "nested_equilibrium",
+            "sourceRevision": None, "signature": _signature(model), "method": method, "closureStrategy": "nested_equilibrium",
             "variables": variables, "equations": [], "domains": [], "conditions": [],
             "systemEquations": compiled_balance_equations(model),
             "relations": relaciones(model), "direct": [], "inverse": [], "eliminatedVariables": [],
-            "auxiliaryStates": system.tam - system.n_estado,
+            "auxiliaryStates": len(system.componentes) + 2 + 2*len(system.vols),
             "time": {"id": "t", "sourceId": "t", "scaleSI": 1, "finalTime": final_time, "physicalFinalTime": final_time},
-            "matrix": "UV/PH closures are solved inside each RHS evaluation. The outer RK45 method has no global solve matrix.",
+            "matrix": "UV/PH closures are solved inside each RHS evaluation. BDF estimates its Jacobian numerically; RK45 has no global solve matrix.",
             "limits": "Thermodynamic assemblies do not yet expose explicit equation trees. Relations describe their structural provenance.",
             **provenance}

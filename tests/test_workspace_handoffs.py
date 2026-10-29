@@ -48,7 +48,7 @@ class WorkspaceHandoffTests(unittest.TestCase):
     def test_nested_method_capability_and_plan(self):
         report = compilation_report(example())
         self.assertEqual(report['method'], 'RK45')
-        self.assertEqual([(m['id'], m['available']) for m in report['strategy']['methods']], [('RK45', True), ('BDF', False)])
+        self.assertEqual([(m['id'], m['available']) for m in report['strategy']['methods']], [('RK45', True), ('BDF', True)])
         self.assertEqual([s['id'] for s in report['strategy']['steps']], ['initialization', 'partition', 'closure', 'balances', 'time-step', 'events', 'verification'])
         self.assertEqual([v['id'] for v in report['variables']], ['A.n.1', 'A.n.2', 'A.H'])
         self.assertIn('V_v', report['strategy']['steps'][3]['latex'])
@@ -72,7 +72,7 @@ class WorkspaceHandoffTests(unittest.TestCase):
     def test_requested_unsupported_method_is_not_silently_replaced(self):
         from core.compilador import NoSoportado
         model = example()
-        model['estudio']['metodoSolicitado'] = 'bdf'
+        model['estudio']['metodoSolicitado'] = 'euler_implicito'
         with self.assertRaises(NoSoportado):
             compilation_report(model)
 
@@ -81,7 +81,7 @@ class WorkspaceHandoffTests(unittest.TestCase):
         from core.compilador import compilar
         from core.paquetes_volumen import PaqueteMezcla
         model = example()
-        model['corrientes'][0].update(desde='A', hasta=None)
+        model['corrientes'][0].update(desde='A', hasta=None, extraccion={'A': {'tipo': 'mezcla_homogenea'}})
         model['intercambios'][0].update(desde='A', hasta=None)
         report = compilation_report(model)
         self.assertIn('=-', report['systemEquations'][0]['latex'])

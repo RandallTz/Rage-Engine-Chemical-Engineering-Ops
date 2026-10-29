@@ -32,6 +32,27 @@ class Drained:
 
 
 class StageStopTests(unittest.TestCase):
+    def test_expected_probe_failure_retains_the_accepted_prefix(self):
+        class ProbeFailure(Drained):
+            def firma(self, t, y):
+                if t > 0.2:
+                    raise RuntimeError('expected physical probe failure')
+                return None
+            def stop_from_exception(self, error):
+                return Detencion('physical_domain', str(error)) if isinstance(error, RuntimeError) else None
+        result = integrar(ProbeFailure(2), [2], 1, max_step=0.1)
+        self.assertEqual(result.detenida.codigo, 'physical_domain')
+        self.assertLessEqual(result.t_fin, 0.2)
+        self.assertGreater(result.t_fin, 0)
+        self.assertAlmostEqual(result.y_fin[0], 2-result.t_fin)
+
+    def test_unclassified_programming_failure_is_not_certified(self):
+        class Broken(Drained):
+            def firma(self, t, y):
+                raise KeyError('programming defect')
+        with self.assertRaises(KeyError):
+            integrar(Broken(2), [2], 1)
+
     def test_stop_is_located_within_the_step(self):
         for method in ("RK45", "BDF"):
             with self.subTest(method=method):

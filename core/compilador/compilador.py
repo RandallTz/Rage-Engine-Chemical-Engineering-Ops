@@ -44,6 +44,14 @@ class NoSoportado(Exception):
     pass
 
 
+class AdmissionError(NoSoportado):
+    """Located, expected input rejection shared by compilation and Solve."""
+    def __init__(self, code, message, path, *, native_code=None, diagnostics=None):
+        self.diagnostics = diagnostics or [{'code': code, 'message': message, 'path': path,
+                                            **({'nativeCode': native_code} if native_code else {})}]
+        super().__init__('; '.join(row['message'] for row in self.diagnostics))
+
+
 def temporal_method(requested):
     methods = {None: 'RK45', 'rk45': 'RK45', 'bdf': 'BDF'}
     if requested not in methods:
@@ -58,24 +66,47 @@ def temporal_method(requested):
 class _Dato:
     """Un dato del modelo como función del tiempo en SI, con su derivada."""
 
-    def __init__(self, d, ruta):
+    def __init__(self, d, ruta, expected_unit=None):
+        self.path = ruta
         texto, unidad = d["declaracion"]["texto"], d["declaracion"]["unidad"]
         if not texto.strip():
-            raise NoSoportado(f"{ruta}: dato pendiente")
+            raise AdmissionError('missing_data', 'A numerical datum is pending.', ruta, native_code='MOTOR_ENS_DATO_PENDIENTE')
         try:
             i = un.interpretar(unidad)
         except un.ErrorUnidad as e:
-            raise NoSoportado(f"{ruta}: {e}") from e
+            raise AdmissionError('incompatible_dimension', str(e), ruta, native_code='MOTOR_ENS_UNIDAD') from e
+        if expected_unit is not None and i['dimension'] != un.interpretar(expected_unit)['dimension']:
+            raise AdmissionError('incompatible_dimension',
+                f'{ruta}: the consuming role requires {expected_unit}, but the declared unit is {unidad}.',
+                ruta, native_code='MOTOR_ENS_UNIDAD')
         self.factor, self.desp = i["factor"], i["desplazamiento"]
-        self.arbol = ex.analizar(texto, ["t"])
-        self.derivada = ex.derivada(self.arbol, "t") if ex.depende_de(self.arbol, "t") else None
+        try:
+            self.arbol = ex.analizar(texto, ["t"])
+            self.derivada = ex.derivada(self.arbol, "t") if ex.depende_de(self.arbol, "t") else None
+        except ex.ErrorExpresion as error:
+            raise AdmissionError('invalid_data', str(error), ruta, native_code='MOTOR_ENS_EXPRESION') from error
         self.unidad = unidad
+        self(0.0)
 
     def __call__(self, t):
-        return self.factor * ex.evaluar(self.arbol, {"t": t}) + self.desp
+        try:
+            value = self.factor * ex.evaluar(self.arbol, {"t": t}) + self.desp
+            if not np.isfinite(value):
+                raise ex.ErrorExpresion('The evaluated datum is not finite.')
+            return value
+        except (ex.ErrorExpresion, ArithmeticError) as error:
+            raise AdmissionError('invalid_data', f'{self.path} at t={t}: {error}', self.path,
+                                 native_code='MOTOR_ENS_EXPRESION') from error
 
     def d_dt(self, t):
-        return 0.0 if self.derivada is None else self.factor * ex.evaluar(self.derivada, {"t": t})
+        try:
+            value = 0.0 if self.derivada is None else self.factor * ex.evaluar(self.derivada, {"t": t})
+            if not np.isfinite(value):
+                raise ex.ErrorExpresion('The required datum derivative is not finite.')
+            return value
+        except (ex.ErrorExpresion, ArithmeticError) as error:
+            raise AdmissionError('invalid_data', f'{self.path} derivative at t={t}: {error}', self.path,
+                                 native_code='MOTOR_ENS_EXPRESION') from error
 
 
 @dataclass
@@ -94,56 +125,19 @@ class SistemaCompilado:
     def __init__(self, modelo):
         self.modelo = leer_modelo_comun(modelo)
         m = self.modelo
+        from .admission import validate
+        self._cache_dato, closures = validate(m)
         self.relaciones = relaciones(m)
         self.datos = {k: d for k, d in m["datos"].items()}
-        self._cache_dato = {}
         self.componentes = [c["id"] for c in m["componentes"]]
         self.vols, k = [], 0
         for v in m["volumenes"]:
-            if v["termodinamica"]["tipo"] != "equilibrio":
-                raise NoSoportado(f"volumen {v['id']}: su estado es un supuesto ({v['termodinamica']['supuesto']}); el compilador necesita el cierre de equilibrio")
-            campo = v["supuestos"]["materia"].get("campo", {})
-            fm = v["supuestos"]["materia"]
-            if fm.get("vista") != "cantidad" or fm.get("cantidadVolumen"):
-                raise NoSoportado(f"Volume {v['id']}: this thermodynamic compiler requires total component inventories; spatial and volumetric formulations need their own Transform path.")
-            if fm.get("sinAcumulacion") or fm.get("fija") and campo.get("estacionario"):
-                raise NoSoportado(f"Volume {v['id']}: zero accumulation produces algebraic constraints; a steady-state/DAE solver is not connected yet.")
-            if not fm.get("restoImpermeable"):
-                raise NoSoportado(f"Volume {v['id']}: an unclosed boundary remainder needs a material flux law; this compiler accepts exchange through declared streams only.")
-            if fm.get("fija") != (v["frontera"]["tipo"] == "rigida"):
-                raise NoSoportado(f"Volume {v['id']}: the material boundary assumption disagrees with the mechanical boundary.")
-            if campo.get("sinConveccion") and any(v['id'] in (s['desde'], s['hasta']) for s in m['corrientes']):
-                raise NoSoportado(f"Volume {v['id']}: the declared streams require convective transport; a moving-boundary sweep or selective transfer needs its own supported law.")
-            if not (campo.get("sinReaccion") or (campo.get("sinGeneracion") and campo.get("sinConsumo"))):
-                raise NoSoportado(f"volumen {v['id']}: fuentes materiales (reacción): pendientes del motor de constitutivas")
-            if not (v["balances"]["materia"] and v["balances"]["energia"]) or v["balances"]["momento"]:
-                raise NoSoportado(f"volumen {v['id']}: esta versión ejecuta materia + energía, sin momento")
-            fe = v["supuestos"]["energia"] or {}
-            policy = v["termodinamica"]["politica"]
-            if fe.get("modelo") == "u_lineal" or fe.get("densidadConstante"):
-                raise NoSoportado(f"Volume {v['id']}: a manual caloric/density law conflicts with the selected equilibrium package.")
-            if bool(fe.get("monofasico")) != (policy["cantidad"] == "monofasico") or bool(fe.get("sinCambioFase")) != (policy["cambioInterno"] == "prohibido"):
-                raise NoSoportado(f"Volume {v['id']}: thermodynamic phase assumptions disagree with the active closure policy.")
-            if fe.get("forma") != "total" or not all(fe.get(key) is True for key in (
-                    "uniforme", "sinCinetica", "separarPresion", "sinTrabajoViscoso", "sinFuerzasVolumen", "sinFuenteVolumetrica")) or fe.get("trabajoTotalHeredado"):
-                raise NoSoportado(f"Volume {v['id']}: the equilibrium compiler needs a uniform total first law with explicit pressure work and negligible kinetic, viscous, body-force and volumetric-source terms.")
-            if fe.get("estacionario") or fe.get("sinAcumulacionTotal"):
-                raise NoSoportado(f"Volume {v['id']}: zero energy accumulation requires a steady-state/DAE method.")
-            heat_links = [q for q in m["intercambios"] if v["id"] in (q["desde"], q["hasta"])]
-            if (fe.get("adiabatico") or fe.get("sinConduccionLocal")) and heat_links:
-                raise NoSoportado(f"Volume {v['id']}: a zero-heat assumption conflicts with a declared heat exchange.")
-            if not heat_links and not (fe.get("adiabatico") or fe.get("sinConduccionLocal")):
-                raise NoSoportado(f"Volume {v['id']}: declare a heat exchange (including an explicit zero) or an adiabatic boundary.")
             rigida = v["frontera"]["tipo"] == "rigida"
-            if rigida and (fe.get("presionPrescrita") or v["frontera"].get("presionRestriccionId")):
-                raise NoSoportado(f"Volume {v['id']}: the common UV compiler does not enforce an additional prescribed-pressure constraint on a rigid boundary.")
-            if not rigida and (fe.get("presionUniforme") is not True or fe.get("presionPrescrita") is False):
-                raise NoSoportado(f"Volume {v['id']}: a prescribed-pressure boundary requires uniform prescribed pressure in the first law.")
             nc = len(v["componenteIds"])
             self.vols.append(_Vol(v["id"], list(v["componenteIds"]), rigida,
                                   None if rigida else self.dato(v["frontera"]["presionId"]),
                                   self.dato(v["frontera"]["datoId"]) if rigida else None,
-                                  CierreVolumen(m, v["id"]), slice(k, k + nc), k + nc))
+                                  closures[v['id']], slice(k, k + nc), k + nc))
             k += nc + 1
         self.n_estado = k
         self.i_aux_n = {c: k + j for j, c in enumerate(self.componentes)}
@@ -185,13 +179,27 @@ class SistemaCompilado:
 
     def dato(self, id_):
         if id_ not in self._cache_dato:
-            self._cache_dato[id_] = _Dato(self.datos[id_], f"datos.{id_}")
+            raise AdmissionError('unbound_data_role', 'No admitted physical role for datum: '+id_, 'datos.'+id_)
         return self._cache_dato[id_]
+
+    def stop_from_exception(self, error):
+        """Only expected physical/data failures become a structured stop."""
+        from core import agua_iapws95
+        if isinstance(error, (FueraDeAlcance, agua_iapws95.FueraDeAlcance)):
+            return Detencion(error.motivo, str(error))
+        if isinstance(error, AdmissionError):
+            return Detencion(error.diagnostics[0]['code'], str(error))
+        if isinstance(error, Detencion):
+            return error
+        return None
 
     # --- estado inicial -------------------------------------------------------------
     def inicial(self):
         y = np.zeros(self.tam)
-        for v, mv in zip(self.vols, self.modelo["volumenes"]):
+        from core import agua_iapws95, paquetes_volumen
+        self.initialization = {}
+        errors = []
+        for index, (v, mv) in enumerate(zip(self.vols, self.modelo["volumenes"])):
             ini = mv["inicial"]
             cant = ini["cantidades"]
             M = v.cierre.M
@@ -201,13 +209,32 @@ class SistemaCompilado:
             y[v.i_n] = n
             en = ini["energia"]
             val = self.dato(en["datoId"])(0.0)
-            if en["tipo"] == "T":
-                e = v.cierre.estado(n, "TV", val, v.dato_V(0.0), rapido=False) if v.rigida else v.cierre.estado(n, "TP", val, v.dato_P(0.0), rapido=False)
+            try:
+                def evaluate(specification, a, b, amounts):
+                    if specification != 'UP':
+                        return v.cierre.estado(amounts, specification, a, b, rapido=False)
+                    if v.cierre.agua:
+                        return paquetes_volumen.PaqueteAgua(capa._cas(self.modelo, mv)).estado(
+                            'UP', a, b, amounts, certificar=True)
+                    return v.cierre.sis.equilibrio_UP(a, b, amounts)
+                from .initialization import initialize_state
+                e = initialize_state(n, en['tipo'], val, v.rigida,
+                                     v.dato_V(0.0) if v.rigida else v.dato_P(0.0), evaluate)
                 y[v.i_E] = e.U if v.rigida else e.H
-            elif v.rigida:
-                y[v.i_E] = val
-            else:
-                raise NoSoportado(f"volumen {v.id}: U inicial con presión prescrita: pendiente (declara T inicial)")
+                phases = tuple(sorted(f.id for f in e.fases))
+                reason = self.admite(((v.id, phases),))
+                if reason:
+                    raise FueraDeAlcance('politica_incumplida', reason)
+                self.initialization[v.id] = {'status': 'compatible', 'state': e, 'amounts': n.copy()}
+            except (FueraDeAlcance, agua_iapws95.FueraDeAlcance) as error:
+                status = {'saturacion': 'pendiente', 'region_critica': 'no_soportada',
+                          'no_soportado': 'no_soportada'}.get(error.motivo, 'incompatible')
+                self.initialization[v.id] = {'status': status, 'state': None}
+                errors.append({'code': 'initialization_'+error.motivo, 'message': str(error),
+                               'path': f'volumenes[{index}].inicial', 'initializationStatus': status,
+                               'nativeCode': 'MOTOR_ENS_INICIAL_'+error.motivo.upper()})
+        if errors:
+            raise AdmissionError('', '', '', diagnostics=errors)
         return y
 
     # --- evaluación -------------------------------------------------------------------
@@ -253,6 +280,7 @@ class SistemaCompilado:
                 margins.append(float(appearance) if appearance is not None and np.isfinite(appearance) and appearance > 0 else None)
                 amounts = [phase.n for phase in state.fases]
                 margins.append(min(amounts)/sum(amounts) if len(amounts) > 1 else None)
+            self._event_context = (t, states)
             return tuple((owner, state.firma) for owner, state in states.items()), tuple(margins)
         finally:
             for volume, seed in zip(self.vols, seeds):
@@ -260,7 +288,14 @@ class SistemaCompilado:
 
     def _donante_volumen(self, s, v, e):
         """(x, h, M) de lo que sale de un volumen: mezcla o una fase."""
-        ext = (s.get("extraccion") or {}).get(v.id, {"tipo": "mezcla_homogenea"})
+        ext = (s.get("extraccion") or {}).get(v.id)
+        if ext is None:
+            # Under an explicit monophase policy, the sole phase is the whole
+            # mixture. Multiphase extraction is never inferred from a default.
+            if self.politicas[v.id]['cantidad'] != 'monofasico':
+                raise AdmissionError('missing_extraction', 'Declare extraction for the actual donor.',
+                                     f'corrientes.{s["id"]}.extraccion.{v.id}', native_code='MOTOR_ENS_EXTRACCION')
+            ext = {'tipo': 'mezcla_homogenea'}
         if ext["tipo"] == "mezcla_homogenea":
             nt = sum(f.n for f in e.fases)
             x = sum(f.n * f.x for f in e.fases) / nt
@@ -416,33 +451,33 @@ def resolver(modelo):
     tf = sis.dato(est["tiempoId"])(0.0)
     muestras = int(est["muestras"])
     y0 = sis.inicial()
-    sis.firma_inicial = sis.event_state(0.0, y0)[0]
+    try:
+        sis.firma_inicial = sis.event_state(0.0, y0)[0]
+    except Exception as error:
+        stop = sis.stop_from_exception(error)
+        if stop is None:
+            raise
+        raise AdmissionError('initialization_'+stop.codigo, stop.mensaje, 'volumenes',
+                             native_code='MOTOR_ENS_INICIAL_'+stop.codigo.upper()) from error
     motivo = sis.admite(sis.firma_inicial)
     if motivo:
         raise NoSoportado(f"el estado inicial incumple la política de fases: {motivo}")
-    atol = np.full(sis.tam, est["atol"]["cantidad"])
-    for v in sis.vols:
-        atol[v.i_E] = est["atol"].get("energia", 1e-6)
-    atol[sis.i_aux_E] = est["atol"].get("energia", 1e-6)
-    tray = integrar(sis, y0, tf, rtol=est["rtol"], atol=atol, max_step=tf / (muestras - 1), metodo=sis.metodo)
-    t_fin = tray.t_fin
-    ts = [x for x in np.linspace(0.0, tf, muestras) if x <= t_fin * (1 + 1e-12)]
-    ts = sorted(set(ts) | {e[1] for e in tray.eventos if e[1] <= t_fin} | {t_fin})
-    filas = [tray.y(t) for t in ts]
-    return _publicar(sis, ts, filas, tray, y0)
+    from .network_results import execute
+    return execute(sis, y0, tf, muestras)
 
 
-def _publicar(sis, ts, filas, tray, y0):
+def _publicar(sis, ts, filas, tray, y0, certified=None):
     m = sis.modelo
     series = []
     datos = {}
     for v in sis.vols:
         p = f"volumen.{v.id}"
-        cert = []
-        for t, y in zip(ts, filas):
-            n = {c: float(y[v.i_n][k]) for k, c in enumerate(v.comp)}
-            espec = ("UV", float(y[v.i_E]), v.dato_V(t)) if v.rigida else ("PH", v.dato_P(t), float(y[v.i_E]))
-            cert.append(capa.cierre(m, v.id, n, espec))
+        cert = certified[v.id] if certified is not None else []
+        if certified is None:
+            for t, y in zip(ts, filas):
+                n = {c: float(y[v.i_n][k]) for k, c in enumerate(v.comp)}
+                espec = ("UV", float(y[v.i_E]), v.dato_V(t)) if v.rigida else ("PH", v.dato_P(t), float(y[v.i_E]))
+                cert.append(capa.cierre(m, v.id, n, espec))
         for k, c in enumerate(v.comp):
             series.append(serie(f"{p}.n.{c}", f"n {c}", "mol", ["t"], [float(y[v.i_n][k]) for y in filas], propietarioId=f"volumen:{v.id}", componenteId=c))
         for clave, unidad in (("T", "K"), ("P", "Pa"), ("V", "m^3"), ("H", "J"), ("U", "J")):
