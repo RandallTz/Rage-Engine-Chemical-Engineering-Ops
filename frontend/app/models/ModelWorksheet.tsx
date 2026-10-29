@@ -9,6 +9,7 @@ import {usePhysicalModel} from './DynamicModelDefinition';
 import {EquationWorkbenchProvider,EquationOperationControls,EquationSystemDevelopment} from './EquationWorkbenchPanel';
 import ModelDomainControls from './ModelDomainControls';
 import ModelReadiness from './ModelReadiness';
+import {ModelAssessmentText} from './AssessmentText';
 import ui from './equationWorkbench.module.css';
 
 const ConfigurationContext=createContext<{open:boolean;content:ReactNode}|null>(null);
@@ -38,7 +39,7 @@ export default function ModelWorksheet({family,label,assumptions,variables,setti
   const equationFamily=family==='materia'?'matter':family==='momento'?'momentum':family==='energia'?'energy':'thermodynamics';
   const aria=family==='materia'?'Equation assumptions':family==='energia'?'Energy assumptions':family==='termodinamica'?'Thermodynamic assumptions':'Momentum assumptions';
   return <EquationWorkbenchProvider family={equationFamily}><div className={styles.layout} data-model-worksheet="canonical" data-family={family}>
-    <section className={styles.equations} aria-label={label}>{typed?<EquationSystemDevelopment/>:children}{!typed&&<><MomentumCoupling family={family}/><DynamicInventoryDevelopment family={family}/></>}</section>
+    <section className={styles.equations} aria-label={label}>{physicalModel&&<ModelAssessmentText model={physicalModel}/>} {typed?<EquationSystemDevelopment/>:children}{!typed&&<><MomentumCoupling family={family}/><DynamicInventoryDevelopment family={family}/></>}</section>
     <aside className={`${styles.assumptions} ${styles.operationsPanel}`} aria-label={aria}>
       <header><div><h2>Assumptions</h2><p className={styles.groupHint}>{physicalModel?.ensamblaje?.volumenes.find(v=>v.id===(physicalModel.volumenActivo??physicalModel.ensamblaje?.volumenes[0]?.id))?.nombre??'Selected physical region'} · {equationFamily}</p><p className={styles.groupHint}>Changes apply to this region and family. Viewing equations does not change the model.</p></div></header>
       <ModelReadiness/>

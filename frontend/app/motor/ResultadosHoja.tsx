@@ -5,7 +5,9 @@ import {useEffect,useState} from 'react';
 import Link from 'next/link';
 import {useHojasMotor} from './useHojasMotor';
 import {guardarHoja} from './hojasMotor';
-import {leerResultadoMotor} from './resultadosMotor';
+import {leerResultadoMotor,loadRejectedAttempt,type RejectedAttempt} from './resultadosMotor';
+import AssessmentText from '../models/AssessmentText';
+import {ModelDiagnosticError} from '../../motores/modelo/assessment';
 import {firmaHoja,formulacionHoja} from './modeloHojaMotor';
 import type {ResultadoMotor} from './modeloNumerico';
 import {datosGraficasMotor} from './datosGraficasMotor';
@@ -24,14 +26,20 @@ const num=formatearNumeroMotor;
 export default function ResultadosHoja({id}:{id:string}){
   const hojas=useHojasMotor(),h=hojas.find(h=>h.id===id),[resultado,setResultado]=useState<ResultadoMotor|undefined>(),[error,setError]=useState(''),[vista,setVista]=useState<'graficas'|'tabla'|'tecnico'|'equilibrio'>('graficas'),[equilibrioAbierto,setEquilibrioAbierto]=useState(false);
   const ref=h?.resultadoRef?.firma;
+  const signature=h?firmaHoja(h):'';
+  const [attempt,setAttempt]=useState<RejectedAttempt|undefined>();
+  useEffect(()=>{let active=true;if(signature)loadRejectedAttempt(id,signature).then(value=>{if(active)setAttempt(value);}).catch(error=>{if(active)setError((error as Error).message);});return()=>{active=false;};},[id,signature]);
+  const currentAttempt=attempt?.modelSignature===signature&&attempt.modelId===id?attempt:undefined;
+  const rejection=currentAttempt?<><p>Rejected {currentAttempt.operation} attempt · {currentAttempt.createdAt}</p><p role="alert">{currentAttempt.message}</p><AssessmentText error={new ModelDiagnosticError(currentAttempt.message,currentAttempt.httpStatus,currentAttempt.detail)}/></>:null;
   useEffect(()=>{let vigente=true;if(ref)leerResultadoMotor(id,ref).then(r=>{if(r){validarResultadoDinamico(r);validarResultadoV2(r);}if(vigente){setResultado(r);if(!r)setError("The saved result is unavailable. Run the model again.");}}).catch(e=>{if(vigente){setResultado(undefined);setError((e as Error).message);}});return()=>{vigente=false;};},[id,ref]);
   if(!h)return <div className={styles.empty}><h1>Open a model</h1><Link href="/motor/hojas">Browse models</Link></div>;
   const f=formulacionHoja(h),r=resultado??h.resultado;
-  if(!ref&&!h.resultado||ref&&ref!==firmaHoja(h)||r&&r.firma!==firmaHoja(h))return <div className={styles.page}><NavegacionHoja id={id} actual="resultados"/><div className={styles.empty}><h1>No current results</h1><Link href={`/motor/hojas/${id}/resolver`} className={styles.primary}>Complete data and solve</Link></div></div>;
-  if(!r)return <div className={styles.page}><NavegacionHoja id={id} actual="resultados"/>{error?<div role="alert" className={styles.error}>{error}<Link href={`/motor/hojas/${id}/resolver`}>Return to Solve</Link></div>:<div className={styles.empty}>Loading results…</div>}</div>;
+  if(!ref&&!h.resultado||ref&&ref!==firmaHoja(h)||r&&r.firma!==firmaHoja(h))return <div className={styles.page}><NavegacionHoja id={id} actual="resultados"/><div className={styles.empty}><h1>No current results</h1>{error&&<p role="alert">{error}</p>}{rejection}<Link href={`/motor/hojas/${id}/resolver`} className={styles.primary}>Complete data and solve</Link></div></div>;
+  if(!r)return <div className={styles.page}><NavegacionHoja id={id} actual="resultados"/>{rejection}{error?<div role="alert" className={styles.error}>{error}<Link href={`/motor/hojas/${id}/resolver`}>Return to Solve</Link></div>:<div className={styles.empty}>Loading results…</div>}</div>;
   const datos=datosGraficasMotor(h,r,'tiempo'),columnas=datos.variables.filter(v=>!!r.seriesEvaluadas||v.id==='t'||v.id.startsWith('m_')||v.id.startsWith('rho_')||v.id.startsWith('prom_')||v.id.startsWith('carga_')||v.id==='V');
   function exportar(){if(!r)return;let csv='';if(r.modo==='1d'){csv='t [s],x [m],componente,rho [kg/m3]\n';r.tiempos.forEach((t,k)=>r.x.forEach((x,j)=>r.componentes.forEach((s,i)=>{csv+=`${t},${x},"${s.nombre.replaceAll('"','""')}",${r.valores[k][i][j]}\n`;})));}else{csv=columnas.map(v=>`"${v.nombre.replaceAll('"','""')} [${nombreUnidad(v.unidad)}]"`).join(',')+'\n'+datos.filas.map(f=>columnas.map(v=>Number.isFinite(f[v.id])?f[v.id]:'').join(',')).join('\n');}const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='resultado-motor.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
   return <div className={`${styles.page} ${styles.resultsPage}`}><NavegacionHoja id={id} actual="resultados"/><header className={styles.heading}><div><span className={styles.eyebrow}>{h.nombre} · {r.modo==='1d'?"1D + time":"Time only"}</span><h1>Results</h1></div><button onClick={exportar}>Download CSV</button></header>{r.estado==='parcial'&&<div className={styles.error} role="status">{r.ensamblajeV2?r.mensaje:r.ensamblajeTermodinamico?mensajeResultadoDinamico(r.ensamblajeTermodinamico.respuesta):r.mensaje} · t = {num(r.tiempos.at(-1)!)} s</div>}{r.ensamblajeV2?.respuesta.resultados&&<AvisoCertificacionRed resultado={r.ensamblajeV2.respuesta.resultados} verDetalles={()=>setVista('tecnico')}/>}{error&&<div role="alert" className={styles.error}>{error}<button onClick={()=>setError('')}>Close</button></div>}<nav className={styles.tabs}><button aria-pressed={vista==='graficas'} onClick={()=>setVista('graficas')}>Charts</button><button aria-pressed={vista==='tabla'} onClick={()=>setVista('tabla')}>Table</button>{r.ensamblajeV2&&<button aria-pressed={vista==='equilibrio'} onClick={()=>{setEquilibrioAbierto(true);setVista('equilibrio');}}>Equilibrium</button>}<button aria-pressed={vista==='tecnico'} onClick={()=>setVista('tecnico')}>Numerical diagnostics</button></nav>
+    {rejection}<AssessmentText assessment={r.commonResult?.procedencia.assessment}/>
     {r.compilation&&<details className={styles.settings}><summary>Executed formulation and solution strategy</summary><CompilationSummary report={r.compilation}/></details>}
     {vista==='graficas'&&<TableroMotor h={h} r={r} guardar={(graficas,columnas)=>{try{guardarHoja({...h,graficas,columnas,tableroIniciado:true});return true;}catch{setError("The chart layout could not be saved.");return false;}}}/>}
     {vista==='tabla'&&<div className={styles.tableWrap}><table><thead><tr>{columnas.map(v=><th key={v.id}>{englishLabel(v.nombre)} [{nombreUnidad(v.unidad)}]</th>)}</tr></thead><tbody>{datos.filas.map((fila,i)=><tr key={i}>{columnas.map(v=><td key={v.id}>{num(fila[v.id])}</td>)}</tr>)}</tbody></table>{r.modo==='1d'&&<small className={styles.muted}>The CSV contains the complete profiles for every cell.</small>}</div>}

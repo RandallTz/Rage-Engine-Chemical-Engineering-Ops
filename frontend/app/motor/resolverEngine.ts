@@ -70,7 +70,7 @@ function transformedResult(model: HojaMotor, result: ConjuntoResultados): Result
     pasos: result.procedencia.pasos ?? 0, rechazados: result.procedencia.rechazos ?? 0,
     conservacion: fields.map((field, index) => states[index][end] - states[index][0] - values('budget.' + field)[end]),
     unidadEstado: imported.origen.estado === 'masa' ? 'kg' : imported.origen.estado === 'volumen' ? 'm3' : 'kg/m3',
-    firma: firmaHoja(model), compilation: report };
+    firma: firmaHoja(model), compilation: report, ...(result.procedencia.assessment?{commonResult:result}:{}) };
 }
 
 function idsEstados(h: HojaMotor, s: ReturnType<typeof compilarHoja>): string[] {
@@ -95,6 +95,7 @@ export function resultadoDesdeComun(h: HojaMotor, s: ReturnType<typeof compilarH
     estado: c.estado === 'parcial' ? 'parcial' : 'resuelto', mensaje,
     pasos: Number(c.procedencia.pasos ?? 0), rechazados: Number(c.procedencia.rechazos ?? 0),
     conservacion, unidadEstado: s.unidadEstado, firma: firmaHoja(h),
+    ...(c.procedencia.assessment?{commonResult:c}:{}),
     ...(c.procedencia.compilation ? { compilation: c.procedencia.compilation } : {}),
     ...(s.variablesNumericas ? { variablesNumericas: s.variablesNumericas } : {}),
     ...(s.evaluacionReglas ? { evaluacionReglas: s.evaluacionReglas } : {}),
@@ -132,5 +133,5 @@ export function derivedResult(model:HojaMotor,result:ConjuntoResultados):Resulta
   const times=result.ejes[0].valores;
   const series=result.series.map(row=>{if(!Array.isArray(row.valores)||row.valores.length!==times.length||row.valores.some(value=>typeof value!=='number'||!Number.isFinite(value)))throw new Error('Invalid published derived trajectory.');return {id:row.id,nombre:row.nombre,unidad:row.unidadSI,grupo:row.id.startsWith('budget.')?'Conservation budgets':row.id.startsWith('transformed.')?'Scaled quantities':'Physical quantities',valores:row.valores as number[]};});
   const states=report.variables.map(variable=>{const row=series.find(item=>item.id==='campo.'+variable.sourceId);if(!row)throw new Error('Missing retained physical state.');return row;});
-  return {version:1,motor:result.procedencia.motor,modo:'temporal',metodo:String(result.procedencia.metodo),tiempos:times,x:[],dx:1,valores:times.map((_,i)=>states.map(state=>[state.valores[i]])),componentes:states.map((state,i)=>({id:i+1,nombre:state.nombre,simbolo:report.variables[i].sourceId})),estado:result.estado==='resuelto'?'resuelto':'parcial',mensaje:String(result.procedencia.mensaje??''),pasos:Number(result.procedencia.pasos??0),rechazados:Number(result.procedencia.rechazos??0),conservacion:[],verificationChecks:result.verificaciones,unidadEstado:'mixta',firma:firmaHoja(model),seriesEvaluadas:series,compilation:report};
+  return {version:1,motor:result.procedencia.motor,modo:'temporal',metodo:String(result.procedencia.metodo),tiempos:times,x:[],dx:1,valores:times.map((_,i)=>states.map(state=>[state.valores[i]])),componentes:states.map((state,i)=>({id:i+1,nombre:state.nombre,simbolo:report.variables[i].sourceId})),estado:result.estado==='resuelto'?'resuelto':'parcial',mensaje:String(result.procedencia.mensaje??''),pasos:Number(result.procedencia.pasos??0),rechazados:Number(result.procedencia.rechazos??0),conservacion:[],verificationChecks:result.verificaciones,unidadEstado:'mixta',firma:firmaHoja(model),seriesEvaluadas:series,compilation:report,...(result.procedencia.assessment?{commonResult:result}:{})};
 }

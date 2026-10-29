@@ -33,7 +33,7 @@ from core.modelo import leer_modelo_comun
 from core.resultados import conjunto, eje, evento, serie
 from core.solvers import integrar
 
-from .compilador import NoSoportado, temporal_method
+from .compilador import AdmissionError, NoSoportado, temporal_method
 
 PREFIJO = "matematico."
 _FUNCIONES = {"exp": math.exp, "log": math.log, "sin": math.sin, "cos": math.cos, "tan": math.tan, "tanh": math.tanh,
@@ -63,20 +63,27 @@ def _dim_de_simbolo(s):
 def _valor_SI(dato, ruta, dim):
     texto, unidad = dato["declaracion"]["texto"], dato["declaracion"]["unidad"]
     if not texto.strip():
-        raise NoSoportado(f"{ruta}: dato pendiente")
+        raise AdmissionError('missing_data', 'A numerical datum is pending.', ruta)
     try:
         i = un.interpretar(unidad)
     except un.ErrorUnidad as e:
-        raise NoSoportado(f"{ruta}: {e}") from e
+        raise AdmissionError('incompatible_dimension', str(e), ruta) from e
     if i["dimension"] != dim:
-        raise NoSoportado(f"{ruta}: la unidad {unidad!r} ({un.dimension_texto(i['dimension'])}) no corresponde a la dimensión del símbolo ({un.dimension_texto(dim)})")
-    arbol = ex.analizar(texto, [])
-    return i["factor"] * ex.evaluar(arbol, {}) + i["desplazamiento"]
+        raise AdmissionError('incompatible_dimension', 'The datum unit does not match the symbol dimension: '+unidad, ruta)
+    try:
+        arbol = ex.analizar(texto, [])
+        value = i["factor"] * ex.evaluar(arbol, {}) + i["desplazamiento"]
+        if not math.isfinite(value):
+            raise ValueError('The datum must evaluate to a finite SI value.')
+        return value
+    except (ValueError, ArithmeticError) as error:
+        raise AdmissionError('invalid_data', str(error), ruta) from error
 
 
 class SistemaExplicito:
-    def __init__(self, modelo):
-        self.modelo = leer_modelo_comun(modelo)
+    def __init__(self, modelo, *, _structure_only=False):
+        from core.modelo.lector import leer_modelo_inspeccion
+        self.modelo = (leer_modelo_inspeccion if _structure_only else leer_modelo_comun)(modelo)
         mat = self.modelo["matematico"]
         if mat is None:
             raise NoSoportado("el modelo no tiene ecuaciones explícitas (matematico)")
@@ -100,7 +107,7 @@ class SistemaExplicito:
         for e in mat["ecuaciones"]:
             _simbolos(e["izquierda"], usados)
             _simbolos(e["derecha"], usados)
-        for c in mat["condiciones"]:
+        for c in ([] if _structure_only else mat["condiciones"]):
             _simbolos(c["ecuacion"]["izquierda"], usados)
             _simbolos(c["ecuacion"]["derecha"], usados)
         # A parameter used only by a reconstructed observable or a validity
@@ -121,7 +128,7 @@ class SistemaExplicito:
             if s["rol"] in ("parametro", "constante"):
                 clave = PREFIJO + sid
                 if clave not in self.modelo["datos"]:
-                    raise NoSoportado(f"datos.{clave}: falta el valor del {s['rol']} {sid}")
+                    raise AdmissionError('missing_data', 'Missing value for '+sid, 'datos.'+clave)
                 self.valores[sid] = _valor_SI(self.modelo["datos"][clave], f"datos.{clave}", _dim_de_simbolo(s))
         # Una ecuación diferencial de primer orden por variable de campo.
         self.f = [None] * len(self.campos)
@@ -135,24 +142,11 @@ class SistemaExplicito:
             if u not in self.indice:
                 raise NoSoportado(f"ecuación {e['id']}: {u} no es una variable de campo")
             if self.f[self.indice[u]] is not None:
-                raise NoSoportado(f"ecuación {e['id']}: {u} ya tiene su ecuación")
+                raise AdmissionError('STRUCTURE_CONFLICT', 'More than one differential equation declares the rate of '+u, 'matematico.ecuaciones')
             self.f[self.indice[u]] = self._compilar(otro, f"ecuación {e['id']}")
         faltan = [c for c, f in zip(self.campos, self.f) if f is None]
         if faltan:
-            raise NoSoportado("sin ecuación diferencial para: " + ", ".join(faltan))
-        self.g = [None] * len(self.campos)
-        for c in mat["condiciones"]:
-            if c["tipo"] != "inicial":
-                raise NoSoportado(f"condición {c['id']}: {c['tipo']} solo tiene sentido con coordenadas espaciales")
-            iz, de = c["ecuacion"]["izquierda"], c["ecuacion"]["derecha"]
-            if iz["tipo"] != "simbolo" or iz["id"] not in self.indice:
-                raise NoSoportado(f"condición {c['id']}: se espera variable = expresión")
-            if _usa_campos(de, self.indice) or _usa(de, self.tiempo):
-                raise NoSoportado(f"condición {c['id']}: el valor inicial no puede depender de variables")
-            self.g[self.indice[iz["id"]]] = self._compilar(de, f"condición {c['id']}")
-        faltan = [c for c, g in zip(self.campos, self.g) if g is None]
-        if faltan:
-            raise NoSoportado("falta la condición inicial de " + ", ".join(faltan))
+            raise AdmissionError('STRUCTURE_MISSING_RELATION', 'Missing differential equations for: '+', '.join(faltan), 'matematico.ecuaciones')
         # Dominio: variables no negativas y expresiones que deben mantenerse >= 0 (validez de un supuesto).
         self.dominios = []
         for r in self.modelo.get("restricciones", []):
@@ -184,6 +178,38 @@ class SistemaExplicito:
         a = self.modelo["estudio"]["atol"]
         self.atol = np.array([a.get("energia", a["cantidad"]) if {k: int(v) for k, v in self.dims[c].items()} == ENERGIA else a["cantidad"]
                               for c in self.campos])
+        if _structure_only:
+            # Inspection has no initial vector and is never sent to a solver.
+            return
+        self.g = [None] * len(self.campos)
+        initial_constraints = [[] for _ in self.campos]
+        for c in mat["condiciones"]:
+            if c["tipo"] != "inicial":
+                raise NoSoportado(f"condición {c['id']}: {c['tipo']} solo tiene sentido con coordenadas espaciales")
+            iz, de = c["ecuacion"]["izquierda"], c["ecuacion"]["derecha"]
+            if iz["tipo"] != "simbolo" or iz["id"] not in self.indice:
+                raise NoSoportado(f"condición {c['id']}: se espera variable = expresión")
+            if _usa_campos(de, self.indice) or _usa(de, self.tiempo):
+                raise NoSoportado(f"condición {c['id']}: el valor inicial no puede depender de variables")
+            function = self._compilar(de, f"condición {c['id']}")
+            index = self.indice[iz['id']]
+            initial_constraints[index].append((c['id'], c['ecuacion']['id'], function))
+            self.g[index] = function
+        faltan = [c for c, g in zip(self.campos, self.g) if g is None]
+        if faltan:
+            raise AdmissionError('INITIALIZATION_MISSING_DATA', 'Missing initial conditions for: '+', '.join(faltan), 'matematico.condiciones')
+        self._check_initial_constraints(initial_constraints)
+        self.validate_initial_state()
+
+    def validate_initial_state(self):
+        """Compilation and execution share the same initial-domain contract."""
+        try:
+            initial = self.inicial()
+            margins = self.dominio(0.0, initial)
+            if not np.isfinite(initial).all() or not np.isfinite(margins).all() or (margins < 0).any():
+                raise ValueError('The initial state violates its declared finite domain.')
+        except (ArithmeticError, ValueError) as error:
+            raise AdmissionError('INITIALIZATION_OUT_OF_DOMAIN', str(error), 'matematico.condiciones') from error
 
     # --- árbol -> función ---------------------------------------------------------------
     def _compilar(self, e, donde):
@@ -234,6 +260,40 @@ class SistemaExplicito:
         if t == "derivada":
             raise NoSoportado(f"{donde}: derivada dentro del lado derecho (respecto de {e['respecto']}): pendiente del motor de discretización")
         raise NoSoportado(f"{donde}: operador {t}: corresponde al motor de discretización (paso 5.2)")
+
+    def _check_initial_constraints(self, constraints):
+        """Check every repeated constraint after SI binding, before execution.
+
+        Exact equality of the evaluated SI values is deliberately conservative:
+        integration tolerances cannot turn contradictory declarations into an
+        accepted initial state. A single constraint keeps its existing path.
+        """
+        diagnostics = []
+        for index, rows in enumerate(constraints):
+            if len(rows) < 2:
+                continue
+            rows = sorted(rows, key=lambda row: row[0])
+            common = {'stage': 'initialization', 'initializationStatus': 'incompatible',
+                      'path': 'matematico.condiciones', 'variableId': self.campos[index],
+                      'conditionIds': [row[0] for row in rows],
+                      'equationIds': [row[1] for row in rows],
+                      'unitSI': un.unidad_SI(self.dims[self.campos[index]])}
+            try:
+                values = [float(row[2](0.0, None)) for row in rows]
+                if not all(math.isfinite(value) for value in values):
+                    raise ValueError('Initial constraints must evaluate to finite SI values.')
+            except (ArithmeticError, ValueError) as error:
+                diagnostics.append({**common, 'code': 'INITIALIZATION_OUT_OF_DOMAIN',
+                                    'message': 'Cannot evaluate the initial constraints: '+str(error)})
+                continue
+            if any(value != values[0] for value in values[1:]):
+                diagnostics.append({**common, 'code': 'INITIALIZATION_CONSTRAINT_CONFLICT',
+                    'message': 'Conflicting initial constraints for '+self.campos[index]+': '+', '.join(common['conditionIds']),
+                    'valuesSI': values})
+            else:
+                self.g[index] = rows[0][2]
+        if diagnostics:
+            raise AdmissionError('', '', '', diagnostics=diagnostics)
 
     # --- interfaz del integrador -----------------------------------------------------------
     def inicial(self):

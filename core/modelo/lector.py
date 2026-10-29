@@ -95,15 +95,32 @@ def _ref(v, conjunto, ruta, que):
 
 
 class _Lectura:
-    def __init__(self, m):
+    def __init__(self, m, inspect_initialization=False):
         self.m = m
         self.datos = set(m["datos"])
+        self.inspect_initialization = inspect_initialization
 
-    def dato(self, v, ruta):
+    def dato(self, v, ruta, initial=False):
+        if initial and self.inspect_initialization:
+            _texto(v, ruta)
+            return
         _ref(v, self.datos, ruta, "dato")
 
 
 def leer_modelo_comun(dato):
+    return _read_model(dato, inspect_initialization=False)
+
+
+def leer_modelo_inspeccion(dato):
+    """Inspect a draft without inventing missing initial declarations or data.
+
+    The returned document is not admitted for execution. All supplied syntax and
+    non-initial references remain strict; the public runnable reader is unchanged.
+    """
+    return _read_model(dato, inspect_initialization=True)
+
+
+def _read_model(dato, *, inspect_initialization):
     if len(json.dumps(dato, ensure_ascii=False).encode("utf-8")) > LIMITE_BYTES:
         _fallo("modelo", "el modelo supera 8 MB")
     m = _claves(dato, "modelo", CLAVES, ["restricciones", "observables", "verificaciones"])
@@ -125,7 +142,7 @@ def leer_modelo_comun(dato):
         org = _claves(o["origen"], r + ".origen", ["propietarioId", "ruta"])
         _texto(org["propietarioId"], r + ".origen.propietarioId")
         _texto(org["ruta"], r + ".origen.ruta")
-    lec = _Lectura(m)
+    lec = _Lectura(m, inspect_initialization)
 
     comps = _lista(m["componentes"], "componentes")
     ids_comp = _unicos(comps, "componentes")
@@ -246,8 +263,9 @@ def leer_modelo_comun(dato):
 
 
 def _leer_volumen(v, r, ids_comp, ids_paq, lec):
-    o = _claves(v, r, ["id", "componenteIds", "balances", "supuestos", "frontera", "inicial", "termodinamica"],
-                ["terminos", "volumenDatoId"])
+    o = _claves(v, r, ["id", "componenteIds", "balances", "supuestos", "frontera", "termodinamica"] +
+                ([] if lec.inspect_initialization else ["inicial"]),
+                ["terminos", "volumenDatoId"] + (["inicial"] if lec.inspect_initialization else []))
     # Datos de los términos que conservan los supuestos (motor de balances): "<rol>.<componenteId>" o un término de energía.
     for k, d in _obj(o.get("terminos", {}), r + ".terminos").items():
         rol = k.split(".")[0]
@@ -275,20 +293,22 @@ def _leer_volumen(v, r, ids_comp, ids_paq, lec):
         lec.dato(f["presionId"], r + ".frontera.presionId")
     else:
         _claves(f, r + ".frontera", ["tipo"])
-    ini = _obj(o["inicial"], r + ".inicial")
+    ini = _obj(o.get("inicial", {}), r + ".inicial")
     if ini.get("tipo") == "por_datos":
         _claves(ini, r + ".inicial", ["tipo"])
     else:
-        _claves(ini, r + ".inicial", ["cantidades"], ["energia"])
-        cant = _claves(ini["cantidades"], r + ".inicial.cantidades", ["base", "datoIds"])
-        _opcion(cant["base"], r + ".inicial.cantidades.base", ["masica", "molar"])
-        for k, d in _obj(cant["datoIds"], r + ".inicial.cantidades.datoIds").items():
-            lec.dato(d, f"{r}.inicial.cantidades.datoIds.{k}")
+        _claves(ini, r + ".inicial", [] if lec.inspect_initialization else ["cantidades"],
+                ["energia", "cantidades"] if lec.inspect_initialization else ["energia"])
+        if "cantidades" in ini:
+            cant = _claves(ini["cantidades"], r + ".inicial.cantidades", ["base", "datoIds"])
+            _opcion(cant["base"], r + ".inicial.cantidades.base", ["masica", "molar"])
+            for k, d in _obj(cant["datoIds"], r + ".inicial.cantidades.datoIds").items():
+                lec.dato(d, f"{r}.inicial.cantidades.datoIds.{k}", initial=True)
         if "energia" in ini:
             en = _claves(ini["energia"], r + ".inicial.energia", ["tipo", "datoId"])
             _opcion(en["tipo"], r + ".inicial.energia.tipo", ["U", "T"])
-            lec.dato(en["datoId"], r + ".inicial.energia.datoId")
-        elif t_tipo(o) == "equilibrio":
+            lec.dato(en["datoId"], r + ".inicial.energia.datoId", initial=True)
+        elif t_tipo(o) == "equilibrio" and not lec.inspect_initialization:
             _fallo(r + ".inicial", "faltan energia")
     # La termodinámica siempre presente: ningún volumen sin cierre declarado.
     t = o["termodinamica"]

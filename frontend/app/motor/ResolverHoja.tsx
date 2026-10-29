@@ -8,7 +8,8 @@ import {useEffect,useRef,useState} from 'react';
 import {useHojasMotor} from './useHojasMotor';
 import {guardarHoja,leerHojas} from './hojasMotor';
 import {necesitaCierre,esVolumetrico} from './modeloNumerico';
-import {guardarResultadoMotor} from './resultadosMotor';
+import {guardarResultadoMotor,saveRejectedAttempt} from './resultadosMotor';
+import AssessmentText from '../models/AssessmentText';
 import type {CampoDato,ConfiguracionMotor,DatoMotor} from './modeloNumerico';
 import {actualizarConfiguracionEnergia,historialEnergiaHoja,formulacionEnergiaHoja} from './estadoEnergiaHoja';
 import {balancesHoja} from './seleccionBalances';
@@ -31,7 +32,7 @@ import HydraulicSolve from '../models/HydraulicSolve';
 function Entrada({id,dato,unidades,cambiar,nombre}:{id:string;dato:DatoMotor;unidades:string[];cambiar:(d:DatoMotor)=>void;nombre:string}){return <div className={styles.entry}><input id={id} aria-label={nombre} value={dato.texto} onChange={e=>cambiar({...dato,texto:e.target.value})} placeholder="Value or expression" autoComplete="off"/><select aria-label={`Unit for ${nombre}`} value={dato.unidad} onChange={e=>cambiar({...dato,unidad:e.target.value})}>{unidades.map(u=><option key={u} value={u}>{nombreUnidad(u)}</option>)}</select></div>;}
 export default function ResolverHoja({id,enfoque}:{id:string;enfoque?:EnfoqueRed}) {
   const router=useRouter();
-  const hojas=useHojasMotor(),hoja=hojas.find(h=>h.id===id),[error,setError]=useState(''),[ejecutando,setEjecutando]=useState(false),[progreso,setProgreso]=useState(0),controller=useRef<AbortController|null>(null);
+  const hojas=useHojasMotor(),hoja=hojas.find(h=>h.id===id),[error,setError]=useState(''),[typedFailure,setTypedFailure]=useState<{signature:string;error:Error}|null>(null),[ejecutando,setEjecutando]=useState(false),[progreso,setProgreso]=useState(0),controller=useRef<AbortController|null>(null);
   useEffect(()=>()=>controller.current?.abort(),[]);
   if(!hoja)return <div className={styles.empty}><h1>Open a model</h1><Link href="/motor/hojas">Browse models</Link></div>;
   if(hoja.commonModel)return <DerivedSolve model={hoja}/>;
@@ -41,13 +42,14 @@ export default function ResolverHoja({id,enfoque}:{id:string;enfoque?:EnfoqueRed
   if(usaEnsamblajeTermodinamico(hoja))return <ResolverEnsamblaje h={hoja}/>;
   const h=hoja,b=balancesHoja(h),f=formulacionHoja(h),c=configuracionHoja(h),a=analizarHoja(h),grupos=[...new Set(a.campos.map(x=>x.grupo))];
   let inicialError='';if(a.listo)try{if(h.transformation)selectedTransformedModel(h);compilarHoja(h);}catch(e){inicialError=(e as Error).message;}
-  function cambiar(config:ConfiguracionMotor){controller.current?.abort();try{guardarHoja(b.energia?actualizarConfiguracionEnergia(h,config):{...h,...(h.ensamblaje?actualizarDatosEnsamblaje(h.ensamblaje,config):{config}),resultado:undefined,resultadoRef:undefined});setError('');}catch{setError("The configuration could not be saved.");}}
+  function cambiar(config:ConfiguracionMotor){controller.current?.abort();try{guardarHoja(b.energia?actualizarConfiguracionEnergia(h,config):{...h,...(h.ensamblaje?actualizarDatosEnsamblaje(h.ensamblaje,config):{config}),resultado:undefined,resultadoRef:undefined});setError('');setTypedFailure(null);}catch{setError("The configuration could not be saved.");}}
   function dato(campo:CampoDato,d:DatoMotor){cambiar({...c,datos:{...c.datos,[campo.id]:d}});}
   function pendiente(){const primero=a.pendientes[0]??Object.keys(a.errores)[0];document.getElementById(primero==='tiempo'?'tiempo':`dato-${primero}`)?.focus();}
-  async function resolver(){setEjecutando(true);setError('');setProgreso(0);const ctl=new AbortController();controller.current=ctl;try{const resultado=await resolverHojaEngine(h,{signal:ctl.signal,progreso:setProgreso});if(ctl.signal.aborted)return;const actual=leerHojas().find(h=>h.id===id);if(!actual||firmaHoja(actual)!==resultado.firma)throw new Error("The model changed during calculation. The outdated result was discarded.");await guardarResultadoMotor(id,resultado);const ultima=leerHojas().find(h=>h.id===id);if(!ultima||firmaHoja(ultima)!==resultado.firma)throw new Error("The model changed while saving. The result was discarded.");guardarHoja({...ultima,resultado:undefined,resultadoRef:{firma:resultado.firma,estado:resultado.estado,fecha:new Date().toISOString()}});router.push(`/motor/hojas/${id}/resultados`);}catch(e){setError((e as Error).message);}finally{setEjecutando(false);controller.current=null;}}
+  async function resolver(){setEjecutando(true);setError('');setTypedFailure(null);setProgreso(0);const ctl=new AbortController();controller.current=ctl;try{const resultado=await resolverHojaEngine(h,{signal:ctl.signal,progreso:setProgreso});if(ctl.signal.aborted)return;const actual=leerHojas().find(h=>h.id===id);if(!actual||firmaHoja(actual)!==resultado.firma)throw new Error("The model changed during calculation. The outdated result was discarded.");await guardarResultadoMotor(id,resultado,ctl.signal);const ultima=leerHojas().find(h=>h.id===id);if(!ultima||firmaHoja(ultima)!==resultado.firma)throw new Error("The model changed while saving. The result was discarded.");guardarHoja({...ultima,resultado:undefined,resultadoRef:{firma:resultado.firma,estado:resultado.estado,fecha:new Date().toISOString()}});router.push(`/motor/hojas/${id}/resultados`);}catch(e){if(!ctl.signal.aborted&&leerHojas().some(item=>item.id===id&&firmaHoja(item)===firmaHoja(h))){setError((e as Error).message);setTypedFailure({signature:firmaHoja(h),error:e as Error});try{await saveRejectedAttempt(id,firmaHoja(h),e,ctl.signal);}catch(storageError){if(!ctl.signal.aborted)setError((e as Error).message+' '+(storageError as Error).message);}}}finally{setEjecutando(false);controller.current=null;}}
   return <div className={styles.page}><NavegacionHoja id={id} actual="resolver"/><header className={styles.heading}><div><span className={styles.eyebrow}>{h.nombre}</span><h1>Solve model</h1></div><span className={styles.eyebrow}>{FAMILIAS_BALANCE.filter(f=>balancesHoja(h)[f.id]).map(f=>f.nombre).join(' + ')||"No active balances"} · {h.ensamblaje?`${h.ensamblaje.volumenes.length} volúmenes · ${h.ensamblaje.corrientes.length} corrientes`:a.modo==='1d'?"1D + time":a.modo==='temporal'?"Time only":"Incomplete formulation"}</span></header>
     {a.bloqueos.length>0&&<div className={styles.error} role="alert"><span>{englishLabel(a.bloqueos[0])}</span><Link href={`/motor/hojas/${id}`}>Review Model →</Link></div>}
-    {error&&<div className={styles.error} role="alert">{error}<button onClick={()=>setError('')}>Close</button></div>}
+    {error&&(!typedFailure||typedFailure.signature===firmaHoja(h))&&<div className={styles.error} role="alert">{error}<button onClick={()=>setError('')}>Close</button></div>}
+    {typedFailure?.signature===firmaHoja(h)&&<><AssessmentText error={typedFailure.error}/><Link href={`/models/${id}/results`}>Review rejected attempt in Results</Link></>}
     {inicialError&&<div className={styles.error} role="alert">{inicialError}</div>}
     <div className={styles.solveLayout}><section>
       <EcuacionesFinales hoja={h}/>
