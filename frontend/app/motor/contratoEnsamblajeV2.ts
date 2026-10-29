@@ -91,7 +91,9 @@ export type InicializacionV2 = {estado: 'pendiente'|'compatible'|'incompatible'|
   volumenes: Record<string, {estado: 'pendiente'|'compatible'|'incompatible'|'no_soportada';
     variables: Record<string, number>; estadoTermodinamico: EstadoVolumenV2|null}>};
 
-export type RespuestaValidacionV2 = {revision: 2; solicitudId: string; modeloId: string|null; recuento: RecuentoDinamico;
+/** Optional HTTP execution provenance; historical publications omit it. */
+export type V2ExecutionProvenance = {version:1;path:'common-compiler'|'native-v2';selection:'default'|'server-override'};
+export type RespuestaValidacionV2 = {revision: 2; executionProvenance?:V2ExecutionProvenance; solicitudId: string; modeloId: string|null; recuento: RecuentoDinamico;
   variables: VariableV2[]; ecuaciones: EcuacionV2[]; diagnosticos: DiagnosticoPreparacion[];
   inicializacion: InicializacionV2};
 
@@ -99,7 +101,7 @@ export type ResiduoV2 = {ecuacionId: string; maximoEscalado: number; tolerancia:
 export type SegundaLeyV2 = {estado: 'cumple'|'no_cumple'|'no_evaluable'; motivo: string;
   generacionMinima: number|null; tolerancia: number|null; unidad: 'J/K'};
 
-export type RespuestaResolucionV2 = {revision: 2; validacion: RespuestaValidacionV2;
+export type RespuestaResolucionV2 = {revision: 2; executionProvenance?:V2ExecutionProvenance; validacion: RespuestaValidacionV2;
   estado: 'resuelto'|'parcial'|'invalido'|'no_convergente'|'no_soportado';
   resultados: null | {metodo: string; tiempos: number[]; series: {variableId: string; unidadSI: string; valores: number[]}[];
     estados: Record<string, EstadoVolumenV2[]>;
@@ -154,7 +156,7 @@ export type CombinacionV2 = {nombre: string; publicada: boolean; motivo: string;
    * liquido_rigido_lleno) y nivel de evidencia. */
   id?: string; evidencia?: EvidenciaV2};
 
-export type CapacidadesEnsamblajeV2 = {revision: 2; revisionesAdmitidas: (1|2)[];
+export type CapacidadesEnsamblajeV2 = {revision: 2; executionProvenance?:V2ExecutionProvenance; revisionesAdmitidas: (1|2)[];
   /** false si la formulacion del agua no supera su auditoria (entonces no se resuelve nada). */
   disponible: boolean;
   /** Por que no esta disponible (null si lo esta). */

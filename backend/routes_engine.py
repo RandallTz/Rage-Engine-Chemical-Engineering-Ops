@@ -11,6 +11,7 @@ from backend.motor_termodinamica import (
     evaluar as evaluar_motor_termodinamica,
 )
 from backend.motor_ensamblaje import (
+    _es_revision_2,
     capacidades as capacidades_motor_ensamblaje,
     validar as validar_motor_ensamblaje,
     resolver as resolver_motor_ensamblaje,
@@ -91,24 +92,31 @@ def motor_termodinamica_evaluar(cuerpo: Any = Body(...)):
     return evaluar_motor_termodinamica(cuerpo)
 
 # --- Motor independiente: ensamblaje dinamico (protocolo de ensamblaje, revision 1) ---
-# Revision 2: backend/motor_ensamblaje_v2.py. Revision 1 retired (dec-r5-legacy-v1): backend/motor_ensamblaje.py
+# Revision 2 uses the common adapter with explicit server-selected native fallback.
+# Revision 1 retired (dec-r5-legacy-v1): backend/motor_ensamblaje.py
 # answers it with MOTOR_ENS_REVISION_RETIRADA; docs/engine/dynamic-assembly.md.
 @router.get("/motor/ensamblajes/capacidades",
          summary="Alcance verificado del ensamblador dinamico independiente")
 def motor_ensamblajes_capacidades(revision: int = 1):
     if revision == 2:
-        from backend.motor_ensamblaje_v2 import capacidades_v2
-        return capacidades_v2()
+        from backend.v2_dispatch import capabilities
+        return capabilities()
     return capacidades_motor_ensamblaje()
 
 
 @router.post("/motor/ensamblajes/validar",
           summary="Ensamblaje, catalogo, recuento e inicializacion; no integra")
 def motor_ensamblajes_validar(cuerpo: Any = Body(...)):
+    if _es_revision_2(cuerpo):
+        from backend.v2_dispatch import validate
+        return validate(cuerpo)
     return validar_motor_ensamblaje(cuerpo)[0]
 
 
 @router.post("/motor/ensamblajes/resolver",
           summary="Validacion y, si esta lista, trayectoria de materia y energia")
 def motor_ensamblajes_resolver(cuerpo: Any = Body(...)):
+    if _es_revision_2(cuerpo):
+        from backend.v2_dispatch import resolve
+        return resolve(cuerpo)
     return resolver_motor_ensamblaje(cuerpo)

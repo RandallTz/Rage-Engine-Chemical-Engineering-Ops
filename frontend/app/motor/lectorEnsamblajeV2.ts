@@ -10,8 +10,16 @@ import {textoPublicado,textosPublicados,identificadoresPublicados,dominioPublica
 const fallo=(m:string):never=>{throw new Error(`Respuesta multifásica incompatible: ${m}`);};
 const fin=(v:unknown):v is number=>typeof v==='number'&&Number.isFinite(v);
 const cerca=(a:number,b:number)=>fin(a)&&fin(b)&&Math.abs(a-b)<=1e-6*Math.max(1,Math.abs(a),Math.abs(b));
+function readExecutionProvenance(value:unknown){
+  if(value===undefined)return;
+  const p=value as {version?:unknown;path?:unknown;selection?:unknown};
+  if(!p||Array.isArray(p)||p.version!==1||typeof p.path!=='string'||!['common-compiler','native-v2'].includes(p.path)
+    ||typeof p.selection!=='string'||!['default','server-override'].includes(p.selection)||Object.keys(p).sort().join(',')!=='path,selection,version'
+    ||p.path==='native-v2'&&p.selection!=='server-override')throw new Error('Invalid v2 execution provenance.');
+}
 export function leerCapacidadesV2(raw:unknown):CapacidadesEnsamblajeV2{
   const c=raw as CapacidadesEnsamblajeV2;
+  readExecutionProvenance(c?.executionProvenance);
   if(!c||c.revision!==2||!Array.isArray(c.revisionesAdmitidas)||!c.revisionesAdmitidas.includes(2)||typeof c.disponible!=='boolean'||!Array.isArray(c.paquetes)||!cantidadMaximaPublicada(c.volumenesMaximos,c.disponible)||!cantidadMaximaPublicada(c.componentesMaximos,c.disponible)||!Array.isArray(c.fronteras)||!Array.isArray(c.integradores)||!c.corrientes||!Array.isArray(c.intercambiosTermicos)||!Array.isArray(c.noSoportado))fallo('capacidades incompletas');
   for(const p of c.paquetes){
     if(!p||!textoPublicado(p.modelo?.id)||!textoPublicado(p.modelo.version)||typeof p.dinamica!=='boolean'||!identificadoresPublicados(p.operaciones)||p.operaciones.some(x=>!['TP','PH','UP','UV','TV'].includes(x))||!identificadoresPublicados(p.fases)||p.fases.some(x=>!['liquido','vapor','solido','fluido'].includes(x))||!Array.isArray(p.combinaciones))fallo('paquete sin alcance');
@@ -51,6 +59,7 @@ export function validarEstadoVolumenV2(m:EstadoVolumenV2,s:SolicitudEnsamblajeV2
 }
 export function leerValidacionV2(raw:unknown,s:SolicitudEnsamblajeV2):RespuestaValidacionV2{
   const r=raw as RespuestaValidacionV2;
+  readExecutionProvenance(r?.executionProvenance);
   if(!r||r.revision!==2||r.solicitudId!==s.solicitudId||!r.recuento||!['listo','incompleto','conflicto','redundante_compatible','no_evaluable'].includes(r.recuento.estado)||!Array.isArray(r.variables)||!Array.isArray(r.ecuaciones)||!Array.isArray(r.diagnosticos)||!r.inicializacion?.volumenes)fallo('identidad o validación incompleta');
   for(const k of ['variables','ecuacionesIndependientes','datosDefinidos','datosFaltantes','inicialesFaltantes','gradosLibertad'] as const){const n=r.recuento[k];if(n!==null&&(!Number.isInteger(n)||k!=='gradosLibertad'&&n<0))fallo('recuento inválido');}
   const ids=new Set(r.variables.map(v=>v.id));if(ids.size!==r.variables.length||new Set(r.ecuaciones.map(e=>e.id)).size!==r.ecuaciones.length)fallo('IDs duplicados');
@@ -70,6 +79,7 @@ export function leerValidacionV2(raw:unknown,s:SolicitudEnsamblajeV2):RespuestaV
 }
 export function leerResolucionV2(raw:unknown,s:SolicitudEnsamblajeV2,modeloId?:string):RespuestaResolucionV2{
   const r=raw as RespuestaResolucionV2;
+  readExecutionProvenance(r?.executionProvenance);
   if(!r||r.revision!==2||!['resuelto','parcial','invalido','no_convergente','no_soportado'].includes(r.estado))fallo('estado de cálculo');
   leerValidacionV2(r.validacion,s);if(modeloId&&r.validacion.modeloId!==modeloId)fallo('modelo distinto del validado');
   if(!['resuelto','parcial'].includes(r.estado)){if(r.resultados!==null)fallo('rechazo con resultados');return r;}
