@@ -155,14 +155,16 @@ try:
     compilar(reac)
     check("fuentes materiales (reacción): no soportadas todavía, con motivo", False)
 except NoSoportado as e:
-    check("fuentes materiales (reacción): no soportadas todavía, con motivo", "constitutivas" in str(e))
+    check("Material sources require an executable constitutive law",
+          any(d['code'] == 'formulation_fuentes' for d in getattr(e, 'diagnostics', [])))
 sup = copy.deepcopy(guia)
 sup["volumenes"][0]["termodinamica"] = {"tipo": "supuesto", "supuesto": "fase_no_evaluada", "motivo": "prueba"}
 try:
     compilar(sup)
     check("volumen con estado supuesto: el compilador exige el cierre de equilibrio", False)
 except NoSoportado as e:
-    check("volumen con estado supuesto: el compilador exige el cierre de equilibrio", "supuesto" in str(e))
+    check("An assumed state cannot replace the equilibrium closure",
+          any(d['code'] == 'unsupported_closure' for d in getattr(e, 'diagnostics', [])))
 
 # --- Sin sesgo hacia ninguna operación (comprobación estática) --------------------------
 PROHIBIDAS = re.compile(r"\b(tanque|columna|reactor|destilaci|evaporador|caldera|intercambiador|decantador|condensador|hervidor|"
@@ -175,6 +177,7 @@ for ruta in ["core/compilador/compilador.py", "core/solvers/integrador.py", "cor
     check(f"{ruta}: ningún equipo, operación ni sustancia en el código", not hallado, hallado)
 
 salida = EJ / "modelo-comun" / "corte-vertical-benceno-tolueno-resultados.json"
-salida.write_text(json.dumps(c1, ensure_ascii=False) + "\n", encoding="utf-8")
+if "--no-write" not in sys.argv:
+    salida.write_text(json.dumps(c1, ensure_ascii=False) + "\n", encoding="utf-8")
 print(f"\n{n[0] - len(fallos)} de {n[0]} comprobaciones correctas." if fallos else f"\nCorte vertical: {n[0]} comprobaciones correctas.")
 sys.exit(1 if fallos else 0)

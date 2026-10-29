@@ -114,6 +114,31 @@ def series(c):
     return {s["id"]: s for s in c["series"]}
 
 
+def appearing_candidate(result, event, component_ids):
+    """Map stable published phase identity to its candidate by composition.
+
+    Stable phase IDs and closure-candidate IDs have separate lifecycles. Never
+    infer either from translated event prose or assume their suffixes agree.
+    """
+    owner = event['propietarioId'].split(':')[1]
+    details = result['procedencia']['equilibrium']
+    native = next(e for e in details['eventos'] if e['codigo'] == event['codigo']
+                  and e['volumenId'] == owner and e['tiempo'] == event['valor'])
+    added = set(native['faseIdsDespues']) - set(native['faseIdsAntes'])
+    assert len(added) == 1, native
+    index = details['tiempos'].index(native['tiempo'])
+    phase = next(f for f in details['estados'][owner][index]['evaluacion']['fases'] if f['id'] in added)
+    values = series(result)
+    candidates = [s['faseId'] for s in result['series'] if s.get('propietarioId') == 'volumen:'+owner
+                  and s['id'].endswith('.beta') and s.get('faseId', '').startswith(phase['tipo']+'-')]
+    def error(candidate):
+        return max(abs(values[f'volumen.{owner}.fase.{candidate}.x.{c}']['valores'][index]
+                       - phase['composicionMolar'][str(c)]) for c in component_ids)
+    candidate = min(candidates, key=error)
+    assert error(candidate) < 1e-7, (candidate, phase)
+    return candidate
+
+
 def comunes(nombre, modelo, c):
     leer_resultados(c)
     check(f"{nombre}: resultado válido en el formato común", True)
@@ -131,7 +156,9 @@ def comunes(nombre, modelo, c):
                   b is not None and len(b["valores"]) == nt and all(x is not None and x >= 0 for x in b["valores"]))
     for e in c["eventos"]:
         if e["codigo"] == "aparicion_fase":
-            vid, k = e["propietarioId"].split(":")[1], e["descripcion"].split()[-1]
+            vid = e["propietarioId"].split(":")[1]
+            volume = next(v for v in modelo['volumenes'] if v['id'] == vid)
+            k = appearing_candidate(c, e, volume['componenteIds'])
             b, t = S[f"volumen.{vid}.fase.{k}.beta"]["valores"], c["ejes"][0]["valores"]
             check(f"{nombre}: antes de aparecer, {vid}/{k} está con beta = 0 (las ecuaciones no cambian)",
                   all(b[i] == 0 for i, x in enumerate(t) if x < e["valor"] - 1e-9))
@@ -231,7 +258,7 @@ from scipy.optimize import fsolve  # noqa: E402
 u = fsolve(iso, [math.log(0.02 / 0.98), math.log(0.4 / 0.6)], xtol=1e-14)
 x_rica_agua, x_rica_butanol = sg(u[0]), sg(u[1])
 S_ = series(c)
-k_ap = e_ap["descripcion"].split()[-1]
+k_ap = appearing_candidate(c, e_ap, v['componenteIds'])
 x_inc = S_[f"volumen.{vid}.fase.{k_ap}.x.{v['componenteIds'][1]}"]["valores"][c["ejes"][0]["valores"].index(e_ap["valor"])]
 check(f"{nom}: aparece cuando la carga alcanza la binodal independiente (thermo, lle; isoactividad) (1e-8)",
       abs(z_e[1] - x_rica_agua) < 1e-8, (z_e[1], x_rica_agua))
