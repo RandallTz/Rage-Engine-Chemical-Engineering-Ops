@@ -339,6 +339,84 @@ class MatterLoweringTests(unittest.TestCase):
         from matter_lowering_inputs import matter_case
         cls.models = {name: matter_case(name) for name in ('decay', 'filling', 'dilution')}
 
+    def test_prescribed_zero_volume_has_a_located_strict_domain_stop(self):
+        for method in ('rk45', 'bdf'):
+            for rate in (-0.5, -0.8):
+                with self.subTest(method=method, rate=rate):
+                    model = copy.deepcopy(self.models['dilution'])
+                    model['datos']['expansionRate']['declaracion']['texto'] = str(rate)
+                    model['estudio']['metodoSolicitado'] = method
+                    system = DerivedSystem(model)
+                    result = leer_resultados(resolve_system(system))
+                    # Independent geometry: 2 m3 + rate*t = 0. Conservation
+                    # gives rho=(6+0.3*t)/(2+rate*t), undefined at that time.
+                    expected_time = -2/rate
+                    self.assertEqual(result['estado'], 'parcial')
+                    stops = [e for e in result['eventos'] if e['codigo'] == 'derived_validity']
+                    self.assertEqual(len(stops), 1)
+                    self.assertAlmostEqual(stops[0]['valor'], expected_time, delta=1e-10)
+                    stop = result['procedencia']['stop']
+                    self.assertEqual(stop['code'], 'derived_validity')
+                    self.assertEqual(stop['time'], stops[0]['valor'])
+                    self.assertTrue(stop['equationId'])
+                    self.assertIn('V', stop['condition'])
+                    times = np.array(result['ejes'][0]['valores'])
+                    self.assertLess(times[-1], expected_time)
+                    self.assertEqual(stop['lastValidTime'], times[-1])
+                    requested = np.linspace(0, 5, model['estudio']['muestras'])
+                    np.testing.assert_array_equal(times, requested[requested < expected_time])
+                    self.assertTrue(all(np.all(np.isfinite(s['valores'])) for s in result['series']))
+                    density = next(s['valores'] for s in result['series']
+                                   if s['id'] == 'campo.'+system.state_ids[0])
+                    interior = times < 0.9*expected_time
+                    np.testing.assert_allclose(np.array(density)[interior],
+                        (6+0.3*times[interior])/(2+rate*times[interior]), rtol=2e-7)
+
+    def test_prescribed_boundary_does_not_replace_an_earlier_solver_failure(self):
+        from unittest.mock import patch
+        from core.solvers import Detencion, Trayectoria
+        model = copy.deepcopy(self.models['dilution'])
+        model['datos']['expansionRate']['declaracion']['texto'] = '-0.5'
+        system = DerivedSystem(model)
+        failed = Trayectoria(y_fin=system.initial(), detenida=Detencion('reference_failure', 'Earlier failure'))
+        with patch('core.compilador.derived.integrar', return_value=failed):
+            result = leer_resultados(resolve_system(system))
+        self.assertEqual(result['estado'], 'parcial')
+        self.assertEqual(result['procedencia']['mensaje'], 'Earlier failure')
+        self.assertNotIn('stop', result['procedencia'])
+        self.assertFalse(result['eventos'])
+
+    def test_prescribed_boundary_handles_a_strict_touch_and_a_coarse_grid(self):
+        # Generic polynomial margin: even a tangent zero is excluded by >0;
+        # no sign crossing or volume-specific formula is needed by the locator.
+        system = object.__new__(DerivedSystem)
+        system.time = sp.Symbol('t'); system.tf = 5
+        system.parameter_values = {}
+        system.margins = [((system.time-2)**2, True, 'condition', 'Positive prescribed quantity')]
+        self.assertEqual(system.prescribed_boundary()[0], 2)
+        model = copy.deepcopy(self.models['dilution'])
+        model['datos']['expansionRate']['declaracion']['texto'] = '-0.5'
+        model['estudio']['muestras'] = 2
+        result = leer_resultados(resolve_system(DerivedSystem(model)))
+        self.assertEqual(result['ejes'][0]['valores'], [0])
+        self.assertEqual(result['eventos'][0]['valor'], 4)
+        self.assertEqual(result['estado'], 'parcial')
+
+    def test_prescribed_boundary_uses_physical_time_with_optional_scaling(self):
+        model = copy.deepcopy(self.models['dilution'])
+        model['datos']['expansionRate']['declaracion']['texto'] = '-0.5'
+        # Put the strict zero exactly at the requested horizon. Both time and
+        # density are scaled through the existing shared Transform operation.
+        model['datos']['horizon']['declaracion']['texto'] = '4'
+        selection = model['motores']['derivedExecution']
+        selection['scaling'] = {selection['timeId']: 'horizon',
+                               selection['states'][0]['quantityId']: 'density.initial'}
+        result = leer_resultados(resolve_system(DerivedSystem(model)))
+        self.assertEqual(result['estado'], 'parcial')
+        self.assertEqual(result['eventos'][0]['valor'], 4)
+        self.assertEqual(result['procedencia']['stop']['time'], 4)
+        self.assertAlmostEqual(result['ejes'][0]['valores'][-1], 4*29/30)
+
     def test_filling_rejects_a_stream_datum_contradicting_the_derived_port_relation(self):
         model = copy.deepcopy(self.models['filling'])
         model['datos']['flow']['declaracion']['texto'] = '0.9'
