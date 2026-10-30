@@ -16,7 +16,7 @@ tres servicios que crecieron de ahí: el balanceo exacto
 lote transitorio (`core/lote.py`).
 
 El contrato de la API, los códigos de diagnóstico y los ejemplos exactos
-están en [`ENTREGA_LABORATORIO_CODEX.md`](ENTREGA_LABORATORIO_CODEX.md).
+están en [`ENTREGA_LABORATORIO_CODEX.md`](history/delivery-notes/ENTREGA_LABORATORIO_CODEX.md).
 
 ---
 
@@ -304,7 +304,7 @@ mitad del trabajo, y es la mitad que no protege de nada.
 ## 15.8 Unidades: la trampa de la misma letra
 
 La unidad es **obligatoria** en cada especificación. Las tablas completas
-están en [la entrega](ENTREGA_LABORATORIO_CODEX.md#3-unidades); aquí el
+están en [la entrega](history/delivery-notes/ENTREGA_LABORATORIO_CODEX.md#3-unidades); aquí el
 detalle que importa.
 
 `bloques[].datos` se admite por compatibilidad con lo que la mesa exporta

@@ -8,7 +8,7 @@ Date: 12 October 2026. Addressed to: Astra's next review and the later implement
 
 **Implemented in this revision:** creating a volume or reactor creates only that piece. It creates no feed, outlet or connections. This applies to the initial button, the palette, dragging and creating a copy of a volume. The three-slot reservations that came with that behaviour were removed. Saved benches and explicit templates keep their elements.
 
-**Editor update:** insertion through a contextual action and connecting volumes without deleting boundaries were also delivered. Evidence and limits in [INTEGRACION_INSERCION_MESA.md](../../frontend/INTEGRACION_INSERCION_MESA.md). The rest of this document keeps the proposed architectural decisions. The engine was not modified and no new physical combinations were enabled. Starting reference: §26 of `docs/ENTREGA_LABORATORIO_CODEX.md`, revision 14.
+**Editor update:** insertion through a contextual action and connecting volumes without deleting boundaries were also delivered. Evidence and limits in [INTEGRACION_INSERCION_MESA.md](../history/delivery-notes/INTEGRACION_INSERCION_MESA.md). The rest of this document keeps the proposed architectural decisions. The engine was not modified and no new physical combinations were enabled. Starting reference: §26 of `docs/ENTREGA_LABORATORIO_CODEX.md`, revision 14.
 
 Goal: to be able to build the model the user intends, see its exchanges and complete its data, without forcing them to think about the serializer's internal structure or filling the canvas with details.
 
