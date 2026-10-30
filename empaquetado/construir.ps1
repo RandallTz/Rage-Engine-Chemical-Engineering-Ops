@@ -73,8 +73,8 @@ Push-Location $Salida
 & "$Salida\venv\Scripts\pyinstaller.exe" --noconfirm --clean --onedir --windowed --name SimuladorDR `
     --distpath "$Salida\dist" --workpath "$Salida\work" --specpath "$Salida" `
     --paths "$Repo" `
-    --collect-submodules backend --collect-submodules core --collect-submodules api `
-    --collect-submodules config --collect-submodules thermodynamics --collect-submodules uvicorn `
+    --collect-submodules backend --collect-submodules core `
+    --collect-submodules config --collect-submodules uvicorn `
     --collect-data thermo --collect-data chemicals --collect-data fluids --collect-data pint `
     --collect-data plotly --collect-all webview `
     "$Repo\empaquetado\lanzador.py"

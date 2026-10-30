@@ -378,7 +378,7 @@ def composicion_de_equilibrio(proveedor, calculadora, NU, n0, T,
         return (NU @ ln_a - ln_K) / escala
 
     # Los limites: el interior del simplex. Con una reaccion son exactos;
-    # con varias, una caja floja (ver core/cinetica.caja_de_avances) y la
+    # con varias, una caja floja (ver core/reactions/kinetics.caja_de_avances) y la
     # factibilidad se comprueba despues.
     inferior = np.full(n_reacciones, -np.inf)
     superior = np.full(n_reacciones, np.inf)

@@ -4,7 +4,7 @@ Lote transitorio: la misma quimica, integrada en el tiempo.
 QUE CAMBIA RESPECTO AL ESTACIONARIO
 -----------------------------------
 En un CSTR estacionario el avance sale de igualar lo que entra con lo que
-sale (ver core/cinetica.py). En un lote no entra ni sale nada: lo que hay
+sale (ver core/reactions/kinetics.py). En un lote no entra ni sale nada: lo que hay
 es una condicion inicial y una trayectoria.
 
     dn_i/dt = sum_r nu_ir r_r(T, x(t))        n_i(0) = n_i0
@@ -52,7 +52,7 @@ import math
 import numpy as np
 from scipy.integrate import solve_ivp
 
-from core import cinetica as cin
+from core.reactions import kinetics as cin
 from core import errores as codigos
 from core.errores import ErrorDeDatos, ErrorFisico, ErrorNumerico
 
@@ -107,7 +107,7 @@ def integrar(proveedor, reacciones, n0, T, t_final, n_muestras=200,
     """
     La trayectoria de un lote isotermo.
 
-    `reacciones` son `ReaccionCinetica` de core/cinetica.py -- las mismas
+    `reacciones` son `ReaccionCinetica` de core/reactions/kinetics.py -- las mismas
     que el CSTR, con las mismas leyes. Es deliberado: la ley de velocidad
     es la misma fisica en los dos regimenes, y tener dos implementaciones
     seria tener dos fisicas que se pueden separar.

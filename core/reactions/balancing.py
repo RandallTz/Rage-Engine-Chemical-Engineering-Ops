@@ -322,7 +322,7 @@ def comprobar_nu(nu, atomos_por_especie, especies):
 
     Es el complemento del balanceo: ahi se busca nu, aqui se juzga una. Lo
     usa el laboratorio para validar lo que llega en la peticion (ver
-    `core/estequiometria.validar_estequiometria`), y se expone aparte para
+    `core/reactions/stoichiometry.validar_estequiometria`), y se expone aparte para
     que el frontend pueda juzgar una nu editada a mano sin resolver nada.
     """
     nu = [int(round(v)) if abs(v - round(v)) < 1e-12 else float(v) for v in nu]
