@@ -130,7 +130,142 @@ def leer_resultados(dato):
     for i, e in enumerate(dato["eventos"]):
         if e.get("ejeId") not in largo:
             _fallo(f"eventos[{i}].ejeId", "eje inexistente")
+    _physical_evidence(dato)
+    if 'steadyDiagnostics' in proc or proc.get('motor') == 'rage.compilador.steady' or proc.get('compilation', {}).get('version') == 2:
+        from core.compilador.steady import read_result
+        try:
+            read_result(dato)
+        except (ValueError, TypeError, KeyError, ArithmeticError) as error:
+            _fallo('procedencia.steadyDiagnostics', str(error))
+    if 'daeDiagnostics' in proc or proc.get('compilation', {}).get('derivedExecution', {}).get('version') == 4:
+        _dae_evidence(dato)
+    if 'nonlinearDiagnostics' in proc:
+        _nonlinear_evidence(dato)
+    if 'assessment' in proc:
+        from core.compilador.assessment import read_assessment
+        try:
+            read_assessment(proc['assessment'], result=dato)
+        except (ValueError, TypeError, KeyError) as error:
+            _fallo('procedencia.assessment', str(error))
     return dato
+
+
+def _dae_evidence(result):
+    path = 'procedencia.daeDiagnostics'
+    value = result['procedencia'].get('daeDiagnostics')
+    selection = result['procedencia'].get('compilation', {}).get('derivedExecution', {}).get('selection', {})
+    fields = {'version', 'method', 'acceptedChecks', 'maxResidual', 'maxConservation', 'driftTolerance', 'scope'}
+    if (not isinstance(value, dict) or set(value) != fields or selection.get('version') != 4
+            or 'nonlinearDiagnostics' not in result['procedencia']):
+        _fallo(path, 'Expected DAE diagnostics for version 4.')
+    if value['version'] != 1 or value['method'] != 'scipy_bdf_nested_newton' or not isinstance(value['scope'], str):
+        _fallo(path, 'Invalid DAE evidence version or method.')
+    if type(value['acceptedChecks']) is not int or value['acceptedChecks'] < 0:
+        _fallo(path, 'Invalid accepted-state counter.')
+    for key in ('maxResidual', 'maxConservation', 'driftTolerance'):
+        if type(value[key]) not in (int, float) or not math.isfinite(value[key]) or value[key] < 0:
+            _fallo(path, 'Invalid DAE numerical evidence.')
+    if (value['driftTolerance'] != selection.get('dae', {}).get('driftTolerance')
+            or value['maxResidual'] > value['driftTolerance'] or value['maxConservation'] > 1e-6
+            or result['estado'] == 'resuelto' and value['acceptedChecks'] < 1):
+        _fallo(path, 'DAE drift evidence contradicts its accepted scope.')
+
+
+def _nonlinear_evidence(result):
+    path = 'procedencia.nonlinearDiagnostics'
+    value = result['procedencia']['nonlinearDiagnostics']
+    required = {'version', 'method', 'sourceSignature', 'settings', 'evaluatedSolves',
+                'lastEvaluation', 'failures', 'publishedSamples', 'scope'}
+    def reject(message):
+        _fallo(path, message)
+    if not isinstance(value, dict) or set(value) != required or value['version'] != 1 or value['method'] != 'damped_newton':
+        reject('Expected nonlinear diagnostics v1.')
+    report = result['procedencia'].get('compilation', {})
+    derived = report.get('derivedExecution', {})
+    from core.modelo.derived_execution import read_definition
+    try:
+        selection = read_definition(derived.get('selection'))
+    except (ValueError, TypeError, KeyError):
+        reject('Missing valid nonlinear selection.')
+    if (selection['version'] not in (3, 4) or value['sourceSignature'] != selection['sourceSignature']
+            or value['settings'] != selection['nonlinear'] or not isinstance(value['scope'], str)
+            or not isinstance(value['failures'], list)):
+        reject('Nonlinear evidence disagrees with its formulation.')
+    for key in ('evaluatedSolves', 'publishedSamples'):
+        if type(value[key]) is not int or value[key] < 0:
+            reject('Nonlinear counters must be nonnegative integers.')
+    if value['publishedSamples'] != len(result['ejes'][0]['valores']):
+        reject('Nonlinear evidence has a different publication scope.')
+    if value['failures'] and result['estado'] == 'resuelto':
+        reject('A failed nonlinear solve cannot report numerical completion.')
+    allowed = {'iterations', 'evaluations', 'backtracks', 'residualNorm', 'stepNorm', 'conditionInfinity',
+               'terminationReason', 'completedProbes', 'uniqueness', 'stage', 'path', 'equationIds',
+               'quantityIds', 'modelId', 'sourceSignature', 'formulationSignature', 'time', 'code', 'message'}
+    for row in [value['lastEvaluation'], *value['failures']]:
+        if not isinstance(row, dict) or row.keys()-allowed:
+            reject('Invalid nonlinear diagnostic fields.')
+        if (row.get('sourceSignature') != selection['sourceSignature'] or row.get('modelId') != result['modeloId']
+                or row.get('formulationSignature') != report.get('signature')
+                or row.get('path') != 'motores.derivedExecution.nonlinear'
+                or row.get('stage') not in ('runtime', 'initialization', 'publication')
+                or row.get('equationIds') != [r['equationId'] for r in selection['algebraic']]
+                or row.get('quantityIds') != [r['quantityId'] for r in selection['algebraic']]):
+            reject('Nonlinear diagnostic location is stale or incompatible.')
+        for key in ('iterations', 'evaluations', 'backtracks'):
+            if type(row.get(key)) is not int or row[key] < 0:
+                reject('Invalid nonlinear iteration counters.')
+        for key in ('residualNorm', 'stepNorm', 'conditionInfinity', 'time'):
+            number = row.get(key)
+            if number is not None and (type(number) not in (int, float) or not math.isfinite(number) or number < 0):
+                reject('Invalid nonlinear numerical evidence.')
+        if not isinstance(row.get('terminationReason'), str):
+            reject('A nonlinear termination reason is required.')
+    for row in value['failures']:
+        if not isinstance(row.get('code'), str) or not isinstance(row.get('message'), str) or row['terminationReason'] != row['code']:
+            reject('Located failure codes and messages are required.')
+
+
+def _physical_evidence(result):
+    """Validate published evidence and scope, never infer physics from solve status."""
+    provenance = result['procedencia']
+    if 'physicalCertification' not in provenance:
+        return
+    certificate = provenance['physicalCertification']
+    if certificate is None:
+        if result['estado'] != 'fallido' or result['series'] or provenance.get('equilibrium'):
+            _fallo('procedencia.physicalCertification', 'A missing certificate cannot describe published equilibrium samples.')
+        return
+    detail = provenance.get('equilibrium')
+    path = 'procedencia.equilibrium'
+    if not isinstance(detail, dict) or detail.get('certificacion') != certificate:
+        _fallo(path, 'The physical certificate must match the published evidence.')
+    times = result['ejes'][0]['valores'] if result['ejes'] else []
+    if not times or detail.get('tiempos') != times:
+        _fallo(path, 'Certified and common sample times must match.')
+    scope = certificate.get('alcance', {})
+    if (scope.get('tInicial') != times[0] or scope.get('tFinal') != times[-1] or scope.get('muestras') != len(times)
+            or scope.get('completa') != (result['estado'] == 'resuelto')):
+        _fallo(path, 'The certificate must describe the actual published scope.')
+    aspects = certificate.get('aspectos', [])
+    expected = {'estados_termodinamicos', 'conservacion', 'cierre_constitutivo', 'segunda_ley'}
+    if len(aspects) != 4 or {a.get('id') for a in aspects} != expected:
+        _fallo(path, 'All four certification aspects are required.')
+    statuses = [a.get('estado') for a in aspects]
+    if any(status not in ('cumple', 'no_cumple', 'no_evaluable') for status in statuses):
+        _fallo(path, 'Invalid physical certification status.')
+    aggregate = 'no_cumple' if 'no_cumple' in statuses else 'no_evaluable' if 'no_evaluable' in statuses else 'cumple'
+    if certificate.get('estado') != aggregate:
+        _fallo(path, 'Physical success cannot override a failed or unevaluable aspect.')
+    common = {series['id']: series for series in result['series']}
+    for series in detail.get('series', []):
+        published = common.get(series['variableId'])
+        if not published or published['valores'] != series['valores'] or published['unidadSI'] != series['unidadSI']:
+            _fallo(path, 'A common series must preserve its certified source quantity.')
+    for states in detail.get('estados', {}).values():
+        if len(states) != len(times):
+            _fallo(path, 'Certified states must align with every published sample.')
+    if any(event['tiempo'] < times[0] or event['tiempo'] > times[-1] for event in detail.get('eventos', [])):
+        _fallo(path, 'An event cannot lie outside the certified prefix.')
 
 
 def _unidad(x, r):

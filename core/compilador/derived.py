@@ -15,21 +15,18 @@ from core import unidades as units
 from core.mathematics.constants import UnitBasis, si_magnitude
 from core.mathematics.dimensions import catalog, dimension, parse_expression
 from core.mathematics.graph import math_latex, solve_unique
+from core.mathematics.linear_system import ConstantAffineBlock, AffineBlockError
 from core.mathematics.validity import HoldsOnInterval
+from core.solvers.nonlinear import NonlinearError
+from .nonlinear_block import NonlinearBlock, NonlinearRuntime
 from core.modelo import leer_modelo_comun
 from core.modelo.derived_execution import read_definition
 from core.modelo.equation_workbench import build, _known_unit, SOURCE_REVISION
 from core.resultados import conjunto, eje, evento, serie
-from core.solvers import Detencion, integrar
+from core.solvers import Detencion, Trayectoria, integrar
 from .compilador import NoSoportado
 from .explicito import SistemaExplicito
-
-
-class LoweringError(NoSoportado):
-    def __init__(self, code, message, equation_id=None):
-        super().__init__(message)
-        self.diagnostics = [{'code': code, 'message': message,
-                             **({'equationId': equation_id} if equation_id else {})}]
+from .derived_graph import DerivedGraph, LoweringError, source_signature
 
 
 def validate_selected_data(model):
@@ -37,6 +34,9 @@ def validate_selected_data(model):
     if (not isinstance(model, dict) or not isinstance(model.get('motores'), dict)
             or not isinstance(model.get('datos'), dict) or not selected(model)):
         return
+    if model['motores']['derivedExecution'].get('version') == 5:
+        from .steady import validate_selected_data as validate_steady_data
+        return validate_steady_data(model)
     try:
         selection = read_definition(model['motores']['derivedExecution'])
     except (ValueError, KeyError, TypeError) as error:
@@ -53,18 +53,6 @@ def selected(model):
     return model.get('motores', {}).get('derivedExecution') is not None
 
 
-def source_signature(model, replayed=None):
-    """Pin mathematical content and unit declarations, independently of labels/data."""
-    result = replayed if replayed is not None else build(model)
-    payload = [SOURCE_REVISION,
-        [(key, sp.srepr(node.equation), node.rule, node.inputs, node.kind,
-          node.dependent, sorted(sp.srepr(p) for p in node.predicates))
-         for key, node in sorted(result.graph.nodes.items())],
-        sorted((sp.srepr(q), unit) for q, unit in result.units.items()),
-        result.definition]
-    return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
-
-
 def _dimension_json(value):
     return {base: {'n': int(sp.Rational(power).p), 'd': int(sp.Rational(power).q)}
             for base, power in value.items() if power}
@@ -77,17 +65,53 @@ def _symbol(identity, role, dim):
             'dependeDe': [], 'signo': 'desconocido'}
 
 
-class DerivedSystem:
+class DerivedSystem(DerivedGraph):
     def __init__(self, model):
         try:
             self._initialize(model)
+        except LoweringError as error:
+            self._locate_failure(model, error)
+            raise
+        except (NonlinearError, Detencion) as error:
+            failure = LoweringError(getattr(error, 'code', getattr(error, 'codigo', 'nonlinear_initialization')), str(error))
+            failure.diagnostics = getattr(error, 'diagnostics', failure.diagnostics)
+            self._locate_failure(model, failure, 'initialization')
+            raise failure from error
         except (ValueError, NotImplementedError, KeyError) as error:
-            raise LoweringError('invalid_derived_formulation', str(error)) from error
+            failure = LoweringError('invalid_derived_formulation', str(error))
+            self._locate_failure(model, failure)
+            raise failure from error
+
+    @staticmethod
+    def _locate_failure(model, error, stage='admission'):
+        selection = model.get('motores', {}).get('derivedExecution', {})
+        if selection.get('version') not in (3, 4):
+            return
+        for row in error.diagnostics:
+            if row['code'] in ('invalid_initialization', 'missing_initialization', 'invalid_initial_domain', 'dae_initial_states_required'):
+                stage = 'initialization'
+            defaults = {'stage': stage, 'path': 'motores.derivedExecution.nonlinear',
+                        'modelId': model.get('id'), 'sourceSignature': selection.get('sourceSignature'),
+                        'formulationSignature': hashlib.sha256(json.dumps([SOURCE_REVISION, selection,
+                            {key: value.get('declaracion') for key, value in model.get('datos', {}).items()},
+                            model.get('estudio')], sort_keys=True).encode()).hexdigest(),
+                        'equationIds': [r.get('equationId') for r in selection.get('algebraic', [])],
+                        'quantityIds': [r.get('quantityId') for r in selection.get('algebraic', [])],
+                        'time': 0. if stage == 'initialization' else None, 'iterations': 0,
+                        'evaluations': 0, 'backtracks': 0, 'residualNorm': None,
+                        'stepNorm': None, 'conditionInfinity': None, 'terminationReason': row['code']}
+            for key, value in defaults.items():
+                row.setdefault(key, value)
 
     def _initialize(self, model):
         validate_selected_data(model)
         self.model = leer_modelo_comun(model)
         self.selection = read_definition(model['motores']['derivedExecution'], model)
+        self.nonlinear = self.selection['version'] in (3, 4)
+        self.dae = None
+        self.is_dae = self.selection['version'] == 4
+        if self.is_dae and model['estudio']['metodoSolicitado'].lower() != 'bdf':
+            raise LoweringError('dae_method_unsupported', 'Semi-explicit index-1 execution requires BDF; no method substitution is allowed.')
         if model.get('matematico') is not None or model['motores'].get('adimensionalizacion') is not None:
             raise LoweringError('competing_formulation', 'Select the derived graph alone; cached mathematical trees and competing scaling selections are not execution inputs.')
         if any(v['termodinamica']['tipo'] != 'supuesto' for v in model['volumenes']):
@@ -126,6 +150,11 @@ class DerivedSystem:
             self.parameter_records.append({'id': qid, 'dataId': data_id,
                 'value': float(self.parameter_values[parameter]), 'unit': self._unit(q)})
         self.replacements = dict(self.parameter_symbols)
+        self.algebraic_rows = self.selection.get('algebraic', [])
+        self.algebraic_quantities = [self._quantity(row['quantityId']) for row in self.algebraic_rows]
+        if any(not isinstance(q, sp.core.function.AppliedUndef) or q.args != (self.time,) for q in self.algebraic_quantities):
+            raise LoweringError('invalid_algebraic_block', 'Algebraic unknowns must depend only on the selected time.')
+        self.ids.update({q: row['quantityId'] for q, row in zip(self.algebraic_quantities, self.algebraic_rows)})
         self.guards = []
         for row in self.selection['reconstructions']:
             q = self._quantity(row['quantityId']); node = self._equation(row['equationId'])
@@ -139,12 +168,60 @@ class DerivedSystem:
                 continue
             key = 'operation.' + str(index); equation = self.graph.nodes[key].equation
             target = equation.lhs
-            if isinstance(target, (sp.Symbol, sp.core.function.AppliedUndef)) and target not in self.states and target not in self.replacements:
+            if isinstance(target, (sp.Symbol, sp.core.function.AppliedUndef)) and target not in self.states and target not in self.replacements and target not in self.algebraic_quantities:
                 self.replacements[target] = equation.rhs
+        self.runtime_replacements = dict(self.replacements)
+        self.algebraic_block = None
+        if self.algebraic_rows:
+            if self.selection.get('scaling'):
+                raise LoweringError('unsupported_algebraic_scaling', 'Affine-block execution currently requires the identity formulation.')
+            equations = [self._equation(row['equationId']).equation for row in self.algebraic_rows]
+            for row, equation in zip(self.algebraic_rows, equations):
+                self._dim(equation.lhs-equation.rhs)
+                if equation.has(sp.Derivative):
+                    raise LoweringError('dae_implicit_unsupported' if self.is_dae else 'unsupported_algebraic_derivative', 'An algebraic block cannot contain derivatives. IDA is a future option for fully implicit systems.', row['equationId'])
+            residuals = [self._expand(e.lhs-e.rhs, self.runtime_replacements) for e in equations]
+            try:
+                self.algebraic_block = (NonlinearBlock(self, residuals) if self.nonlinear else
+                                        ConstantAffineBlock(residuals, self.algebraic_quantities, self.parameter_values))
+            except (AffineBlockError, NonlinearError) as error:
+                diagnostic = LoweringError(error.code, str(error), self.algebraic_rows[0]['equationId'])
+                if isinstance(error, NonlinearError):
+                    diagnostic.diagnostics[0].update(error.diagnostic)
+                diagnostic.diagnostics[0].update(path='motores.derivedExecution.algebraic',
+                    equationIds=[row['equationId'] for row in self.algebraic_rows])
+                raise diagnostic from error
+            if not self.nonlinear:
+                self.replacements.update(self.algebraic_block.reconstruction)
+                self.guards.append((sp.Ne(self.algebraic_block.matrix.det(), 0, evaluate=False), self.algebraic_rows[0]['equationId']))
+        if self.is_dae:
+            from .dae import IndexOne
+            try:
+                self.dae = IndexOne(self)
+            except NonlinearError as error:
+                raise LoweringError(error.code, str(error)) from error
         self.rates = {}
+        self.runtime_rates = []
         for row, q in zip(self.selection['states'], self.states):
             equation = self._equation(row['equationId']).equation
             derivative = sp.Derivative(q, self.time, evaluate=False)
+            if self.is_dae:
+                from .dae import FUTURE
+                residual = self._expand(equation.lhs-equation.rhs, self.runtime_replacements).doit()
+                if residual.atoms(sp.Derivative) != {derivative}:
+                    raise LoweringError('dae_implicit_unsupported', 'Select semi-explicit first-order differential rows. '+FUTURE, row['equationId'])
+                coefficient = sp.diff(residual, derivative)
+                bound = si_magnitude(coefficient).subs(self.parameter_values)
+                if coefficient.has(derivative) or bound.is_number is not True or bound == 0:
+                    raise LoweringError('dae_implicit_unsupported', 'Only a nonzero constant scalar derivative coefficient is admitted. '+FUTURE, row['equationId'])
+            if self.algebraic_block is not None:
+                runtime_equation = sp.Eq(self._expand(equation.lhs, self.runtime_replacements).doit(),
+                                         self._expand(equation.rhs, self.runtime_replacements).doit(), evaluate=False)
+                if runtime_equation.atoms(sp.Derivative) != {derivative}:
+                    raise LoweringError('unsupported_rate', 'Affine-block RHS rows must isolate one first derivative without differentiating algebraic unknowns.', row['equationId'])
+                rate, guards = solve_unique(runtime_equation, derivative, self.graph.names)
+                self.runtime_rates.append(rate)
+                self.guards.extend((guard, row['equationId']) for guard in guards)
             # Apply the selected algebraic reconstructions and product rule
             # before isolating a regular, first-order scalar rate. This admits
             # density-volume balances without inserting a replacement law.
@@ -170,6 +247,8 @@ class DerivedSystem:
         bound_coordinates = {p.args[1] for node in self.graph.nodes.values() for p in node.predicates if isinstance(p, HoldsOnInterval) and p.args[1] != self.time}
         self.bound_coordinates = bound_coordinates
         self._collect_conditions()
+        if self.nonlinear:
+            self.algebraic_block.set_conditions(self.margins)
         self._check_operations()
         self.checks = self._conservation_checks()
         self.lowered = self._lower_model()
@@ -177,7 +256,12 @@ class DerivedSystem:
         analysis = analizar_modelo(self.lowered['matematico'])
         if analysis['estado'] != 'compatible':
             raise LoweringError('incompatible_lowering', 'The lowered AST does not preserve the declared equation dimensions: ' + str(analysis))
-        self.numeric = SistemaExplicito(self.lowered)
+        self.numeric = NonlinearRuntime(self) if self.nonlinear else SistemaExplicito(self.lowered)
+        if self.algebraic_block is not None and not self.nonlinear:
+            evaluator = copy.copy(self.numeric)
+            evaluator.indice = {**self.numeric.indice, **{self.ids[q]: len(self.numeric.campos)+i for i, q in enumerate(self.algebraic_quantities)}}
+            self.algebraic_forcing = [self.numeric._compilar(self._ast(e), 'affine block forcing') for e in self.algebraic_block.forcing]
+            self.algebraic_rates = [evaluator._compilar(self._ast(e), 'affine block RHS') for e in self.runtime_rates]
         self.scaled = None
         if 'scaling' in self.selection:
             self._select_scaling()
@@ -191,58 +275,26 @@ class DerivedSystem:
         self._physical_admission()
         self._validate_initial()
         self.report = self._report()
-
-    def _quantity(self, key):
-        if key not in self.quantities:
-            raise LoweringError('missing_quantity', 'The selected quantity no longer exists: ' + key)
-        return self.quantities[key]
-
-    def _equation(self, key):
-        if key not in self.graph.nodes or not isinstance(self.graph.nodes[key].equation, sp.Equality):
-            raise LoweringError('missing_equation', 'Select an existing equality from Transform.', key)
-        return self.graph.nodes[key]
-
-    def _dim(self, expression):
-        return dimension(expression, self.replayed.units, _known_unit) or {}
-
-    def _unit(self, expression):
-        return units.unidad_SI(self._dim(expression))
-
-    def _datum(self, key, expected):
-        if key not in self.model['datos']:
-            raise LoweringError('missing_data', 'Missing numerical datum: ' + key)
-        declaration = self.model['datos'][key]['declaracion']
-        try:
-            conversion = units.exact_conversion(declaration['unidad'])
-            if conversion['dimension'] != expected or conversion['afin']:
-                raise ValueError('Use a dimension-compatible absolute unit.')
-            value = parse_expression(declaration['texto'], {})
-            value = value * sp.Rational(conversion['factor']) + sp.Rational(conversion['desplazamiento'])
-            if value.is_number is not True or value.is_finite is not True or value.is_real is not True:
-                raise ValueError('Use a finite real constant datum.')
-            return value
-        except (ValueError, units.ErrorUnidad) as error:
-            raise LoweringError('invalid_data', key + ': ' + str(error)) from error
-
-    def _expand(self, expression):
-        previous = expression
-        for _ in range(len(self.replacements) + 2):
-            current = previous.xreplace(self.replacements)
-            if current == previous:
-                return current
-            previous = current
-        raise LoweringError('cyclic_reconstruction', 'Algebraic reconstruction is cyclic; an implicit constraint needs a different compiler.')
+        if self.dae:
+            self.validate_accepted = self._validate_dae_accepted
 
     def _normalize(self, expression):
         expression = self._expand(expression).doit()
         for _ in range(len(self.rates) + 2):
             current = self._expand(expression.xreplace(self.rates)).doit()
             if current == expression:
-                return sp.cancel(current)
+                value = sp.cancel(current)
+                if self.nonlinear and self.algebraic_block.is_consequence(value):
+                    return sp.S.Zero
+                return value
             expression = current
         raise LoweringError('unsupported_derivative', 'A derivative cannot be lowered to the selected explicit states.')
 
     def _initial_conditions(self):
+        if self.is_dae:
+            missing = {r['quantityId'] for r in self.selection['states']} - set(self.selection['initialValues'])
+            if missing:
+                raise LoweringError('dae_initial_states_required', 'Provide each differential state at t0; free-state initialization is deferred. Missing: '+', '.join(sorted(missing)))
         initial = {self._quantity(qid): self._datum(data, self._dim(self._quantity(qid)))
                    for qid, data in self.selection['initialValues'].items()}
         initial.update(self.parameter_values)
@@ -268,6 +320,20 @@ class DerivedSystem:
                 if value.is_number is True:
                     initial[q] = value
         initial[self.time] = sp.S.Zero
+        if self.dae:
+            self.dae.state_domain(0., [float(initial[q]) for q in self.states], 'initialization')
+        if self.nonlinear:
+            try:
+                z, _ = self.algebraic_block.evaluate(0., [float(initial[q]) for q in self.states], 'initialization')
+            except NonlinearError as error:
+                failure = LoweringError(error.code, str(error))
+                failure.diagnostics = error.diagnostics
+                raise failure from error
+            self.initial_algebraic = dict(zip(self.algebraic_quantities, map(sp.Float, z)))
+            for q, solved in self.initial_algebraic.items():
+                if q in initial and not math.isclose(float(initial[q]), float(solved), rel_tol=self.selection['nonlinear']['residualTolerance'], abs_tol=self.selection['nonlinear']['stepTolerance']):
+                    raise LoweringError('invalid_initialization', 'Fixed algebraic initial data contradict the solved constraints: '+str(q))
+                initial[q] = solved
         for key in self.selection['initialEquations']:
             equation = self._equation(key).equation
             residual = si_magnitude((equation.lhs-equation.rhs).xreplace(self.parameter_symbols)).xreplace(initial)
@@ -283,7 +349,7 @@ class DerivedSystem:
 
     def _collect_conditions(self):
         self.margins = []
-        selected_keys = {r['equationId'] for r in [*self.selection['states'], *self.selection['reconstructions'], *self.selection['checks']]}
+        selected_keys = {r['equationId'] for r in [*self.selection['states'], *self.selection['reconstructions'], *self.selection['checks'], *self.algebraic_rows]}
         selected_keys.update(key for key in self.graph.nodes if key.startswith('operation.'))
         predicates = [(p, key) for key in sorted(selected_keys) for p in self.graph.predicates_for(key)] + self.guards
         predicates += [(premise.expression, key) for key, premise in self.graph.domains.items()]
@@ -313,7 +379,13 @@ class DerivedSystem:
                 self.proof_conditions.append({'equationId': key, 'sourceEquationId': physical_predicates[predicate],
                     'kind': 'eliminated_coordinate_premise', 'latex': math_latex(predicate, self.graph.names)})
                 continue
+            first_margin = len(self.margins)
             self._predicate_margin(value, key)
+            # Evaluate expanded expressions, but name the recorded physical
+            # condition rather than its substituted internal datum symbols.
+            for index in range(first_margin, len(self.margins)):
+                expression, strict, source, _ = self.margins[index]
+                self.margins[index] = (expression, strict, source, math_latex(predicate, self.graph.names))
         for volume in self.model['volumenes']:
             closure = volume['termodinamica']
             if closure.get('supuesto') != 'u_lineal' or not volume['balances']['energia']:
@@ -323,6 +395,10 @@ class DerivedSystem:
                 raise LoweringError('missing_closure_data', 'The declared caloric closure needs its numerical coefficient, references and validity interval.')
             owner = volume['id']
             temperatures = [(row, expression) for row, expression in self.reconstructed if self.replayed.owners[row['equationId']] == owner and self._dim(self._quantity(row['quantityId'])) == {'Theta': 1}]
+            if self.is_dae:
+                temperatures.extend((row, q) for row, q in zip(self.algebraic_rows, self.algebraic_quantities)
+                                    if row['equationId'] == 'thermodynamics.'+owner+'.caloric-inventory'
+                                    and self._dim(q) == {'Theta': 1})
             if len(temperatures) != 1:
                 raise LoweringError('missing_caloric_reconstruction', 'Select the temperature reconstruction of the declared caloric inventory.')
             row, expression = temperatures[0]
@@ -366,7 +442,7 @@ class DerivedSystem:
                 # branch selected by its initial data. A signed margin makes
                 # a crossing visible to the existing nonnegative-domain stop;
                 # abs(expression) would hide a jump across the excluded zero.
-                initial = delta.xreplace({**self.parameter_values, **self.initial_values, self.time: sp.S.Zero})
+                initial = delta.xreplace({**self.parameter_values, **self.initial_values, **getattr(self, 'initial_algebraic', {}), self.time: sp.S.Zero})
                 if initial.is_number is not True or initial.is_real is not True or initial.is_finite is not True:
                     raise LoweringError('unsupported_condition', 'The nonzero condition needs a finite initial sign.', key)
                 if initial == 0:
@@ -401,7 +477,7 @@ class DerivedSystem:
             used.add(key)
             for parent in self.graph.nodes[key].inputs:
                 visit(parent)
-        for row in [*self.selection['states'], *self.selection['reconstructions']]:
+        for row in [*self.selection['states'], *self.selection['reconstructions'], *self.algebraic_rows]:
             visit(row['equationId'])
         for key in self.graph.nodes:
             if key not in used:
@@ -513,6 +589,8 @@ class DerivedSystem:
                 'origen': {'propietarioId': 'matematico', 'ruta': key}}
         expressions = [*self.rates.values(), *(e for _, e in self.reconstructed),
                        *(e for _, inventory, rate, _ in self.checks for e in (inventory, rate))]
+        if self.algebraic_block is not None:
+            expressions.extend([*self.runtime_rates, *self.algebraic_block.forcing])
         for atom in sorted(set().union(*(e.atoms(UnitBasis) for e in expressions)), key=sp.srepr):
             identity = 'si_unit_' + atom.base
             self.ids[atom] = identity
@@ -525,6 +603,10 @@ class DerivedSystem:
                 continue
             symbols.append(_symbol(identity, 'parametro', self._dim(q)))
             datum('matematico.'+identity, self.parameter_values[symbol], self._unit(q))
+        if self.nonlinear:
+            for q in self.algebraic_quantities:
+                symbols.append(_symbol(self.ids[q], 'campo', self._dim(q)))
+                symbols[-1]['dependeDe'] = [self.ids[self.time]]
         symbols.append(_symbol('final_time', 'parametro', {'T': 1}))
         datum('matematico.final_time', self._datum(study['tiempoId'], {'T': 1}), 's')
         for index, q in enumerate(self.states):
@@ -595,7 +677,10 @@ class DerivedSystem:
         try:
             self.rhs(0.0, self.initial_state)
         except Detencion as error:
-            raise LoweringError(error.codigo, str(error)) from error
+            failure = LoweringError(error.codigo, str(error))
+            if self.nonlinear and getattr(error, 'diagnostics', None):
+                failure.diagnostics = [{**row, 'stage': 'initialization'} for row in error.diagnostics]
+            raise failure from error
 
     def _physical_admission(self):
         self.hydraulic_guards = []
@@ -699,10 +784,33 @@ class DerivedSystem:
             'parameters': [{k: v for k, v in p.items() if k != 'dataId'} for p in self.parameter_records],
             'systemEquations': [{'id': row['id'], 'family': row['family'].title(), 'latex': row['latex']} for row in rows if row['id'] in {s['equationId'] for s in self.selection['states']}],
             'equationWorkbench': development,
-            'derivedExecution': {'version': 1, 'sourceSignature': self.selection['sourceSignature'],
+            'derivedExecution': {'version': self.selection['version'], 'sourceSignature': self.selection['sourceSignature'],
                 'selection': self.selection, 'proofConditions': self.proof_conditions,
                 'runtimeConditions': [{'equationId': key, 'strict': strict, 'latex': label} for _, strict, key, label in self.margins],
                 'reconstructions': self.selection['reconstructions']}}
+        if self.algebraic_block is not None and not self.nonlinear:
+            block = self.algebraic_block
+            report['derivedExecution']['algebraicBlock'] = {
+                'rows': self.algebraic_rows, 'matrixSI': block.numeric.tolist(),
+                'determinantSI': block.determinant, 'equilibratedConditionInfinity': block.condition,
+                'conditionTest': 'Exact nonzero SI-bound determinant; row/column-equilibrated cond_inf * machine epsilon <= 1e-8.',
+                'solve': 'numpy.linalg.solve at every RHS evaluation; componentwise backward error <= 64 machine epsilons.'}
+            report['equations'] = [{**row, 'derecha': self._ast(rate)} for row, rate in zip(report['equations'], self.runtime_rates)]
+            report['systemEquations'].extend({'id': row['equationId'], 'family': 'Algebraic',
+                'latex': math_latex(self._equation(row['equationId']).equation, self.graph.names)} for row in self.algebraic_rows)
+            report['matrix'] = 'Constant affine algebraic block solved in SI inside every RHS; common RK45/BDF advances the differential states. Symbolic elimination is used only for equivalence, initialization, guards and ordinary reconstructions.'
+        if self.nonlinear:
+            report['derivedExecution']['nonlinearBlock'] = {
+                'rows': self.algebraic_rows, 'method': 'damped_newton',
+                'settings': self.selection['nonlinear'],
+                'initialization': {**self.algebraic_block.last, 'stage': 'initialization'},
+                'scope': 'Local regular root only; deterministic finite probes reject detected multiple roots, not a global uniqueness certificate.'}
+            report['systemEquations'].extend({'id': row['equationId'], 'family': 'Algebraic',
+                'latex': math_latex(self._equation(row['equationId']).equation, self.graph.names)} for row in self.algebraic_rows)
+            report['matrix'] = 'Damped Newton solves the retained nonlinear block at each RK45/BDF evaluation, including BDF Jacobian probes; no symbolic inverse or fallback.'
+        if self.dae:
+            report['derivedExecution']['dae'] = self.dae.proof
+            report['matrix'] = 'Semi-explicit index-1 DAE: SciPy BDF integrates fixed-initial differential states; the existing damped Newton solves algebraic variables inside every RHS and BDF probe. No residual DAE backend or new dependency.'
         if self.hydraulic_guards:
             report['derivedExecution']['runtimeConditions'].extend([
                 {'equationId': self.selection['states'][index]['equationId'], 'strict': False,
@@ -736,6 +844,17 @@ class DerivedSystem:
         report['strategy'] = solution_strategy(report, self.model)
         return report
 
+    def _validate_dae_accepted(self, t, state, publication=False):
+        try:
+            if publication:
+                self.dae.conservation(t, state, 'publication')
+            else:
+                self.dae.accepted(t, state)
+        except NonlinearError as error:
+            stop = Detencion(error.code, str(error))
+            stop.diagnostics = error.diagnostics
+            raise stop from error
+
     def initial(self):
         return self.initial_state.copy()
 
@@ -743,12 +862,34 @@ class DerivedSystem:
         return self.initial()
 
     def rhs(self, t, state):
+        if self.nonlinear:
+            z, _ = self.solve_algebraic(t, state)
+            extended = np.concatenate([state, z])
+            try:
+                value = np.array([f(t, extended) for f in self.numeric.f])
+                if not np.all(np.isfinite(value)):
+                    raise ValueError('A retained differential rate is nonfinite.')
+            except (ArithmeticError, ValueError) as error:
+                failure = NonlinearError('nonlinear_nonfinite', str(error), **self.algebraic_block.location(t, 'runtime'))
+                stop = Detencion(failure.code, str(failure))
+                stop.diagnostics = [failure.diagnostic]
+                raise stop from error
+            return value
         for function, strict, key, label in self.runtime_guards:
             if strict:
                 margin = float(function(t, state))
                 if not math.isfinite(margin) or margin <= 0:
                     raise Detencion('derived_validity', key + ': ' + label)
-        value = self.numeric.rhs(t, state)
+        if self.algebraic_block is None:
+            value = self.numeric.rhs(t, state)
+        else:
+            algebraic, _ = self.solve_algebraic(t, state)
+            extended = np.concatenate([state, algebraic])
+            try:
+                value = np.array([f(t, extended) for f in self.algebraic_rates] +
+                                 [f(t, state) for f in self.numeric.f[len(self.states):]], dtype=float)
+            except (ArithmeticError, ValueError) as error:
+                raise Detencion('algebraic_rhs_failed', str(error)) from error
         if not np.all(np.isfinite(value)):
             raise Detencion('derived_nonfinite', 'A selected derived rate is non-finite.')
         if self.hydraulic_guards:
@@ -756,6 +897,29 @@ class DerivedSystem:
             for index, pressures, diameter, viscosity, minimum in self.hydraulic_guards:
                 check_medium_domain(state[index], value[index], pressures[0](t, state), pressures[1](t, state), diameter, viscosity, minimum)
         return value
+
+    def solve_algebraic(self, t, state):
+        if self.nonlinear:
+            try:
+                if self.dae:
+                    self.dae.state_domain(t, state)
+                z, norm = self.algebraic_block.evaluate(t, state)
+                if self.dae:
+                    norm = self.dae.residual(t, state, z)
+                return z, norm
+            except NonlinearError as error:
+                stop = Detencion(error.code, str(error))
+                stop.diagnostics = error.diagnostics
+                raise stop from error
+        try:
+            return self.algebraic_block.solve([f(t, state) for f in self.algebraic_forcing])
+        except (AffineBlockError, ArithmeticError, ValueError) as error:
+            raise Detencion(getattr(error, 'code', 'algebraic_solve_failed'), str(error)) from error
+
+    def stop_from_exception(self, error):
+        # Preserve the common integrator's accepted prefix if a block stop
+        # escapes a restart/initial-stage evaluation. Do not classify bugs.
+        return error if self.algebraic_block is not None and isinstance(error, Detencion) else None
 
     def firma(self, t, state):
         return None
@@ -765,6 +929,25 @@ class DerivedSystem:
 
     def describir_dominio(self, index):
         return self.numeric.describir_dominio(index)
+
+    def prescribed_boundary(self):
+        """First excluded zero of a prescribed polynomial validity margin.
+
+        This locates a boundary of the replayed condition, independently of the
+        ODE state. State-dependent/nonpolynomial margins retain runtime checks.
+        Prefer explicit domains (collected last) over duplicate algebraic guards.
+        """
+        boundaries = []
+        for expression, strict, key, label in reversed(self.margins):
+            expression = expression.subs(self.parameter_values)
+            if not strict or expression.free_symbols != {self.time} or not expression.is_polynomial(self.time):
+                continue
+            roots = sp.solveset(expression, self.time, domain=sp.Interval(0, self.tf))
+            if not isinstance(roots, sp.FiniteSet):
+                continue
+            boundaries.extend((float(root), key, label) for root in roots
+                              if root.is_real is True and root.is_finite is True and 0 < root <= self.tf)
+        return min(boundaries, key=lambda row: row[0]) if boundaries else None
 
 
 def resolve(model):
@@ -782,15 +965,59 @@ def resolve_system(system):
         # The existing scaled RHS already maps the original domains; preserve
         # strict derived guards at every physical RHS evaluation as well.
         runtime.physical.rhs = system.rhs
-    trajectory = integrar(runtime, initial, final, rtol=study['rtol'], atol=tolerance,
+    requested_times = np.linspace(0, final, study['muestras'])
+    time_scale = system.scaled.time_scale if system.scaled is not None else 1
+    boundary = system.prescribed_boundary()
+    integration_final = final
+    if boundary is not None:
+        # A strict endpoint may have no finite state (e.g. rho at V=0).
+        # Retain requested samples strictly before it; never extrapolate a
+        # state to the algebraically located boundary or invent an epsilon.
+        integration_final = max(float(t) for t in requested_times if t*time_scale < boundary[0])
+    trajectory = (integrar(runtime, initial, integration_final, rtol=study['rtol'], atol=tolerance,
                            max_step=final/(study['muestras']-1), metodo=system.method)
-    times = sorted({float(t) for t in np.linspace(0, final, study['muestras']) if t <= trajectory.t_fin} | {trajectory.t_fin})
+                  if integration_final > 0 else Trayectoria(y_fin=initial))
+    stop = None
+    if boundary is not None and trajectory.detenida is None and trajectory.t_fin == integration_final:
+        time, key, condition = boundary
+        message = f'Prescribed strict validity boundary at t = {time:.12g} s: {condition}. Only samples before the excluded endpoint are published; no endpoint state is asserted.'
+        trajectory.detenida = Detencion('derived_validity', message)
+        trajectory.eventos.append(('derived_validity', time/time_scale, None, None, message))
+        stop = {'code': 'derived_validity', 'equationId': key, 'condition': condition,
+                'time': time, 'lastValidTime': trajectory.t_fin*time_scale}
+    times = sorted({float(t) for t in requested_times if t <= trajectory.t_fin} | {trajectory.t_fin})
     raw = [trajectory.y(t) for t in times]
     if system.scaled is not None:
         physical_times = [t*runtime.time_scale for t in times]
         values = [row[:runtime.size]*runtime.state_scales for row in raw]
     else:
         physical_times = times; values = raw
+    solved = None
+    nonlinear_failure = None
+    if system.nonlinear:
+        solved = []
+        for t, row in zip(physical_times, values):
+            try:
+                candidate = system.solve_algebraic(t, row)
+                if system.dae:
+                    system._validate_dae_accepted(t, row, publication=True)
+                for _, _, _, function in system.numeric.observables:
+                    if not math.isfinite(float(function(t, row))):
+                        raise ValueError('A selected reconstruction is nonfinite at publication.')
+                solved.append(candidate)
+            except (ArithmeticError, ValueError) as error:
+                failure = NonlinearError('nonlinear_nonfinite', str(error), **system.algebraic_block.location(t, 'publication'))
+                trajectory.detenida = Detencion(failure.code, str(failure))
+                nonlinear_failure = [failure.diagnostic]
+                break
+            except Detencion as error:
+                trajectory.detenida = error
+                nonlinear_failure = getattr(error, 'diagnostics', [])
+                break
+        count = len(solved)
+        physical_times, values, raw = physical_times[:count], values[:count], raw[:count]
+        if nonlinear_failure is None and trajectory.detenida is not None:
+            nonlinear_failure = getattr(trajectory.detenida, 'diagnostics', [])
     series = [serie('campo.'+identity, str(q), system._unit(q), ['t'], [float(row[i]) for row in values])
               for i, (identity, q) in enumerate(zip(system.state_ids, system.states))]
     if system.scaled is not None:
@@ -799,9 +1026,29 @@ def resolve_system(system):
     for key, label, unit, function in system.numeric.observables:
         series.append(serie('observable.'+key, label, unit, ['t'], [float(function(t, row)) for t, row in zip(physical_times, values)]))
     verifications = []
+    if system.algebraic_block is not None:
+        if solved is None:
+            solved = [system.solve_algebraic(t, row) for t, row in zip(physical_times, values)]
+        for index, (q, selection) in enumerate(zip(system.algebraic_quantities, system.algebraic_rows)):
+            series.append(serie('observable.'+selection['quantityId'], str(q), system._unit(q), ['t'],
+                                [float(z[index]) for z, _ in solved]))
+        if system.nonlinear:
+            for index, selection in enumerate(system.algebraic_rows):
+                equation = system._equation(selection['equationId']).equation
+                residuals = [system.algebraic_block.residual(t, *row[:system.size], *z)[index]
+                             for t, row, (z, _) in zip(physical_times, values, solved)]
+                series.append(serie('algebraic.residual.'+selection['equationId'], 'Original algebraic residual',
+                                    system._unit(equation.lhs), ['t'], residuals))
+        if solved:
+            verifications.append({'id': 'algebraic.scaled_residual' if system.nonlinear else 'algebraic.backward_error',
+                'valor': max(error for _, error in solved),
+                'tolerancia': system.selection['nonlinear']['residualTolerance'] if system.nonlinear else 64*np.finfo(float).eps,
+                'descripcion': 'Original SI residual divided by declared row scales; not a thermodynamic certificate.' if system.nonlinear else 'Original SI algebraic residual divided componentwise by |A||z|+|b| at published samples; not a thermodynamic certificate.'})
     for index, (selection, inventory, _, scale) in enumerate(system.checks):
         function = system.numeric._compilar(system._ast(inventory), 'conservation inventory')
         first = function(0.0, system.initial_state)
+        if not values:
+            continue
         residual = max(abs(float(function(t, row)-first-row[system.size+index])) for t, row in zip(physical_times, values)) / float(scale)
         verifications.append({'id': 'conservation.'+selection['equationId'], 'valor': residual, 'tolerancia': 1e-6,
                               'descripcion': 'Selected inventory change minus its integrated net rate, divided by the declared physical scale.'})
@@ -809,8 +1056,15 @@ def resolve_system(system):
         series.append(serie('inventory.'+selection['equationId'], 'Reconstructed dependent inventory', system._unit(inventory), ['t'], [float(function(t, row)) for t, row in zip(physical_times, values)]))
     events = [evento(code, 't', t*(system.scaled.time_scale if system.scaled is not None else 1), message)
               for code, t, _, _, message in trajectory.eventos]
-    return conjunto(system.model['id'], system.model['nombre'], 'parcial' if trajectory.detenida else 'resuelto',
+    return conjunto(system.model['id'], system.model['nombre'], 'fallido' if not values else 'parcial' if trajectory.detenida else 'resuelto',
         {'motor': 'rage.compilador.derived', 'metodo': system.method, 'firma': system.report['signature'],
          'compilation': system.report, 'pasos': trajectory.pasos, 'rechazos': trajectory.rechazos,
+         **({'nonlinearDiagnostics': {'version': 1, 'method': 'damped_newton',
+             'sourceSignature': system.selection['sourceSignature'], 'settings': system.selection['nonlinear'],
+             'evaluatedSolves': system.algebraic_block.calls, 'lastEvaluation': system.algebraic_block.last,
+             'failures': nonlinear_failure or [], 'publishedSamples': len(values),
+             'scope': 'Local regular roots; finite probes do not establish global uniqueness.'}} if system.nonlinear else {}),
+         **({'daeDiagnostics': system.dae.evidence()} if system.dae else {}),
+         **({'stop': stop} if stop is not None else {}),
          **({'mensaje': str(trajectory.detenida)} if trajectory.detenida else {})},
         [eje('t', 'Physical time', 'tiempo', 's', physical_times)], series, events, verifications, modeloId=system.model['id'])

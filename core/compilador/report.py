@@ -8,6 +8,9 @@ from .transformed import TransformedSystem, _signature, selected_execution
 
 
 def compilation_report(model):
+    if model.get('motores', {}).get('derivedExecution', {}).get('version') == 5:
+        from .steady import SteadySystem
+        return SteadySystem(model).report
     if model.get('motores', {}).get('derivedExecution') is not None:
         from .derived import DerivedSystem
         return DerivedSystem(model).report

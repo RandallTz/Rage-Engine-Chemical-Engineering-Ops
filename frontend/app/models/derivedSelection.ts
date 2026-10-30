@@ -23,6 +23,7 @@ export function selectedDerivedModel(model:HojaMotor):ModeloComun {
   const common=commonSource(model),stored=model.derivedSelection;
   if(!stored||stored.version!==1||stored.sourceSignature!==derivedSourceIdentity(common))throw new Error('The derived formulation is missing or outdated. Review and select it in Transform.');
   common.motores.derivedExecution=readDerivedExecution(structuredClone(stored.selection),common.datos);
+  if(common.motores.derivedExecution.version===5)common.estudio={tipo:'steady',version:1,metodoSolicitado:'damped_newton'};
   return leerModeloComun(common);
 }
 export function reconcileDerived(previous:HojaMotor|undefined,next:HojaMotor):HojaMotor {

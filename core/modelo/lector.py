@@ -1,11 +1,11 @@
 """
-Lector estricto del modelo común v0. Devuelve el mismo dict si es válido; si
-no, ErrorModelo con la ruta del primer problema. No convierte unidades ni
-completa valores: un dato que falta es un error, nunca un valor por omisión.
+Strict common-model v0 reader. Returns the original dict when valid; otherwise
+raises ErrorModelo with the first problem's path. It neither converts units nor
+fills values: missing data is an error, never an implicit default.
 
-La parte matemática se valida con el lector del documento v2 de la
-adimensionalización (misma representación), y la configuración de ese motor
-con su lector de documentos: no se duplica ninguna regla.
+The mathematical part uses the nondimensionalization v2 model reader (the same
+representation), and that engine's configuration uses its document reader.
+Validation rules are not duplicated.
 """
 
 import json
@@ -36,7 +36,7 @@ def _fallo(ruta, motivo):
 
 def _obj(v, ruta):
     if not isinstance(v, dict):
-        _fallo(ruta, "se esperaba un objeto")
+        _fallo(ruta, "Expected an object")
     return v
 
 
@@ -44,37 +44,37 @@ def _claves(v, ruta, obligatorias, opcionales=()):
     o = _obj(v, ruta)
     faltan = [k for k in obligatorias if k not in o]
     if faltan:
-        _fallo(ruta, "faltan " + ", ".join(faltan))
+        _fallo(ruta, "Missing fields: " + ", ".join(faltan))
     sobran = [k for k in o if k not in obligatorias and k not in opcionales]
     if sobran:
-        _fallo(ruta, "campos desconocidos: " + ", ".join(sobran))
+        _fallo(ruta, "Unknown fields: " + ", ".join(sobran))
     return o
 
 
 def _texto(v, ruta):
     if not isinstance(v, str) or not v.strip():
-        _fallo(ruta, "texto requerido")
+        _fallo(ruta, "Text required")
 
 
 def _lista(v, ruta):
     if not isinstance(v, list):
-        _fallo(ruta, "se esperaba una lista")
+        _fallo(ruta, "Expected a list")
     return v
 
 
 def _bool(v, ruta):
     if not isinstance(v, bool):
-        _fallo(ruta, "se esperaba verdadero o falso")
+        _fallo(ruta, "Expected true or false")
 
 
 def _opcion(v, ruta, opciones):
     if v not in opciones:
-        _fallo(ruta, f"valor no admitido ({v!r}); admitidos: {', '.join(map(str, opciones))}")
+        _fallo(ruta, f"Unsupported value ({v!r}); allowed: {', '.join(map(str, opciones))}")
 
 
 def _numero(v, ruta):
     if isinstance(v, bool) or not isinstance(v, (int, float)) or v != v or v in (float("inf"), float("-inf")):
-        _fallo(ruta, "número finito requerido")
+        _fallo(ruta, "Finite number required")
 
 
 def _unicos(items, ruta, clave="id"):
@@ -82,16 +82,16 @@ def _unicos(items, ruta, clave="id"):
     for i, x in enumerate(items):
         k = _obj(x, f"{ruta}[{i}]").get(clave)
         if k is None:
-            _fallo(f"{ruta}[{i}].{clave}", "requerido")
+            _fallo(f"{ruta}[{i}].{clave}", "Required")
         if k in vistos:
-            _fallo(f"{ruta}[{i}].{clave}", f"identidad repetida: {k!r}")
+            _fallo(f"{ruta}[{i}].{clave}", f"Duplicate identity: {k!r}")
         vistos.add(k)
     return vistos
 
 
 def _ref(v, conjunto, ruta, que):
     if v not in conjunto:
-        _fallo(ruta, f"referencia inexistente ({que} {v!r})")
+        _fallo(ruta, f"Unknown reference ({que} {v!r})")
 
 
 class _Lectura:
@@ -104,7 +104,7 @@ class _Lectura:
         if initial and self.inspect_initialization:
             _texto(v, ruta)
             return
-        _ref(v, self.datos, ruta, "dato")
+        _ref(v, self.datos, ruta, "datum")
 
 
 def leer_modelo_comun(dato):
@@ -122,7 +122,7 @@ def leer_modelo_inspeccion(dato):
 
 def _read_model(dato, *, inspect_initialization):
     if len(json.dumps(dato, ensure_ascii=False).encode("utf-8")) > LIMITE_BYTES:
-        _fallo("modelo", "el modelo supera 8 MB")
+        _fallo("modelo", "The model exceeds 8 MB")
     m = _claves(dato, "modelo", CLAVES, ["restricciones", "observables", "verificaciones"])
     _opcion(m["formato"], "formato", ["rage.modelo"])
     _opcion(m["version"], "version", [VERSION])
@@ -136,9 +136,9 @@ def _read_model(dato, *, inspect_initialization):
         _opcion(o["funcion"], r + ".funcion", FUNCIONES_DATO)
         dec = _claves(o["declaracion"], r + ".declaracion", ["texto", "unidad"])
         if not isinstance(dec["texto"], str):
-            _fallo(r + ".declaracion.texto", "texto requerido (vacío = dato pendiente)")
+            _fallo(r + ".declaracion.texto", "Text required (empty = pending datum)")
         if not isinstance(dec["unidad"], str):
-            _fallo(r + ".declaracion.unidad", "texto requerido (vacío si la magnitud no tiene unidad)")
+            _fallo(r + ".declaracion.unidad", "Text required (empty for a quantity without a unit)")
         org = _claves(o["origen"], r + ".origen", ["propietarioId", "ruta"])
         _texto(org["propietarioId"], r + ".origen.propietarioId")
         _texto(org["ruta"], r + ".origen.ruta")
@@ -150,7 +150,7 @@ def _read_model(dato, *, inspect_initialization):
         r = f"componentes[{i}]"
         o = _claves(c, r, ["id", "nombre", "simbolo"], ["identidadQuimica", "masaMolar"])
         if isinstance(o["id"], bool) or not isinstance(o["id"], int):
-            _fallo(r + ".id", "entero requerido")
+            _fallo(r + ".id", "Integer required")
         _texto(o["nombre"], r + ".nombre")
         _texto(o["simbolo"], r + ".simbolo")
         if "identidadQuimica" in o:
@@ -197,7 +197,7 @@ def _read_model(dato, *, inspect_initialization):
     for clave, campos in (("observables", ["id", "nombre", "unidadSI", "expresion"]), ("verificaciones", ["id", "descripcion", "expresion", "escala"])):
         if clave in m:
             if m["matematico"] is None:
-                _fallo(clave, "se declaran sobre variables del modelo matemático")
+                _fallo(clave, "Declarations must reference mathematical-model variables")
             xs = _lista(m[clave], clave)
             _unicos(xs, clave)
             for i, x in enumerate(xs):
@@ -266,7 +266,7 @@ def _leer_volumen(v, r, ids_comp, ids_paq, lec):
     o = _claves(v, r, ["id", "componenteIds", "balances", "supuestos", "frontera", "termodinamica"] +
                 ([] if lec.inspect_initialization else ["inicial"]),
                 ["terminos", "volumenDatoId"] + (["inicial"] if lec.inspect_initialization else []))
-    # Datos de los términos que conservan los supuestos (motor de balances): "<rol>.<componenteId>" o un término de energía.
+    # Data for terms retained by the assumptions (balance engine): "<role>.<componentId>" or an energy term.
     for k, d in _obj(o.get("terminos", {}), r + ".terminos").items():
         rol = k.split(".")[0]
         _opcion(rol, f"{r}.terminos.{k}", ["generacion", "consumo", "resto", "calor", "trabajo_viscoso", "fuerzas", "fuente"])
@@ -275,7 +275,7 @@ def _leer_volumen(v, r, ids_comp, ids_paq, lec):
         lec.dato(o["volumenDatoId"], r + ".volumenDatoId")
     _texto(o["id"], r + ".id")
     for j, c in enumerate(_lista(o["componenteIds"], r + ".componenteIds")):
-        _ref(c, ids_comp, f"{r}.componenteIds[{j}]", "componente")
+        _ref(c, ids_comp, f"{r}.componenteIds[{j}]", "component")
     b = _claves(o["balances"], r + ".balances", ["materia", "energia", "momento"])
     for k in ("materia", "energia", "momento"):
         _bool(b[k], f"{r}.balances.{k}")
@@ -309,30 +309,30 @@ def _leer_volumen(v, r, ids_comp, ids_paq, lec):
             _opcion(en["tipo"], r + ".inicial.energia.tipo", ["U", "T"])
             lec.dato(en["datoId"], r + ".inicial.energia.datoId", initial=True)
         elif t_tipo(o) == "equilibrio" and not lec.inspect_initialization:
-            _fallo(r + ".inicial", "faltan energia")
-    # La termodinámica siempre presente: ningún volumen sin cierre declarado.
+            _fallo(r + ".inicial", "Missing energia")
+    # Thermodynamics is always present: every volume must declare a closure.
     t = o["termodinamica"]
     if not isinstance(t, dict) or "tipo" not in t:
-        _fallo(r + ".termodinamica", "todo volumen declara su cierre termodinámico (equilibrio con un paquete, "
-                                     "o un supuesto explícito con su motivo)")
+        _fallo(r + ".termodinamica", "Every volume must declare its thermodynamic closure (package equilibrium, "
+                                     "or an explicit assumption with its reason)")
     _opcion(t["tipo"], r + ".termodinamica.tipo", ["equilibrio", "supuesto"])
     if t["tipo"] == "equilibrio":
         _claves(t, r + ".termodinamica", ["tipo", "paqueteId", "politica"])
-        _ref(t["paqueteId"], ids_paq, r + ".termodinamica.paqueteId", "paquete")
+        _ref(t["paqueteId"], ids_paq, r + ".termodinamica.paqueteId", "package")
         pol = _claves(t["politica"], r + ".termodinamica.politica", ["cantidad", "cambioInterno", "evaluacion"],
                       ["tiposPermitidos"])
         _opcion(pol["cantidad"], r + ".termodinamica.politica.cantidad", ["sin_restriccion", "monofasico"])
         _opcion(pol["cambioInterno"], r + ".termodinamica.politica.cambioInterno", ["permitido", "prohibido"])
         _opcion(pol["evaluacion"], r + ".termodinamica.politica.evaluacion", ["equilibrio_estable"])
         if f["tipo"] not in ("rigida", "presion_prescrita"):
-            _fallo(r + ".frontera", "un cierre de equilibrio necesita frontera rígida (UV) o presión prescrita (PH)")
+            _fallo(r + ".frontera", "An equilibrium closure requires a rigid boundary (UV) or prescribed pressure (PH)")
     else:
         _claves(t, r + ".termodinamica", ["tipo", "supuesto", "motivo"], ["parametros"])
         _opcion(t["supuesto"], r + ".termodinamica.supuesto", SUPUESTOS_CIERRE)
         _texto(t["motivo"], r + ".termodinamica.motivo")
         if "parametros" in t:
             if t["supuesto"] != "u_lineal":
-                _fallo(r + ".termodinamica.parametros", "solo u_lineal declara parámetros")
+                _fallo(r + ".termodinamica.parametros", "Only u_lineal declares parameters")
             par = _claves(t["parametros"], r + ".termodinamica.parametros", ["cId", "uRefId", "TRefId", "TMinId", "TMaxId"], ["rhoId"])
             for k, d in par.items():
                 lec.dato(d, f"{r}.termodinamica.parametros.{k}")
@@ -345,7 +345,7 @@ def t_tipo(o):
 
 def _extremo(v, ids_vol, ruta):
     if v is not None:
-        _ref(v, ids_vol, ruta, "volumen")
+        _ref(v, ids_vol, ruta, "volume")
 
 
 def _leer_corriente(c, r, ids_comp, ids_vol, lec):
@@ -354,9 +354,9 @@ def _leer_corriente(c, r, ids_comp, ids_vol, lec):
     _extremo(o["desde"], ids_vol, r + ".desde")
     _extremo(o["hasta"], ids_vol, r + ".hasta")
     if o["desde"] is None and o["hasta"] is None:
-        _fallo(r, "una corriente necesita al menos un extremo en un volumen")
+        _fallo(r, "A stream requires at least one endpoint in a volume")
     for j, k in enumerate(_lista(o["componenteIds"], r + ".componenteIds")):
-        _ref(k, ids_comp, f"{r}.componenteIds[{j}]", "componente")
+        _ref(k, ids_comp, f"{r}.componenteIds[{j}]", "component")
     _opcion(o["mecanismo"], r + ".mecanismo", ["convectivo", "selectivo", None])
     mat = _obj(o["materia"], r + ".materia")
     _opcion(mat.get("modo"), r + ".materia.modo", ["por_componente", "total_desde_donante", "total_y_composicion"])
@@ -365,14 +365,14 @@ def _leer_corriente(c, r, ids_comp, ids_vol, lec):
         lec.dato(mat["caudalId"], r + ".materia.caudalId")
         fr = _obj(mat["fracciones"], r + ".materia.fracciones")
         for k, x in fr.items():
-            _ref(int(k) if str(k).lstrip("-").isdigit() else k, ids_comp, f"{r}.materia.fracciones.{k}", "componente")
+            _ref(int(k) if str(k).lstrip("-").isdigit() else k, ids_comp, f"{r}.materia.fracciones.{k}", "component")
             _numero(x, f"{r}.materia.fracciones.{k}")
         if abs(sum(fr.values()) - 1) > 1e-12 or any(x < 0 for x in fr.values()):
-            _fallo(r + ".materia.fracciones", "fracciones no negativas que suman uno")
+            _fallo(r + ".materia.fracciones", "Fractions must be nonnegative and sum to one")
     elif mat["modo"] == "por_componente":
         _claves(mat, r + ".materia", ["modo", "base", "caudalIds"])
         for k, d in _obj(mat["caudalIds"], r + ".materia.caudalIds").items():
-            _ref(int(k) if str(k).lstrip("-").isdigit() else k, ids_comp, f"{r}.materia.caudalIds.{k}", "componente")
+            _ref(int(k) if str(k).lstrip("-").isdigit() else k, ids_comp, f"{r}.materia.caudalIds.{k}", "component")
             lec.dato(d, f"{r}.materia.caudalIds.{k}")
     else:
         _claves(mat, r + ".materia", ["modo", "base", "caudalId"])
@@ -382,7 +382,7 @@ def _leer_corriente(c, r, ids_comp, ids_vol, lec):
         _bool(o["constante"], r + ".constante")
     if "extraccion" in o:
         for k in _obj(o["extraccion"], r + ".extraccion"):
-            _ref(k, ids_vol, f"{r}.extraccion.{k}", "volumen")
+            _ref(k, ids_vol, f"{r}.extraccion.{k}", "volume")
     if "estadoExterior" in o:
         ee = _obj(o["estadoExterior"], r + ".estadoExterior")
         lec.dato(ee.get("temperaturaId"), r + ".estadoExterior.temperaturaId")
@@ -407,6 +407,11 @@ def _leer_intercambio(q, r, ids_vol, lec):
 
 
 def _leer_estudio(e, lec):
+    if isinstance(e, dict) and e.get('tipo') == 'steady':
+        _claves(e, 'estudio', ['tipo', 'version', 'metodoSolicitado'])
+        if type(e['version']) is not int or e['version'] != 1 or e['metodoSolicitado'] != 'damped_newton':
+            _fallo('estudio', 'Steady study version 1 requires explicit damped_newton selection.')
+        return
     o = _claves(e, "estudio", ["tipo", "tiempoId", "metodoSolicitado", "muestras", "rtol", "atol"],
                 ["espacial", "cierreMasico"])
     _opcion(o["tipo"], "estudio.tipo", ["temporal"])
@@ -414,7 +419,7 @@ def _leer_estudio(e, lec):
     if o["metodoSolicitado"] is not None:
         _texto(o["metodoSolicitado"], "estudio.metodoSolicitado")
     if isinstance(o["muestras"], bool) or not isinstance(o["muestras"], int) or o["muestras"] < 2:
-        _fallo("estudio.muestras", "entero mayor o igual que 2")
+        _fallo("estudio.muestras", "Integer greater than or equal to 2")
     _numero(o["rtol"], "estudio.rtol")
     at = _claves(o["atol"], "estudio.atol", ["cantidad"], ["energia"])
     for k, x in at.items():
@@ -422,17 +427,17 @@ def _leer_estudio(e, lec):
     if "espacial" in o:
         esp = _claves(o["espacial"], "estudio.espacial", ["celdas", "frontera"])
         if isinstance(esp["celdas"], bool) or not isinstance(esp["celdas"], int):
-            _fallo("estudio.espacial.celdas", "entero requerido")
+            _fallo("estudio.espacial.celdas", "Integer required")
         _opcion(esp["frontera"], "estudio.espacial.frontera", ["periodica", "valores", "sin_flujo", ""])
     if "cierreMasico" in o:
         _opcion(o["cierreMasico"], "estudio.cierreMasico", ["densidad", "volumen", ""])
 
 
 def _leer_restricciones(m):
-    """Dominio de las variables del modelo matemático: el cálculo se detiene
-    en el instante en que una variable lo abandonaría (agotamiento)."""
+    """Mathematical-variable domain: stop at the instant a variable would
+    leave the domain (depletion)."""
     if m["matematico"] is None:
-        _fallo("restricciones", "las restricciones se declaran sobre variables del modelo matemático")
+        _fallo("restricciones", "Constraints must reference mathematical-model variables")
     campos = {s["id"] for s in m["matematico"]["simbolos"] if s["rol"] == "campo"}
     rs = _lista(m["restricciones"], "restricciones")
     vistos = set()
@@ -440,12 +445,12 @@ def _leer_restricciones(m):
         r = f"restricciones[{i}]"
         if "simboloId" in _obj(x, r):
             o = _claves(x, r, ["simboloId", "tipo"])
-            _ref(o["simboloId"], campos, r + ".simboloId", "variable del modelo matemático")
+            _ref(o["simboloId"], campos, r + ".simboloId", "mathematical-model variable")
             if o["simboloId"] in vistos:
-                _fallo(r + ".simboloId", f"identidad repetida: {o['simboloId']!r}")
+                _fallo(r + ".simboloId", f"Duplicate identity: {o['simboloId']!r}")
             vistos.add(o["simboloId"])
         else:
-            # Una expresión de las variables que debe mantenerse >= 0 (dominio de validez de un supuesto).
+            # An expression that must remain >= 0 (the validity domain of an assumption).
             o = _claves(x, r, ["expresion", "tipo", "descripcion"])
             _obj(o["expresion"], r + ".expresion")
             _texto(o["descripcion"], r + ".descripcion")
@@ -455,7 +460,7 @@ def _leer_restricciones(m):
 def _leer_adim(cfg, m):
     o = _claves(cfg, "motores.adimensionalizacion", ["version", "formas", "activaId"], ["exploracion", "execution"])
     if m["matematico"] is None:
-        _fallo("motores.adimensionalizacion", "la configuración de adimensionalización necesita el modelo matemático")
+        _fallo("motores.adimensionalizacion", "Nondimensionalization configuration requires the mathematical model")
     doc = {"formato": "adimensionalizacion", "version": o["version"], "id": m["id"], "nombre": m["nombre"],
            "modelo": m["matematico"], "formas": o["formas"], "activaId": o["activaId"],
            **({"exploracion": o["exploracion"]} if "exploracion" in o else {})}

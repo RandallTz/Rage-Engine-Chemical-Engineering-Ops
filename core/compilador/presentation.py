@@ -114,8 +114,8 @@ def solution_strategy(report, model=None):
     """Capabilities of the compiler branch that already accepted this problem."""
     nested = report["closureStrategy"] == "nested_equilibrium"
     methods = [{"id": "RK45", "available": True, "reason": "Adaptive Dormand–Prince 5(4) integration of the retained differential states."}]
-    methods.append({"id": "BDF", "available": not nested,
-                    "reason": "Not connected to this nested-equilibrium compiler." if nested else "Implicit variable-order integration; Newton iterations use a numerical Jacobian."})
+    methods.append({"id": "BDF", "available": True,
+                    "reason": "Implicit variable-order integration; Newton iterations use a numerical Jacobian."})
     steps = [
         {"id": "initialization", "title": "Initialize the same formulation", "description": "Read declared units in SI, replay deductions and construct compatible initial states. Missing data or unsupported constraints block execution.",
          "latex": r"\mathbf y(t_0)=\mathbf y_0"},
@@ -135,6 +135,21 @@ def solution_strategy(report, model=None):
     else:
         steps.append({"id": "rhs", "title": "Evaluate the compiled differential equations", "description": "Use the generated or explicitly declared RHS and its constitutive assumptions. Selected scaling is compiled first; physical variables are reconstructed through the saved inverse map.",
                       "latex": r"\dot{\mathbf y}=\mathbf f(t,\mathbf y),\qquad \mathbf y(t_0)=\mathbf y_0"})
+    nonlinear = report.get('derivedExecution', {}).get('nonlinearBlock')
+    if report.get('derivedExecution', {}).get('dae'):
+        methods[0].update(available=False, reason='The admitted semi-explicit index-one path requires BDF; IDA is a future option for higher-index or fully implicit systems.')
+        steps.append({'id': 'index-one', 'title': 'Verify index one and preserve the given initial states',
+                      'description': 'An exact determinant interval excludes zero over the declared domain. Damped Newton initializes algebraic variables with differential states fixed. Original residuals and conservation are checked before accepting each internal BDF endpoint and at publication.',
+                      'latex': r'\det(g_z)\ne0,\quad g(t_0,x_0,z_0)=0,\quad \dot x=f(t,x,z)'})
+    if nonlinear:
+        steps.append({'id': 'nonlinear-block', 'title': 'Solve the retained nonlinear block',
+                      'description': 'Damped Newton with original residual checks, dimensioned scales and bounded Armijo trials. Singular, ambiguous, nonconverged or out-of-domain solves stop explicitly. Each BDF probe recomputes the complete closure.',
+                      'latex': r'J_g\Delta z=-g,\quad z_{k+1}=z_k+\lambda\Delta z,\quad g(t,y,z)=0'})
+    block = report.get('derivedExecution', {}).get('algebraicBlock')
+    if block:
+        steps.append({'id': 'algebraic-block', 'title': 'Solve the selected constant affine block',
+            'description': block['conditionTest']+' '+block['solve']+' No nonlinear or time-varying matrix fallback is admitted.',
+            'latex': r'A\mathbf z=\mathbf b(t,\mathbf y),\quad\dot{\mathbf y}=\mathbf f(t,\mathbf y,\mathbf z)'})
     steps.append({"id": "time-step", "title": f"Advance with {report['method']}",
                   "description": "Adaptive embedded stages estimate local error and accept or reject steps. No global linear solve matrix is assembled." if report["method"] == "RK45" else "Solve the implicit multistep residual with Newton iterations. The numerical Jacobian belongs to this time-step solve; it is not the list of physical equations.",
                   "latex": r"\mathbf k_j=\mathbf f(t_n+c_jh,\mathbf y_n+h\sum_{l<j}a_{jl}\mathbf k_l),\quad\mathbf y_{n+1}=\mathbf y_n+h\sum_j b_j\mathbf k_j" if report["method"] == "RK45" else r"\mathbf r(\mathbf y_{n+1})=\sum_{j=0}^q\alpha_j\mathbf y_{n+1-j}-h\mathbf f(t_{n+1},\mathbf y_{n+1})=\mathbf0,\quad J_r=\alpha_0 I-hJ_f"})

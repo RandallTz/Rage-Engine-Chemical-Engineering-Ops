@@ -93,7 +93,9 @@ export function hojaDesdeModelo(m: ModeloComun): { componentes: Componente[]; fo
   const fronteras = m.corrientes.map(c => ({ id: Number(c.id.split(".")[1]), sentido: c.hasta === VOLUMEN_HOJA ? "entrada" as const : "salida" as const, ...(c.constante !== undefined ? { constante: c.constante } : {}) }));
   const datos: Record<string, DatoMotor> = {};
   for (const d of Object.values(m.datos)) if (d.origen.ruta.startsWith(RUTA_DATOS)) datos[d.origen.ruta.slice(RUTA_DATOS.length)] = { texto: d.declaracion.texto, unidad: d.declaracion.unidad };
-  const e = m.estudio, tf = m.datos[e.tiempoId].declaracion;
+  const e = m.estudio;
+  if(e.tipo!=='temporal')throw new Error('Steady studies use the common derived-model workspace.');
+  const tf = m.datos[e.tiempoId].declaracion;
   const config: ConfiguracionMotor = {
     datos, tiempo: { texto: tf.texto, unidad: tf.unidad }, metodo: e.metodoSolicitado as ConfiguracionMotor["metodo"], muestras: e.muestras,
     celdas: e.espacial?.celdas ?? 40, rtol: e.rtol, atol: e.atol.cantidad, frontera: e.espacial?.frontera ?? "",

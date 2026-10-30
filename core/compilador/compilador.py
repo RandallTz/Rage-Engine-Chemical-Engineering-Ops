@@ -1,29 +1,29 @@
 """
-Compilador del modelo común a un sistema numérico temporal.
+Compile the common model into a numerical time-dependent system.
 
-Ejecuta las relaciones estructurales del modelo (core/modelo/relaciones.py),
-sin ramas por equipo, operación ni sustancia:
+Execute the model's structural relations (core/modelo/relaciones.py),
+without branches for particular equipment, operations or substances:
 
-  por volumen v y componente i:   dn_vi/dt = sum_s B_vs ndot_s x_si
-  por volumen v (energía):        dE_v/dt  = sum_s B_vs ndot_s h_s + sum_q B_vq Q_q  [+ V_v dP_v/dt]
-      E = U con frontera rígida (cierre UV con V dato)
-      E = H con presión prescrita (cierre PH con P(t) dato)
-  cierre: el de la capa termodinámica, en cada evaluación (fases como resultado)
-  corriente s: caudal dato; composición y entalpía del DONANTE según el signo
-      actual del caudal (volumen: mezcla o fase extraída; exterior: estado TP declarado)
-  intercambio q: Q dato (impuesto) o G (T_desde - T_hasta) (conductancia)
+  per volume v and component i:   dn_vi/dt = sum_s B_vs ndot_s x_si
+  per volume v (energy):          dE_v/dt  = sum_s B_vs ndot_s h_s + sum_q B_vq Q_q  [+ V_v dP_v/dt]
+      E = U for a rigid boundary (UV closure with given V)
+      E = H for prescribed pressure (PH closure with given P(t))
+  closure: the thermodynamic layer at each evaluation (phases are outputs)
+  stream s: given flow; DONOR composition and enthalpy follow its current sign
+      (volume: mixture or extracted phase; exterior: declared TP state)
+  exchange q: given Q (imposed) or G (T_desde - T_hasta) (conductance)
 
-Integrales auxiliares para verificar la conservación global: materia por
-componente y energía intercambiadas con el exterior.
+Auxiliary integrals verify global conservation of each component and energy
+exchanged with the exterior.
 
-Datos: textos del modelo (número o expresión en t) con su unidad, pasados a SI
-por el servicio único de unidades; expresiones con core/expresiones_motor.
+Data: model text (number or expression in t) with its unit, converted to SI
+by the shared units service; expressions use core/expresiones_motor.
 
-Fuera de esta versión (NoSoportado con motivo): fuentes materiales
-(reacción), caudal volumétrico, volúmenes con estado supuesto, momento.
+Outside this entry point's scope (NoSoportado with a reason): material sources
+(reaction), volumetric flow, volumes with assumed states, and momentum.
 
-Un modelo cuyos volúmenes declaran su estado como supuesto y que trae sus
-ecuaciones escritas (`matematico`) lo ejecuta la otra entrada, explicito.py.
+Models with assumed volume states and authored equations (`matematico`)
+use the other entry point, explicito.py.
 """
 
 from dataclasses import dataclass
@@ -64,7 +64,7 @@ def temporal_method(requested):
 
 
 class _Dato:
-    """Un dato del modelo como función del tiempo en SI, con su derivada."""
+    """A model datum as an SI function of time, with its derivative."""
 
     def __init__(self, d, ruta, expected_unit=None):
         self.path = ruta
@@ -148,7 +148,7 @@ class SistemaCompilado:
             if s["mecanismo"] == "selectivo":
                 raise NoSoportado(f"Stream {s['id']}: selective transfer needs a coupled material and energy law.")
             if s["materia"]["base"] == "volumetrica":
-                raise NoSoportado(f"corriente {s['id']}: caudal volumétrico: pendiente")
+                raise NoSoportado(f"Stream {s['id']}: volumetric flow is not yet supported")
         self._ultimo_estado = {}
         from core.balances.energy_equations import lower_equilibrium_rate
         from core.modelo.operation_journal import JournalError
@@ -163,18 +163,18 @@ class SistemaCompilado:
         self.firma_inicial = None
 
     def admite(self, firma):
-        """La política de fases de cada volumen es un supuesto declarado: un
-        conjunto de fases que la incumple detiene el cálculo, no se ignora."""
+        """Each volume's phase policy is a declared assumption: a phase set
+        that violates it stops the calculation and is never ignored."""
         for vid, fases in firma:
             pol = self.politicas[vid]
             tipos = [f.rsplit("-", 1)[0] for f in fases]
             if pol["cantidad"] == "monofasico" and len(fases) > 1:
-                return f"volumen {vid}: la política es monofásica y el estado tiene {len(fases)} fases ({', '.join(fases)})"
+                return f"Volume {vid}: the policy requires a single phase, but the state has {len(fases)} phases ({', '.join(fases)})"
             if pol["cambioInterno"] == "prohibido" and self.firma_inicial is not None and fases != dict(self.firma_inicial)[vid]:
-                return f"volumen {vid}: el cambio interno de fases está prohibido y el conjunto pasa a ({', '.join(fases)})"
+                return f"Volume {vid}: internal phase changes are forbidden, but the phase set changes to ({', '.join(fases)})"
             tp = pol.get("tiposPermitidos")
             if tp is not None and any(x not in tp for x in tipos):
-                return f"volumen {vid}: aparece una fase fuera de los tipos permitidos ({', '.join(tp)})"
+                return f"Volume {vid}: a phase appears outside the allowed types ({', '.join(tp)})"
         return None
 
     def dato(self, id_):
@@ -193,7 +193,7 @@ class SistemaCompilado:
             return error
         return None
 
-    # --- estado inicial -------------------------------------------------------------
+    # --- initial state -------------------------------------------------------------
     def inicial(self):
         y = np.zeros(self.tam)
         from core import agua_iapws95, paquetes_volumen
@@ -237,13 +237,13 @@ class SistemaCompilado:
             raise AdmissionError('', '', '', diagnostics=errors)
         return y
 
-    # --- evaluación -------------------------------------------------------------------
+    # --- evaluation -------------------------------------------------------------------
     def _estados(self, t, y, rapido=True):
         sal = {}
         for v in self.vols:
             n = np.maximum(y[v.i_n], 0.0)
             if not n.sum() > 0:
-                raise Detencion("agotamiento", f"el volumen {v.id} se ha vaciado")
+                raise Detencion("agotamiento", f"Volume {v.id} is empty")
             if v.rigida:
                 sal[v.id] = v.cierre.estado(n, "UV", y[v.i_E], v.dato_V(t), rapido)
             else:
@@ -287,7 +287,7 @@ class SistemaCompilado:
                 volume.cierre.semilla = seed
 
     def _donante_volumen(self, s, v, e):
-        """(x, h, M) de lo que sale de un volumen: mezcla o una fase."""
+        """(x, h, M) of the material leaving a volume: mixture or a single phase."""
         ext = (s.get("extraccion") or {}).get(v.id)
         if ext is None:
             # Under an explicit monophase policy, the sole phase is the whole
@@ -302,11 +302,11 @@ class SistemaCompilado:
             return x, e.H / nt, float(np.dot(x, v.cierre.M))
         fases = [f for f in e.fases if f.tipo == ext["fase"]]
         if not fases:
-            raise Detencion("fase_ausente", f"la corriente {s['id']} extrae {ext['fase']} del volumen {v.id}, que no la tiene")
+            raise Detencion("fase_ausente", f"Stream {s['id']} extracts {ext['fase']} from volume {v.id}, where that phase is absent")
         if len(fases) > 1:
             crit = ext.get("criterio")
             if crit is None:
-                raise Detencion("fase_ambigua", f"la corriente {s['id']}: hay {len(fases)} fases {ext['fase']}; declara un criterio")
+                raise Detencion("fase_ambigua", f"Stream {s['id']}: there are {len(fases)} phases of type {ext['fase']}; declare a selection criterion")
             fases.sort(key=lambda f: f.M / f.v, reverse=(crit == "mayor_densidad"))
         f = fases[0]
         return f.x, f.h, f.M
@@ -314,7 +314,7 @@ class SistemaCompilado:
     def _donante_exterior(self, s, t, receptor):
         ee = s.get("estadoExterior")
         if not ee:
-            raise NoSoportado(f"corriente {s['id']}: entra del exterior sin estado exterior declarado")
+            raise NoSoportado(f"Stream {s['id']}: external inflow has no declared exterior state")
         T = self.dato(ee["temperaturaId"])(t)
         pres = ee["presion"]
         P = self.dato(pres["datoId"])(t) if pres["tipo"] == "dato" else self._ultimo_estado[pres["volumenId"]].P
@@ -348,14 +348,14 @@ class SistemaCompilado:
                 Fi = np.array([self.dato(mat["caudalIds"][str(c)])(t) if str(c) in mat["caudalIds"] else 0.0 for c in ref.comp])
                 ni = Fi / ref.cierre.M if mat["base"] == "masica" else Fi
                 if np.any(ni > 0) and np.any(ni < 0):
-                    raise NoSoportado(f"corriente {s['id']}: caudales por componente con signos opuestos")
+                    raise NoSoportado(f"Stream {s['id']}: component flows have opposite signs")
                 sentido = 1.0 if ni.sum() >= 0 else -1.0
                 origen, destino = (de, ha) if sentido > 0 else (ha, de)
                 ndot = float(abs(ni.sum()))
                 x = np.abs(ni) / ndot if ndot > 0 else np.zeros(len(ni))
                 if origen is not None:
                     if len(origen.comp) > 1:
-                        raise NoSoportado(f"corriente {s['id']}: caudales por componente desde un volumen de varias especies sobreespecifican la composición")
+                        raise NoSoportado(f"Stream {s['id']}: component flows from a multispecies volume overspecify the composition")
                     _, h, _ = self._donante_volumen(s, origen, est[origen.id])
                 else:
                     _, h, _ = self._donante_exterior(s, t, destino) if ndot > 0 else (None, 0.0, None)
@@ -402,6 +402,9 @@ class SistemaCompilado:
 
 
 def compilar(modelo):
+    if modelo.get('motores', {}).get('derivedExecution', {}).get('version') == 5:
+        from .steady import SteadySystem
+        return SteadySystem(modelo)
     if modelo.get('motores', {}).get('derivedExecution') is not None:
         from .derived import DerivedSystem
         return DerivedSystem(modelo)
@@ -425,12 +428,15 @@ def _check_inventory_execution(modelo):
 
 
 def resolver(modelo):
-    """Modelo común -> conjunto de resultados en el formato común (core/resultados).
+    """Common model -> result set in the common format (core/resultados).
 
-    Dos entradas: la estructural (volúmenes con cierre de equilibrio, este
-    archivo) y la de ecuaciones explícitas (`matematico`, explicito.py)."""
+    Two entry points: structural (volumes with equilibrium closures, this
+    file) and explicit equations (`matematico`, explicito.py)."""
     from .explicito import es_explicito, resolver_explicito
     from .transformed import selected_execution, resolve_transformed
+    if modelo.get('motores', {}).get('derivedExecution', {}).get('version') == 5:
+        from .steady import resolve
+        return resolve(modelo)
     if modelo.get('motores', {}).get('derivedExecution') is not None:
         from .derived import resolve
         return resolve(modelo)
@@ -445,7 +451,7 @@ def resolver(modelo):
     sis = compilar(modelo)
     est = modelo["estudio"]
     if est is None or est["tipo"] != "temporal":
-        raise NoSoportado("el modelo no pide un estudio temporal")
+        raise NoSoportado("The model does not request a time-dependent study")
     requested = est.get("metodoSolicitado")
     sis.metodo = temporal_method(requested)
     tf = sis.dato(est["tiempoId"])(0.0)
@@ -461,7 +467,7 @@ def resolver(modelo):
                              native_code='MOTOR_ENS_INICIAL_'+stop.codigo.upper()) from error
     motivo = sis.admite(sis.firma_inicial)
     if motivo:
-        raise NoSoportado(f"el estado inicial incumple la política de fases: {motivo}")
+        raise NoSoportado(f"The initial state violates the phase policy: {motivo}")
     from .network_results import execute
     return execute(sis, y0, tf, muestras)
 
@@ -482,16 +488,16 @@ def _publicar(sis, ts, filas, tray, y0, certified=None):
             series.append(serie(f"{p}.n.{c}", f"n {c}", "mol", ["t"], [float(y[v.i_n][k]) for y in filas], propietarioId=f"volumen:{v.id}", componenteId=c))
         for clave, unidad in (("T", "K"), ("P", "Pa"), ("V", "m^3"), ("H", "J"), ("U", "J")):
             series.append(serie(f"{p}.{clave}", clave, unidad, ["t"], [e[clave] for e in cert], propietarioId=f"volumen:{v.id}"))
-        # Todas las fases candidatas, presentes o no, en cada muestra.
+        # All candidate phases, present or absent, at each sample.
         for j, k in enumerate(v.cierre.candidatas):
             series.append(serie(f"{p}.fase.{k}.beta", f"beta {k}", "1", ["t"], [e["fases"][j]["beta"] for e in cert], propietarioId=f"volumen:{v.id}", faseId=k))
             series.append(serie(f"{p}.fase.{k}.tm", f"tm {k}", "1", ["t"], [e["fases"][j]["tm"] for e in cert], propietarioId=f"volumen:{v.id}", faseId=k))
             for c in v.comp:
-                series.append(serie(f"{p}.fase.{k}.x.{c}", f"x {c} en {k}", "1", ["t"],
+                series.append(serie(f"{p}.fase.{k}.x.{c}", f"x {c} in {k}", "1", ["t"],
                                     [(e["fases"][j].get("composicion") or e["fases"][j].get("composicionIncipiente") or {}).get(c) for e in cert],
                                     propietarioId=f"volumen:{v.id}", faseId=k, componenteId=c))
         datos[v.id] = cert
-    # Conservación global con las integrales auxiliares.
+    # Global conservation using the auxiliary integrals.
     resid_n, resid_E = 0.0, 0.0
     for t, y in zip(ts, filas):
         for c in sis.componentes:
@@ -506,16 +512,16 @@ def _publicar(sis, ts, filas, tray, y0, certified=None):
         if codigo == "cambio_firma":
             for (vid, fa), (_, fd) in zip(antes, despues):
                 for f in sorted(set(fd) - set(fa)):
-                    eventos.append(evento("aparicion_fase", "t", t, f"aparece {f}", f"volumen:{vid}"))
+                    eventos.append(evento("aparicion_fase", "t", t, f"{f} appears", f"volumen:{vid}"))
                 for f in sorted(set(fa) - set(fd)):
-                    eventos.append(evento("desaparicion_fase", "t", t, f"desaparece {f}", f"volumen:{vid}"))
+                    eventos.append(evento("desaparicion_fase", "t", t, f"{f} disappears", f"volumen:{vid}"))
         else:
             eventos.append(evento(codigo, "t", t, msg))
     estado = "parcial" if tray.detenida else "resuelto"
-    verif = [{"id": "conservacion.materia", "valor": resid_n, "tolerancia": 1e-9, "descripcion": "max |sum n - n0 - intercambio exterior| / n0 por componente"},
-             {"id": "conservacion.energia", "valor": resid_E, "tolerancia": 1e-9, "descripcion": "max |sum E - E0 - intercambio exterior| / |E|"},
+    verif = [{"id": "conservacion.materia", "valor": resid_n, "tolerancia": 1e-9, "descripcion": "max |sum n - n0 - external exchange| / n0 per component"},
+             {"id": "conservacion.energia", "valor": resid_E, "tolerancia": 1e-9, "descripcion": "max |sum E - E0 - external exchange| / |E|"},
              {"id": "complementariedad", "valor": max(e["complementariedad"] for cert in datos.values() for e in cert), "tolerancia": 1e-8,
-              "descripcion": "max |beta tm|, -beta, -tm en las muestras"}]
+              "descripcion": "max |beta tm|, -beta, -tm over the samples"}]
     provenance = {}
     if any(m.get("motores", {}).get(key) for key in ("materialDerivation", "energyDerivation", "thermodynamicDerivation")):
         from .report import compilation_report
@@ -524,4 +530,4 @@ def _publicar(sis, ts, filas, tray, y0, certified=None):
                     {"motor": "rage.compilador", "metodo": f"{sis.metodo} with signature events (core/solvers)", "firma": None,
                      **provenance,
                      **({"mensaje": tray.detenida.mensaje} if tray.detenida else {})},
-                    [eje("t", "tiempo", "tiempo", "s", ts)], series, eventos, verif, modeloId=m["id"])
+                    [eje("t", "Time", "tiempo", "s", ts)], series, eventos, verif, modeloId=m["id"])

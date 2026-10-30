@@ -11,7 +11,13 @@ export function readRejectedAttempt(value:unknown,id:string,signature:string):Re
   return a;
 }
 function abrir():Promise<IDBDatabase>{return new Promise((resolve,reject)=>{const r=indexedDB.open('rage-motor-resultados',1);r.onupgradeneeded=()=>r.result.createObjectStore('resultados');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(new Error('No se pudo abrir el almacenamiento de resultados.'));});}
+export function validateSavedSteady(result:ResultadoMotor,id:string,signature:string){
+  if(result.version!==2&&result.modo!=='steady'&&result.motor!=='rage.compilador.steady'&&result.compilation?.version!==2&&result.commonResult?.procedencia.motor!=='rage.compilador.steady')return;
+  if(result.version!==2||result.modo!=='steady'||result.motor!=='rage.compilador.steady'||result.estado!=='resuelto'||result.metodo!=='damped_newton'||result.firma!==signature||!result.commonResult||result.commonResult.modeloId!==id||result.compilation?.version!==2||result.tiempos.length||result.x.length||result.valores.length||result.componentes.length||result.seriesEvaluadas||result.ensamblajeV2||result.ensamblajeTermodinamico||JSON.stringify(result.compilation)!==JSON.stringify(result.commonResult.procedencia.compilation)||JSON.stringify(result.verificationChecks)!==JSON.stringify(result.commonResult.verificaciones))throw new Error('Invalid scalar steady saved wrapper.');
+  leerResultados(result.commonResult);
+}
 export async function guardarResultadoMotor(id:string,resultado:ResultadoMotor,signal?:AbortSignal){
+  validateSavedSteady(resultado,id,resultado.firma);
   if(resultado.compilation)readCompilationReport(resultado.compilation);
   if(resultado.commonResult)leerResultados(resultado.commonResult);
   signal?.throwIfAborted();const db=await abrir();
@@ -27,7 +33,7 @@ export async function guardarResultadoMotor(id:string,resultado:ResultadoMotor,s
     catch(error){terminar();try{t.abort();}catch{/* Preserve the original storage error. */}reject(error);}
   });}finally{db.close();}
 }
-export async function leerResultadoMotor(id:string,firma:string):Promise<ResultadoMotor|undefined>{const db=await abrir();try{return await new Promise((resolve,reject)=>{const t=db.transaction('resultados'),r=t.objectStore('resultados').get([id,firma]);r.onsuccess=()=>{try{if(r.result?.compilation)readCompilationReport(r.result.compilation);if(r.result?.commonResult)leerResultados(r.result.commonResult);resolve(r.result);}catch(error){reject(error);}};r.onerror=()=>reject(new Error('No se pudo leer el resultado.'));});}finally{db.close();}}
+export async function leerResultadoMotor(id:string,firma:string):Promise<ResultadoMotor|undefined>{const db=await abrir();try{return await new Promise((resolve,reject)=>{const t=db.transaction('resultados'),r=t.objectStore('resultados').get([id,firma]);r.onsuccess=()=>{try{if(r.result)validateSavedSteady(r.result,id,firma);if(r.result?.compilation)readCompilationReport(r.result.compilation);if(r.result?.commonResult)leerResultados(r.result.commonResult);resolve(r.result);}catch(error){reject(error);}};r.onerror=()=>reject(new Error('No se pudo leer el resultado.'));});}finally{db.close();}}
 
 /** Separate key in the existing store; a rejected attempt never overwrites a run. */
 export async function saveRejectedAttempt(id:string,signature:string,error:unknown,signal?:AbortSignal,operation:RejectedAttempt['operation']='solve'){

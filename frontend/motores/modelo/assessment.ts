@@ -42,7 +42,7 @@ export function readAssessment(value:unknown, result?:ConjuntoResultados):ModelA
   const inspection=a.inspection;
   if(!object(inspection)||Object.keys(inspection).length!==3||!Array.isArray(inspection.variables)||!inspection.variables.every(object)||!Array.isArray(inspection.equations)||!inspection.equations.every(object)||typeof inspection.scope!=='string')return reject('invalid structural inspection.');
   if(a.initialization.status==='compatible'&&a.structure.status!=='complete')return reject('initialization cannot pass an unadmitted structure.');
-  if(a.compilation!==undefined){readCompilationReport(a.compilation);if(a.initialization.status!=='compatible')return reject('compiled report without compatible initialization.');}
+  if(a.compilation!==undefined){readCompilationReport(a.compilation);if(a.compilation.version===2?(a.structure.status!=='complete'||a.initialization.status!=='not_evaluated'):a.initialization.status!=='compatible')return reject('compiled report has incompatible assessment scope.');}
   if(a.resultSignature!==undefined&&!digest(a.resultSignature))return reject('result digest required.');
   if(a.resultSignature===undefined&&a.certification.status!=='not_evaluated')return reject('certification requires published evidence.');
   if(result){

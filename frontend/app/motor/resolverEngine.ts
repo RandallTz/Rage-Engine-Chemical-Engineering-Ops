@@ -1,3 +1,5 @@
+import {leerResultados} from '../../motores/resultados/lector';
+import {steadySignature} from '../../motores/modelo/steadyContract';
 import {selectedDerivedModel} from '../models/derivedSelection';
 /** Resolver del Engine: el cálculo lo hace el Engine común del servidor (motor de balances +
  * compilador + solvers, POST /modelo/resolver) para toda hoja que llega a él; el solver del
@@ -27,7 +29,7 @@ export type OpcionesResolver = { signal?: AbortSignal; progreso?: (v: number) =>
 export const resuelveEngineComun = (h: HojaMotor) => !!h.transformation || cabeEnBalances(h);
 
 export async function resolverHojaEngine(h: HojaMotor, opciones: OpcionesResolver = {}): Promise<ResultadoMotor> {
-  if(h.commonModel){const result=await resolverModelo(selectedDerivedModel(h),opciones.signal,opciones.transporte);return derivedResult(h,result);}
+  if(h.commonModel){opciones.signal?.throwIfAborted();const result=await resolverModelo(selectedDerivedModel(h),opciones.signal,opciones.transporte);opciones.signal?.throwIfAborted();return derivedResult(h,result);}
   const { ensureInventoryExecution } = await import('../models/dynamicDefinition');
   ensureInventoryExecution(h);
   if (h.transformation) {
@@ -52,7 +54,7 @@ export async function resolverHojaEngine(h: HojaMotor, opciones: OpcionesResolve
 function transformedResult(model: HojaMotor, result: ConjuntoResultados): ResultadoMotor {
   const imported = importarHojaMotor(model);
   const report = result.procedencia.compilation;
-  if (result.procedencia.motor !== 'rage.compilador.transformed' || !report || report.formulation !== 'scaled') throw new Error('The server did not execute the selected transformation.');
+  if (result.procedencia.motor !== 'rage.compilador.transformed' || !report || report.version!==1 || report.formulation !== 'scaled') throw new Error('The server did not execute the selected transformation.');
   if (result.modeloId !== model.id || report.sourceModelId !== `model-equations-${model.id}`
     || !igualdadProfunda(report.selection, { formId: model.transformation!.config.activaId, execution: model.transformation!.config.execution })) throw new Error('The returned execution does not match the selected formulation.');
   const physicalSeries = new Map(result.series.map(item => [item.id, item.valores]));
@@ -129,7 +131,13 @@ export function resultadoDesdeComun(h: HojaMotor, s: ReturnType<typeof compilarH
 /** Preserve the common result's series, units and exact compiler provenance. */
 export function derivedResult(model:HojaMotor,result:ConjuntoResultados):ResultadoMotor {
   const report=result.procedencia.compilation;
-  if(result.modeloId!==model.id||result.procedencia.motor!=='rage.compilador.derived'||!report?.derivedExecution||!igualdadProfunda(report.derivedExecution.selection,model.derivedSelection?.selection))throw new Error('The result does not match the selected derived formulation.');
+  if(report?.version===2){
+    leerResultados(result);
+    const selected=selectedDerivedModel(model);
+    if(result.modeloId!==model.id||!igualdadProfunda(report.selection,selected.motores.derivedExecution)||report.dataSignature!==steadySignature(Object.fromEntries(Object.entries(selected.datos).map(([k,v])=>[k,v.declaracion]))))throw new Error('Steady result does not match current selection/data.');
+    return {version:2,motor:result.procedencia.motor,modo:'steady',metodo:'damped_newton',tiempos:[],x:[],dx:1,valores:[],componentes:[],estado:'resuelto',mensaje:report.scope,pasos:result.procedencia.steadyDiagnostics!.solver.iterations,rechazados:result.procedencia.steadyDiagnostics!.solver.backtracks,conservacion:[],unidadEstado:'mixta',firma:firmaHoja(model),verificationChecks:result.verificaciones,compilation:report,commonResult:result};
+  }
+  if(result.modeloId!==model.id||result.procedencia.motor!=='rage.compilador.derived' ||!report?.derivedExecution||!igualdadProfunda(report.derivedExecution.selection,model.derivedSelection?.selection))throw new Error('The result does not match the selected derived formulation.');
   const times=result.ejes[0].valores;
   const series=result.series.map(row=>{if(!Array.isArray(row.valores)||row.valores.length!==times.length||row.valores.some(value=>typeof value!=='number'||!Number.isFinite(value)))throw new Error('Invalid published derived trajectory.');return {id:row.id,nombre:row.nombre,unidad:row.unidadSI,grupo:row.id.startsWith('budget.')?'Conservation budgets':row.id.startsWith('transformed.')?'Scaled quantities':'Physical quantities',valores:row.valores as number[]};});
   const states=report.variables.map(variable=>{const row=series.find(item=>item.id==='campo.'+variable.sourceId);if(!row)throw new Error('Missing retained physical state.');return row;});
