@@ -1,15 +1,15 @@
 """
-Relaciones estructurales siempre presentes de un modelo común (contrato §2).
+Always-present structural relations of a common model (contract §2).
 
-Son las ecuaciones que el modelo contiene por ser físico, se usen o no en
-un instante concreto. El cierre de equilibrio de cada volumen figura aunque
-ese volumen sea hoy un líquido sin vapor: la fase ausente tiene cantidad
-cero con las mismas ecuaciones. Un volumen cuyo motor no evalúa el estado
-aporta una relación `supuesta`, para que la carencia sea visible.
+These equations belong to the physical model whether or not they are active
+at a given instant. Each volume's equilibrium closure remains present even
+when the volume contains only liquid: an absent phase has zero amount under
+the same equations. A volume whose engine does not evaluate its state adds
+a `supuesta` relation to make that limitation visible.
 
-Misma estructura, misma lista y mismo orden. Para los ensamblajes v2
-coincide con las ecuaciones que publica /motor/ensamblajes/validar
-(tests/validar_modelo_comun.py lo comprueba con sus ejemplos).
+The same structure produces the same list in the same order. For v2 assemblies,
+the equation identities match those published by /motor/ensamblajes/validar
+(tests/validar_modelo_comun.py checks this against its fixtures).
 """
 
 
@@ -28,26 +28,26 @@ def relaciones(modelo):
         t = v["termodinamica"]
         if t["tipo"] == "supuesto":
             out.append(_r(f"estado.{v['id']}.supuesto", "estado", p,
-                          f"estado no evaluado por un paquete ({t['supuesto']}): {t['motivo']}", supuesta=True))
+                          f"State not evaluated by a package ({t['supuesto']}): {t['motivo']}", supuesta=True))
             continue
         rigida = v["frontera"]["tipo"] == "rigida"
         cierre = "UV" if rigida else "PH"
-        out.append(_r(f"estado.{v['id']}.energia", "estado", p, f"cierre {cierre} del paquete: energía de todas las fases"))
-        out.append(_r(f"estado.{v['id']}.volumen", "estado", p, f"cierre {cierre} del paquete: volumen de todas las fases"))
+        out.append(_r(f"estado.{v['id']}.energia", "estado", p, f"Package {cierre} closure: energy of every phase"))
+        out.append(_r(f"estado.{v['id']}.volumen", "estado", p, f"Package {cierre} closure: volume of every phase"))
         out.append(_r(f"equilibrio.{v['id']}", "equilibrio", p,
-                      "reparto de equilibrio entre todas las fases candidatas, con prueba de estabilidad; "
-                      "una fase ausente tiene cantidad cero"))
+                      "Equilibrium partition over all candidate phases, with stability search; "
+                      "an absent phase has zero amount"))
         if not rigida:
             out.append(_r(f"estado.{v['id']}.U", "estado", p, "U = H - P V"))
-            out.append(_r(f"mecanica.{v['id']}.trabajo", "mecanica", p, "trabajo de frontera P dV/dt (comprobación)"))
+            out.append(_r(f"mecanica.{v['id']}.trabajo", "mecanica", p, "Boundary work P dV/dt (verification)"))
     for s in modelo["corrientes"]:
         p = f"corriente:{s['id']}"
         pres = (s.get("estadoExterior") or {}).get("presion") or {}
         if pres.get("tipo") == "continuidad":
-            out.append(_r(f"mecanica.continuidad.{s['id']}", "mecanica", p, "continuidad de presión declarada"))
-        out.append(_r(f"transferencia.{s['id']}.composicion", "transferencia", p, "composición del donante según el signo del caudal"))
-        out.append(_r(f"transferencia.{s['id']}.entalpia", "transferencia", p, "entalpía del donante según el signo del caudal"))
-        out.append(_r(f"transferencia.{s['id']}.caudal", "transferencia", p, "caudal en base molar"))
+            out.append(_r(f"mecanica.continuidad.{s['id']}", "mecanica", p, "Declared pressure continuity"))
+        out.append(_r(f"transferencia.{s['id']}.composicion", "transferencia", p, "Donor composition follows the flow direction"))
+        out.append(_r(f"transferencia.{s['id']}.entalpia", "transferencia", p, "Donor enthalpy follows the flow direction"))
+        out.append(_r(f"transferencia.{s['id']}.caudal", "transferencia", p, "Molar flow rate"))
     for q in modelo["intercambios"]:
         if q["ley"]["tipo"] == "conductancia":
             out.append(_r(f"transferencia.calor.{q['id']}", "transferencia", f"calor:{q['id']}",
@@ -56,13 +56,13 @@ def relaciones(modelo):
         p = f"volumen:{v['id']}"
         if v["balances"]["materia"]:
             for c in v["componenteIds"]:
-                out.append(_r(f"materia.{v['id']}.{c}", "materia", p, "conservación por componente"))
+                out.append(_r(f"materia.{v['id']}.{c}", "materia", p, "Conservation of each component"))
         if v["balances"]["energia"]:
-            out.append(_r(f"energia.{v['id']}", "energia", p, "primera ley"))
+            out.append(_r(f"energia.{v['id']}", "energia", p, "First law"))
     if vols:
         for c in modelo["componentes"]:
             if any(c["id"] in v["componenteIds"] and v["balances"]["materia"] for v in vols):
-                out.append(_r(f"global.materia.{c['id']}", "verificacion", "red", "conservación global del componente"))
+                out.append(_r(f"global.materia.{c['id']}", "verificacion", "red", "Global component conservation"))
         if any(v["balances"]["energia"] for v in vols):
-            out.append(_r("global.energia", "verificacion", "red", "conservación global de energía"))
+            out.append(_r("global.energia", "verificacion", "red", "Global energy conservation"))
     return out

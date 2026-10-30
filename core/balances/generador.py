@@ -1,6 +1,6 @@
 """
 Motor de balances: de las ecuaciones fundamentales y los supuestos de cada
-volumen a las ecuaciones explícitas del modelo común (ARQUITECTURA_MOTOR.md §5,
+volumen a las ecuaciones explícitas del modelo común (ARCHITECTURE.md §5,
 paso 5.5 adelantado por §9.1).
 
 Entrada: un modelo común cuyos volúmenes declaran su estado como supuesto
@@ -98,8 +98,10 @@ DIM = {
 
 
 class _Generador:
-    def __init__(self, modelo):
-        self.m = leer_modelo_comun(modelo)
+    def __init__(self, modelo, *, initialization=True):
+        from core.modelo.lector import leer_modelo_inspeccion
+        self.initialization = initialization
+        self.m = (leer_modelo_comun if initialization else leer_modelo_inspeccion)(modelo)
         m = self.m
         if m["matematico"] is not None:
             raise NoGenerable("el modelo ya trae sus ecuaciones escritas")
@@ -301,6 +303,9 @@ class _Generador:
         terminos = v.get("terminos", {})
         acumula = not (fm.get("sinAcumulacion"))
         materia = v["balances"]["materia"]
+        from .material_equations import equation_graph
+        import sympy as sp
+        graph,final,bindings=equation_graph(self.m,vid,fm)
         for c in v["componenteIds"]:
             der = []
             for s in self.m["corrientes"]:
@@ -339,18 +344,48 @@ class _Generador:
             if not acumula:
                 raise NoGenerable(f"volumen {vid}: sin acumulación el balance es algebraico (estacionario): pendiente de los solvers")
             u = self.masa[(vid, c)]["id"]
+            if materia:
+                # Lower the actual derived law, rather than rebuilding a
+                # finished conservation equation independently from flags.
+                node=graph.nodes[next(i for i in final if graph.nodes[i].kind=='balance' and not graph.nodes[i].dependent and i.startswith(f'matter.{vid}.{c}.'))].equation
+                inventory=next(s for s,b in bindings.items() if b==('inventory',vid,c))
+                rate=sp.Derivative(inventory,sp.Symbol('t',real=True))
+                solution=sp.solve(node,rate)
+                if len(solution)!=1:raise NoGenerable(f'Volume {vid}: the derived material law does not determine one inventory rate.')
+                def lower(expression):
+                    binding=bindings.get(expression)
+                    if binding:
+                        role,owner,component=binding
+                        if role=='stream':return self.caudal[(owner,component)]
+                        if role=='inventory':return self.masa[(owner,component)]
+                        if role=='volume':return self.V[owner]
+                        if role in ('generation_density','consumption_density'):
+                            source_role='generacion' if role=='generation_density' else 'consumo'
+                            return self._termino(v,f'{source_role}.{component}','tasa_volumetrica_masica',component)
+                        role={'generation':'generacion','consumption':'consumo','remainder':'resto'}.get(role)
+                        if role:
+                            uniform=role!='resto' and uniforme[role]
+                            value=self._termino(v,f'{role}.{component}','tasa_volumetrica_masica' if uniform else 'caudal_masico',component)
+                            return prod(value,self.V[vid]) if uniform else value
+                    if expression.is_Number:return num(float(expression))
+                    if expression.is_Add:return suma(*(lower(a) for a in expression.args))
+                    if expression.is_Mul:return prod(*(lower(a) for a in expression.args))
+                    if expression.is_Pow:return {'tipo':'potencia','base':lower(expression.base),'exponente':lower(expression.exp)}
+                    raise NoGenerable(f'Volume {vid}: an operation in the material graph has no numerical lowering yet.')
+                der=[lower(solution[0])]
             self.ecuaciones.append({"id": f"materia.{vid}.{c}", "izquierda": {"tipo": "derivada", "expresion": sim(u), "respecto": "t", "orden": 1},
                                     "derecha": suma(*der)})
-            ini = v["inicial"]
-            if ini.get("tipo") == "por_datos" or "cantidades" not in ini:
-                raise NoGenerable(f"volumen {vid}: faltan las cantidades iniciales")
-            cant = ini["cantidades"]
-            did = cant["datoIds"].get(str(c))
-            if did is None:
-                raise NoGenerable(f"volumen {vid}: falta la cantidad inicial del componente {c}")
-            m0 = self.dato(did, "masa", {}) if cant["base"] == "masica" else prod(num(self._M(c, vid)), self.dato(did, "cantidad", {}))
-            self.condiciones.append({"id": f"inicial.{u}", "tipo": "inicial", "dominioId": "it",
-                                     "ecuacion": {"id": f"inicial.{u}.eq", "izquierda": sim(u), "derecha": m0}})
+            if self.initialization:
+                ini = v["inicial"]
+                if ini.get("tipo") == "por_datos" or "cantidades" not in ini:
+                    raise NoGenerable(f"volumen {vid}: faltan las cantidades iniciales")
+                cant = ini["cantidades"]
+                did = cant["datoIds"].get(str(c))
+                if did is None:
+                    raise NoGenerable(f"volumen {vid}: falta la cantidad inicial del componente {c}")
+                m0 = self.dato(did, "masa", {}) if cant["base"] == "masica" else prod(num(self._M(c, vid)), self.dato(did, "cantidad", {}))
+                self.condiciones.append({"id": f"inicial.{u}", "tipo": "inicial", "dominioId": "it",
+                                         "ecuacion": {"id": f"inicial.{u}.eq", "izquierda": sim(u), "derecha": m0}})
             self.restricciones.append({"simboloId": u, "tipo": "no_negativo"})
 
     def _termino(self, v, clave, magnitud, c=None):
@@ -485,13 +520,14 @@ class _Generador:
         Uid = e["U"]["id"]
         self.ecuaciones.append({"id": f"energia.{vid}", "izquierda": {"tipo": "derivada", "expresion": sim(Uid), "respecto": "t", "orden": 1},
                                 "derecha": suma(*der)})
-        ini = v["inicial"].get("energia")
-        if ini is None:
-            raise NoGenerable(f"volumen {vid}: falta la energía o la temperatura inicial")
-        m0 = suma(*[self._inicial_masa(v, c) for c in v["componenteIds"]])
-        U0 = self.dato(ini["datoId"], "energia", {}) if ini["tipo"] == "U" else prod(m0, self._u(vid, self.dato(ini["datoId"], "temperatura", {})))
-        self.condiciones.append({"id": f"inicial.{Uid}", "tipo": "inicial", "dominioId": "it",
-                                 "ecuacion": {"id": f"inicial.{Uid}.eq", "izquierda": sim(Uid), "derecha": U0}})
+        if self.initialization:
+            ini = v["inicial"].get("energia")
+            if ini is None:
+                raise NoGenerable(f"volumen {vid}: falta la energía o la temperatura inicial")
+            m0 = suma(*[self._inicial_masa(v, c) for c in v["componenteIds"]])
+            U0 = self.dato(ini["datoId"], "energia", {}) if ini["tipo"] == "U" else prod(m0, self._u(vid, self.dato(ini["datoId"], "temperatura", {})))
+            self.condiciones.append({"id": f"inicial.{Uid}", "tipo": "inicial", "dominioId": "it",
+                                     "ecuacion": {"id": f"inicial.{Uid}.eq", "izquierda": sim(Uid), "derecha": U0}})
         self.restricciones.append({"expresion": suma(e["T"], num(-e["Tmin"])), "tipo": "no_negativo",
                                    "descripcion": f"volumen {vid}: T >= T_min, dominio del supuesto u(T)"})
         self.restricciones.append({"expresion": suma(num(e["Tmax"]), neg(e["T"])), "tipo": "no_negativo",
@@ -542,7 +578,8 @@ class _Generador:
         self.condiciones.append({"id": f"inicial.{u}", "tipo": "inicial", "dominioId": "it", "ecuacion": {"id": f"inicial.{u}.eq", "izquierda": sim(u), "derecha": x0}})
 
     def _modelo(self):
-        self._auxiliares()
+        if self.initialization:
+            self._auxiliares()
         m = dict(self.m)
         m["matematico"] = {"id": f"{m['id']}.balances", "revision": 1, "simbolos": self.simbolos, "funciones": [],
                            "ecuaciones": self.ecuaciones,
@@ -557,3 +594,8 @@ class _Generador:
 def generar(modelo):
     """Modelo común con volúmenes de estado supuesto -> el mismo modelo con sus ecuaciones explícitas."""
     return _Generador(modelo).generar()
+
+
+def inspect_equations(model):
+    """Generate the same balance laws without initial constraints or budgets."""
+    return _Generador(model, initialization=False).generar()

@@ -171,29 +171,29 @@ def rechaza(nombre, m, fragmento):
 
 m = copy.deepcopy(ago)
 m["datos"]["matematico.k"]["declaracion"]["unidad"] = "kg"
-rechaza("unidad incompatible con la dimensión del símbolo", m, "no corresponde a la dimensión")
+rechaza("Unit incompatible with the symbol dimension", m, "does not match the symbol dimension")
 m = copy.deepcopy(ago)
 m["datos"]["matematico.k"]["declaracion"]["texto"] = " "
-rechaza("dato pendiente", m, "dato pendiente")
+rechaza("Pending datum", m, "A numerical datum is pending")
 m = copy.deepcopy(ago)
 del m["datos"]["matematico.k"]
-rechaza("valor de parámetro ausente", m, "falta el valor")
+rechaza("Missing parameter value", m, "Missing value for")
 m = copy.deepcopy(ago)
 m["matematico"]["ecuaciones"][0]["izquierda"] = s("m")
-rechaza("ecuación algebraica (DAE): pendiente", m, "algebraicas")
+rechaza("Algebraic equation unsupported by this entry point", m, "algebraic equations and DAEs are unsupported here")
 m = copy.deepcopy(ago)
 m["matematico"]["simbolos"].append(simbolo("x", "coordenada", D(L=1)))
-rechaza("coordenada espacial: motor de discretización", m, "discretización")
+rechaza("Spatial coordinate requires discretization", m, "discretization engine")
 m = copy.deepcopy(ago)
 m["matematico"]["ecuaciones"][0]["izquierda"] = der("m", 2)
-rechaza("derivada de orden dos", m, "orden 2")
+rechaza("Second-order derivative", m, "order 2")
 m = copy.deepcopy(ago)
 m["matematico"]["condiciones"][0]["ecuacion"]["derecha"] = s("m")
-rechaza("condición inicial que depende de variables", m, "no puede depender")
+rechaza("Initial condition depends on variables", m, "cannot depend on variables")
 m = copy.deepcopy(ago)
 m["matematico"]["funciones"] = [{"id": "h", "nombre": "h", "entradas": [D(M=1)], "salida": D(M=1, T=-1), "dependeDe": []}]
 m["matematico"]["ecuaciones"][0]["derecha"] = {"tipo": "llamada", "funcionId": "h", "argumentos": [s("m")]}
-rechaza("función declarada sin definición", m, "sin definición")
+rechaza("Declared function without definition", m, "without definitions")
 
 # --- 7. Ruta HTTP ------------------------------------------------------------------------
 check("POST /modelo/resolver: el mismo conjunto que el compilador", resolver_modelo({"modelo": log}) == resolver(log))
@@ -213,6 +213,7 @@ for ruta in ["core/compilador/explicito.py", "core/solvers/integrador.py"]:
     check(f"{ruta}: ningún equipo, operación ni sustancia en el código", not hallado, hallado)
 
 salida = RAIZ / "docs" / "ejemplos" / "modelo-comun" / "explicito-agotamiento.json"
-salida.write_text(json.dumps({"modelo": ago, "resultados": resolver(ago)}, ensure_ascii=False) + "\n", encoding="utf-8")
+if "--no-write" not in sys.argv:
+    salida.write_text(json.dumps({"modelo": ago, "resultados": resolver(ago)}, ensure_ascii=False) + "\n", encoding="utf-8")
 print(f"\n{n[0] - len(fallos)} de {n[0]} comprobaciones correctas." if fallos else f"\nCompilador explícito: {n[0]} comprobaciones correctas.")
 sys.exit(1 if fallos else 0)

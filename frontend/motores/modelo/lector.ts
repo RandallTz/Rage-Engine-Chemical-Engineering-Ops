@@ -76,7 +76,13 @@ export function leerModeloComun(dato: unknown): ModeloComun {
     else fallo(r + ".materia.modo", "valor no admitido");
   });
   unicos(lista(m.intercambios, "intercambios"), "intercambios");
-  if (m.estudio !== null) dato_(obj(m.estudio, "estudio").tiempoId, "estudio.tiempoId");
+  if (m.estudio !== null) {
+    const study=obj(m.estudio,'estudio');
+    if(study.tipo==='steady') {
+      claves(study,'estudio',['tipo','version','metodoSolicitado']);
+      if(study.version!==1||study.metodoSolicitado!=='damped_newton')fallo('estudio','Invalid steady study.');
+    }else dato_(study.tiempoId,'estudio.tiempoId');
+  }
   if (m.matematico !== null) obj(m.matematico, "matematico");
   if ("restricciones" in m) {
     if (m.matematico === null) fallo("restricciones", "las restricciones se declaran sobre variables del modelo matemático");

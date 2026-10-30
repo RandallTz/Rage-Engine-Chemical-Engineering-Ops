@@ -112,31 +112,31 @@ check("calentamiento: el número de relaciones no depende del número de fases (
 # 4. Rechazos
 sin_cierre = copy.deepcopy(m_cal)
 del sin_cierre["volumenes"][0]["termodinamica"]
-rechaza("volumen sin cierre termodinámico: rechazado", sin_cierre, "faltan termodinamica")
+rechaza("Volume without a thermodynamic closure: rejected", sin_cierre, "Missing fields: termodinamica")
 cierre_vacio = copy.deepcopy(m_cal)
 cierre_vacio["volumenes"][0]["termodinamica"] = {}
-rechaza("cierre vacío: rechazado con el principio", cierre_vacio, "todo volumen declara su cierre")
+rechaza("Empty closure: rejected with the governing rule", cierre_vacio, "Every volume must declare its thermodynamic closure")
 supuesto_sin_motivo = copy.deepcopy(m_cal)
 supuesto_sin_motivo["volumenes"][0]["termodinamica"] = {"tipo": "supuesto", "supuesto": "fase_no_evaluada", "motivo": " "}
 rechaza("supuesto sin motivo: rechazado", supuesto_sin_motivo, "motivo")
 paq = copy.deepcopy(m_cal)
 paq["volumenes"][0]["termodinamica"]["paqueteId"] = "inexistente"
-rechaza("paquete inexistente: rechazado", paq, "referencia inexistente (paquete")
+rechaza("Unknown package: rejected", paq, "Unknown reference (package")
 dat = copy.deepcopy(m_cal)
 dat["volumenes"][0]["frontera"]["presionId"] = "no.existe"
-rechaza("dato inexistente: rechazado", dat, "referencia inexistente (dato")
+rechaza("Unknown datum: rejected", dat, "Unknown reference (datum")
 clave_extra = copy.deepcopy(m_cal)
 clave_extra["inventado"] = 1
-rechaza("clave desconocida: rechazada", clave_extra, "campos desconocidos")
+rechaza("Unknown field: rejected", clave_extra, "Unknown fields")
 eq_sin_frontera = copy.deepcopy(m_cal)
 eq_sin_frontera["volumenes"][0]["frontera"] = {"tipo": "sin_relacion"}
-rechaza("equilibrio sin frontera UV/PH: rechazado", eq_sin_frontera, "cierre de equilibrio necesita")
+rechaza("Equilibrium without a UV/PH boundary: rejected", eq_sin_frontera, "An equilibrium closure requires")
 mal_mat = desde_documento_adimensional(json.loads((EJ / "adimensionalizacion-estudio-calor-solicitud.json").read_text(encoding="utf-8"))["documento"])
 mal_mat["matematico"]["ecuaciones"][0]["izquierda"] = {"tipo": "simbolo", "id": "no_declarado"}
 rechaza("expresión con un símbolo no declarado: rechazada por el lector matemático común", mal_mat, "referencia")
 motor_ajeno = copy.deepcopy(m_cal)
 motor_ajeno["motores"]["graficas"] = {}
-rechaza("configuración de un motor desconocido: rechazada", motor_ajeno, "valor no admitido")
+rechaza("Unknown engine configuration: rejected", motor_ajeno, "Unsupported value")
 supuesto = copy.deepcopy(m_cal)
 supuesto["volumenes"][0]["termodinamica"] = {"tipo": "supuesto", "supuesto": "fase_no_evaluada", "motivo": "prueba"}
 leer_modelo_comun(supuesto)
@@ -154,10 +154,24 @@ for nombre, m in (("modelo-comun-documento-adimensional.json", calor), ("modelo-
         ruta.write_text(texto, encoding="utf-8")
     check(f"ejemplo {nombre} vigente", ruta.read_text(encoding="utf-8") == texto)
 rel_ruta = SALIDA / "modelo-comun-ensamblaje-calentamiento-relaciones.json"
-texto = json.dumps(rel, ensure_ascii=False, indent=1) + "\n"
-if "--regenerar" in sys.argv or not rel_ruta.exists():
-    rel_ruta.write_text(texto, encoding="utf-8")
-check("ejemplo de relaciones vigente", rel_ruta.read_text(encoding="utf-8") == texto)
+# Keep the archived Spanish reference intact. Translate only its presentation
+# fields in memory, then compare every field, identity, equation and ordering.
+reference_labels = {
+    "cierre PH del paquete: energía de todas las fases": "Package PH closure: energy of every phase",
+    "cierre PH del paquete: volumen de todas las fases": "Package PH closure: volume of every phase",
+    "reparto de equilibrio entre todas las fases candidatas, con prueba de estabilidad; una fase ausente tiene cantidad cero":
+        "Equilibrium partition over all candidate phases, with stability search; an absent phase has zero amount",
+    "U = H - P V": "U = H - P V",
+    "trabajo de frontera P dV/dt (comprobación)": "Boundary work P dV/dt (verification)",
+    "conservación por componente": "Conservation of each component",
+    "primera ley": "First law",
+    "conservación global del componente": "Global component conservation",
+    "conservación global de energía": "Global energy conservation",
+}
+reference_relations = json.loads(rel_ruta.read_text(encoding="utf-8"))
+for relation in reference_relations:
+    relation["descripcion"] = reference_labels[relation["descripcion"]]
+check("Archived relations match after presentation-only translation", reference_relations == rel)
 
 print(f"\n{n[0] - len(fallos)} de {n[0]} comprobaciones correctas." if fallos else f"\nModelo común: {n[0]} comprobaciones correctas.")
 sys.exit(1 if fallos else 0)

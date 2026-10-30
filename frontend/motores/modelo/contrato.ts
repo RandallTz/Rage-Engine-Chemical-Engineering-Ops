@@ -55,7 +55,8 @@ export type Corriente = Omit<CorrienteV2, "materia"> & {
   constante?: boolean;
 };
 
-export type Estudio = {
+export type Estudio = TemporalStudy | {tipo:'steady';version:1;metodoSolicitado:'damped_newton'};
+export type TemporalStudy = {
   tipo: "temporal"; tiempoId: string; metodoSolicitado: string | null; muestras: number; rtol: number;
   atol: { cantidad: number; energia?: number };
   espacial?: { celdas: number; frontera: "periodica" | "valores" | "sin_flujo" | "" };

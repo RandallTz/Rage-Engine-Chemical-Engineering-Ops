@@ -1,10 +1,10 @@
 """
-Modelo común v0 (docs/contracts/common-model.md): la representación única que
-comparten los motores del simulador (ARCHITECTURE.md §4).
+Common model v0 (docs/contracts/common-model.md): the single representation
+shared by the simulator engines (ARCHITECTURE.md §4).
 
-  lector.leer_modelo_comun(dato)      -> dict validado (o ErrorModelo)
-  relaciones.relaciones(modelo)       -> relaciones estructurales siempre presentes
-  adaptadores.*                       -> ida y vuelta con los formatos existentes
+  lector.leer_modelo_comun(dato)      -> validated dict (or ErrorModelo)
+  relaciones.relaciones(modelo)       -> always-present structural relations
+  adaptadores.*                       -> round trips with existing formats
 """
 
 from .lector import ErrorModelo, VERSION, leer_modelo_comun

@@ -1,7 +1,7 @@
 """
 Revision 2 del protocolo de ensamblaje del motor (aditiva y discriminada por
 `revision`). Tipos: docs/contratos/contratoEnsamblajeV2.ts. Documento:
-docs/MOTOR_EQUILIBRIO_MULTIFASICO.md.
+docs/engine/multiphase-equilibrium.md.
 
 Lo que anade a la revision 1: catalogo de paquetes configurados, varios
 volumenes con su paquete, politica, frontera e iniciales; corrientes internas
@@ -97,24 +97,24 @@ def _pares_nrtl_sin_cerrojo():
     return pares
 
 
-# Evidencia medida de cada paquete UNIFAC (tests/validar_motor_unifac.py, docs/MOTOR_UNIFAC.md). Son
+# Evidencia medida de cada paquete UNIFAC (tests/validar_motor_unifac.py, docs/engine/unifac.md). Son
 # PREDICCIONES por contribucion de grupos: nivel 'cualitativa' aunque algun punto coincida con la literatura.
 EVIDENCIA_UNIFAC = {
     "unifac-original-public": (
         "prediccion por contribucion de grupos; azeotropo etanol-agua a 1 atm 78.04 C, x 0.896 frente a 78.15 C, "
-        "0.894 de la literatura (docs/MOTOR_UNIFAC.md)",
+        "0.894 de la literatura (docs/engine/unifac.md)",
         "prediccion con parametros de VLE: agua/1-butanol a 293-298 K dentro de 0.6 g/100 g de IUPAC-NIST SDS-15, "
         "con error creciente con T (agua en la fase organica 22.4 frente a 27.5 g/100 g a 353 K)"),
     "unifac-dortmund-public": (
         "prediccion por contribucion de grupos; azeotropo etanol-agua a 1 atm 78.13 C, x 0.899 frente a 78.15 C, "
-        "0.894 de la literatura (docs/MOTOR_UNIFAC.md)",
+        "0.894 de la literatura (docs/engine/unifac.md)",
         "prediccion pobre para agua/1-butanol: solubilidades mutuas 11.2 y 11.7 g/100 g a 293 K frente a 7.8 y 20.0 "
-        "de IUPAC-NIST SDS-15 (docs/MOTOR_UNIFAC.md)"),
+        "de IUPAC-NIST SDS-15 (docs/engine/unifac.md)"),
     "unifac-original-lle-public": (
         "sin contraste experimental en su dominio (10-40 C); Pxy etanol-agua a 298.15 K entre 3 y 8 % por debajo "
-        "de UNIFAC original y sin el azeotropo que predicen la original y NRTL (docs/MOTOR_UNIFAC.md)",
+        "de UNIFAC original y sin el azeotropo que predicen la original y NRTL (docs/engine/unifac.md)",
         "tabla ajustada a ELL (Magnussen 1981); agua/1-butanol a 293 K: 6.9 y 21.6 g/100 g frente a 7.8 y 20.0 de "
-        "IUPAC-NIST SDS-15 (prediccion: el par no se reajusto; docs/MOTOR_UNIFAC.md)"),
+        "IUPAC-NIST SDS-15 (prediccion: el par no se reajusto; docs/engine/unifac.md)"),
 }
 
 
@@ -244,6 +244,10 @@ def capacidades_v2():
 
 # ----------------------------------------------------------------------
 def _comprobar_formulacion(diag, fm, fe, pol, tipo_fr, fr, base, pv_):
+    if not fm.get("restoImpermeable"):
+        diag("MOTOR_ENS_MATERIAL_REMAINDER", "no_soportado", "The boundary outside declared streams needs its own material flux law.", f"{base}/formulacionMateria/restoImpermeable", propietario=pv_)
+    if fm.get("fija") and (fm.get("campo") or {}).get("estacionario"):
+        diag("MOTOR_ENS_ESTACIONARIO", "no_soportado", "Local stationarity in a fixed volume produces an algebraic balance; a compatible solver is required.", f"{base}/formulacionMateria/campo/estacionario", propietario=pv_)
     if fm.get("vista") != "cantidad" or fm.get("cantidadVolumen") or fe.get("forma") != "total":
         diag("MOTOR_ENS_FORMA", "no_soportado", "Formas totales de cantidades y energía requeridas.",
              f"{base}/formulacionMateria/vista", propietario=pv_)
@@ -320,6 +324,60 @@ def validar_v2(cuerpo):
         diag("MOTOR_ENS_FORMA", "invalido", "Estructura incompatible con SolicitudEnsamblajeV2.", "/")
         return respuesta(dict(vacio_rec, motivo="Estructura ilegible."), [], [], ini_vacia), None
     lec = v1._Lector(cuerpo, diag)
+    # The optional, versioned journal must agree with the physical input on this
+    # legacy API too; Model/Solve must not bypass the common compiler's reader.
+    derivation = cuerpo.get("derivacion")
+    if isinstance(derivation, dict) and 'equationWorkbench' in derivation:
+        from core.modelo.equation_workbench import ensure_executable as ensure_equations
+        from core.modelo.adaptadores import desde_ensamblaje_v2
+        try:ensure_equations(desde_ensamblaje_v2(cuerpo))
+        except (ValueError,KeyError,TypeError) as error:diag('MOTOR_ENS_EQUATION_WORKBENCH','invalido',str(error),'/derivacion/equationWorkbench')
+    if isinstance(derivation, dict) and 'hydraulicNetwork' in derivation:
+        diag('MOTOR_ENS_HYDRAULIC_ROUTE','invalido','Reduced hydraulics executes through the common /modelo compiler, not the native equilibrium solver.','/derivacion/hydraulicNetwork')
+    if isinstance(derivation, dict) and "momentumDerivation" in derivation:
+        from core.balances.momentum_derivation import ensure_executable as ensure_momentum
+        from core.modelo.adaptadores import desde_ensamblaje_v2
+        try:
+            ensure_momentum(desde_ensamblaje_v2(cuerpo))
+        except (ValueError, KeyError, TypeError) as error:
+            diag("MOTOR_ENS_MOMENTUM_JOURNAL", "invalido", str(error), "/derivacion/momentumDerivation")
+            return respuesta(dict(vacio_rec, motivo=str(error)), [], [], ini_vacia), None
+    if isinstance(derivation, dict) and "dynamicDefinition" in derivation:
+        from core.modelo.dynamic_definition import ensure_executable
+        from core.modelo.adaptadores import desde_ensamblaje_v2
+        try:
+            ensure_executable(desde_ensamblaje_v2(cuerpo))
+        except (ValueError, KeyError, TypeError) as error:
+            diag("MOTOR_ENS_INVENTORY_CONSTRAINT", "invalido", str(error), "/derivacion/dynamicDefinition")
+            return respuesta(dict(vacio_rec, motivo=str(error)), [], [], ini_vacia), None
+    if isinstance(derivation, dict) and "materialDerivation" in derivation:
+        from core.balances.material_derivation import MaterialDerivationError, validate_model_journal
+        from core.modelo.adaptadores import desde_ensamblaje_v2
+        try:
+            validate_model_journal(desde_ensamblaje_v2(cuerpo))
+        except (MaterialDerivationError, KeyError, TypeError) as error:
+            diag("MOTOR_ENS_MATERIAL_JOURNAL", "invalido", str(error), "/derivacion/materialDerivation")
+            return respuesta(dict(vacio_rec, motivo="Material derivation does not match the model."), [], [], ini_vacia), None
+
+    if isinstance(derivation, dict) and "energyDerivation" in derivation:
+        from core.balances.energy_derivation import validate_model_journal as validate_energy
+        from core.modelo.adaptadores import desde_ensamblaje_v2
+        from core.modelo.operation_journal import JournalError
+        try:
+            validate_energy(desde_ensamblaje_v2(cuerpo))
+        except (JournalError, KeyError, TypeError) as error:
+            diag("MOTOR_ENS_ENERGY_JOURNAL", "invalido", str(error), "/derivacion/energyDerivation")
+            return respuesta(dict(vacio_rec, motivo="Energy derivation does not match the model."), [], [], ini_vacia), None
+
+    if isinstance(derivation, dict) and "thermodynamicDerivation" in derivation:
+        from core.termodinamica.derivation import validate_model_journal as validate_thermodynamics
+        from core.modelo.adaptadores import desde_ensamblaje_v2
+        from core.modelo.operation_journal import JournalError
+        try:
+            validate_thermodynamics(desde_ensamblaje_v2(cuerpo))
+        except (JournalError, KeyError, TypeError) as error:
+            diag("MOTOR_ENS_THERMODYNAMIC_JOURNAL", "invalido", str(error), "/derivacion/thermodynamicDerivation")
+            return respuesta(dict(vacio_rec, motivo="Thermodynamic derivation does not match the model."), [], [], ini_vacia), None
 
     # --- catalogo de componentes ------------------------------------------------
     comps, cas_de, M_decl = [], {}, {}
@@ -534,6 +592,10 @@ def validar_v2(cuerpo):
         if c.get("mecanismo") == "selectivo":
             diag("MOTOR_ENS_SELECTIVO", "no_soportado", "Transferencia selectiva sin ley energética.", base,
                  propietario=pc)
+        if any(isinstance(volume, dict) and volume.get("id") in (de, ha) and
+               ((volume.get("formulacionMateria") or {}).get("campo") or {}).get("sinConveccion")
+               for volume in cuerpo["volumenes"]):
+            diag("MOTOR_ENS_MATERIAL_TRANSPORT", "no_soportado", "The stream requires convective transport; the declared material assumptions remove it.", base, propietario=pc)
         if de is not None and ha is not None:
             m1, m2 = vols[vol_idx[de]]["mod"], vols[vol_idx[ha]]["mod"]
             p1, p2 = vols[vol_idx[de]]["paq"], vols[vol_idx[ha]]["paq"]
@@ -542,7 +604,7 @@ def validar_v2(cuerpo):
             # F2.5: paquetes distintos con la MISMA referencia por especie (todos los de mezcla: gas ideal a
             # 298.15 K y 1 bar con h = s = 0, y la misma M del registro) transportan h y s coherentes; se admiten.
             # Agua IAPWS-95 frente a mezcla: h_mez - h_IAPWS del agua varia ~700 J/mol entre estados (los modelos
-            # difieren), asi que una constante no conserva la energia: se rechaza (docs/MOTOR_CATALOGO_PROPIEDADES.md).
+            # difieren), asi que una constante no conserva la energia: se rechaza (docs/engine/property-catalog.md).
             if m1 != m2 and (r1 is None or r1 != r2):
                 diag("MOTOR_ENS_REFERENCIAS_INCOMPATIBLES", "no_soportado",
                      f"La corriente une volúmenes con paquetes de referencia distinta ({m1}: {r1} / {m2}: {r2}): "
@@ -685,7 +747,7 @@ def validar_v2(cuerpo):
                           f"{base}/temperaturaFronteraId", pq)
         ints.append({"id": q["id"], "de": de, "ha": ha, "ley": ley.get("tipo"), "Q": Qd, "G": G, "Te": Te, "Tf": Tf})
     for vv in vols:
-        ad = vv["fe"].get("adiabatico")
+        ad = vv["fe"].get("adiabatico") or vv["fe"].get("sinConduccionLocal")
         if ad is True and vv["intercambia_calor"]:
             diag("MOTOR_ENS_Q_ADIABATICO", "conflicto", f"Volumen {vv['id']} adiabático con un intercambio térmico.",
                  "/intercambiosTermicos", propietario=f"volumen:{vv['id']}")
@@ -1003,14 +1065,11 @@ def _inicializar(vols, diag):
             estados.append("incompatible")
             continue
         try:
-            if v["tipo"] == "rigida":
-                Vv = v["V"].funcion(0.0)
-                e = paq.estado("UV", v["E0"].funcion(0.0), Vv, n, certificar=True) if v["en"] == "U" else \
-                    paq.estado("TV", v["E0"].funcion(0.0), Vv, n, certificar=True)
-            else:
-                P0 = v["P"].funcion(0.0)
-                e = paq.estado("UP", P0, v["E0"].funcion(0.0), n, certificar=True) if v["en"] == "U" else \
-                    paq.estado("TP", v["E0"].funcion(0.0), P0, n, certificar=True)
+            from core.compilador.initialization import initialize_state
+            rigid = v['tipo'] == 'rigida'
+            e = initialize_state(n, v['en'], v['E0'].funcion(0.0), rigid,
+                                 (v['V'] if rigid else v['P']).funcion(0.0),
+                                 lambda specification, a, b, amounts: paq.estado(specification, a, b, amounts, certificar=True))
             pol = v["pol"]
             tipos = [f.tipo for f in e.fases]
             if pol.get("cantidad") == "monofasico" and len(e.fases) > 1 or pol.get("tiposPermitidos") and any(
@@ -1119,201 +1178,8 @@ def resolver_v2(cuerpo):
         diags.append({"codigo": "MOTOR_ENS_NO_CONVERGENTE", "estado": "invalido", "mensaje": getattr(x, "mensaje", str(x)),
                       "variableIds": [], "origen": {"propietarioId": "red", "ruta": "/volumenes"}})
         return rechazo("no_convergente")
-    # muestras certificadas
-    tiempos, filas, estados = [], [], {v.id: [] for v in vsi}
-    detenida = tray.detenida
-    semillas = [ctx["ini"][v.id]["estado"] for v in vsi]
-    ids_previos = [None] * len(vsi)
-    ids_usados = [set() for _ in vsi]
-    ids_muestra = {v.id: [] for v in vsi}
-    for t, y in er.muestras(red, tray):
-        try:
-            evs = []
-            for j, v in enumerate(vsi):
-                e = sis.estado_vol(t, y, j, certificar=True, semilla=semillas[j])
-                evs.append(e)
-            evals = []
-            for j, v in enumerate(vsi):
-                e = evs[j]
-                _seguir_ids(e, ids_previos, j, ids_usados[j])
-                ev = evaluacion_volumen(v.paquete, e, vols[j]["comp"], v.politica)
-                if any(x["estado"] == "no_cumple" for x in ev["verificaciones"]):
-                    raise mz.FueraDeAlcance("no_convergente", f"Volumen {v.id}: verificación no cumplida.")
-                evals.append({"volumenId": v.id, "evaluacion": ev, "potenciales": potenciales(e, v.paquete, vols[j]["comp"])})
-            fl = sis.flujos(t, y, evs)
-        except (mz.FueraDeAlcance, Detencion) as x:
-            diags.append({"codigo": "MOTOR_ENS_MUESTRA_NO_CERTIFICADA", "estado": "invalido",
-                          "mensaje": f"t = {t:.9g} s: {getattr(x, 'mensaje', str(x))}", "variableIds": [],
-                          "origen": {"propietarioId": "red", "ruta": "/estudio"}})
-            detenida = detenida or Detencion("muestra_no_certificada", "", t)
-            break
-        semillas = evs
-        tiempos.append(t)
-        filas.append((t, y, evs, fl))
-        for j, v in enumerate(vsi):
-            estados[v.id].append(evals[j])
-            ids_muestra[v.id].append([f.id for f in evs[j].fases])
-    if not filas:
-        d = tray.detenida
-        if d is not None and d.t == 0.0:
-            # la red no puede arrancar (p. ej. extraer una fase ausente): el motivo es la detencion, no una
-            # falta de convergencia; se publica como tal y la respuesta es invalida, sin muestras
-            diags.append({"codigo": f"MOTOR_ENS_DETENIDO_{d.codigo.upper()}", "estado": "invalido",
-                          "mensaje": f"La red no puede arrancar en t = 0: {d.mensaje}", "variableIds": [],
-                          "origen": {"propietarioId": "red", "ruta": "/corrientes"}})
-            return rechazo("invalido")
-        return rechazo("no_convergente")
-    series = []
-    catalogo = []
-    vars_val = {x["id"] for x in val.get("variables") or []}
-
-    def serie(id_, uni, vals, magnitud, papel, propietario, procedencia):
-        series.append({"variableId": id_, "unidadSI": uni, "valores": [float(x) for x in vals]})
-        catalogo.append({"variableId": id_, "propietarioId": propietario, "unidadSI": uni, "magnitud": magnitud,
-                         "papel": papel, "variableEnsamblajeId": id_ if id_ in vars_val else None,
-                         "procedencia": procedencia})
-    for j, v in enumerate(vsi):
-        pref = f"volumen.{v.id}"
-        pv_ = f"volumen:{v.id}"
-        o = sis.offs[j]
-        for k, c in enumerate(vols[j]["comp"]):
-            serie(f"{pref}.n.{c}", "mol", [f[1][o + k] for f in filas], "cantidad", "estado_integrado", pv_,
-                  f"estado diferencial: balance de materia del componente {c} en {v.id}")
-        if v.frontera == "rigida":
-            serie(f"{pref}.U", "J", [f[2][j].U for f in filas], "energia", "estado_integrado", pv_,
-                  "estado diferencial (frontera rigida); valor del estado certificado de la muestra")
-        else:
-            serie(f"{pref}.U", "J", [f[2][j].U for f in filas], "energia", "algebraica", pv_,
-                  "U = H - P V del estado certificado")
-            serie(f"{pref}.H", "J", [f[1][o + len(v.comp)] for f in filas], "energia", "estado_integrado", pv_,
-                  "estado diferencial (presion prescrita): dH/dt = J_E + V dP/dt")
-            serie(f"{pref}.W", "J", [f[1][sis.i_W + j] for f in filas], "energia", "integral_auxiliar", pv_,
-                  "trabajo de frontera acumulado int P dV/dt dt (no es un estado del sistema fisico)")
-        serie(f"{pref}.T", "K", [f[2][j].T for f in filas], "temperatura", "algebraica", pv_,
-              "cierre de equilibrio del paquete (estado certificado)")
-        serie(f"{pref}.P", "Pa", [f[2][j].P for f in filas], "presion", "algebraica" if v.frontera == "rigida" else "dato",
-              pv_, "cierre de equilibrio del paquete" if v.frontera == "rigida" else "presion prescrita (dato)")
-        serie(f"{pref}.V", "m3", [f[2][j].V for f in filas], "volumen", "dato" if v.frontera == "rigida" else "algebraica",
-              pv_, "volumen geometrico (dato)" if v.frontera == "rigida" else "cierre de equilibrio del paquete")
-        serie(f"{pref}.masa", "kg", [f[2][j].masa for f in filas], "masa", "derivada", pv_,
-              "sum_i n_i M_i con las masas molares del paquete; presentacion, sin ecuacion propia")
-        serie(f"{pref}.S", "J/K", [f[2][j].S for f in filas], "entropia", "derivada", pv_,
-              "entropia del estado certificado (referencia del paquete); presentacion, sin ecuacion propia")
-    for s_ in csi:
-        serie(f"corriente.{s_.id}.ndot", "mol/s",
-              [next((ndot if (o_ == s_.desde) else -ndot) for c_, ndot, o_, d_, *_ in f[3] if c_ is s_) for f in filas],
-              "caudal_molar", "algebraica", f"corriente:{s_.id}",
-              "caudal molar total en el sentido declarado desde -> hasta (negativo: invertido)")
-    for q in isi:
-        serie(f"calor.{q.id}.Q", "W", [next(Q for q_, Q in sis.calores(f[0], f[2]) if q_ is q) for f in filas],
-              "potencia", "dato" if q.ley == "impuesto" else "algebraica", f"calor:{q.id}",
-              "potencia impuesta (dato)" if q.ley == "impuesto" else "Q = G (T_desde - T_hasta)")
-    # residuos (max sobre la trayectoria) y su valor por muestra, para la certificacion
-    U0 = sum(ctx["ini"][v.id]["U"] for v in vsi)
-    escala_n = est["atol"]["cantidad"] + est["rtol"] * max(
-        float(sum(np.sum(f[1][sis.offs[j]:sis.offs[j] + len(v.comp)]) for j, v in enumerate(vsi))) for f in filas)
-    P0V0 = [filas[0][2][j].P * filas[0][2][j].V for j in range(len(vsi))]
-
-    def W_partes(f, j):
-        # trabajo de frontera por partes: int P dV = [P V] - int V dP/dt dt (sin derivar V)
-        return 0.0 if vsi[j].frontera == "rigida" else f[2][j].P * f[2][j].V - P0V0[j] - f[1][sis.i_VdP + j]
-    # escala de energia: la mayor de |U|, |int E_ext| y |W| a lo largo de la trayectoria (no solo |U|, que
-    # depende del cero de la referencia y puede pasar por 0)
-    escala_E = est["atol"]["energia"] + est["rtol"] * max(
-        max(abs(sum(e.U for e in f[2])) for f in filas), max(abs(f[1][sis.i_E]) for f in filas),
-        max(abs(sum(W_partes(f, j) for j in range(len(vsi)))) for f in filas), 1.0)
-    residuos, por_muestra = [], {}
-
-    def residuo(id_, valores, tol, definicion):
-        por_muestra[id_] = (valores, tol)
-        residuos.append({"ecuacionId": id_, "maximoEscalado": float(max(valores)), "tolerancia": tol,
-                         "definicion": definicion})
-    for c in comps:
-        g = gidx[c]
-        n0 = sum(v.n0[v.comp.index(g)] for v in vsi if g in v.comp)
-        residuo(f"global.materia.{c}",
-                [abs(sum(f[1][sis.offs[j] + v.comp.index(g)] for j, v in enumerate(vsi) if g in v.comp)
-                     - n0 - f[1][sis.i_mat + g]) / escala_n for f in filas], 10.0,
-                "max_t |sum_v n_v,i - n_i(0) - int ndot_ext,i dt| / (atol + rtol max_t sum_v,i n); las "
-                "transferencias internas se suman y restan como el mismo número")
-    residuo("global.energia",
-            [abs(sum(e.U for e in f[2]) - U0 - (f[1][sis.i_E] - sum(W_partes(f, j) for j in range(len(vsi)))))
-             / escala_E for f in filas], 10.0,
-            "max_t |sum U_v - U(0) - (int E_ext dt - sum W_v)| / (atol + rtol max_t(|sum U|, |int E_ext|, |sum W|)), "
-            "con W_v = [P V] - int V dP/dt dt: U de los estados certificados frente a la contabilidad de "
-            "transferencias exteriores y trabajo")
-    for j, v in enumerate(vsi):
-        if v.frontera == "rigida":
-            continue
-        escala_W = est["atol"]["energia"] + 1e-5 * max(max(abs(W_partes(f, j)) for f in filas),
-                                                       max(abs(f[2][j].P * f[2][j].V) for f in filas) * 1e-3)
-        residuo(f"mecanica.{v.id}.trabajo", [abs(f[1][sis.i_W + j] - W_partes(f, j)) / escala_W for f in filas], 1.0,
-                "max_t |int P dV/dt dt (dV/dt total de V(H, P, n) por diferencia centrada) - ([P V] - int V dP)| / "
-                "(atol + 1e-5 max|W|): verifica la derivada total de V (diferencia centrada, integrada a traves de "
-                "las aristas de cambio de fase; acuerdo medido ~2e-6 relativo, tolerancia 1e-5 declarada)")
-    for j, v in enumerate(vsi):
-        o = sis.offs[j]
-        m = len(v.comp)
-        residuo(f"estado.{v.id}.energia",
-                [abs((f[2][j].U if v.frontera == "rigida" else f[2][j].H) - f[1][o + m]) / escala_E for f in filas], 1.0,
-                "max |E del estado certificado - E integrada| / escala de energia")
-        if v.frontera == "rigida":
-            residuo(f"estado.{v.id}.volumen", [abs(f[2][j].V - v.V) / v.V / 1e-9 for f in filas], 1.0,
-                    "max |V del estado - V geométrico| / V / 1e-9")
-    # segunda ley
-    S0 = sum(e.S for e in filas[0][2])
-    gen = [sum(e.S for e in f[2]) - S0 - f[1][sis.i_S] for f in filas]
-    tol_S = est["atol"]["energia"] / 300.0 + est["rtol"] * max(abs(S0), 1.0) * 10
-    primera_S = None
-    if not sis.segunda_ley_evaluable:
-        sl = {"estado": "no_evaluable", "motivo": "Hay intercambios de calor con el exterior sin temperatura de frontera "
-              "(temperaturaFronteraId): no se sustituye por la T del fluido.", "generacionMinima": None,
-              "tolerancia": None, "unidad": "J/K"}
-    else:
-        dif = [gen[k] - gen[k - 1] for k in range(1, len(gen))]
-        mn = min([0.0] + gen + dif)
-        sl = {"estado": "cumple" if mn >= -tol_S else "no_cumple",
-              "motivo": "S_gen(t) = sum_v S_v(t) - S(0) - int (sum ndot s + Q/T_frontera)_ext dt evaluada en las "
-                        "muestras certificadas: debe ser >= 0 y no decreciente. Contactos internos y mezcla de "
-                        "corrientes generan entropía dentro del conjunto; no se exige que cada volumen abierto la aumente.",
-              "generacionMinima": float(mn), "tolerancia": float(tol_S), "unidad": "J/K"}
-        primera_S = next((k for k in range(len(gen)) if gen[k] < -tol_S or (k > 0 and gen[k] - gen[k - 1] < -tol_S)),
-                         None)
-        serie("red.Sgen", "J/K", gen, "entropia", "derivada", "red",
-              "S_gen(t) de la segunda ley (ver segundaLey); presentacion, sin ecuacion propia")
-    # eventos con los IDs reales de las fases que aparecen o desaparecen
-    eventos = []
-    for c, t, j, msj in tray.eventos:
-        ev_ = {"codigo": c, "tiempo": t, "volumenId": vsi[j].id if j is not None else None, "faseIds": [],
-               "variableIds": [f"volumen.{vsi[j].id}.fases"] if j is not None else []}
-        if j is not None:
-            k = next((k for k, tk in enumerate(tiempos) if abs(tk - t) <= 1e-12 * max(tf, 1.0)), None)
-            if k is not None and k > 0:
-                antes, despues = ids_muestra[vsi[j].id][k - 1], ids_muestra[vsi[j].id][k]
-                ev_["faseIds"] = sorted(set(antes) ^ set(despues))
-                ev_["faseIdsAntes"], ev_["faseIdsDespues"] = list(antes), list(despues)
-        ev_["descripcion"] = _DESCRIPCION_EVENTO.get(c, msj)
-        eventos.append(ev_)
-    if tray.detenida is not None:
-        d = tray.detenida
-        diags.append({"codigo": f"MOTOR_ENS_DETENIDO_{d.codigo.upper()}", "estado": "invalido",
-                      "mensaje": f"Trayectoria detenida en t = {d.t:.9g} s: {d.mensaje}", "variableIds": [],
-                      "origen": {"propietarioId": "red", "ruta": "/volumenes"}})
-    cert = _certificacion(por_muestra, sl, primera_S, tiempos, tf, detenida, estados)
-    if cert["estado"] == "no_cumple":
-        diags.append({"codigo": "MOTOR_ENS_CERTIFICACION_NO_CUMPLE", "estado": "invalido",
-                      "mensaje": "La trayectoria se calculó, pero no está físicamente certificada: " + cert["motivo"],
-                      "variableIds": [], "origen": {"propietarioId": "red", "ruta": "/resultados/certificacion"}})
-    metodo = (f"RK45 Dormand-Prince 5(4) (scipy {scipy.__version__}), rtol {est['rtol']:g}, atol cantidad "
-              f"{est['atol']['cantidad']:g} mol, atol energía {est['atol']['energia']:g} J; {tray.pasos} pasos, "
-              f"{tray.reintentos} reintentos. Estados por volumen: n_i y U (rígido) o H (presión prescrita). Etapas "
-              "con flashes con semilla; muestras certificadas con prueba de estabilidad completa. Eventos de fase "
-              "vigilados en 3 puntos interiores y el extremo de cada paso aceptado (vigilancia puntual, no continua).")
-    return {"revision": REVISION, "validacion": val, "estado": "parcial" if detenida is not None else "resuelto",
-            "resultados": {"metodo": metodo, "tiempos": [float(t) for t in tiempos], "series": series,
-                           "estados": estados, "eventos": eventos, "residuos": residuos, "segundaLey": sl,
-                           "catalogoSeries": catalogo, "certificacion": cert,
-                           "procedenciaModelo": _procedencia(vols)}}
+    from backend.assembly_results import publish
+    return publish(ctx, val, red, sis, tray)
 
 
 def _procedencia(vols):

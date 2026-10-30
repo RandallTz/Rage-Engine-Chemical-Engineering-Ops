@@ -1,11 +1,11 @@
 """
-Compilador del modelo común (ARCHITECTURE.md §5, docs/engine/vertical-slice.md):
-modelo + datos -> sistema numérico (rhs, firma, estado inicial, observables).
+Common-model compiler (ARCHITECTURE.md §5, docs/engine/vertical-slice.md):
+model + data -> numerical system (rhs, signature, initial state, observables).
 
-  compilar(modelo)            -> SistemaCompilado (entrada estructural)
-  SistemaExplicito(modelo)    -> sistema de las ecuaciones escritas (matematico)
-  resolver(modelo)            -> conjunto de resultados (formato común), por la
-                                 entrada que corresponda
+  compilar(modelo)            -> SistemaCompilado (structural entry point)
+  SistemaExplicito(modelo)    -> system of authored equations (matematico)
+  resolver(modelo)            -> common-format result set through the
+                                 applicable entry point
 """
 
 from .compilador import NoSoportado, SistemaCompilado, compilar, resolver

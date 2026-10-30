@@ -1,12 +1,12 @@
 """
-Ida y vuelta entre el modelo común y los formatos existentes (contrato §3).
-Cada par es exacto: formato -> modelo -> formato devuelve el original.
+Round trips between the common model and existing formats (contract §3).
+Each pair is exact: format -> model -> format returns the original.
 
-  documento de adimensionalización (v1/v2)  <->  modelo (matemático + motores.adimensionalizacion)
-  solicitud de ensamblaje v2 del motor       <->  modelo (volúmenes, corrientes, termodinámica)
+  nondimensionalization document (v1/v2) <-> model (matematico + motores.adimensionalizacion)
+  engine assembly v2 request             <-> model (volumes, streams, thermodynamics)
 
-La hoja de materia del motor TS se adapta en TypeScript
-(frontend/motores/modelo/desdeHojaMotor.ts), donde vive su compilador.
+The TS engine's material sheet is adapted in TypeScript
+(frontend/motores/modelo/desdeHojaMotor.ts), where its compiler lives.
 """
 
 import copy
@@ -20,7 +20,7 @@ def _vacio(id_, nombre, procedencia):
             "datos": {}, "matematico": None, "estudio": None, "motores": {}, "procedencia": procedencia}
 
 
-# --- documento de adimensionalización -------------------------------------------
+# --- nondimensionalization document -------------------------------------------
 def desde_documento_adimensional(doc):
     d = copy.deepcopy(doc)
     m = _vacio(d["id"], d["nombre"], {"tipo": "documento_adimensional", "documentoId": d["id"]})
@@ -42,7 +42,7 @@ def a_documento_adimensional(modelo):
     return doc
 
 
-# --- solicitud de ensamblaje v2 --------------------------------------------------
+# --- assembly v2 request --------------------------------------------------
 def desde_ensamblaje_v2(sol):
     s = copy.deepcopy(sol)
     proc = {"tipo": "ensamblaje_v2", "solicitudId": s["solicitudId"], "revision": s["revision"]}
@@ -74,7 +74,7 @@ def a_ensamblaje_v2(modelo):
     for v in m["volumenes"]:
         t = v["termodinamica"]
         if t["tipo"] != "equilibrio":
-            raise ValueError(f"el ensamblaje v2 necesita un cierre de equilibrio en el volumen {v['id']}")
+            raise ValueError(f"Assembly v2 requires an equilibrium closure in volume {v['id']}")
         vols.append({"id": v["id"], "componenteIds": v["componenteIds"], "balances": v["balances"],
                      "formulacionMateria": v["supuestos"]["materia"], "formulacionEnergia": v["supuestos"]["energia"],
                      "paqueteId": t["paqueteId"], "politica": t["politica"], "frontera": v["frontera"],

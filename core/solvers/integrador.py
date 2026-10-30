@@ -102,6 +102,7 @@ class Trayectoria:
     detenida: Detencion = None
     pasos: int = 0
     rechazos: int = 0
+    event_contexts: dict = field(default_factory=dict)
 
     def y(self, t):
         for t0, t1, d in self.tramos:
@@ -135,10 +136,29 @@ def _detener_dominio(sistema, tray, k, t):
 
 
 def integrar(sistema, y0, t_final, rtol=1e-8, atol=1e-10, max_step=np.inf, h_min=1e-10, max_pasos=200000, metodo="RK45"):
+    """Retain the accepted prefix if a system-classified failure escapes a probe/restart."""
+    tray = Trayectoria(y_fin=np.array(y0, dtype=float))
+    try:
+        return _integrar(sistema, y0, t_final, rtol, atol, max_step, h_min, max_pasos, metodo, tray)
+    except Exception as error:
+        stop = sistema.stop_from_exception(error) if hasattr(sistema, 'stop_from_exception') else None
+        if stop is None:
+            raise
+        if tray.tramos:
+            _, tray.t_fin, dense = tray.tramos[-1]
+            tray.y_fin = np.array(dense(tray.t_fin), dtype=float)
+        tray.eventos = [event for event in tray.eventos if event[1] <= tray.t_fin]
+        tray.detenida = stop
+        tray.eventos.append((stop.codigo, tray.t_fin, None, None, stop.mensaje))
+        return tray
+
+
+def _integrar(sistema, y0, t_final, rtol, atol, max_step, h_min, max_pasos, metodo, tray):
     if metodo not in METODOS:
         raise ValueError(f"método no admitido: {metodo}")
-    tray = Trayectoria()
     t, y = 0.0, np.array(y0, dtype=float)
+    if hasattr(sistema, "validate_accepted"):
+        sistema.validate_accepted(t, y)
     try:
         firma, initial_margins = _event_state(sistema, t, y)
     except Detencion as d:
@@ -184,17 +204,20 @@ def integrar(sistema, y0, t_final, rtol=1e-8, atol=1e-10, max_step=np.inf, h_min
             return tray
         except Exception as e:          # noqa: BLE001 - una etapa fuera de dominio: paso menor
             tray.rechazos += 1
-            paso_max = min(paso_max, max(r.step_size if np.isfinite(r.step_size) else t_final, h_min)) / 4
+            step_size = r.step_size
+            paso_max = min(paso_max, max(step_size if step_size is not None and np.isfinite(step_size) else r.h_abs, h_min)) / 4
             if paso_max < h_min:
                 tray.detenida = Detencion("no_convergente", f"una evaluación falla con paso {paso_max:.3g}: {e}")
                 tray.eventos.append(("no_convergente", t_a, firma, None, str(e)))
                 tray.t_fin, tray.y_fin = t_a, y_a
                 return tray
-            r = _rk(sistema, t_a, y_a, t_final, rtol, atol, paso_max, metodo)
+            r = _rk(sistema, t_a, y_a, t_final, rtol, atol, paso_max, metodo, first_step=paso_max)
             continue
         if r.status == "failed":
             tray.detenida = Detencion("no_convergente", "el integrador no pudo avanzar")
             break
+        if hasattr(sistema, "validate_accepted"):
+            sistema.validate_accepted(r.t, r.y)
         tray.pasos += 1
         paso_max = max_step
         fuera = _fuera(sistema, r.t, r.y)
@@ -274,6 +297,8 @@ def integrar(sistema, y0, t_final, rtol=1e-8, atol=1e-10, max_step=np.inf, h_min
             current_margins = _event_state(sistema, t_a, y_a)[1]
             continue
         tray.eventos.append(("cambio_firma", hi, firma, nueva, ""))
+        if hasattr(sistema, 'capture_event_context'):
+            tray.event_contexts[hi] = sistema.capture_event_context(hi, y_e)
         motivo = sistema.admite(nueva) if hasattr(sistema, "admite") else None
         if motivo:
             tray.detenida = Detencion("politica_incumplida", motivo)
