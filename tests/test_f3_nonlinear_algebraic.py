@@ -122,6 +122,7 @@ class NonlinearAcceptanceTests(unittest.TestCase):
     def setUpClass(cls):
         cls.hashes={p:hashlib.sha256(p.read_bytes()).hexdigest() for p in (ROOT/'tests/reference_data').glob('m1-?.json')}
         cls.model,cls.author=thermal_case()
+        Path('.tmp/f3-nonlinear').mkdir(parents=True,exist_ok=True)
         Path('.tmp/f3-nonlinear/model.json').write_text(json.dumps(cls.model,indent=2),encoding='utf-8')
         cls.system=DerivedSystem(cls.model)
 

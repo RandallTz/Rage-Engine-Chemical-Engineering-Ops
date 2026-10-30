@@ -94,11 +94,11 @@ class MaterialDerivationTests(unittest.TestCase):
         journal = edit_journal(journal_for(), "A", {"kind": "no_accumulation"})
         model["motores"]["materialDerivation"] = journal
         model["volumenes"][0]["supuestos"]["materia"]["sinAcumulacion"] = True
-        with self.assertRaisesRegex(NoSoportado, "algebraic"):
+        with self.assertRaisesRegex(NoSoportado, "Algebraic accumulation constraints require a steady-state/DAE solver"):
             compilar(model)
 
     def test_spatial_and_unclosed_boundary_cannot_be_ignored(self):
-        for change, message in (({"vista": "campo"}, "Transform"), ({"restoImpermeable": False}, "flux law")):
+        for change, message in (({"vista": "campo"}, "Use total component inventories and total energy"), ({"restoImpermeable": False}, "flux law")):
             model = self.model()
             model["motores"] = {}
             model["volumenes"][0]["supuestos"]["materia"].update(change)
