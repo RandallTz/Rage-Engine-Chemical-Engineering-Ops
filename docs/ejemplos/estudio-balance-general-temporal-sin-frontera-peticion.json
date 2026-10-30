@@ -1,0 +1,123 @@
+{
+  "version": 1,
+  "componentes": [
+    "water"
+  ],
+  "bloques": [
+    {
+      "id": "in",
+      "tipo": "entrada",
+      "nombre": "Alimentacion"
+    },
+    {
+      "id": "cv1",
+      "tipo": "recipiente",
+      "nombre": "Primer volumen"
+    },
+    {
+      "id": "medio",
+      "tipo": "corriente",
+      "nombre": "Corriente compartida"
+    },
+    {
+      "id": "cv2",
+      "tipo": "recipiente",
+      "nombre": "Segundo volumen"
+    },
+    {
+      "id": "out",
+      "tipo": "salida",
+      "nombre": "Salida final"
+    }
+  ],
+  "conexiones": [
+    {
+      "id": "c1",
+      "desde": "in",
+      "hacia": "cv1",
+      "tipo": "materia"
+    },
+    {
+      "id": "c2",
+      "desde": "cv1",
+      "hacia": "medio",
+      "tipo": "materia"
+    },
+    {
+      "id": "c3",
+      "desde": "medio",
+      "hacia": "cv2",
+      "tipo": "materia"
+    },
+    {
+      "id": "c4",
+      "desde": "cv2",
+      "hacia": "out",
+      "tipo": "materia"
+    }
+  ],
+  "supuestos": {
+    "estacionario": false,
+    "adiabatico": true,
+    "sinTrabajo": true,
+    "sinReaccion": true,
+    "sinMovimiento": true
+  },
+  "especificaciones": [],
+  "almacenamiento": [
+    {
+      "bloque_id": "cv1",
+      "cierre": "balance_general"
+    },
+    {
+      "bloque_id": "cv2",
+      "cierre": "balance_general"
+    }
+  ],
+  "seleccion_variables": {
+    "version": 1,
+    "variables": [
+      {
+        "variable_id": "in.F",
+        "modo": "dato",
+        "cantidad": {
+          "valor": 3.0,
+          "unidad": "mol/s"
+        }
+      },
+      {
+        "variable_id": "out.F",
+        "modo": "dato",
+        "cantidad": {
+          "valor": 1.0,
+          "unidad": "mol/s"
+        }
+      }
+    ]
+  },
+  "estudio": {
+    "version": 1,
+    "tipo": "temporal",
+    "condiciones_iniciales": [
+      {
+        "bloque_id": "cv1",
+        "componente": "water",
+        "magnitud": "n",
+        "valor": 100.0,
+        "unidad": "mol"
+      },
+      {
+        "bloque_id": "cv2",
+        "componente": "water",
+        "magnitud": "n",
+        "valor": 200.0,
+        "unidad": "mol"
+      }
+    ],
+    "tiempo": {
+      "final": 50.0,
+      "unidad": "s",
+      "muestras": 51
+    }
+  }
+}

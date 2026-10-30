@@ -1,0 +1,477 @@
+{
+  "version": 1,
+  "componentes": [
+    "o-xylene",
+    "m-xylene",
+    "p-xylene"
+  ],
+  "bloques": [
+    {
+      "id": "in",
+      "tipo": "entrada",
+      "nombre": "Alimentacion"
+    },
+    {
+      "id": "rx1",
+      "tipo": "reactor",
+      "nombre": "Primer reactor"
+    },
+    {
+      "id": "q1",
+      "tipo": "calor",
+      "nombre": "Camisa"
+    },
+    {
+      "id": "medio",
+      "tipo": "corriente",
+      "nombre": "Corriente compartida"
+    },
+    {
+      "id": "rx2",
+      "tipo": "reactor",
+      "nombre": "Segundo reactor"
+    },
+    {
+      "id": "out",
+      "tipo": "salida",
+      "nombre": "Salida"
+    }
+  ],
+  "conexiones": [
+    {
+      "id": "c1",
+      "desde": "in",
+      "hacia": "rx1"
+    },
+    {
+      "id": "cq",
+      "desde": "q1",
+      "hacia": "rx1"
+    },
+    {
+      "id": "c2",
+      "desde": "rx1",
+      "hacia": "medio"
+    },
+    {
+      "id": "c3",
+      "desde": "medio",
+      "hacia": "rx2"
+    },
+    {
+      "id": "c4",
+      "desde": "rx2",
+      "hacia": "out"
+    },
+    {
+      "id": "it",
+      "desde": "rx1",
+      "hacia": "rx2",
+      "tipo": "termica"
+    }
+  ],
+  "supuestos": {
+    "estacionario": false,
+    "adiabatico": false,
+    "sinTrabajo": true,
+    "sinReaccion": false,
+    "sinMovimiento": true
+  },
+  "especificaciones": [
+    {
+      "bloque_id": "in",
+      "variable": "F",
+      "valor": 10.0,
+      "unidad": "mol/s"
+    },
+    {
+      "bloque_id": "in",
+      "variable": "x0",
+      "valor": 1.0,
+      "unidad": "mol/mol"
+    },
+    {
+      "bloque_id": "in",
+      "variable": "x1",
+      "valor": 0.0,
+      "unidad": "mol/mol"
+    },
+    {
+      "bloque_id": "in",
+      "variable": "T",
+      "valor": 350.0,
+      "unidad": "K"
+    },
+    {
+      "bloque_id": "q1",
+      "variable": "Q",
+      "valor": 20000.0,
+      "unidad": "W"
+    }
+  ],
+  "almacenamiento": [
+    {
+      "bloque_id": "rx1",
+      "cierre": "inventario_constante",
+      "V": {
+        "valor": 0.05,
+        "unidad": "m3"
+      },
+      "densidad_molar": {
+        "valor": 8000.0,
+        "unidad": "mol/m3"
+      },
+      "energia": {
+        "modelo": "solo_fluido"
+      }
+    },
+    {
+      "bloque_id": "rx2",
+      "cierre": "inventario_constante",
+      "V": {
+        "valor": 0.1,
+        "unidad": "m3"
+      },
+      "densidad_molar": {
+        "valor": 8000.0,
+        "unidad": "mol/m3"
+      },
+      "energia": {
+        "modelo": "solo_fluido",
+        "adiabatico": true
+      }
+    }
+  ],
+  "reacciones": [
+    {
+      "id": "om",
+      "bloque_id": "rx1",
+      "nu": [
+        -1.0,
+        1.0,
+        0.0
+      ],
+      "ley_directa": {
+        "k_ref": {
+          "valor": 5.0,
+          "unidad": "mol/s"
+        },
+        "T_ref": {
+          "valor": 390.0,
+          "unidad": "K"
+        },
+        "Ea": 40000.0,
+        "base_actividad": "fraccion_molar",
+        "ordenes": {
+          "o-xylene": 1.0
+        }
+      }
+    },
+    {
+      "id": "mp",
+      "bloque_id": "rx2",
+      "nu": [
+        0.0,
+        -1.0,
+        1.0
+      ],
+      "ley_directa": {
+        "k_ref": {
+          "valor": 3.0,
+          "unidad": "mol/s"
+        },
+        "T_ref": {
+          "valor": 390.0,
+          "unidad": "K"
+        },
+        "Ea": 40000.0,
+        "base_actividad": "fraccion_molar",
+        "ordenes": {
+          "m-xylene": 1.0
+        }
+      }
+    }
+  ],
+  "modelo_energetico": {
+    "tipo": "proveedor_liquido",
+    "densidad_molar": {
+      "valor": 8000.0,
+      "unidad": "mol/m3"
+    },
+    "dominio_T": {
+      "min": 280.0,
+      "max": 410.0,
+      "unidad": "K"
+    }
+  },
+  "presion_sistema": {
+    "valor": 101325.0,
+    "unidad": "Pa"
+  },
+  "estudio": {
+    "version": 1,
+    "tipo": "temporal",
+    "condicion_inicial_transferida": {
+      "version": 1,
+      "tipo": "estacionario",
+      "origen": {
+        "modelo_id": "4cd2d9031c456d556f215ef58db159b6de2317117bf3e2eaf3543412140a1b00",
+        "estudio_id": "db5db7d4b1b355d4ba61c29931abf69713fb9fc7e9ffb3bccc22c36f9bfadc2e",
+        "calculo_identificador": "f787f11ead9fb043d93a87e088677afe",
+        "instante_utc": "2026-10-12T21:51:34.255+00:00",
+        "motor": {
+          "version": "0.15.0",
+          "commit": "dc6ede0bcb842bc8e2e6d03e7a882bb2fc650ab4-sucio"
+        },
+        "schema_version": 1,
+        "revision_contrato": 15
+      },
+      "huellas": {
+        "componentes": "7b3a5c1a16073a577a7922639fc09bf48e7afbade765312084314be81f3c2c21",
+        "bloques": {
+          "in": "91d2dea06abe1c10c36360de0fbb843b8ddf012b3bcc2323a161bce547895487",
+          "rx1": "3eda2eee9f04a03e4be378309bf83078231e92030628b198d3fe13745699a7bf",
+          "q1": "ec36721b0b0660dabeee028591f0795833382ba2fb88951d113cc818f24ed7a3",
+          "medio": "72cf9bc3eed0882bd349ab6ffcecf3c8eb578c2ce35d6a9370520e33a9bacb00",
+          "rx2": "3eda2eee9f04a03e4be378309bf83078231e92030628b198d3fe13745699a7bf",
+          "out": "336fa85df3f86b541e90ac98f1bcde20b98847b4b962a82ae7aa8168fe8073c9"
+        },
+        "conexiones": {
+          "c1": "6e199b4c4bc7b5723f0cba375648f50f9e0c710afc8f775eaa0a4732e22117f8",
+          "cq": "6fb168450ce1f7711dfd1ade30474f5d0404fe6579049de60783f12d3e238c46",
+          "c2": "6edc4ee51d05c52a6bb6f1f853d154f12df9ecac147cb8bc66de5e19f5c24df1",
+          "c3": "3f575735f9a9e60a235f39795a9b7748a5e267a9fe50ea0c69eaa8d77be1b504",
+          "c4": "ced083fec4b2b94b2465a60e347383310bce4475bcc6beb28d4fa3b412e44a1d",
+          "it": "aab4cac42d13c4e9626f72d99243d6917b1a8c3420a4572c497954efc6b22807"
+        },
+        "especificaciones": {
+          "in.F": "fdd0cedb9ea54d26a2186d973acbf468025543067958d9eeda512dc6e1a1eadb",
+          "in.x0": "02feede1c3be4439836fe5fbc2d3c1918eb61284c70fb69a4bcbe9637952d153",
+          "in.x1": "9da8eb10750a1cebffe5336b46209cd9dee3324ba343dca2bee77ec14b0e3bd5",
+          "in.T": "3fa6d23f7d8f61e396a2e7d0d67f3a09780a24d3fbc2ae3f883dc6524501b3c5",
+          "q1.Q": "bcc9f467bb5cfd4a552a31fc3f1e4e646c10c45c9400189c709cc8b677fe602f"
+        },
+        "almacenamiento": {
+          "rx1": "f7e92e4d3ed6e42cbfab0116e8c8d15a25c1d21b26ab55b0327b97ed05a5c414",
+          "rx2": "69d0f6d1fb6d3e175c41254d927f62b1d030221b5d8da274f6f7e9887f6f9765"
+        },
+        "reacciones": {
+          "om": "970a1dcb08bd1fe87c2e3b35e3a58af14a9dd3b571bc14d035d36400bba616e6",
+          "mp": "f5385ccd69e5954cd1beebdd9750177134b059bc146170162de727f4fdeadf69"
+        },
+        "interfaces_termicas": {
+          "it": "27282dabbbf421b49602b5f7b9b501f6cf3451e50d39743b421fefec2c9f526e"
+        },
+        "modelo_energetico": "2d25478e0e9bd22ea3b9c5664fbf1c0130bd724f8ea1e7d3f5ea9308b9bb7f8d",
+        "presion_sistema": "c0acf43e742838a86cfe2df1c80d1cc53ecc4cd3c0e3f6eb5e5132996f96a72d",
+        "supuestos": "8e26174bf6aeda0942cd1de0f2dd948bf89bdd641289756271a4e2c20e90b0fc"
+      },
+      "inventarios": [
+        {
+          "bloque_id": "rx1",
+          "componente": "o-xylene",
+          "magnitud": "n",
+          "valor": 338.09220045389696,
+          "unidad": "mol"
+        },
+        {
+          "bloque_id": "rx1",
+          "componente": "m-xylene",
+          "magnitud": "n",
+          "valor": 61.907799546103035,
+          "unidad": "mol"
+        },
+        {
+          "bloque_id": "rx1",
+          "componente": "p-xylene",
+          "magnitud": "n",
+          "valor": 0.0,
+          "unidad": "mol"
+        },
+        {
+          "bloque_id": "rx2",
+          "componente": "o-xylene",
+          "magnitud": "n",
+          "valor": 676.184400907794,
+          "unidad": "mol"
+        },
+        {
+          "bloque_id": "rx2",
+          "componente": "m-xylene",
+          "magnitud": "n",
+          "valor": 111.58419185641841,
+          "unidad": "mol"
+        },
+        {
+          "bloque_id": "rx2",
+          "componente": "p-xylene",
+          "magnitud": "n",
+          "valor": 12.231407235787643,
+          "unidad": "mol"
+        }
+      ],
+      "energia": [
+        {
+          "bloque_id": "rx1",
+          "magnitud": "U",
+          "valor": 4921223.074217334,
+          "unidad": "J",
+          "T": 360.6326526213074,
+          "unidad_T": "K",
+          "U_es_estado": true,
+          "nota": "U es el estado; T se informa, no se usa"
+        },
+        {
+          "bloque_id": "rx2",
+          "magnitud": "U",
+          "valor": 9832673.61651058,
+          "unidad": "J",
+          "T": 360.5711807385148,
+          "unidad_T": "K",
+          "U_es_estado": true,
+          "nota": "U es el estado; T se informa, no se usa"
+        }
+      ],
+      "comprobaciones": {
+        "residuo_estacionario_escalado": 5.638867150992155e-15,
+        "tolerancia_transferencia": 1e-08,
+        "restricciones": [
+          {
+            "bloque_id": "rx1",
+            "restriccion": "sum_i n_i = rho V",
+            "residuo_relativo": 0.0
+          },
+          {
+            "bloque_id": "rx2",
+            "restriccion": "sum_i n_i = rho V",
+            "residuo_relativo": 1.4210854715202004e-16
+          }
+        ],
+        "estabilidad_local": {
+          "autovalores": [
+            {
+              "real": -0.034140058015844875,
+              "imaginaria": 0.0
+            },
+            {
+              "real": -0.03031143226957952,
+              "imaginaria": 0.0
+            },
+            {
+              "real": -0.02499999999996984,
+              "imaginaria": 0.0
+            },
+            {
+              "real": -0.010814993614409525,
+              "imaginaria": 0.0
+            },
+            {
+              "real": -0.013810445799222935,
+              "imaginaria": 0.0
+            },
+            {
+              "real": -0.012500000008009654,
+              "imaginaria": 0.0
+            }
+          ],
+          "unidad": "1/s",
+          "restringido_a_restricciones": true,
+          "acoplado": true,
+          "localmente_estable": true,
+          "constante_de_tiempo_mas_lenta_s": 92.46422472849493,
+          "alcance": "estabilidad lineal LOCAL del estacionario: dice que una perturbacion pequena decae, no que el estacionario se alcance desde cualquier estado inicial ni que sea unico globalmente."
+        },
+        "correcciones_de_redondeo": [
+          {
+            "bloque_id": "rx1",
+            "componente": "p-xylene",
+            "valor_resuelto": -6.0443133345081034e-24,
+            "valor_transferido": 0.0,
+            "unidad": "mol",
+            "umbral": 4e-10,
+            "motivo": "inventario negativo de magnitud de redondeo (<= 1e-12 x el inventario del volumen); un inventario no puede ser negativo"
+          }
+        ]
+      },
+      "rama": {
+        "indice": 0,
+        "de": 1,
+        "arranque": "composicion con pesos 1..n (no la equimolar)",
+        "estabilidad_local": {
+          "autovalores": [
+            {
+              "real": -0.034140058015844875,
+              "imaginaria": 0.0
+            },
+            {
+              "real": -0.03031143226957952,
+              "imaginaria": 0.0
+            },
+            {
+              "real": -0.02499999999996984,
+              "imaginaria": 0.0
+            },
+            {
+              "real": -0.010814993614409525,
+              "imaginaria": 0.0
+            },
+            {
+              "real": -0.013810445799222935,
+              "imaginaria": 0.0
+            },
+            {
+              "real": -0.012500000008009654,
+              "imaginaria": 0.0
+            }
+          ],
+          "unidad": "1/s",
+          "restringido_a_restricciones": true,
+          "acoplado": true,
+          "localmente_estable": true,
+          "constante_de_tiempo_mas_lenta_s": 92.46422472849493,
+          "alcance": "estabilidad lineal LOCAL del estacionario: dice que una perturbacion pequena decae, no que el estacionario se alcance desde cualquier estado inicial ni que sea unico globalmente."
+        }
+      },
+      "referencia_energia": "sensible con fuente quimica explicita (dH a 298.15 K)",
+      "fluido": {
+        "tipo": "proveedor_liquido",
+        "densidad_molar": 8000.0,
+        "unidad_densidad": "mol/m3",
+        "cp": "del proveedor, cp_i(T) liquido (spline sobre 'thermo')",
+        "unidad_cp": "J/(mol*K)",
+        "T_referencia": 298.15,
+        "dominio_T": [
+          280.0,
+          410.0
+        ],
+        "presion": 101325.0,
+        "origen": "h_i(298.15 K) = 0 para cada liquido puro a la presion del sistema (referencia del proveedor); u_i = h_i - P/rho. El mismo origen en U y en h.",
+        "mezcla": "ideal: sin entalpia de exceso, porque el proveedor no ofrece un modelo para ella",
+        "fase": "liquido, comprobado: P_burbuja(T, x) < P en cada estado; la frontera es un evento terminal",
+        "volumen_molar": "1/rho declarado, igual para todas las especies"
+      },
+      "transformaciones": [
+        "n_i: el inventario resuelto de cada volumen, en mol, sin conversion",
+        "U: la energia interna resuelta (estado del volumen) en J, con la referencia del fluido; T se adjunta a titulo informativo",
+        "con T impuesta: U = U(n, T*) del cierre energetico",
+        "NO se transfieren caudales F ni entalpias de corriente h"
+      ],
+      "firma": "f6535057cebe1fb0df384633b3380044f2731c6df56139074824080dbd65fd25"
+    },
+    "tiempo": {
+      "final": 600.0,
+      "unidad": "s",
+      "muestras": 61
+    },
+    "entradas_temporales": []
+  },
+  "interfaces_termicas": [
+    {
+      "conexion_id": "it",
+      "conductancia": {
+        "valor": 500.0,
+        "unidad": "W/K"
+      }
+    }
+  ]
+}

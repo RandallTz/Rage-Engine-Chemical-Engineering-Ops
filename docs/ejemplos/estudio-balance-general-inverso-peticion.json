@@ -1,0 +1,118 @@
+{
+  "version": 1,
+  "componentes": [
+    "water"
+  ],
+  "bloques": [
+    {
+      "id": "in",
+      "tipo": "entrada",
+      "nombre": "Alimentacion"
+    },
+    {
+      "id": "cv1",
+      "tipo": "recipiente",
+      "nombre": "Primer volumen"
+    },
+    {
+      "id": "medio",
+      "tipo": "corriente",
+      "nombre": "Corriente compartida"
+    },
+    {
+      "id": "cv2",
+      "tipo": "recipiente",
+      "nombre": "Segundo volumen"
+    },
+    {
+      "id": "out",
+      "tipo": "salida",
+      "nombre": "Salida final"
+    }
+  ],
+  "conexiones": [
+    {
+      "id": "c1",
+      "desde": "in",
+      "hacia": "cv1",
+      "tipo": "materia"
+    },
+    {
+      "id": "c2",
+      "desde": "cv1",
+      "hacia": "medio",
+      "tipo": "materia"
+    },
+    {
+      "id": "c3",
+      "desde": "medio",
+      "hacia": "cv2",
+      "tipo": "materia"
+    },
+    {
+      "id": "c4",
+      "desde": "cv2",
+      "hacia": "out",
+      "tipo": "materia"
+    }
+  ],
+  "supuestos": {
+    "estacionario": true,
+    "adiabatico": true,
+    "sinTrabajo": true,
+    "sinReaccion": true,
+    "sinMovimiento": true
+  },
+  "especificaciones": [],
+  "almacenamiento": [
+    {
+      "bloque_id": "cv1",
+      "cierre": "balance_general"
+    },
+    {
+      "bloque_id": "cv2",
+      "cierre": "balance_general"
+    }
+  ],
+  "seleccion_variables": {
+    "version": 1,
+    "variables": [
+      {
+        "variable_id": "in.F",
+        "modo": "calcular"
+      },
+      {
+        "variable_id": "medio.F",
+        "modo": "calcular"
+      },
+      {
+        "variable_id": "out.F",
+        "modo": "dato",
+        "cantidad": {
+          "valor": 36.0,
+          "unidad": "kmol/h"
+        }
+      },
+      {
+        "variable_id": "cv1.n0",
+        "modo": "dato",
+        "cantidad": {
+          "valor": 100.0,
+          "unidad": "mol"
+        }
+      },
+      {
+        "variable_id": "cv2.n0",
+        "modo": "dato",
+        "cantidad": {
+          "valor": 200.0,
+          "unidad": "mol"
+        }
+      }
+    ]
+  },
+  "estudio": {
+    "version": 1,
+    "tipo": "estacionario"
+  }
+}

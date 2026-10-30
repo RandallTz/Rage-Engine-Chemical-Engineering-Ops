@@ -1,0 +1,102 @@
+{
+  "version": 1,
+  "componentes": [
+    "water",
+    "acetic acid"
+  ],
+  "bloques": [
+    {
+      "id": "cv1",
+      "tipo": "recipiente",
+      "nombre": "Compartimento 1"
+    },
+    {
+      "id": "cv2",
+      "tipo": "recipiente",
+      "nombre": "Compartimento 2"
+    }
+  ],
+  "conexiones": [
+    {
+      "id": "im",
+      "desde": "cv1",
+      "hacia": "cv2",
+      "tipo": "transferencia_materia"
+    }
+  ],
+  "supuestos": {
+    "sinReaccion": true
+  },
+  "especificaciones": [],
+  "almacenamiento": [
+    {
+      "bloque_id": "cv1",
+      "cierre": "volumen_fijo",
+      "V": {
+        "valor": 0.001,
+        "unidad": "m3"
+      }
+    },
+    {
+      "bloque_id": "cv2",
+      "cierre": "volumen_fijo",
+      "V": {
+        "valor": 0.002,
+        "unidad": "m3"
+      }
+    }
+  ],
+  "interfaces_materiales": [
+    {
+      "conexion_id": "im",
+      "especie": "acetic acid",
+      "conductancia": {
+        "valor": 1e-06,
+        "unidad": "m3/s"
+      },
+      "reparto": {
+        "valor": 2.0,
+        "unidad": "adimensional"
+      }
+    }
+  ],
+  "estudio": {
+    "version": 1,
+    "tipo": "temporal",
+    "condiciones_iniciales": [
+      {
+        "bloque_id": "cv1",
+        "componente": "water",
+        "magnitud": "n",
+        "valor": 55.0,
+        "unidad": "mol"
+      },
+      {
+        "bloque_id": "cv1",
+        "componente": "acetic acid",
+        "magnitud": "n",
+        "valor": 0.1,
+        "unidad": "mol"
+      },
+      {
+        "bloque_id": "cv2",
+        "componente": "water",
+        "magnitud": "n",
+        "valor": 110.0,
+        "unidad": "mol"
+      },
+      {
+        "bloque_id": "cv2",
+        "componente": "acetic acid",
+        "magnitud": "n",
+        "valor": 0.4,
+        "unidad": "mol"
+      }
+    ],
+    "tiempo": {
+      "final": 2000.0,
+      "unidad": "s",
+      "muestras": 21
+    }
+  }
+}

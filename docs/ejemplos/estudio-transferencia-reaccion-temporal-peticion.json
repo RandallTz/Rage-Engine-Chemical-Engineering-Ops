@@ -1,0 +1,282 @@
+{
+  "version": 1,
+  "componentes": [
+    "n-butane",
+    "isobutane"
+  ],
+  "bloques": [
+    {
+      "id": "in",
+      "tipo": "entrada",
+      "nombre": "Alimentacion"
+    },
+    {
+      "id": "rx",
+      "tipo": "reactor",
+      "nombre": "Reactor"
+    },
+    {
+      "id": "out",
+      "tipo": "salida",
+      "nombre": "Salida"
+    }
+  ],
+  "conexiones": [
+    {
+      "id": "c1",
+      "desde": "in",
+      "hacia": "rx",
+      "tipo": "materia"
+    },
+    {
+      "id": "c2",
+      "desde": "rx",
+      "hacia": "out",
+      "tipo": "materia"
+    }
+  ],
+  "supuestos": {
+    "estacionario": false,
+    "adiabatico": true,
+    "sinTrabajo": true,
+    "sinReaccion": false,
+    "sinMovimiento": true
+  },
+  "especificaciones": [
+    {
+      "bloque_id": "in",
+      "variable": "F",
+      "valor": 100.0,
+      "unidad": "mol/s"
+    },
+    {
+      "bloque_id": "in",
+      "variable": "x0",
+      "valor": 1.0,
+      "unidad": "mol/mol"
+    },
+    {
+      "bloque_id": "in",
+      "variable": "T",
+      "valor": 320.0,
+      "unidad": "K"
+    }
+  ],
+  "almacenamiento": [
+    {
+      "bloque_id": "rx",
+      "cierre": "inventario_constante",
+      "V": {
+        "valor": 0.1,
+        "unidad": "m3"
+      },
+      "densidad_molar": {
+        "valor": 10000.0,
+        "unidad": "mol/m3"
+      },
+      "energia": {
+        "modelo": "solo_fluido"
+      }
+    }
+  ],
+  "reacciones": [
+    {
+      "id": "iso",
+      "bloque_id": "rx",
+      "nu": [
+        -1.0,
+        1.0
+      ],
+      "ley_directa": {
+        "k_ref": {
+          "valor": 50.0,
+          "unidad": "mol/s"
+        },
+        "T_ref": {
+          "valor": 320.0,
+          "unidad": "K"
+        },
+        "Ea": 50000.0,
+        "base_actividad": "actividad",
+        "ordenes": {
+          "n-butane": 1.0
+        }
+      }
+    }
+  ],
+  "presion_sistema": {
+    "valor": 2000000.0,
+    "unidad": "Pa"
+  },
+  "modelo_energetico": {
+    "tipo": "proveedor_liquido",
+    "densidad_molar": {
+      "valor": 10000.0,
+      "unidad": "mol/m3"
+    },
+    "dominio_T": {
+      "min": 250.0,
+      "max": 395.0,
+      "unidad": "K"
+    }
+  },
+  "estudio": {
+    "version": 1,
+    "tipo": "temporal",
+    "condicion_inicial_transferida": {
+      "version": 1,
+      "tipo": "estacionario",
+      "origen": {
+        "modelo_id": "407362fddaf6924b959ca94e793720aa5477844c06f0c5c417948fbdb358fa92",
+        "estudio_id": "db5db7d4b1b355d4ba61c29931abf69713fb9fc7e9ffb3bccc22c36f9bfadc2e",
+        "calculo_identificador": "58fe7d8a886d89463336a3ad75084f89",
+        "instante_utc": "2026-10-12T21:51:32.385+00:00",
+        "motor": {
+          "version": "0.15.0",
+          "commit": "dc6ede0bcb842bc8e2e6d03e7a882bb2fc650ab4-sucio"
+        },
+        "schema_version": 1,
+        "revision_contrato": 15
+      },
+      "huellas": {
+        "componentes": "5243a00bbbd22fdb98832252192f16703aa8f5637ad96fdedf13bbd94e7f49d0",
+        "bloques": {
+          "in": "91d2dea06abe1c10c36360de0fbb843b8ddf012b3bcc2323a161bce547895487",
+          "rx": "3eda2eee9f04a03e4be378309bf83078231e92030628b198d3fe13745699a7bf",
+          "out": "336fa85df3f86b541e90ac98f1bcde20b98847b4b962a82ae7aa8168fe8073c9"
+        },
+        "conexiones": {
+          "c1": "890de597841e88700f58279f9141eb01a9fb260ed06800b0fa1aeec16c72d059",
+          "c2": "ba3f9d3cd43ca1d502f6f17431f0e30f3eb3b349a8f5cb4071dbf98545c02b75"
+        },
+        "especificaciones": {
+          "in.F": "1144dc564791c0f3615d6fd6f4610c0955312afacb2637863a22bf72bb2953b1",
+          "in.x0": "02feede1c3be4439836fe5fbc2d3c1918eb61284c70fb69a4bcbe9637952d153",
+          "in.T": "c50b4890c6efd5324df63e1f7146ae7689159f27f43ddb9850e514c8a6afd6d2"
+        },
+        "almacenamiento": {
+          "rx": "e688cac32352e731a6ca15fd7e399f9d101d4711f28fd579e8707c5dbca6b302"
+        },
+        "reacciones": {
+          "iso": "c95abf07d99a002488a8d9ff2d9e5c60d561a2d75a52eceea9675b34944fd653"
+        },
+        "interfaces_termicas": {},
+        "modelo_energetico": "e9bcb2adc1ed020f179abd63131617f57ac97363a61b3891feef06cbfa9d9c3a",
+        "presion_sistema": "74e40aaef6ce2addde912eb699efd9496154ee29328a0c51b4946136ee63bb25",
+        "supuestos": "0af5c47ff05b0344c687326828e3133f3dea806be799e79fca2b52d2c165c5bb"
+      },
+      "inventarios": [
+        {
+          "bloque_id": "rx",
+          "componente": "n-butane",
+          "magnitud": "n",
+          "valor": 139.1058722542523,
+          "unidad": "mol"
+        },
+        {
+          "bloque_id": "rx",
+          "componente": "isobutane",
+          "magnitud": "n",
+          "valor": 860.8941277457478,
+          "unidad": "mol"
+        }
+      ],
+      "energia": [
+        {
+          "bloque_id": "rx",
+          "magnitud": "U",
+          "valor": 11170277.798085755,
+          "unidad": "J",
+          "T": 369.46220038601774,
+          "unidad_T": "K",
+          "U_es_estado": true,
+          "nota": "U es el estado; T se informa, no se usa"
+        }
+      ],
+      "comprobaciones": {
+        "residuo_estacionario_escalado": 7.773616533074059e-15,
+        "tolerancia_transferencia": 1e-08,
+        "restricciones": [
+          {
+            "bloque_id": "rx",
+            "restriccion": "sum_i n_i = rho V",
+            "residuo_relativo": 1.1368683772161603e-16
+          }
+        ],
+        "estabilidad_local": {
+          "autovalores": [
+            {
+              "real": -0.5303910213622905,
+              "imaginaria": 0.0
+            },
+            {
+              "real": -0.09999999998400821,
+              "imaginaria": 0.0
+            }
+          ],
+          "unidad": "1/s",
+          "restringido_a_restricciones": true,
+          "acoplado": true,
+          "localmente_estable": true,
+          "constante_de_tiempo_mas_lenta_s": 10.00000000159918,
+          "alcance": "estabilidad lineal LOCAL del estacionario: dice que una perturbacion pequena decae, no que el estacionario se alcance desde cualquier estado inicial ni que sea unico globalmente."
+        },
+        "correcciones_de_redondeo": []
+      },
+      "rama": {
+        "indice": 0,
+        "de": 1,
+        "arranque": "composicion con pesos 1..n (no la equimolar)",
+        "estabilidad_local": {
+          "autovalores": [
+            {
+              "real": -0.5303910213622905,
+              "imaginaria": 0.0
+            },
+            {
+              "real": -0.09999999998400821,
+              "imaginaria": 0.0
+            }
+          ],
+          "unidad": "1/s",
+          "restringido_a_restricciones": true,
+          "acoplado": true,
+          "localmente_estable": true,
+          "constante_de_tiempo_mas_lenta_s": 10.00000000159918,
+          "alcance": "estabilidad lineal LOCAL del estacionario: dice que una perturbacion pequena decae, no que el estacionario se alcance desde cualquier estado inicial ni que sea unico globalmente."
+        }
+      },
+      "referencia_energia": "sensible con fuente quimica explicita (dH a 298.15 K)",
+      "fluido": {
+        "tipo": "proveedor_liquido",
+        "densidad_molar": 10000.0,
+        "unidad_densidad": "mol/m3",
+        "cp": "del proveedor, cp_i(T) liquido (spline sobre 'thermo')",
+        "unidad_cp": "J/(mol*K)",
+        "T_referencia": 298.15,
+        "dominio_T": [
+          250.0,
+          395.0
+        ],
+        "presion": 2000000.0,
+        "origen": "h_i(298.15 K) = 0 para cada liquido puro a la presion del sistema (referencia del proveedor); u_i = h_i - P/rho. El mismo origen en U y en h.",
+        "mezcla": "ideal: sin entalpia de exceso, porque el proveedor no ofrece un modelo para ella",
+        "fase": "liquido, comprobado: P_burbuja(T, x) < P en cada estado; la frontera es un evento terminal",
+        "volumen_molar": "1/rho declarado, igual para todas las especies"
+      },
+      "transformaciones": [
+        "n_i: el inventario resuelto de cada volumen, en mol, sin conversion",
+        "U: la energia interna resuelta (estado del volumen) en J, con la referencia del fluido; T se adjunta a titulo informativo",
+        "con T impuesta: U = U(n, T*) del cierre energetico",
+        "NO se transfieren caudales F ni entalpias de corriente h"
+      ],
+      "firma": "f751777754f2a75a3bab163f12663090a67a3d6e5d5807f7b82058942156cc7a"
+    },
+    "tiempo": {
+      "final": 600.0,
+      "unidad": "s",
+      "muestras": 61
+    },
+    "entradas_temporales": []
+  }
+}

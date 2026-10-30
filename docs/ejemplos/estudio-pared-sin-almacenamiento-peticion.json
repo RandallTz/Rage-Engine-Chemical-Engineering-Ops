@@ -1,0 +1,158 @@
+{
+  "version": 1,
+  "componentes": [
+    "water"
+  ],
+  "bloques": [
+    {
+      "id": "ca",
+      "tipo": "recipiente",
+      "nombre": "Agua caliente"
+    },
+    {
+      "id": "pw",
+      "tipo": "pared",
+      "nombre": "Pared"
+    },
+    {
+      "id": "tq",
+      "tipo": "recipiente",
+      "nombre": "Tanque"
+    }
+  ],
+  "conexiones": [
+    {
+      "id": "g1",
+      "desde": "ca",
+      "hacia": "pw",
+      "tipo": "termica"
+    },
+    {
+      "id": "g2",
+      "desde": "pw",
+      "hacia": "tq",
+      "tipo": "termica"
+    }
+  ],
+  "supuestos": {
+    "adiabatico": true,
+    "sinTrabajo": true,
+    "sinReaccion": true,
+    "sinMovimiento": true
+  },
+  "especificaciones": [],
+  "almacenamiento": [
+    {
+      "bloque_id": "ca",
+      "cierre": "inventario_constante",
+      "V": {
+        "valor": 0.0018181818181818182,
+        "unidad": "m3"
+      },
+      "densidad_molar": {
+        "valor": 55000.0,
+        "unidad": "mol/m3"
+      },
+      "energia": {
+        "modelo": "solo_fluido"
+      }
+    },
+    {
+      "bloque_id": "tq",
+      "cierre": "inventario_constante",
+      "V": {
+        "valor": 0.01818181818181818,
+        "unidad": "m3"
+      },
+      "densidad_molar": {
+        "valor": 55000.0,
+        "unidad": "mol/m3"
+      },
+      "energia": {
+        "modelo": "solo_fluido"
+      }
+    }
+  ],
+  "interfaces_termicas": [
+    {
+      "conexion_id": "g1",
+      "conductancia": {
+        "valor": 400.0,
+        "unidad": "W/K"
+      }
+    },
+    {
+      "conexion_id": "g2",
+      "conductancia": {
+        "valor": 250.0,
+        "unidad": "W/K"
+      }
+    }
+  ],
+  "paredes": [
+    {
+      "bloque_id": "pw",
+      "almacenamiento": "sin_almacenamiento"
+    }
+  ],
+  "modelo_energetico": {
+    "tipo": "ideal_incompresible",
+    "densidad_molar": {
+      "valor": 55000.0,
+      "unidad": "mol/m3"
+    },
+    "cp": [
+      {
+        "componente": "water",
+        "valor": 75.3,
+        "unidad": "J/(mol*K)"
+      }
+    ],
+    "T_referencia": {
+      "valor": 298.15,
+      "unidad": "K"
+    },
+    "dominio_T": {
+      "min": 273.15,
+      "max": 373.15,
+      "unidad": "K"
+    }
+  },
+  "estudio": {
+    "version": 1,
+    "tipo": "temporal",
+    "condiciones_iniciales": [
+      {
+        "bloque_id": "ca",
+        "componente": "water",
+        "magnitud": "n",
+        "valor": 100.0,
+        "unidad": "mol"
+      },
+      {
+        "bloque_id": "ca",
+        "magnitud": "T",
+        "valor": 360.0,
+        "unidad": "K"
+      },
+      {
+        "bloque_id": "tq",
+        "componente": "water",
+        "magnitud": "n",
+        "valor": 1000.0,
+        "unidad": "mol"
+      },
+      {
+        "bloque_id": "tq",
+        "magnitud": "T",
+        "valor": 300.0,
+        "unidad": "K"
+      }
+    ],
+    "tiempo": {
+      "final": 3000.0,
+      "unidad": "s",
+      "muestras": 121
+    }
+  }
+}

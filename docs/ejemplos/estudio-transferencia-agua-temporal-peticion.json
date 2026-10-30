@@ -1,0 +1,217 @@
+{
+  "version": 1,
+  "componentes": [
+    "water"
+  ],
+  "bloques": [
+    {
+      "id": "in",
+      "tipo": "entrada",
+      "nombre": "Alimentacion"
+    },
+    {
+      "id": "cv1",
+      "tipo": "recipiente",
+      "nombre": "Primer volumen"
+    },
+    {
+      "id": "medio",
+      "tipo": "corriente",
+      "nombre": "Corriente compartida"
+    },
+    {
+      "id": "cv2",
+      "tipo": "recipiente",
+      "nombre": "Segundo volumen"
+    },
+    {
+      "id": "out",
+      "tipo": "salida",
+      "nombre": "Salida final"
+    }
+  ],
+  "conexiones": [
+    {
+      "id": "c1",
+      "desde": "in",
+      "hacia": "cv1",
+      "tipo": "materia"
+    },
+    {
+      "id": "c2",
+      "desde": "cv1",
+      "hacia": "medio",
+      "tipo": "materia"
+    },
+    {
+      "id": "c3",
+      "desde": "medio",
+      "hacia": "cv2",
+      "tipo": "materia"
+    },
+    {
+      "id": "c4",
+      "desde": "cv2",
+      "hacia": "out",
+      "tipo": "materia"
+    }
+  ],
+  "supuestos": {
+    "estacionario": false,
+    "adiabatico": true,
+    "sinTrabajo": true,
+    "sinReaccion": true,
+    "sinMovimiento": true
+  },
+  "especificaciones": [
+    {
+      "bloque_id": "in",
+      "variable": "F",
+      "valor": 10.0,
+      "unidad": "mol/s"
+    }
+  ],
+  "almacenamiento": [
+    {
+      "bloque_id": "cv1",
+      "cierre": "salida_lineal",
+      "k_salida": {
+        "valor": 0.2,
+        "unidad": "1/s"
+      }
+    },
+    {
+      "bloque_id": "cv2",
+      "cierre": "salida_lineal",
+      "k_salida": {
+        "valor": 0.05,
+        "unidad": "1/s"
+      }
+    }
+  ],
+  "estudio": {
+    "version": 1,
+    "tipo": "temporal",
+    "condicion_inicial_transferida": {
+      "version": 1,
+      "tipo": "estacionario",
+      "origen": {
+        "modelo_id": "a8904e584b5e8615a7bfc400437851f99f53749987a14a45f24007e7274d653c",
+        "estudio_id": "db5db7d4b1b355d4ba61c29931abf69713fb9fc7e9ffb3bccc22c36f9bfadc2e",
+        "calculo_identificador": "279a2bb5be162677bdf9b2ca23917370",
+        "instante_utc": "2026-10-12T21:51:34.990+00:00",
+        "motor": {
+          "version": "0.15.0",
+          "commit": "dc6ede0bcb842bc8e2e6d03e7a882bb2fc650ab4-sucio"
+        },
+        "schema_version": 1,
+        "revision_contrato": 15
+      },
+      "huellas": {
+        "componentes": "3a3c9ffa273eb2cf8f84ee265306665d59d06d0d7629b121102d791f2eaf66a5",
+        "bloques": {
+          "in": "91d2dea06abe1c10c36360de0fbb843b8ddf012b3bcc2323a161bce547895487",
+          "cv1": "3af77b529fb96e5668b2d3be1d43d9ef7664668f6a072b7a7c6c4ee46b66a886",
+          "medio": "72cf9bc3eed0882bd349ab6ffcecf3c8eb578c2ce35d6a9370520e33a9bacb00",
+          "cv2": "3af77b529fb96e5668b2d3be1d43d9ef7664668f6a072b7a7c6c4ee46b66a886",
+          "out": "336fa85df3f86b541e90ac98f1bcde20b98847b4b962a82ae7aa8168fe8073c9"
+        },
+        "conexiones": {
+          "c1": "e158a7ce0a370fb74b0e960e08b5dc440b9afd2c153d2ccc1787a9a3551802bf",
+          "c2": "1170ddff15198a59fe5ab15c72b8e56fd398dd2120a2f17fd9783bf2d8cab47d",
+          "c3": "56e3016a00376cd0e03c052709484f6889315599f75d3c57e11cc95e9914837c",
+          "c4": "bb7fba25180ec93bbd7c7cc4e5d93893bac51d6f685e975e4a57ec7bff451690"
+        },
+        "especificaciones": {
+          "in.F": "fdd0cedb9ea54d26a2186d973acbf468025543067958d9eeda512dc6e1a1eadb"
+        },
+        "almacenamiento": {
+          "cv1": "9dfa247480b58fdb5f12d011a2f63abd93b1a065de03b6996029f3c70e27b8e8",
+          "cv2": "888bc2a383bd17e2a9df3feb9054e3ceec0225767467a4e6df7bdd374066d0f1"
+        },
+        "reacciones": {},
+        "interfaces_termicas": {},
+        "modelo_energetico": null,
+        "presion_sistema": null,
+        "supuestos": "b88159dd9aa68d8b902bb9a41c7ad7c138585e67aefda5422d51cfd276a9f8e2"
+      },
+      "inventarios": [
+        {
+          "bloque_id": "cv1",
+          "componente": "water",
+          "magnitud": "n",
+          "valor": 50.0,
+          "unidad": "mol"
+        },
+        {
+          "bloque_id": "cv2",
+          "componente": "water",
+          "magnitud": "n",
+          "valor": 200.0,
+          "unidad": "mol"
+        }
+      ],
+      "energia": [],
+      "comprobaciones": {
+        "residuo_estacionario_escalado": 0.0,
+        "tolerancia_transferencia": 1e-08,
+        "restricciones": [],
+        "estabilidad_local": {
+          "autovalores": [
+            {
+              "real": -0.05000000000254801,
+              "imaginaria": 0.0
+            },
+            {
+              "real": -0.19999999999953388,
+              "imaginaria": 0.0
+            }
+          ],
+          "unidad": "1/s",
+          "restringido_a_restricciones": false,
+          "acoplado": false,
+          "localmente_estable": true,
+          "constante_de_tiempo_mas_lenta_s": 19.999999998980794,
+          "alcance": "estabilidad lineal LOCAL del estacionario: dice que una perturbacion pequena decae, no que el estacionario se alcance desde cualquier estado inicial ni que sea unico globalmente."
+        },
+        "correcciones_de_redondeo": []
+      },
+      "rama": {
+        "indice": 0,
+        "de": 1,
+        "arranque": "composicion con pesos 1..n (no la equimolar)",
+        "estabilidad_local": {
+          "autovalores": [
+            {
+              "real": -0.05000000000254801,
+              "imaginaria": 0.0
+            },
+            {
+              "real": -0.19999999999953388,
+              "imaginaria": 0.0
+            }
+          ],
+          "unidad": "1/s",
+          "restringido_a_restricciones": false,
+          "acoplado": false,
+          "localmente_estable": true,
+          "constante_de_tiempo_mas_lenta_s": 19.999999998980794,
+          "alcance": "estabilidad lineal LOCAL del estacionario: dice que una perturbacion pequena decae, no que el estacionario se alcance desde cualquier estado inicial ni que sea unico globalmente."
+        }
+      },
+      "referencia_energia": null,
+      "fluido": null,
+      "transformaciones": [
+        "n_i: el inventario resuelto de cada volumen, en mol, sin conversion",
+        "NO se transfieren caudales F ni entalpias de corriente h"
+      ],
+      "firma": "3f4125376b017098a019f899c97259c5930eaa31fd38129e1c79fdecd4383cf7"
+    },
+    "tiempo": {
+      "final": 600.0,
+      "unidad": "s",
+      "muestras": 61
+    },
+    "entradas_temporales": []
+  }
+}

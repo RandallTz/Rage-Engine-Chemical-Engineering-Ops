@@ -1,0 +1,198 @@
+{
+  "version": 1,
+  "componentes": [
+    "water"
+  ],
+  "bloques": [
+    {
+      "id": "in",
+      "tipo": "entrada",
+      "nombre": "Entrada de agua"
+    },
+    {
+      "id": "tk",
+      "tipo": "recipiente",
+      "nombre": "Tanque"
+    },
+    {
+      "id": "out",
+      "tipo": "salida",
+      "nombre": "Salida de agua"
+    },
+    {
+      "id": "inc",
+      "tipo": "entrada",
+      "nombre": "Entrada caliente"
+    },
+    {
+      "id": "sp",
+      "tipo": "recipiente",
+      "nombre": "Serpentin"
+    },
+    {
+      "id": "outc",
+      "tipo": "salida",
+      "nombre": "Salida caliente"
+    },
+    {
+      "id": "pw",
+      "tipo": "pared",
+      "nombre": "Pared del serpentin"
+    }
+  ],
+  "conexiones": [
+    {
+      "id": "c1",
+      "desde": "in",
+      "hacia": "tk"
+    },
+    {
+      "id": "c2",
+      "desde": "tk",
+      "hacia": "out"
+    },
+    {
+      "id": "c3",
+      "desde": "inc",
+      "hacia": "sp"
+    },
+    {
+      "id": "c4",
+      "desde": "sp",
+      "hacia": "outc"
+    },
+    {
+      "id": "g1",
+      "desde": "sp",
+      "hacia": "pw",
+      "tipo": "termica"
+    },
+    {
+      "id": "g2",
+      "desde": "pw",
+      "hacia": "tk",
+      "tipo": "termica"
+    }
+  ],
+  "supuestos": {
+    "sinReaccion": true,
+    "sinTrabajo": true,
+    "sinMovimiento": true,
+    "adiabatico": true
+  },
+  "especificaciones": [
+    {
+      "bloque_id": "in",
+      "variable": "T",
+      "valor": 300.0,
+      "unidad": "K"
+    },
+    {
+      "bloque_id": "inc",
+      "variable": "T",
+      "valor": 360.0,
+      "unidad": "K"
+    },
+    {
+      "bloque_id": "inc",
+      "variable": "F",
+      "valor": 1.0,
+      "unidad": "mol/s"
+    },
+    {
+      "bloque_id": "in",
+      "variable": "F",
+      "valor": 2.0,
+      "unidad": "mol/s"
+    }
+  ],
+  "almacenamiento": [
+    {
+      "bloque_id": "tk",
+      "cierre": "inventario_constante",
+      "V": {
+        "valor": 0.01818181818181818,
+        "unidad": "m3"
+      },
+      "densidad_molar": {
+        "valor": 55000.0,
+        "unidad": "mol/m3"
+      },
+      "energia": {
+        "modelo": "solo_fluido"
+      }
+    },
+    {
+      "bloque_id": "sp",
+      "cierre": "inventario_constante",
+      "V": {
+        "valor": 0.0018181818181818182,
+        "unidad": "m3"
+      },
+      "densidad_molar": {
+        "valor": 55000.0,
+        "unidad": "mol/m3"
+      },
+      "energia": {
+        "modelo": "solo_fluido"
+      }
+    }
+  ],
+  "interfaces_termicas": [
+    {
+      "conexion_id": "g1",
+      "conductancia": {
+        "valor": 1000.0,
+        "unidad": "W/K"
+      }
+    },
+    {
+      "conexion_id": "g2",
+      "conductancia": {
+        "valor": 800.0,
+        "unidad": "W/K"
+      }
+    }
+  ],
+  "modelo_energetico": {
+    "tipo": "ideal_incompresible",
+    "densidad_molar": {
+      "valor": 55000.0,
+      "unidad": "mol/m3"
+    },
+    "cp": [
+      {
+        "componente": "water",
+        "valor": 75.3,
+        "unidad": "J/(mol*K)"
+      }
+    ],
+    "T_referencia": {
+      "valor": 298.15,
+      "unidad": "K"
+    },
+    "dominio_T": {
+      "min": 273.15,
+      "max": 373.15,
+      "unidad": "K"
+    }
+  },
+  "presion_sistema": {
+    "valor": 101325.0,
+    "unidad": "Pa"
+  },
+  "estudio": {
+    "version": 1,
+    "tipo": "estacionario"
+  },
+  "paredes": [
+    {
+      "bloque_id": "pw",
+      "almacenamiento": "con_almacenamiento",
+      "capacidad": {
+        "valor": 20000.0,
+        "unidad": "J/K"
+      }
+    }
+  ]
+}

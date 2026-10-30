@@ -207,7 +207,7 @@
       "rol": "calculada",
       "compartida": false,
       "impuesta": false,
-      "valor": 4706.244302416381,
+      "valor": 4706.244299150005,
       "procedencia": "h(330 K, 2e+06 Pa, x=[0.550468, 0.449532]) con unifac_raoult; fase liquido"
     },
     {
@@ -225,7 +225,7 @@
       "rol": "calculada",
       "compartida": false,
       "impuesta": false,
-      "valor": 0.5504677529981167,
+      "valor": 0.5504680495238753,
       "procedencia": "balances por especie de 'Reactor de isomerizacion' con el avance de la reaccion"
     },
     {
@@ -243,7 +243,7 @@
       "rol": "calculada",
       "compartida": false,
       "impuesta": false,
-      "valor": 0.4495322470018834,
+      "valor": 0.44953195047612476,
       "procedencia": "balances por especie de 'Reactor de isomerizacion' con el avance de la reaccion"
     },
     {
@@ -261,7 +261,7 @@
       "rol": "calculada",
       "compartida": false,
       "impuesta": false,
-      "valor": -275198.200979522,
+      "valor": -275197.91931016324,
       "procedencia": "balance de energia de 'Reactor de isomerizacion': Q = F_sal h_sal - F_ent h_ent + sum(xi dH_rxn)"
     }
   ],
@@ -673,7 +673,7 @@
       "codigo": "LAB_INFO_CINETICA",
       "severidad": "informacion",
       "categoria": "informacion",
-      "mensaje": "'Reactor de isomerizacion': sistema cinetico resuelto con brentq sobre el avance, acotado por la estequiometria; residuo escalado 0.000e+00 en 9 evaluaciones de la ley.",
+      "mensaje": "'Reactor de isomerizacion': sistema cinetico resuelto con brentq sobre el avance, acotado por la estequiometria; residuo escalado 7.105e-17 en 10 evaluaciones de la ley.",
       "accion_sugerida": null,
       "bloque_ids": [
         "rx"
@@ -687,7 +687,7 @@
       "codigo": "LAB_INFO_CONSERVACION",
       "severidad": "informacion",
       "categoria": "informacion",
-      "mensaje": "'Reactor de isomerizacion': elementos y masa conservados (residuo relativo maximo 1.565e-16). El caudal molar pasa de 100 a 100 mol/s.",
+      "mensaje": "'Reactor de isomerizacion': elementos y masa conservados (residuo relativo maximo 0.000e+00). El caudal molar pasa de 100 a 100 mol/s.",
       "accion_sugerida": null,
       "bloque_ids": [
         "rx",
@@ -778,10 +778,10 @@
         "metodo": "brentq sobre el avance, acotado por la estequiometria",
         "alcance": "raiz_escalar_acotada",
         "itera": true,
-        "residuo_escalado": 0.0,
+        "residuo_escalado": 7.105427357601002e-17,
         "escala_residuo": "relativo al caudal molar de entrada",
         "tolerancia": 1e-10,
-        "evaluaciones_de_funcion": 9,
+        "evaluaciones_de_funcion": 10,
         "convergio": true,
         "restricciones": [
           "avance en [-0, 100] mol/s por la estequiometria y la alimentacion"
@@ -829,26 +829,26 @@
       "F": 100.0,
       "T": 330.0,
       "p": 2000000.0,
-      "x": 0.5504677529981167,
+      "x": 0.5504680495238753,
       "composicion": [
-        0.5504677529981167,
-        0.4495322470018834
+        0.5504680495238753,
+        0.44953195047612476
       ],
       "por_especie": [
         {
           "componente": "n-butane",
-          "x": 0.5504677529981167,
-          "F_i": 55.04677529981167,
+          "x": 0.5504680495238753,
+          "F_i": 55.04680495238753,
           "unidad_F_i": "mol/s"
         },
         {
           "componente": "isobutane",
-          "x": 0.4495322470018834,
-          "F_i": 44.953224700188336,
+          "x": 0.44953195047612476,
+          "F_i": 44.953195047612475,
           "unidad_F_i": "mol/s"
         }
       ],
-      "h": 4706.244302416381,
+      "h": 4706.244299150005,
       "fase": "liquido",
       "beta": 0.0,
       "nota_F_i": "F_i = F x_i, derivado. No es una variable del sistema: declararlo como tal anadiria n incognitas y n ecuaciones que se cancelan."
@@ -889,13 +889,14 @@
       "ley_inversa": {
         "origen": "derivada del equilibrio",
         "expresion": "k_inv = k_dir / K_eq(T)",
-        "K_eq_usada": 10.76568549520721,
+        "K_eq_usada": 10.765515429767035,
+        "ruta_de_K": "rigurosa: Kirchhoff para dH --que sale de las entalpias sensibles sin integrar nada-- e integracion numerica de dCp/T para dS. NO van't Hoff: la diferencia llega al medio por ciento en la composicion de equilibrio a 100 K de la referencia, y dos partes del motor contestando cosas distintas a la misma pregunta es peor que una aproximacion declarada.",
         "nota": "Es la restriccion que impone la termodinamica: en el equilibrio r+ = r- obliga a que la razon de las constantes sea K_eq. Con este modo la ley directa usa los exponentes de la estequiometria, porque mezclar ordenes libres con una inversa derivada del equilibrio romperia esa consistencia."
       },
-      "tasa_directa": 48.64307484337615,
-      "tasa_inversa": 3.6898501431878126,
+      "tasa_directa": 48.64310104628258,
+      "tasa_inversa": 3.6899059986701084,
       "tasa_neta_declarada": null,
-      "avance_neto": 44.953224700188336,
+      "avance_neto": 44.953195047612475,
       "unidad_avance": "mol/s",
       "brutas_disponibles": true,
       "motivo_brutas_no_disponibles": null,
@@ -903,16 +904,16 @@
         {
           "componente": "n-butane",
           "nu": -1.0,
-          "generacion_bruta": 3.6898501431878126,
-          "consumo_bruto": 48.64307484337615,
-          "fuente_neta": -44.953224700188336
+          "generacion_bruta": 3.6899059986701084,
+          "consumo_bruto": 48.64310104628258,
+          "fuente_neta": -44.953195047612475
         },
         {
           "componente": "isobutane",
           "nu": 1.0,
-          "generacion_bruta": 48.64307484337615,
-          "consumo_bruto": 3.6898501431878126,
-          "fuente_neta": 44.953224700188336
+          "generacion_bruta": 48.64310104628258,
+          "consumo_bruto": 3.6899059986701084,
+          "fuente_neta": 44.953195047612475
         }
       ],
       "balance_elemental": {
@@ -949,21 +950,21 @@
       "por_especie": [
         {
           "componente": "n-butane",
-          "generacion_bruta": 3.6898501431878126,
-          "consumo_bruto": 48.64307484337615,
-          "fuente_neta": -44.953224700188336,
+          "generacion_bruta": 3.6899059986701084,
+          "consumo_bruto": 48.64310104628258,
+          "fuente_neta": -44.953195047612475,
           "descomposicion_neta": {
             "aparente_generacion": 0.0,
-            "aparente_consumo": 44.953224700188336
+            "aparente_consumo": 44.953195047612475
           }
         },
         {
           "componente": "isobutane",
-          "generacion_bruta": 48.64307484337615,
-          "consumo_bruto": 3.6898501431878126,
-          "fuente_neta": 44.953224700188336,
+          "generacion_bruta": 48.64310104628258,
+          "consumo_bruto": 3.6899059986701084,
+          "fuente_neta": 44.953195047612475,
           "descomposicion_neta": {
-            "aparente_generacion": 44.953224700188336,
+            "aparente_generacion": 44.953195047612475,
             "aparente_consumo": 0.0
           }
         }
@@ -989,8 +990,8 @@
       "residuo_elemental_maximo": 0.0,
       "masa": {
         "entra_g_s": 5812.22,
-        "sale_g_s": 5812.219999999999,
-        "residuo_relativo": 1.5647974470562507e-16
+        "sale_g_s": 5812.22,
+        "residuo_relativo": 0.0
       },
       "caudal_molar": {
         "entra_mol_s": 100.0,
@@ -1236,7 +1237,7 @@
     ],
     "nota_fases": "La fase se determina con el punto de burbuja y el de rocio; no se supone liquida.",
     "no_soportado": [
-      "regimen transitorio y lote (dE/dt, dn_i/dt, integracion en el tiempo)",
+      "regimen transitorio EN ESTE ENDPOINT (dE/dt, dn_i/dt): el material de uno o dos volumenes esta en /laboratorio/estudios, y el lote reactivo en /laboratorio/lote",
       "equilibrio quimico calculado: el motor no obtiene el avance a partir de K. OJO: imponer r+ = r- NO demuestra equilibrio termodinamico, solo describe un estado estacionario con esas dos tasas",
       "trabajo de eje",
       "energias cinetica y potencial",

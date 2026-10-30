@@ -1,0 +1,890 @@
+{
+  "format": "rage.model-file",
+  "version": 1,
+  "model": {
+    "version": 1,
+    "id": "heated-filling-vessel-v1",
+    "nombre": "Heated filling vessel · Water and ethanol",
+    "actualizada": "2026-10-20T08:14:49.083Z",
+    "historial": {
+      "pasos": [
+        {
+          "titulo": "Local conservation",
+          "origen": null,
+          "operacion": null,
+          "formulacion": {
+            "componentes": [],
+            "campo": {
+              "sinReaccion": false,
+              "sinDifusion": false,
+              "sinConveccion": false,
+              "estacionario": false,
+              "difusion": "flujo"
+            },
+            "coordenadas": "cartesianas",
+            "expandida": false,
+            "vista": "campo",
+            "fronteras": [],
+            "uniforme": false,
+            "fija": false,
+            "sinAcumulacion": false,
+            "invariantes": [
+              false,
+              false,
+              false
+            ],
+            "generacionUniforme": false,
+            "consumoUniforme": false,
+            "restoImpermeable": false,
+            "cantidadVolumen": false,
+            "densidadMediaConstante": false,
+            "densidadComunPuertos": false,
+            "expandirProducto": false
+          }
+        },
+        {
+          "titulo": "Declare water and ethanol identities",
+          "formulacion": {
+            "componentes": [
+              {
+                "id": 1,
+                "nombre": "Water",
+                "simbolo": "w",
+                "identidadQuimica": {
+                  "cas": "7732-18-5"
+                }
+              },
+              {
+                "id": 2,
+                "nombre": "Ethanol",
+                "simbolo": "e",
+                "identidadQuimica": {
+                  "cas": "64-17-5"
+                }
+              }
+            ],
+            "campo": {
+              "sinReaccion": false,
+              "sinDifusion": false,
+              "sinConveccion": false,
+              "estacionario": false,
+              "difusion": "flujo"
+            },
+            "coordenadas": "cartesianas",
+            "expandida": false,
+            "vista": "campo",
+            "fronteras": [],
+            "uniforme": false,
+            "fija": false,
+            "sinAcumulacion": false,
+            "invariantes": [
+              false,
+              false,
+              false
+            ],
+            "generacionUniforme": false,
+            "consumoUniforme": false,
+            "restoImpermeable": false,
+            "cantidadVolumen": false,
+            "densidadMediaConstante": false,
+            "densidadComunPuertos": false,
+            "expandirProducto": false
+          },
+          "origen": 0,
+          "operacion": {
+            "componentes": [
+              {
+                "id": 1,
+                "nombre": "Water",
+                "simbolo": "w",
+                "identidadQuimica": {
+                  "cas": "7732-18-5"
+                }
+              },
+              {
+                "id": 2,
+                "nombre": "Ethanol",
+                "simbolo": "e",
+                "identidadQuimica": {
+                  "cas": "64-17-5"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "titulo": "Integrate local conservation · Gauss and Reynolds",
+          "formulacion": {
+            "componentes": [
+              {
+                "id": 1,
+                "nombre": "Water",
+                "simbolo": "w",
+                "identidadQuimica": {
+                  "cas": "7732-18-5"
+                }
+              },
+              {
+                "id": 2,
+                "nombre": "Ethanol",
+                "simbolo": "e",
+                "identidadQuimica": {
+                  "cas": "64-17-5"
+                }
+              }
+            ],
+            "campo": {
+              "sinReaccion": false,
+              "sinDifusion": false,
+              "sinConveccion": false,
+              "estacionario": false,
+              "difusion": "flujo"
+            },
+            "coordenadas": "cartesianas",
+            "expandida": false,
+            "vista": "integral",
+            "fronteras": [],
+            "uniforme": false,
+            "fija": false,
+            "sinAcumulacion": false,
+            "invariantes": [
+              false,
+              false,
+              false
+            ],
+            "generacionUniforme": false,
+            "consumoUniforme": false,
+            "restoImpermeable": false,
+            "cantidadVolumen": false,
+            "densidadMediaConstante": false,
+            "densidadComunPuertos": false,
+            "expandirProducto": false
+          },
+          "origen": 1,
+          "operacion": {
+            "vista": "integral"
+          }
+        },
+        {
+          "titulo": "Define inventories and stream boundary partition",
+          "formulacion": {
+            "componentes": [
+              {
+                "id": 1,
+                "nombre": "Water",
+                "simbolo": "w",
+                "identidadQuimica": {
+                  "cas": "7732-18-5"
+                }
+              },
+              {
+                "id": 2,
+                "nombre": "Ethanol",
+                "simbolo": "e",
+                "identidadQuimica": {
+                  "cas": "64-17-5"
+                }
+              }
+            ],
+            "campo": {
+              "sinReaccion": false,
+              "sinDifusion": false,
+              "sinConveccion": false,
+              "estacionario": false,
+              "difusion": "flujo"
+            },
+            "coordenadas": "cartesianas",
+            "expandida": false,
+            "vista": "cantidad",
+            "fronteras": [],
+            "uniforme": false,
+            "fija": false,
+            "sinAcumulacion": false,
+            "invariantes": [
+              false,
+              false,
+              false
+            ],
+            "generacionUniforme": false,
+            "consumoUniforme": false,
+            "restoImpermeable": false,
+            "cantidadVolumen": false,
+            "densidadMediaConstante": false,
+            "densidadComunPuertos": false,
+            "expandirProducto": false
+          },
+          "origen": 2,
+          "operacion": {
+            "vista": "cantidad"
+          }
+        },
+        {
+          "titulo": "No chemical generation or consumption",
+          "formulacion": {
+            "componentes": [
+              {
+                "id": 1,
+                "nombre": "Water",
+                "simbolo": "w",
+                "identidadQuimica": {
+                  "cas": "7732-18-5"
+                }
+              },
+              {
+                "id": 2,
+                "nombre": "Ethanol",
+                "simbolo": "e",
+                "identidadQuimica": {
+                  "cas": "64-17-5"
+                }
+              }
+            ],
+            "campo": {
+              "sinReaccion": true,
+              "sinDifusion": false,
+              "sinConveccion": false,
+              "estacionario": false,
+              "difusion": "flujo"
+            },
+            "coordenadas": "cartesianas",
+            "expandida": false,
+            "vista": "cantidad",
+            "fronteras": [],
+            "uniforme": false,
+            "fija": false,
+            "sinAcumulacion": false,
+            "invariantes": [
+              false,
+              false,
+              false
+            ],
+            "generacionUniforme": false,
+            "consumoUniforme": false,
+            "restoImpermeable": false,
+            "cantidadVolumen": false,
+            "densidadMediaConstante": false,
+            "densidadComunPuertos": false,
+            "expandirProducto": false
+          },
+          "origen": 3,
+          "operacion": {
+            "campo": {
+              "sinReaccion": true,
+              "sinDifusion": false,
+              "sinConveccion": false,
+              "estacionario": false,
+              "difusion": "flujo"
+            }
+          }
+        },
+        {
+          "titulo": "Impermeable boundary outside the inlet",
+          "formulacion": {
+            "componentes": [
+              {
+                "id": 1,
+                "nombre": "Water",
+                "simbolo": "w",
+                "identidadQuimica": {
+                  "cas": "7732-18-5"
+                }
+              },
+              {
+                "id": 2,
+                "nombre": "Ethanol",
+                "simbolo": "e",
+                "identidadQuimica": {
+                  "cas": "64-17-5"
+                }
+              }
+            ],
+            "campo": {
+              "sinReaccion": true,
+              "sinDifusion": false,
+              "sinConveccion": false,
+              "estacionario": false,
+              "difusion": "flujo"
+            },
+            "coordenadas": "cartesianas",
+            "expandida": false,
+            "vista": "cantidad",
+            "fronteras": [],
+            "uniforme": false,
+            "fija": false,
+            "sinAcumulacion": false,
+            "invariantes": [
+              false,
+              false,
+              false
+            ],
+            "generacionUniforme": false,
+            "consumoUniforme": false,
+            "restoImpermeable": true,
+            "cantidadVolumen": false,
+            "densidadMediaConstante": false,
+            "densidadComunPuertos": false,
+            "expandirProducto": false
+          },
+          "origen": 4,
+          "operacion": {
+            "restoImpermeable": true
+          }
+        }
+      ],
+      "activo": 5,
+      "rehacer": [],
+      "ultimoComponenteId": 2
+    },
+    "config": {
+      "datos": {},
+      "tiempo": {
+        "texto": "",
+        "unidad": "s"
+      },
+      "metodo": "rk45",
+      "muestras": 101,
+      "celdas": 40,
+      "rtol": 0.000001,
+      "atol": 1e-9,
+      "frontera": ""
+    },
+    "graficas": [
+      {
+        "id": "inventories",
+        "nombre": "Matter · component inventories",
+        "tipo": "tiempo",
+        "x": "t",
+        "y": [
+          "volumen.A.n.1",
+          "volumen.A.n.2"
+        ],
+        "ancha": false,
+        "altura": 310,
+        "instante": 6
+      },
+      {
+        "id": "enthalpy",
+        "nombre": "Energy · stored enthalpy",
+        "tipo": "tiempo",
+        "x": "t",
+        "y": [
+          "volumen.A.H"
+        ],
+        "ancha": false,
+        "altura": 310,
+        "instante": 6
+      },
+      {
+        "id": "temperature",
+        "nombre": "Thermodynamics · temperature",
+        "tipo": "tiempo",
+        "x": "t",
+        "y": [
+          "volumen.A.T"
+        ],
+        "ancha": false,
+        "altura": 310,
+        "instante": 6
+      },
+      {
+        "id": "volume",
+        "nombre": "Thermodynamics · vessel volume",
+        "tipo": "tiempo",
+        "x": "t",
+        "y": [
+          "volumen.A.V"
+        ],
+        "ancha": false,
+        "altura": 310,
+        "instante": 6
+      }
+    ],
+    "columnas": 2,
+    "balances": {
+      "materia": true,
+      "energia": true,
+      "momento": false
+    },
+    "tableroIniciado": true,
+    "redTermodinamica": {
+      "solicitud": {
+        "revision": 2,
+        "solicitudId": "heated-filling-vessel",
+        "componentes": [
+          {
+            "id": 1,
+            "nombre": "Water",
+            "simbolo": "w",
+            "identidadQuimica": {
+              "cas": "7732-18-5"
+            }
+          },
+          {
+            "id": 2,
+            "nombre": "Ethanol",
+            "simbolo": "e",
+            "identidadQuimica": {
+              "cas": "64-17-5"
+            }
+          }
+        ],
+        "paquetes": [
+          {
+            "id": "properties",
+            "modelo": {
+              "id": "unifac-original-public",
+              "version": "1"
+            }
+          }
+        ],
+        "volumenes": [
+          {
+            "id": "A",
+            "componenteIds": [
+              1,
+              2
+            ],
+            "balances": {
+              "materia": true,
+              "energia": true,
+              "momento": false
+            },
+            "formulacionMateria": {
+              "campo": {
+                "sinReaccion": true,
+                "sinDifusion": false,
+                "sinConveccion": false,
+                "estacionario": false,
+                "difusion": "flujo"
+              },
+              "coordenadas": "cartesianas",
+              "expandida": false,
+              "vista": "cantidad",
+              "uniforme": false,
+              "fija": false,
+              "sinAcumulacion": false,
+              "invariantes": [
+                false,
+                false,
+                false
+              ],
+              "generacionUniforme": false,
+              "consumoUniforme": false,
+              "restoImpermeable": true,
+              "cantidadVolumen": false,
+              "densidadMediaConstante": false,
+              "densidadComunPuertos": false,
+              "expandirProducto": false
+            },
+            "formulacionEnergia": {
+              "forma": "total",
+              "trabajoTotalHeredado": false,
+              "separarPresion": true,
+              "entalpia": true,
+              "sinCinetica": true,
+              "sinTrabajoViscoso": true,
+              "sinFuerzasVolumen": true,
+              "sinFuenteVolumetrica": true,
+              "sinConduccionLocal": false,
+              "adiabatico": false,
+              "estacionario": false,
+              "sinAcumulacionTotal": false,
+              "uniforme": true,
+              "monofasico": false,
+              "sinCambioFase": false,
+              "densidadConstante": false,
+              "presionUniforme": true,
+              "presionPrescrita": true,
+              "modelo": "sin_declarar"
+            },
+            "paqueteId": "properties",
+            "politica": {
+              "cantidad": "sin_restriccion",
+              "cambioInterno": "permitido",
+              "evaluacion": "equilibrio_estable"
+            },
+            "frontera": {
+              "tipo": "presion_prescrita",
+              "presionId": "vessel.P"
+            },
+            "inicial": {
+              "cantidades": {
+                "base": "molar",
+                "datoIds": {
+                  "1": "vessel.n0.water",
+                  "2": "vessel.n0.ethanol"
+                }
+              },
+              "energia": {
+                "tipo": "T",
+                "datoId": "vessel.T0"
+              }
+            }
+          }
+        ],
+        "corrientes": [
+          {
+            "id": "feed",
+            "desde": null,
+            "hasta": "A",
+            "componenteIds": [
+              1,
+              2
+            ],
+            "mecanismo": "convectivo",
+            "materia": {
+              "modo": "total_desde_donante",
+              "base": "molar",
+              "caudalId": "feed.F"
+            },
+            "estadoExterior": {
+              "tipo": "TP",
+              "temperaturaId": "feed.T",
+              "presion": {
+                "tipo": "dato",
+                "datoId": "feed.P"
+              },
+              "composicion": {
+                "base": "molar",
+                "fracciones": {
+                  "1": 0.5,
+                  "2": 0.5
+                }
+              }
+            }
+          }
+        ],
+        "intercambiosTermicos": [
+          {
+            "id": "heater",
+            "desde": null,
+            "hasta": "A",
+            "ley": {
+              "tipo": "impuesto",
+              "potenciaId": "heater.Q"
+            },
+            "temperaturaFronteraId": "heater.T"
+          }
+        ],
+        "datos": {
+          "vessel.n0.water": {
+            "magnitud": "cantidad",
+            "funcion": "inicial",
+            "declaracion": {
+              "texto": "0.8",
+              "unidad": "mol"
+            },
+            "origen": {
+              "propietarioId": "volumen:A",
+              "ruta": "/datos"
+            }
+          },
+          "vessel.n0.ethanol": {
+            "magnitud": "cantidad",
+            "funcion": "inicial",
+            "declaracion": {
+              "texto": "0.2",
+              "unidad": "mol"
+            },
+            "origen": {
+              "propietarioId": "volumen:A",
+              "ruta": "/datos"
+            }
+          },
+          "vessel.T0": {
+            "magnitud": "temperatura",
+            "funcion": "inicial",
+            "declaracion": {
+              "texto": "300",
+              "unidad": "K"
+            },
+            "origen": {
+              "propietarioId": "volumen:A",
+              "ruta": "/datos"
+            }
+          },
+          "vessel.P": {
+            "magnitud": "presion",
+            "funcion": "frontera",
+            "declaracion": {
+              "texto": "1",
+              "unidad": "bar"
+            },
+            "origen": {
+              "propietarioId": "volumen:A",
+              "ruta": "/datos"
+            }
+          },
+          "feed.F": {
+            "magnitud": "caudal_molar",
+            "funcion": "frontera",
+            "declaracion": {
+              "texto": "0.001",
+              "unidad": "mol/s"
+            },
+            "origen": {
+              "propietarioId": "corriente:feed",
+              "ruta": "/datos"
+            }
+          },
+          "feed.T": {
+            "magnitud": "temperatura",
+            "funcion": "frontera",
+            "declaracion": {
+              "texto": "320",
+              "unidad": "K"
+            },
+            "origen": {
+              "propietarioId": "corriente:feed",
+              "ruta": "/datos"
+            }
+          },
+          "feed.P": {
+            "magnitud": "presion",
+            "funcion": "frontera",
+            "declaracion": {
+              "texto": "1",
+              "unidad": "bar"
+            },
+            "origen": {
+              "propietarioId": "corriente:feed",
+              "ruta": "/datos"
+            }
+          },
+          "heater.Q": {
+            "magnitud": "potencia",
+            "funcion": "frontera",
+            "declaracion": {
+              "texto": "5",
+              "unidad": "W"
+            },
+            "origen": {
+              "propietarioId": "calor:heater",
+              "ruta": "/datos"
+            }
+          },
+          "heater.T": {
+            "magnitud": "temperatura",
+            "funcion": "frontera",
+            "declaracion": {
+              "texto": "350",
+              "unidad": "K"
+            },
+            "origen": {
+              "propietarioId": "calor:heater",
+              "ruta": "/datos"
+            }
+          },
+          "study.tf": {
+            "magnitud": "tiempo",
+            "funcion": "estudio",
+            "declaracion": {
+              "texto": "60",
+              "unidad": "s"
+            },
+            "origen": {
+              "propietarioId": "estudio",
+              "ruta": "/datos"
+            }
+          }
+        },
+        "estudio": {
+          "tipo": "temporal",
+          "tiempoId": "study.tf",
+          "metodoSolicitado": "rk45",
+          "muestras": 7,
+          "rtol": 1e-7,
+          "atol": {
+            "cantidad": 1e-10,
+            "energia": 0.00001
+          }
+        },
+        "derivacion": {
+          "materialDerivation": {
+            "format": "rage.material-derivation",
+            "version": 1,
+            "volumes": {
+              "A": {
+                "origin": "recorded",
+                "operations": [
+                  {
+                    "id": "history-2",
+                    "title": "Integrate local conservation · Gauss and Reynolds",
+                    "changes": {
+                      "vista": "integral"
+                    }
+                  },
+                  {
+                    "id": "history-3",
+                    "title": "Define inventories and stream boundary partition",
+                    "changes": {
+                      "vista": "cantidad"
+                    }
+                  },
+                  {
+                    "id": "history-4",
+                    "title": "No chemical generation or consumption",
+                    "changes": {
+                      "campo": {
+                        "sinReaccion": true,
+                        "sinDifusion": false,
+                        "sinConveccion": false,
+                        "estacionario": false,
+                        "difusion": "flujo"
+                      }
+                    }
+                  },
+                  {
+                    "id": "history-5",
+                    "title": "Impermeable boundary outside the inlet",
+                    "changes": {
+                      "restoImpermeable": true
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "energyDerivation": {
+            "format": "rage.energy-derivation",
+            "version": 1,
+            "volumes": {
+              "A": {
+                "origin": "recorded",
+                "operations": [
+                  {
+                    "id": "energy-history-1",
+                    "title": "Integrate over V(t) and apply Gauss",
+                    "changes": {
+                      "forma": "integrada"
+                    }
+                  },
+                  {
+                    "id": "energy-history-2",
+                    "title": "Apply Reynolds transport theorem",
+                    "changes": {
+                      "forma": "integral"
+                    }
+                  },
+                  {
+                    "id": "energy-history-3",
+                    "title": "Separate pressure and viscous stress",
+                    "changes": {
+                      "separarPresion": true
+                    }
+                  },
+                  {
+                    "id": "energy-history-4",
+                    "title": "Collect flow work into enthalpy",
+                    "changes": {
+                      "entalpia": true
+                    }
+                  },
+                  {
+                    "id": "energy-history-5",
+                    "title": "Partition the boundary into streams and the remaining surface",
+                    "changes": {
+                      "forma": "total"
+                    }
+                  },
+                  {
+                    "id": "energy-history-6",
+                    "title": "Negligible kinetic energy",
+                    "changes": {
+                      "sinCinetica": true
+                    }
+                  },
+                  {
+                    "id": "energy-history-7",
+                    "title": "Negligible viscous work",
+                    "changes": {
+                      "sinTrabajoViscoso": true
+                    }
+                  },
+                  {
+                    "id": "energy-history-8",
+                    "title": "No body-force work",
+                    "changes": {
+                      "sinFuerzasVolumen": true
+                    }
+                  },
+                  {
+                    "id": "energy-history-9",
+                    "title": "No volumetric energy source",
+                    "changes": {
+                      "sinFuenteVolumetrica": true
+                    }
+                  },
+                  {
+                    "id": "energy-history-10",
+                    "title": "Uniform equilibrium state",
+                    "changes": {
+                      "uniforme": true
+                    }
+                  },
+                  {
+                    "id": "energy-history-11",
+                    "title": "Spatially uniform pressure",
+                    "changes": {
+                      "presionUniforme": true
+                    }
+                  },
+                  {
+                    "id": "energy-history-12",
+                    "title": "Prescribed pressure at the moving boundary",
+                    "changes": {
+                      "presionPrescrita": true
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "thermodynamicDerivation": {
+            "format": "rage.thermodynamic-derivation",
+            "version": 1,
+            "volumes": {
+              "A": {
+                "origin": "recorded",
+                "operations": [
+                  {
+                    "id": "select-equilibrium-closure",
+                    "title": "Select UNIFAC original and unrestricted stable phase discovery",
+                    "changes": {
+                      "closure": {
+                        "packageId": "properties",
+                        "model": {
+                          "id": "unifac-original-public",
+                          "version": "1"
+                        },
+                        "policy": {
+                          "cantidad": "sin_restriccion",
+                          "cambioInterno": "permitido",
+                          "evaluacion": "equilibrio_estable"
+                        }
+                      },
+                      "monofasico": false,
+                      "sinCambioFase": false
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "nombres": {
+        "volumen:A": "Well-mixed vessel",
+        "corriente:feed": "Warm feed",
+        "calor:heater": "External heater",
+        "estudio": "Time study"
+      }
+    },
+    "workspaceNotes": {
+      "model": "A well-mixed vessel receives a water–ethanol feed and 5 W of heat. An ideal moving boundary maintains 1 bar; its volume is a result. Start at the local laws and inspect every recorded assumption in the standard right-hand panel. UNIFAC original supplies the common caloric and equilibrium properties. No equilibrium type or phase count is imposed. Momentum is not solved: pressure and feed rate are declared boundaries.",
+      "transform": "The deduced total model passes through the identity transformation. It needs no spatial mesh. Scaling of this coupled equilibrium model is not connected yet; this example does not claim to apply it.",
+      "solve": "Integrate water amount, ethanol amount and total enthalpy. At every RHS evaluation recover the vessel state from PH equilibrium and the feed enthalpy from its TP state. Positive feed is 0.001 mol/s with equal mole fractions at 320 K; initial amounts are 0.8 and 0.2 mol at 300 K. Run for 60 s. The method compatibility and mathematical plan below come from the Python compiler.",
+      "results": "Matter reference: water = 0.8 + 0.0005 t mol; ethanol = 0.2 + 0.0005 t mol. With constant feed conditions and pressure, H(t) = H(0) + (0.001 h_feed + 5) t J. Temperature, volume, phases and enthalpy use the same selected property package; inspect conservation and physical certification with the plots."
+    }
+  }
+}

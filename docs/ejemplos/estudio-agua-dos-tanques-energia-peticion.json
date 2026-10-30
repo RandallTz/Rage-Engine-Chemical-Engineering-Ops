@@ -1,0 +1,189 @@
+{
+  "version": 1,
+  "componentes": [
+    "water"
+  ],
+  "bloques": [
+    {
+      "id": "in",
+      "tipo": "entrada",
+      "nombre": "Alimentacion"
+    },
+    {
+      "id": "cv1",
+      "tipo": "recipiente",
+      "nombre": "Primer volumen"
+    },
+    {
+      "id": "q1",
+      "tipo": "calor",
+      "nombre": "Calefactor"
+    },
+    {
+      "id": "medio",
+      "tipo": "corriente",
+      "nombre": "Corriente compartida"
+    },
+    {
+      "id": "cv2",
+      "tipo": "recipiente",
+      "nombre": "Segundo volumen"
+    },
+    {
+      "id": "out",
+      "tipo": "salida",
+      "nombre": "Salida final"
+    }
+  ],
+  "conexiones": [
+    {
+      "id": "c1",
+      "desde": "in",
+      "hacia": "cv1",
+      "tipo": "materia"
+    },
+    {
+      "id": "c2",
+      "desde": "cv1",
+      "hacia": "medio",
+      "tipo": "materia"
+    },
+    {
+      "id": "c3",
+      "desde": "medio",
+      "hacia": "cv2",
+      "tipo": "materia"
+    },
+    {
+      "id": "c4",
+      "desde": "cv2",
+      "hacia": "out",
+      "tipo": "materia"
+    },
+    {
+      "id": "cq",
+      "desde": "q1",
+      "hacia": "cv1"
+    }
+  ],
+  "supuestos": {
+    "estacionario": false,
+    "adiabatico": false,
+    "sinTrabajo": true,
+    "sinReaccion": true,
+    "sinMovimiento": true
+  },
+  "especificaciones": [
+    {
+      "bloque_id": "in",
+      "variable": "F",
+      "valor": 10.0,
+      "unidad": "mol/s"
+    },
+    {
+      "bloque_id": "in",
+      "variable": "T",
+      "valor": 300.0,
+      "unidad": "K"
+    },
+    {
+      "bloque_id": "q1",
+      "variable": "Q",
+      "valor": 5000.0,
+      "unidad": "W"
+    }
+  ],
+  "almacenamiento": [
+    {
+      "bloque_id": "cv1",
+      "cierre": "inventario_constante",
+      "V": {
+        "valor": 0.05,
+        "unidad": "m3"
+      },
+      "densidad_molar": {
+        "valor": 55000.0,
+        "unidad": "mol/m3"
+      },
+      "energia": {
+        "modelo": "solo_fluido"
+      }
+    },
+    {
+      "bloque_id": "cv2",
+      "cierre": "inventario_constante",
+      "V": {
+        "valor": 0.2,
+        "unidad": "m3"
+      },
+      "densidad_molar": {
+        "valor": 55000.0,
+        "unidad": "mol/m3"
+      },
+      "energia": {
+        "modelo": "solo_fluido",
+        "adiabatico": true
+      }
+    }
+  ],
+  "modelo_energetico": {
+    "tipo": "ideal_incompresible",
+    "densidad_molar": {
+      "valor": 55000.0,
+      "unidad": "mol/m3"
+    },
+    "cp": [
+      {
+        "componente": "water",
+        "valor": 75.3,
+        "unidad": "J/(mol*K)"
+      }
+    ],
+    "T_referencia": {
+      "valor": 298.15,
+      "unidad": "K"
+    },
+    "dominio_T": {
+      "min": 273.15,
+      "max": 370.0,
+      "unidad": "K"
+    }
+  },
+  "estudio": {
+    "version": 1,
+    "tipo": "temporal",
+    "condiciones_iniciales": [
+      {
+        "bloque_id": "cv1",
+        "componente": "water",
+        "magnitud": "n",
+        "valor": 2750.0,
+        "unidad": "mol"
+      },
+      {
+        "bloque_id": "cv2",
+        "componente": "water",
+        "magnitud": "n",
+        "valor": 11000.0,
+        "unidad": "mol"
+      },
+      {
+        "bloque_id": "cv1",
+        "magnitud": "T",
+        "valor": 300.0,
+        "unidad": "K"
+      },
+      {
+        "bloque_id": "cv2",
+        "magnitud": "T",
+        "valor": 300.0,
+        "unidad": "K"
+      }
+    ],
+    "tiempo": {
+      "final": 3000.0,
+      "unidad": "s",
+      "muestras": 61
+    }
+  }
+}

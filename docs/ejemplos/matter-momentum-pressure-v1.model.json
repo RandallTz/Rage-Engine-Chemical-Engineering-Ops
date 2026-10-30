@@ -1,0 +1,1987 @@
+{
+  "format": "rage.model-file",
+  "version": 1,
+  "model": {
+    "version": 1,
+    "id": "matter-momentum-pressure-v1",
+    "nombre": "Coupled matter and momentum · exchanging liquid volumes",
+    "actualizada": "2026-10-21T02:02:38.990Z",
+    "historial": {
+      "pasos": [
+        {
+          "titulo": "Local conservation",
+          "origen": null,
+          "operacion": null,
+          "formulacion": {
+            "componentes": [],
+            "campo": {
+              "sinReaccion": false,
+              "sinDifusion": false,
+              "sinConveccion": false,
+              "estacionario": false,
+              "difusion": "flujo"
+            },
+            "coordenadas": "cartesianas",
+            "expandida": false,
+            "vista": "campo",
+            "fronteras": [],
+            "uniforme": false,
+            "fija": false,
+            "sinAcumulacion": false,
+            "invariantes": [
+              false,
+              false,
+              false
+            ],
+            "generacionUniforme": false,
+            "consumoUniforme": false,
+            "restoImpermeable": false,
+            "cantidadVolumen": false,
+            "densidadMediaConstante": false,
+            "densidadComunPuertos": false,
+            "expandirProducto": false
+          }
+        },
+        {
+          "titulo": "Declare the reference liquid",
+          "formulacion": {
+            "componentes": [
+              {
+                "id": 1,
+                "nombre": "Reference Newtonian liquid",
+                "simbolo": "L"
+              }
+            ],
+            "campo": {
+              "sinReaccion": false,
+              "sinDifusion": false,
+              "sinConveccion": false,
+              "estacionario": false,
+              "difusion": "flujo"
+            },
+            "coordenadas": "cartesianas",
+            "expandida": false,
+            "vista": "campo",
+            "fronteras": [],
+            "uniforme": false,
+            "fija": false,
+            "sinAcumulacion": false,
+            "invariantes": [
+              false,
+              false,
+              false
+            ],
+            "generacionUniforme": false,
+            "consumoUniforme": false,
+            "restoImpermeable": false,
+            "cantidadVolumen": false,
+            "densidadMediaConstante": false,
+            "densidadComunPuertos": false,
+            "expandirProducto": false
+          },
+          "origen": 0,
+          "operacion": {
+            "componentes": [
+              {
+                "id": 1,
+                "nombre": "Reference Newtonian liquid",
+                "simbolo": "L"
+              }
+            ]
+          }
+        },
+        {
+          "titulo": "Integrate local conservation with Gauss and Reynolds",
+          "formulacion": {
+            "componentes": [
+              {
+                "id": 1,
+                "nombre": "Reference Newtonian liquid",
+                "simbolo": "L"
+              }
+            ],
+            "campo": {
+              "sinReaccion": false,
+              "sinDifusion": false,
+              "sinConveccion": false,
+              "estacionario": false,
+              "difusion": "flujo"
+            },
+            "coordenadas": "cartesianas",
+            "expandida": false,
+            "vista": "integral",
+            "fronteras": [],
+            "uniforme": false,
+            "fija": false,
+            "sinAcumulacion": false,
+            "invariantes": [
+              false,
+              false,
+              false
+            ],
+            "generacionUniforme": false,
+            "consumoUniforme": false,
+            "restoImpermeable": false,
+            "cantidadVolumen": false,
+            "densidadMediaConstante": false,
+            "densidadComunPuertos": false,
+            "expandirProducto": false
+          },
+          "origen": 1,
+          "operacion": {
+            "vista": "integral"
+          }
+        },
+        {
+          "titulo": "Define the dynamic total inventory",
+          "formulacion": {
+            "componentes": [
+              {
+                "id": 1,
+                "nombre": "Reference Newtonian liquid",
+                "simbolo": "L"
+              }
+            ],
+            "campo": {
+              "sinReaccion": false,
+              "sinDifusion": false,
+              "sinConveccion": false,
+              "estacionario": false,
+              "difusion": "flujo"
+            },
+            "coordenadas": "cartesianas",
+            "expandida": false,
+            "vista": "cantidad",
+            "fronteras": [],
+            "uniforme": false,
+            "fija": false,
+            "sinAcumulacion": false,
+            "invariantes": [
+              false,
+              false,
+              false
+            ],
+            "generacionUniforme": false,
+            "consumoUniforme": false,
+            "restoImpermeable": false,
+            "cantidadVolumen": false,
+            "densidadMediaConstante": false,
+            "densidadComunPuertos": false,
+            "expandirProducto": false
+          },
+          "origen": 2,
+          "operacion": {
+            "vista": "cantidad"
+          }
+        },
+        {
+          "titulo": "No chemical generation or consumption",
+          "formulacion": {
+            "componentes": [
+              {
+                "id": 1,
+                "nombre": "Reference Newtonian liquid",
+                "simbolo": "L"
+              }
+            ],
+            "campo": {
+              "sinReaccion": true,
+              "sinDifusion": false,
+              "sinConveccion": false,
+              "estacionario": false,
+              "difusion": "flujo"
+            },
+            "coordenadas": "cartesianas",
+            "expandida": false,
+            "vista": "cantidad",
+            "fronteras": [],
+            "uniforme": false,
+            "fija": false,
+            "sinAcumulacion": false,
+            "invariantes": [
+              false,
+              false,
+              false
+            ],
+            "generacionUniforme": false,
+            "consumoUniforme": false,
+            "restoImpermeable": false,
+            "cantidadVolumen": false,
+            "densidadMediaConstante": false,
+            "densidadComunPuertos": false,
+            "expandirProducto": false
+          },
+          "origen": 3,
+          "operacion": {
+            "campo": {
+              "sinReaccion": true,
+              "sinDifusion": false,
+              "sinConveccion": false,
+              "estacionario": false,
+              "difusion": "flujo"
+            }
+          }
+        },
+        {
+          "titulo": "Impermeable boundary outside the material ports",
+          "formulacion": {
+            "componentes": [
+              {
+                "id": 1,
+                "nombre": "Reference Newtonian liquid",
+                "simbolo": "L"
+              }
+            ],
+            "campo": {
+              "sinReaccion": true,
+              "sinDifusion": false,
+              "sinConveccion": false,
+              "estacionario": false,
+              "difusion": "flujo"
+            },
+            "coordenadas": "cartesianas",
+            "expandida": false,
+            "vista": "cantidad",
+            "fronteras": [],
+            "uniforme": false,
+            "fija": false,
+            "sinAcumulacion": false,
+            "invariantes": [
+              false,
+              false,
+              false
+            ],
+            "generacionUniforme": false,
+            "consumoUniforme": false,
+            "restoImpermeable": true,
+            "cantidadVolumen": false,
+            "densidadMediaConstante": false,
+            "densidadComunPuertos": false,
+            "expandirProducto": false
+          },
+          "origen": 4,
+          "operacion": {
+            "restoImpermeable": true
+          }
+        },
+        {
+          "titulo": "Fixed full flow-path envelope",
+          "formulacion": {
+            "componentes": [
+              {
+                "id": 1,
+                "nombre": "Reference Newtonian liquid",
+                "simbolo": "L"
+              }
+            ],
+            "campo": {
+              "sinReaccion": true,
+              "sinDifusion": false,
+              "sinConveccion": false,
+              "estacionario": false,
+              "difusion": "flujo"
+            },
+            "coordenadas": "cartesianas",
+            "expandida": false,
+            "vista": "cantidad",
+            "fronteras": [],
+            "uniforme": false,
+            "fija": true,
+            "sinAcumulacion": false,
+            "invariantes": [
+              false,
+              false,
+              false
+            ],
+            "generacionUniforme": false,
+            "consumoUniforme": false,
+            "restoImpermeable": true,
+            "cantidadVolumen": false,
+            "densidadMediaConstante": false,
+            "densidadComunPuertos": false,
+            "expandirProducto": false
+          },
+          "origen": 5,
+          "operacion": {
+            "fija": true
+          }
+        }
+      ],
+      "activo": 6,
+      "rehacer": [],
+      "ultimoComponenteId": 1
+    },
+    "config": {
+      "datos": {
+        "density": {
+          "texto": "1000",
+          "unidad": "kg/m3"
+        },
+        "viscosity": {
+          "texto": "0.05",
+          "unidad": "Pa*s"
+        },
+        "temperature": {
+          "texto": "293.15",
+          "unidad": "K"
+        },
+        "minimumPressure": {
+          "texto": "2500",
+          "unidad": "Pa"
+        },
+        "gravity": {
+          "texto": "9.80665",
+          "unidad": "m/s2"
+        },
+        "length": {
+          "texto": "10",
+          "unidad": "m"
+        },
+        "area": {
+          "texto": "0.0003141592653589793",
+          "unidad": "m2"
+        },
+        "diameter": {
+          "texto": "0.02",
+          "unidad": "m"
+        },
+        "drive": {
+          "texto": "0",
+          "unidad": "Pa"
+        },
+        "inletElevation": {
+          "texto": "0",
+          "unidad": "m"
+        },
+        "outletElevation": {
+          "texto": "0",
+          "unidad": "m"
+        },
+        "channel__inicial_1": {
+          "texto": "3.141592653589793",
+          "unidad": "kg"
+        },
+        "upper__inicial_1": {
+          "texto": "40",
+          "unidad": "kg"
+        },
+        "lower__inicial_1": {
+          "texto": "10",
+          "unidad": "kg"
+        },
+        "upperArea": {
+          "texto": "0.02",
+          "unidad": "m2"
+        },
+        "lowerArea": {
+          "texto": "0.02",
+          "unidad": "m2"
+        },
+        "upperSurface": {
+          "texto": "101325",
+          "unidad": "Pa"
+        },
+        "lowerSurface": {
+          "texto": "101325",
+          "unidad": "Pa"
+        },
+        "upperFloor": {
+          "texto": "0",
+          "unidad": "m"
+        },
+        "lowerFloor": {
+          "texto": "0",
+          "unidad": "m"
+        },
+        "initialFlow": {
+          "texto": "0",
+          "unidad": "kg/s"
+        }
+      },
+      "tiempo": {
+        "texto": "600",
+        "unidad": "s"
+      },
+      "metodo": "euler_implicito",
+      "muestras": 121,
+      "celdas": 40,
+      "rtol": 1e-8,
+      "atol": 1e-10,
+      "frontera": ""
+    },
+    "graficas": [
+      {
+        "id": "difference",
+        "nombre": "Signed pressure difference and contributions",
+        "y": [
+          "path.channel.drop",
+          "path.channel.viscous",
+          "path.channel.inertial"
+        ],
+        "tipo": "tiempo",
+        "x": "t",
+        "altura": 310,
+        "ancha": false,
+        "instante": 120
+      },
+      {
+        "id": "pressures",
+        "nombre": "Absolute static port pressures",
+        "y": [
+          "path.channel.inlet",
+          "path.channel.outlet"
+        ],
+        "tipo": "tiempo",
+        "x": "t",
+        "altura": 310,
+        "ancha": false,
+        "instante": 120
+      },
+      {
+        "id": "flow",
+        "nombre": "Shared mass flow",
+        "y": [
+          "path.channel.flow"
+        ],
+        "tipo": "tiempo",
+        "x": "t",
+        "altura": 310,
+        "ancha": false,
+        "instante": 120
+      },
+      {
+        "id": "inventories",
+        "nombre": "Coupled mass inventories",
+        "y": [
+          "volume.upper.mass",
+          "volume.lower.mass"
+        ],
+        "tipo": "tiempo",
+        "x": "t",
+        "altura": 310,
+        "ancha": false,
+        "instante": 120
+      },
+      {
+        "id": "heights",
+        "nombre": "Heights recovered from the same inventories",
+        "y": [
+          "volume.upper.height",
+          "volume.lower.height"
+        ],
+        "tipo": "tiempo",
+        "x": "t",
+        "altura": 310,
+        "ancha": false,
+        "instante": 120
+      }
+    ],
+    "columnas": 2,
+    "ensamblaje": {
+      "version": 2,
+      "componentes": [
+        {
+          "id": 1,
+          "nombre": "Reference Newtonian liquid",
+          "simbolo": "L"
+        }
+      ],
+      "ultimoVolumen": 3,
+      "ultimaCorriente": 2,
+      "volumenes": [
+        {
+          "id": "upper",
+          "nombre": "Upper free-surface volume",
+          "componentesIds": [
+            1
+          ],
+          "historial": {
+            "pasos": [
+              {
+                "titulo": "Local conservation",
+                "origen": null,
+                "operacion": null,
+                "formulacion": {
+                  "componentes": [],
+                  "campo": {
+                    "sinReaccion": false,
+                    "sinDifusion": false,
+                    "sinConveccion": false,
+                    "estacionario": false,
+                    "difusion": "flujo"
+                  },
+                  "coordenadas": "cartesianas",
+                  "expandida": false,
+                  "vista": "campo",
+                  "fronteras": [],
+                  "uniforme": false,
+                  "fija": false,
+                  "sinAcumulacion": false,
+                  "invariantes": [
+                    false,
+                    false,
+                    false
+                  ],
+                  "generacionUniforme": false,
+                  "consumoUniforme": false,
+                  "restoImpermeable": false,
+                  "cantidadVolumen": false,
+                  "densidadMediaConstante": false,
+                  "densidadComunPuertos": false,
+                  "expandirProducto": false
+                }
+              },
+              {
+                "titulo": "Declare the reference liquid",
+                "formulacion": {
+                  "componentes": [
+                    {
+                      "id": 1,
+                      "nombre": "Reference Newtonian liquid",
+                      "simbolo": "L"
+                    }
+                  ],
+                  "campo": {
+                    "sinReaccion": false,
+                    "sinDifusion": false,
+                    "sinConveccion": false,
+                    "estacionario": false,
+                    "difusion": "flujo"
+                  },
+                  "coordenadas": "cartesianas",
+                  "expandida": false,
+                  "vista": "campo",
+                  "fronteras": [],
+                  "uniforme": false,
+                  "fija": false,
+                  "sinAcumulacion": false,
+                  "invariantes": [
+                    false,
+                    false,
+                    false
+                  ],
+                  "generacionUniforme": false,
+                  "consumoUniforme": false,
+                  "restoImpermeable": false,
+                  "cantidadVolumen": false,
+                  "densidadMediaConstante": false,
+                  "densidadComunPuertos": false,
+                  "expandirProducto": false
+                },
+                "origen": 0,
+                "operacion": {
+                  "componentes": [
+                    {
+                      "id": 1,
+                      "nombre": "Reference Newtonian liquid",
+                      "simbolo": "L"
+                    }
+                  ]
+                }
+              },
+              {
+                "titulo": "Integrate local conservation with Gauss and Reynolds",
+                "formulacion": {
+                  "componentes": [
+                    {
+                      "id": 1,
+                      "nombre": "Reference Newtonian liquid",
+                      "simbolo": "L"
+                    }
+                  ],
+                  "campo": {
+                    "sinReaccion": false,
+                    "sinDifusion": false,
+                    "sinConveccion": false,
+                    "estacionario": false,
+                    "difusion": "flujo"
+                  },
+                  "coordenadas": "cartesianas",
+                  "expandida": false,
+                  "vista": "integral",
+                  "fronteras": [],
+                  "uniforme": false,
+                  "fija": false,
+                  "sinAcumulacion": false,
+                  "invariantes": [
+                    false,
+                    false,
+                    false
+                  ],
+                  "generacionUniforme": false,
+                  "consumoUniforme": false,
+                  "restoImpermeable": false,
+                  "cantidadVolumen": false,
+                  "densidadMediaConstante": false,
+                  "densidadComunPuertos": false,
+                  "expandirProducto": false
+                },
+                "origen": 1,
+                "operacion": {
+                  "vista": "integral"
+                }
+              },
+              {
+                "titulo": "Define the dynamic total inventory",
+                "formulacion": {
+                  "componentes": [
+                    {
+                      "id": 1,
+                      "nombre": "Reference Newtonian liquid",
+                      "simbolo": "L"
+                    }
+                  ],
+                  "campo": {
+                    "sinReaccion": false,
+                    "sinDifusion": false,
+                    "sinConveccion": false,
+                    "estacionario": false,
+                    "difusion": "flujo"
+                  },
+                  "coordenadas": "cartesianas",
+                  "expandida": false,
+                  "vista": "cantidad",
+                  "fronteras": [],
+                  "uniforme": false,
+                  "fija": false,
+                  "sinAcumulacion": false,
+                  "invariantes": [
+                    false,
+                    false,
+                    false
+                  ],
+                  "generacionUniforme": false,
+                  "consumoUniforme": false,
+                  "restoImpermeable": false,
+                  "cantidadVolumen": false,
+                  "densidadMediaConstante": false,
+                  "densidadComunPuertos": false,
+                  "expandirProducto": false
+                },
+                "origen": 2,
+                "operacion": {
+                  "vista": "cantidad"
+                }
+              },
+              {
+                "titulo": "No chemical generation or consumption",
+                "formulacion": {
+                  "componentes": [
+                    {
+                      "id": 1,
+                      "nombre": "Reference Newtonian liquid",
+                      "simbolo": "L"
+                    }
+                  ],
+                  "campo": {
+                    "sinReaccion": true,
+                    "sinDifusion": false,
+                    "sinConveccion": false,
+                    "estacionario": false,
+                    "difusion": "flujo"
+                  },
+                  "coordenadas": "cartesianas",
+                  "expandida": false,
+                  "vista": "cantidad",
+                  "fronteras": [],
+                  "uniforme": false,
+                  "fija": false,
+                  "sinAcumulacion": false,
+                  "invariantes": [
+                    false,
+                    false,
+                    false
+                  ],
+                  "generacionUniforme": false,
+                  "consumoUniforme": false,
+                  "restoImpermeable": false,
+                  "cantidadVolumen": false,
+                  "densidadMediaConstante": false,
+                  "densidadComunPuertos": false,
+                  "expandirProducto": false
+                },
+                "origen": 3,
+                "operacion": {
+                  "campo": {
+                    "sinReaccion": true,
+                    "sinDifusion": false,
+                    "sinConveccion": false,
+                    "estacionario": false,
+                    "difusion": "flujo"
+                  }
+                }
+              },
+              {
+                "titulo": "Impermeable boundary outside the material ports",
+                "formulacion": {
+                  "componentes": [
+                    {
+                      "id": 1,
+                      "nombre": "Reference Newtonian liquid",
+                      "simbolo": "L"
+                    }
+                  ],
+                  "campo": {
+                    "sinReaccion": true,
+                    "sinDifusion": false,
+                    "sinConveccion": false,
+                    "estacionario": false,
+                    "difusion": "flujo"
+                  },
+                  "coordenadas": "cartesianas",
+                  "expandida": false,
+                  "vista": "cantidad",
+                  "fronteras": [],
+                  "uniforme": false,
+                  "fija": false,
+                  "sinAcumulacion": false,
+                  "invariantes": [
+                    false,
+                    false,
+                    false
+                  ],
+                  "generacionUniforme": false,
+                  "consumoUniforme": false,
+                  "restoImpermeable": true,
+                  "cantidadVolumen": false,
+                  "densidadMediaConstante": false,
+                  "densidadComunPuertos": false,
+                  "expandirProducto": false
+                },
+                "origen": 4,
+                "operacion": {
+                  "restoImpermeable": true
+                }
+              },
+              {
+                "titulo": "Bind shared oriented material ports",
+                "formulacion": {
+                  "componentes": [
+                    {
+                      "id": 1,
+                      "nombre": "Reference Newtonian liquid",
+                      "simbolo": "L"
+                    }
+                  ],
+                  "campo": {
+                    "sinReaccion": true,
+                    "sinDifusion": false,
+                    "sinConveccion": false,
+                    "estacionario": false,
+                    "difusion": "flujo"
+                  },
+                  "coordenadas": "cartesianas",
+                  "expandida": false,
+                  "vista": "cantidad",
+                  "fronteras": [
+                    {
+                      "id": 1,
+                      "sentido": "salida",
+                      "constante": false
+                    }
+                  ],
+                  "uniforme": false,
+                  "fija": false,
+                  "sinAcumulacion": false,
+                  "invariantes": [
+                    false,
+                    false,
+                    false
+                  ],
+                  "generacionUniforme": false,
+                  "consumoUniforme": false,
+                  "restoImpermeable": true,
+                  "cantidadVolumen": false,
+                  "densidadMediaConstante": false,
+                  "densidadComunPuertos": false,
+                  "expandirProducto": false
+                },
+                "origen": 5,
+                "operacion": {
+                  "fronteras": [
+                    {
+                      "id": 1,
+                      "sentido": "salida",
+                      "constante": false
+                    }
+                  ]
+                }
+              }
+            ],
+            "activo": 6,
+            "rehacer": [],
+            "ultimoComponenteId": 1
+          },
+          "balances": {
+            "materia": true,
+            "energia": false,
+            "momento": true
+          }
+        },
+        {
+          "id": "channel",
+          "nombre": "Circular flow path",
+          "componentesIds": [
+            1
+          ],
+          "historial": {
+            "pasos": [
+              {
+                "titulo": "Local conservation",
+                "origen": null,
+                "operacion": null,
+                "formulacion": {
+                  "componentes": [],
+                  "campo": {
+                    "sinReaccion": false,
+                    "sinDifusion": false,
+                    "sinConveccion": false,
+                    "estacionario": false,
+                    "difusion": "flujo"
+                  },
+                  "coordenadas": "cartesianas",
+                  "expandida": false,
+                  "vista": "campo",
+                  "fronteras": [],
+                  "uniforme": false,
+                  "fija": false,
+                  "sinAcumulacion": false,
+                  "invariantes": [
+                    false,
+                    false,
+                    false
+                  ],
+                  "generacionUniforme": false,
+                  "consumoUniforme": false,
+                  "restoImpermeable": false,
+                  "cantidadVolumen": false,
+                  "densidadMediaConstante": false,
+                  "densidadComunPuertos": false,
+                  "expandirProducto": false
+                }
+              },
+              {
+                "titulo": "Declare the reference liquid",
+                "formulacion": {
+                  "componentes": [
+                    {
+                      "id": 1,
+                      "nombre": "Reference Newtonian liquid",
+                      "simbolo": "L"
+                    }
+                  ],
+                  "campo": {
+                    "sinReaccion": false,
+                    "sinDifusion": false,
+                    "sinConveccion": false,
+                    "estacionario": false,
+                    "difusion": "flujo"
+                  },
+                  "coordenadas": "cartesianas",
+                  "expandida": false,
+                  "vista": "campo",
+                  "fronteras": [],
+                  "uniforme": false,
+                  "fija": false,
+                  "sinAcumulacion": false,
+                  "invariantes": [
+                    false,
+                    false,
+                    false
+                  ],
+                  "generacionUniforme": false,
+                  "consumoUniforme": false,
+                  "restoImpermeable": false,
+                  "cantidadVolumen": false,
+                  "densidadMediaConstante": false,
+                  "densidadComunPuertos": false,
+                  "expandirProducto": false
+                },
+                "origen": 0,
+                "operacion": {
+                  "componentes": [
+                    {
+                      "id": 1,
+                      "nombre": "Reference Newtonian liquid",
+                      "simbolo": "L"
+                    }
+                  ]
+                }
+              },
+              {
+                "titulo": "Integrate local conservation with Gauss and Reynolds",
+                "formulacion": {
+                  "componentes": [
+                    {
+                      "id": 1,
+                      "nombre": "Reference Newtonian liquid",
+                      "simbolo": "L"
+                    }
+                  ],
+                  "campo": {
+                    "sinReaccion": false,
+                    "sinDifusion": false,
+                    "sinConveccion": false,
+                    "estacionario": false,
+                    "difusion": "flujo"
+                  },
+                  "coordenadas": "cartesianas",
+                  "expandida": false,
+                  "vista": "integral",
+                  "fronteras": [],
+                  "uniforme": false,
+                  "fija": false,
+                  "sinAcumulacion": false,
+                  "invariantes": [
+                    false,
+                    false,
+                    false
+                  ],
+                  "generacionUniforme": false,
+                  "consumoUniforme": false,
+                  "restoImpermeable": false,
+                  "cantidadVolumen": false,
+                  "densidadMediaConstante": false,
+                  "densidadComunPuertos": false,
+                  "expandirProducto": false
+                },
+                "origen": 1,
+                "operacion": {
+                  "vista": "integral"
+                }
+              },
+              {
+                "titulo": "Define the dynamic total inventory",
+                "formulacion": {
+                  "componentes": [
+                    {
+                      "id": 1,
+                      "nombre": "Reference Newtonian liquid",
+                      "simbolo": "L"
+                    }
+                  ],
+                  "campo": {
+                    "sinReaccion": false,
+                    "sinDifusion": false,
+                    "sinConveccion": false,
+                    "estacionario": false,
+                    "difusion": "flujo"
+                  },
+                  "coordenadas": "cartesianas",
+                  "expandida": false,
+                  "vista": "cantidad",
+                  "fronteras": [],
+                  "uniforme": false,
+                  "fija": false,
+                  "sinAcumulacion": false,
+                  "invariantes": [
+                    false,
+                    false,
+                    false
+                  ],
+                  "generacionUniforme": false,
+                  "consumoUniforme": false,
+                  "restoImpermeable": false,
+                  "cantidadVolumen": false,
+                  "densidadMediaConstante": false,
+                  "densidadComunPuertos": false,
+                  "expandirProducto": false
+                },
+                "origen": 2,
+                "operacion": {
+                  "vista": "cantidad"
+                }
+              },
+              {
+                "titulo": "No chemical generation or consumption",
+                "formulacion": {
+                  "componentes": [
+                    {
+                      "id": 1,
+                      "nombre": "Reference Newtonian liquid",
+                      "simbolo": "L"
+                    }
+                  ],
+                  "campo": {
+                    "sinReaccion": true,
+                    "sinDifusion": false,
+                    "sinConveccion": false,
+                    "estacionario": false,
+                    "difusion": "flujo"
+                  },
+                  "coordenadas": "cartesianas",
+                  "expandida": false,
+                  "vista": "cantidad",
+                  "fronteras": [],
+                  "uniforme": false,
+                  "fija": false,
+                  "sinAcumulacion": false,
+                  "invariantes": [
+                    false,
+                    false,
+                    false
+                  ],
+                  "generacionUniforme": false,
+                  "consumoUniforme": false,
+                  "restoImpermeable": false,
+                  "cantidadVolumen": false,
+                  "densidadMediaConstante": false,
+                  "densidadComunPuertos": false,
+                  "expandirProducto": false
+                },
+                "origen": 3,
+                "operacion": {
+                  "campo": {
+                    "sinReaccion": true,
+                    "sinDifusion": false,
+                    "sinConveccion": false,
+                    "estacionario": false,
+                    "difusion": "flujo"
+                  }
+                }
+              },
+              {
+                "titulo": "Impermeable boundary outside the material ports",
+                "formulacion": {
+                  "componentes": [
+                    {
+                      "id": 1,
+                      "nombre": "Reference Newtonian liquid",
+                      "simbolo": "L"
+                    }
+                  ],
+                  "campo": {
+                    "sinReaccion": true,
+                    "sinDifusion": false,
+                    "sinConveccion": false,
+                    "estacionario": false,
+                    "difusion": "flujo"
+                  },
+                  "coordenadas": "cartesianas",
+                  "expandida": false,
+                  "vista": "cantidad",
+                  "fronteras": [],
+                  "uniforme": false,
+                  "fija": false,
+                  "sinAcumulacion": false,
+                  "invariantes": [
+                    false,
+                    false,
+                    false
+                  ],
+                  "generacionUniforme": false,
+                  "consumoUniforme": false,
+                  "restoImpermeable": true,
+                  "cantidadVolumen": false,
+                  "densidadMediaConstante": false,
+                  "densidadComunPuertos": false,
+                  "expandirProducto": false
+                },
+                "origen": 4,
+                "operacion": {
+                  "restoImpermeable": true
+                }
+              },
+              {
+                "titulo": "Fixed full flow-path envelope",
+                "formulacion": {
+                  "componentes": [
+                    {
+                      "id": 1,
+                      "nombre": "Reference Newtonian liquid",
+                      "simbolo": "L"
+                    }
+                  ],
+                  "campo": {
+                    "sinReaccion": true,
+                    "sinDifusion": false,
+                    "sinConveccion": false,
+                    "estacionario": false,
+                    "difusion": "flujo"
+                  },
+                  "coordenadas": "cartesianas",
+                  "expandida": false,
+                  "vista": "cantidad",
+                  "fronteras": [],
+                  "uniforme": false,
+                  "fija": true,
+                  "sinAcumulacion": false,
+                  "invariantes": [
+                    false,
+                    false,
+                    false
+                  ],
+                  "generacionUniforme": false,
+                  "consumoUniforme": false,
+                  "restoImpermeable": true,
+                  "cantidadVolumen": false,
+                  "densidadMediaConstante": false,
+                  "densidadComunPuertos": false,
+                  "expandirProducto": false
+                },
+                "origen": 5,
+                "operacion": {
+                  "fija": true
+                }
+              },
+              {
+                "titulo": "Bind shared oriented material ports",
+                "formulacion": {
+                  "componentes": [
+                    {
+                      "id": 1,
+                      "nombre": "Reference Newtonian liquid",
+                      "simbolo": "L"
+                    }
+                  ],
+                  "campo": {
+                    "sinReaccion": true,
+                    "sinDifusion": false,
+                    "sinConveccion": false,
+                    "estacionario": false,
+                    "difusion": "flujo"
+                  },
+                  "coordenadas": "cartesianas",
+                  "expandida": false,
+                  "vista": "cantidad",
+                  "fronteras": [
+                    {
+                      "id": 1,
+                      "sentido": "entrada",
+                      "constante": false
+                    },
+                    {
+                      "id": 2,
+                      "sentido": "salida",
+                      "constante": false
+                    }
+                  ],
+                  "uniforme": false,
+                  "fija": true,
+                  "sinAcumulacion": false,
+                  "invariantes": [
+                    false,
+                    false,
+                    false
+                  ],
+                  "generacionUniforme": false,
+                  "consumoUniforme": false,
+                  "restoImpermeable": true,
+                  "cantidadVolumen": false,
+                  "densidadMediaConstante": false,
+                  "densidadComunPuertos": false,
+                  "expandirProducto": false
+                },
+                "origen": 6,
+                "operacion": {
+                  "fronteras": [
+                    {
+                      "id": 1,
+                      "sentido": "entrada",
+                      "constante": false
+                    },
+                    {
+                      "id": 2,
+                      "sentido": "salida",
+                      "constante": false
+                    }
+                  ]
+                }
+              }
+            ],
+            "activo": 7,
+            "rehacer": [],
+            "ultimoComponenteId": 1
+          },
+          "balances": {
+            "materia": false,
+            "energia": false,
+            "momento": true
+          }
+        },
+        {
+          "id": "lower",
+          "nombre": "Lower free-surface volume",
+          "componentesIds": [
+            1
+          ],
+          "historial": {
+            "pasos": [
+              {
+                "titulo": "Local conservation",
+                "origen": null,
+                "operacion": null,
+                "formulacion": {
+                  "componentes": [],
+                  "campo": {
+                    "sinReaccion": false,
+                    "sinDifusion": false,
+                    "sinConveccion": false,
+                    "estacionario": false,
+                    "difusion": "flujo"
+                  },
+                  "coordenadas": "cartesianas",
+                  "expandida": false,
+                  "vista": "campo",
+                  "fronteras": [],
+                  "uniforme": false,
+                  "fija": false,
+                  "sinAcumulacion": false,
+                  "invariantes": [
+                    false,
+                    false,
+                    false
+                  ],
+                  "generacionUniforme": false,
+                  "consumoUniforme": false,
+                  "restoImpermeable": false,
+                  "cantidadVolumen": false,
+                  "densidadMediaConstante": false,
+                  "densidadComunPuertos": false,
+                  "expandirProducto": false
+                }
+              },
+              {
+                "titulo": "Declare the reference liquid",
+                "formulacion": {
+                  "componentes": [
+                    {
+                      "id": 1,
+                      "nombre": "Reference Newtonian liquid",
+                      "simbolo": "L"
+                    }
+                  ],
+                  "campo": {
+                    "sinReaccion": false,
+                    "sinDifusion": false,
+                    "sinConveccion": false,
+                    "estacionario": false,
+                    "difusion": "flujo"
+                  },
+                  "coordenadas": "cartesianas",
+                  "expandida": false,
+                  "vista": "campo",
+                  "fronteras": [],
+                  "uniforme": false,
+                  "fija": false,
+                  "sinAcumulacion": false,
+                  "invariantes": [
+                    false,
+                    false,
+                    false
+                  ],
+                  "generacionUniforme": false,
+                  "consumoUniforme": false,
+                  "restoImpermeable": false,
+                  "cantidadVolumen": false,
+                  "densidadMediaConstante": false,
+                  "densidadComunPuertos": false,
+                  "expandirProducto": false
+                },
+                "origen": 0,
+                "operacion": {
+                  "componentes": [
+                    {
+                      "id": 1,
+                      "nombre": "Reference Newtonian liquid",
+                      "simbolo": "L"
+                    }
+                  ]
+                }
+              },
+              {
+                "titulo": "Integrate local conservation with Gauss and Reynolds",
+                "formulacion": {
+                  "componentes": [
+                    {
+                      "id": 1,
+                      "nombre": "Reference Newtonian liquid",
+                      "simbolo": "L"
+                    }
+                  ],
+                  "campo": {
+                    "sinReaccion": false,
+                    "sinDifusion": false,
+                    "sinConveccion": false,
+                    "estacionario": false,
+                    "difusion": "flujo"
+                  },
+                  "coordenadas": "cartesianas",
+                  "expandida": false,
+                  "vista": "integral",
+                  "fronteras": [],
+                  "uniforme": false,
+                  "fija": false,
+                  "sinAcumulacion": false,
+                  "invariantes": [
+                    false,
+                    false,
+                    false
+                  ],
+                  "generacionUniforme": false,
+                  "consumoUniforme": false,
+                  "restoImpermeable": false,
+                  "cantidadVolumen": false,
+                  "densidadMediaConstante": false,
+                  "densidadComunPuertos": false,
+                  "expandirProducto": false
+                },
+                "origen": 1,
+                "operacion": {
+                  "vista": "integral"
+                }
+              },
+              {
+                "titulo": "Define the dynamic total inventory",
+                "formulacion": {
+                  "componentes": [
+                    {
+                      "id": 1,
+                      "nombre": "Reference Newtonian liquid",
+                      "simbolo": "L"
+                    }
+                  ],
+                  "campo": {
+                    "sinReaccion": false,
+                    "sinDifusion": false,
+                    "sinConveccion": false,
+                    "estacionario": false,
+                    "difusion": "flujo"
+                  },
+                  "coordenadas": "cartesianas",
+                  "expandida": false,
+                  "vista": "cantidad",
+                  "fronteras": [],
+                  "uniforme": false,
+                  "fija": false,
+                  "sinAcumulacion": false,
+                  "invariantes": [
+                    false,
+                    false,
+                    false
+                  ],
+                  "generacionUniforme": false,
+                  "consumoUniforme": false,
+                  "restoImpermeable": false,
+                  "cantidadVolumen": false,
+                  "densidadMediaConstante": false,
+                  "densidadComunPuertos": false,
+                  "expandirProducto": false
+                },
+                "origen": 2,
+                "operacion": {
+                  "vista": "cantidad"
+                }
+              },
+              {
+                "titulo": "No chemical generation or consumption",
+                "formulacion": {
+                  "componentes": [
+                    {
+                      "id": 1,
+                      "nombre": "Reference Newtonian liquid",
+                      "simbolo": "L"
+                    }
+                  ],
+                  "campo": {
+                    "sinReaccion": true,
+                    "sinDifusion": false,
+                    "sinConveccion": false,
+                    "estacionario": false,
+                    "difusion": "flujo"
+                  },
+                  "coordenadas": "cartesianas",
+                  "expandida": false,
+                  "vista": "cantidad",
+                  "fronteras": [],
+                  "uniforme": false,
+                  "fija": false,
+                  "sinAcumulacion": false,
+                  "invariantes": [
+                    false,
+                    false,
+                    false
+                  ],
+                  "generacionUniforme": false,
+                  "consumoUniforme": false,
+                  "restoImpermeable": false,
+                  "cantidadVolumen": false,
+                  "densidadMediaConstante": false,
+                  "densidadComunPuertos": false,
+                  "expandirProducto": false
+                },
+                "origen": 3,
+                "operacion": {
+                  "campo": {
+                    "sinReaccion": true,
+                    "sinDifusion": false,
+                    "sinConveccion": false,
+                    "estacionario": false,
+                    "difusion": "flujo"
+                  }
+                }
+              },
+              {
+                "titulo": "Impermeable boundary outside the material ports",
+                "formulacion": {
+                  "componentes": [
+                    {
+                      "id": 1,
+                      "nombre": "Reference Newtonian liquid",
+                      "simbolo": "L"
+                    }
+                  ],
+                  "campo": {
+                    "sinReaccion": true,
+                    "sinDifusion": false,
+                    "sinConveccion": false,
+                    "estacionario": false,
+                    "difusion": "flujo"
+                  },
+                  "coordenadas": "cartesianas",
+                  "expandida": false,
+                  "vista": "cantidad",
+                  "fronteras": [],
+                  "uniforme": false,
+                  "fija": false,
+                  "sinAcumulacion": false,
+                  "invariantes": [
+                    false,
+                    false,
+                    false
+                  ],
+                  "generacionUniforme": false,
+                  "consumoUniforme": false,
+                  "restoImpermeable": true,
+                  "cantidadVolumen": false,
+                  "densidadMediaConstante": false,
+                  "densidadComunPuertos": false,
+                  "expandirProducto": false
+                },
+                "origen": 4,
+                "operacion": {
+                  "restoImpermeable": true
+                }
+              },
+              {
+                "titulo": "Bind shared oriented material ports",
+                "formulacion": {
+                  "componentes": [
+                    {
+                      "id": 1,
+                      "nombre": "Reference Newtonian liquid",
+                      "simbolo": "L"
+                    }
+                  ],
+                  "campo": {
+                    "sinReaccion": true,
+                    "sinDifusion": false,
+                    "sinConveccion": false,
+                    "estacionario": false,
+                    "difusion": "flujo"
+                  },
+                  "coordenadas": "cartesianas",
+                  "expandida": false,
+                  "vista": "cantidad",
+                  "fronteras": [
+                    {
+                      "id": 2,
+                      "sentido": "entrada",
+                      "constante": false
+                    }
+                  ],
+                  "uniforme": false,
+                  "fija": false,
+                  "sinAcumulacion": false,
+                  "invariantes": [
+                    false,
+                    false,
+                    false
+                  ],
+                  "generacionUniforme": false,
+                  "consumoUniforme": false,
+                  "restoImpermeable": true,
+                  "cantidadVolumen": false,
+                  "densidadMediaConstante": false,
+                  "densidadComunPuertos": false,
+                  "expandirProducto": false
+                },
+                "origen": 5,
+                "operacion": {
+                  "fronteras": [
+                    {
+                      "id": 2,
+                      "sentido": "entrada",
+                      "constante": false
+                    }
+                  ]
+                }
+              }
+            ],
+            "activo": 6,
+            "rehacer": [],
+            "ultimoComponenteId": 1
+          },
+          "balances": {
+            "materia": true,
+            "energia": false,
+            "momento": true
+          }
+        }
+      ],
+      "corrientes": [
+        {
+          "id": 1,
+          "nombre": "Shared inlet stream",
+          "desde": "upper",
+          "hasta": "channel",
+          "constante": false,
+          "mecanismo": "convectivo",
+          "componentesIds": [
+            1
+          ],
+          "datos": {
+            "materia": {
+              "modo": "por_componente",
+              "base": "masica",
+              "caudales": {}
+            }
+          }
+        },
+        {
+          "id": 2,
+          "nombre": "Shared outlet stream",
+          "desde": "channel",
+          "hasta": "lower",
+          "constante": false,
+          "mecanismo": "convectivo",
+          "componentesIds": [
+            1
+          ],
+          "datos": {
+            "materia": {
+              "modo": "por_componente",
+              "base": "masica",
+              "caudales": {}
+            }
+          }
+        }
+      ]
+    },
+    "volumenActivo": "channel",
+    "vistaBalance": "momento",
+    "balances": {
+      "materia": true,
+      "energia": false,
+      "momento": true
+    },
+    "recorridoTermodinamico": {
+      "version": 1,
+      "pasos": [
+        {
+          "titulo": "Fundamental thermodynamic relations",
+          "supuestos": {
+            "monofasico": false,
+            "sinCambioFase": false,
+            "densidadConstante": false,
+            "modelo": "sin_declarar"
+          },
+          "relaciones": [],
+          "operation": null
+        },
+        {
+          "titulo": "Declare the single-phase reference-medium approximation",
+          "supuestos": {
+            "monofasico": true,
+            "sinCambioFase": false,
+            "densidadConstante": false,
+            "modelo": "sin_declarar"
+          },
+          "relaciones": [],
+          "operation": {
+            "changes": {
+              "monofasico": true
+            }
+          }
+        },
+        {
+          "titulo": "No phase change within the declared pressure and temperature domain",
+          "supuestos": {
+            "monofasico": true,
+            "sinCambioFase": true,
+            "densidadConstante": false,
+            "modelo": "sin_declarar"
+          },
+          "relaciones": [],
+          "operation": {
+            "changes": {
+              "sinCambioFase": true
+            }
+          }
+        },
+        {
+          "titulo": "Declare the constant-density state approximation",
+          "supuestos": {
+            "monofasico": true,
+            "sinCambioFase": true,
+            "densidadConstante": true,
+            "modelo": "sin_declarar"
+          },
+          "relaciones": [],
+          "operation": {
+            "changes": {
+              "densidadConstante": true
+            }
+          }
+        }
+      ],
+      "rehacer": []
+    },
+    "momentumDerivation": {
+      "format": "rage.momentum-derivation",
+      "version": 1,
+      "volumes": {
+        "upper": {
+          "origin": "recorded",
+          "operations": [
+            {
+              "id": "deduction-1",
+              "title": "Hydrostatic limit: pressureStress",
+              "changes": {
+                "pressureStress": true
+              }
+            },
+            {
+              "id": "deduction-2",
+              "title": "Hydrostatic limit: negligibleConvection",
+              "changes": {
+                "negligibleConvection": true
+              }
+            },
+            {
+              "id": "deduction-3",
+              "title": "Hydrostatic limit: negligibleViscousStress",
+              "changes": {
+                "negligibleViscousStress": true
+              }
+            },
+            {
+              "id": "deduction-4",
+              "title": "Hydrostatic limit: zeroLocalAccumulation",
+              "changes": {
+                "zeroLocalAccumulation": true
+              }
+            },
+            {
+              "id": "deduction-5",
+              "title": "Hydrostatic limit: uniformGravity",
+              "changes": {
+                "uniformGravity": true
+              }
+            },
+            {
+              "id": "deduction-6",
+              "title": "Hydrostatic limit: referenceDensity",
+              "changes": {
+                "referenceDensity": true
+              }
+            },
+            {
+              "id": "deduction-7",
+              "title": "Hydrostatic limit: verticalGravity",
+              "changes": {
+                "verticalGravity": true
+              }
+            },
+            {
+              "id": "deduction-8",
+              "title": "Hydrostatic limit: pressureReference",
+              "changes": {
+                "pressureReference": true
+              }
+            },
+            {
+              "id": "deduction-9",
+              "title": "Hydrostatic limit: prismaticStorage",
+              "changes": {
+                "prismaticStorage": true
+              }
+            }
+          ]
+        },
+        "channel": {
+          "origin": "recorded",
+          "operations": [
+            {
+              "id": "deduction-1",
+              "title": "Declare pressureStress · true",
+              "changes": {
+                "pressureStress": true
+              }
+            },
+            {
+              "id": "deduction-2",
+              "title": "Declare newtonian · true",
+              "changes": {
+                "newtonian": true
+              }
+            },
+            {
+              "id": "deduction-3",
+              "title": "Declare massContinuity · true",
+              "changes": {
+                "massContinuity": true
+              }
+            },
+            {
+              "id": "deduction-4",
+              "title": "Declare constantViscosity · true",
+              "changes": {
+                "constantViscosity": true
+              }
+            },
+            {
+              "id": "deduction-5",
+              "title": "Declare divergenceFree · true",
+              "changes": {
+                "divergenceFree": true
+              }
+            },
+            {
+              "id": "deduction-6",
+              "title": "Declare form · integral",
+              "changes": {
+                "form": "integral"
+              }
+            },
+            {
+              "id": "deduction-7",
+              "title": "Declare fixedBoundary · true",
+              "changes": {
+                "fixedBoundary": true
+              }
+            },
+            {
+              "id": "deduction-8",
+              "title": "Declare uniformSections · true",
+              "changes": {
+                "uniformSections": true
+              }
+            },
+            {
+              "id": "deduction-9",
+              "title": "Declare impermeableWall · true",
+              "changes": {
+                "impermeableWall": true
+              }
+            },
+            {
+              "id": "deduction-10",
+              "title": "Declare form · ports",
+              "changes": {
+                "form": "ports"
+              }
+            },
+            {
+              "id": "deduction-11",
+              "title": "Declare constantArea · true",
+              "changes": {
+                "constantArea": true
+              }
+            },
+            {
+              "id": "deduction-12",
+              "title": "Declare referenceDensity · true",
+              "changes": {
+                "referenceDensity": true
+              }
+            },
+            {
+              "id": "deduction-13",
+              "title": "Declare uniformGravity · true",
+              "changes": {
+                "uniformGravity": true
+              }
+            },
+            {
+              "id": "deduction-14",
+              "title": "Declare form · hydraulic",
+              "changes": {
+                "form": "hydraulic"
+              }
+            },
+            {
+              "id": "deduction-15",
+              "title": "Declare circularSection · true",
+              "changes": {
+                "circularSection": true
+              }
+            },
+            {
+              "id": "deduction-16",
+              "title": "Declare developedProfile · true",
+              "changes": {
+                "developedProfile": true
+              }
+            },
+            {
+              "id": "deduction-17",
+              "title": "Declare quasiSteadyWall · true",
+              "changes": {
+                "quasiSteadyWall": true
+              }
+            },
+            {
+              "id": "deduction-18",
+              "title": "Declare regularAxis · true",
+              "changes": {
+                "regularAxis": true
+              }
+            },
+            {
+              "id": "deduction-19",
+              "title": "Declare noSlipWall · true",
+              "changes": {
+                "noSlipWall": true
+              }
+            },
+            {
+              "id": "deduction-20",
+              "title": "Bind the existing material ports",
+              "changes": {
+                "inletStreamId": "s1",
+                "outletStreamId": "s2"
+              }
+            }
+          ]
+        },
+        "lower": {
+          "origin": "recorded",
+          "operations": [
+            {
+              "id": "deduction-1",
+              "title": "Hydrostatic limit: pressureStress",
+              "changes": {
+                "pressureStress": true
+              }
+            },
+            {
+              "id": "deduction-2",
+              "title": "Hydrostatic limit: negligibleConvection",
+              "changes": {
+                "negligibleConvection": true
+              }
+            },
+            {
+              "id": "deduction-3",
+              "title": "Hydrostatic limit: negligibleViscousStress",
+              "changes": {
+                "negligibleViscousStress": true
+              }
+            },
+            {
+              "id": "deduction-4",
+              "title": "Hydrostatic limit: zeroLocalAccumulation",
+              "changes": {
+                "zeroLocalAccumulation": true
+              }
+            },
+            {
+              "id": "deduction-5",
+              "title": "Hydrostatic limit: uniformGravity",
+              "changes": {
+                "uniformGravity": true
+              }
+            },
+            {
+              "id": "deduction-6",
+              "title": "Hydrostatic limit: referenceDensity",
+              "changes": {
+                "referenceDensity": true
+              }
+            },
+            {
+              "id": "deduction-7",
+              "title": "Hydrostatic limit: verticalGravity",
+              "changes": {
+                "verticalGravity": true
+              }
+            },
+            {
+              "id": "deduction-8",
+              "title": "Hydrostatic limit: pressureReference",
+              "changes": {
+                "pressureReference": true
+              }
+            },
+            {
+              "id": "deduction-9",
+              "title": "Hydrostatic limit: prismaticStorage",
+              "changes": {
+                "prismaticStorage": true
+              }
+            }
+          ]
+        }
+      }
+    },
+    "hydraulicNetwork": {
+      "format": "rage.hydraulic-network",
+      "version": 1,
+      "medium": {
+        "densityId": "density",
+        "viscosityId": "viscosity",
+        "temperatureId": "temperature",
+        "minimumPressureId": "minimumPressure",
+        "reason": "Explicit reference Newtonian liquid, externally isothermal, single phase and constant density. rho and mu are declared constitutive data, not an inferred substance package. No energy or equilibrium certification is claimed."
+      },
+      "gravityId": "gravity",
+      "storages": [
+        {
+          "volumeId": "upper",
+          "areaId": "upperArea",
+          "surfacePressureId": "upperSurface",
+          "floorElevationId": "upperFloor"
+        },
+        {
+          "volumeId": "lower",
+          "areaId": "lowerArea",
+          "surfacePressureId": "lowerSurface",
+          "floorElevationId": "lowerFloor"
+        }
+      ],
+      "paths": [
+        {
+          "volumeId": "channel",
+          "inletStreamId": "s1",
+          "outletStreamId": "s2",
+          "lengthId": "length",
+          "areaId": "area",
+          "diameterId": "diameter",
+          "driveId": "drive",
+          "inletElevationId": "inletElevation",
+          "outletElevationId": "outletElevation",
+          "flow": {
+            "kind": "dynamic",
+            "initialId": "initialFlow"
+          },
+          "inletPressure": {
+            "kind": "storage",
+            "volumeId": "upper"
+          },
+          "outletPressure": {
+            "kind": "storage",
+            "volumeId": "lower"
+          }
+        }
+      ]
+    },
+    "tableroIniciado": true,
+    "workspaceNotes": {
+      "model": "Two prismatic free-surface volumes exchange the same liquid through one circular path. Matter starts from local conservation; momentum starts from Cauchy. Reservoir pressure is deduced from hydrostatic force compatibility, surface conditions and inventory-derived height. No pressure-difference trajectory or equilibrium level is imposed.",
+      "transform": "Identity formulation. These are lumped models: no spatial mesh is selected. The displayed assumptions and geometry remain attached to Solve.",
+      "solve": "Integrate both mass inventories and the shared flow. Surface pressures are boundary conditions; port pressures and their difference follow from the changing inventories. Start with zero flow while the unequal inventories drive a nonzero acceleration.",
+      "results": "Inspect pressure, flow and conservation checks. This is an assumed-medium, isothermal hydraulic approximation with quasi-steady laminar wall resistance, not an exact spatial transient Navier–Stokes or thermodynamic certification."
+    }
+  }
+}

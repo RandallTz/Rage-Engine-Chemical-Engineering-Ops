@@ -1,0 +1,6057 @@
+{
+  "schema_version": 1,
+  "revision_contrato": 15,
+  "estado": "resuelto",
+  "terminacion": "completado",
+  "modelo_id": "d523f2a03f4413afd95b02fa0734bc911de4e61a5f43f3bd1a0eefb8f47e7c9b",
+  "estudio_id": "f62da0dabf6399c7e952d7cb5efd2eb5f8c8f4654388e7cdcef787df3b95fbf5",
+  "calculo": {
+    "identificador": "bf41589cc5ff0f35f7ece7a837c59ecf",
+    "instante_utc": "2026-10-12T21:51:19.210+00:00",
+    "motor": {
+      "version": "0.15.0",
+      "commit": "dc6ede0bcb842bc8e2e6d03e7a882bb2fc650ab4-sucio"
+    },
+    "proveedor_termodinamico": {
+      "identificador": "ninguno (modelo material; densidad declarada)",
+      "versiones": {
+        "thermo": "0.6.1",
+        "chemicals": "1.5.2",
+        "fluids": "1.3.1",
+        "numpy": "1.26.4",
+        "scipy": "1.16.2"
+      }
+    },
+    "huella_entradas": "7297a26895a63dcbf34a111301ee461f87b162cb10090d53f98675dd93c74998",
+    "algoritmo_huella": "sha256"
+  },
+  "estudio": {
+    "version": 1,
+    "tipo": "temporal"
+  },
+  "fisica": [
+    "materia"
+  ],
+  "propiedades": null,
+  "reacciones": [],
+  "interfaces_termicas": [],
+  "interfaces_materiales": [],
+  "componentes": [
+    "benzene",
+    "toluene"
+  ],
+  "identidad_componentes": [
+    {
+      "indice": 0,
+      "componente": "benzene",
+      "cas": "71-43-2",
+      "nombre": "benzene",
+      "formula": "C6H6"
+    },
+    {
+      "indice": 1,
+      "componente": "toluene",
+      "cas": "108-88-3",
+      "nombre": "toluene",
+      "formula": "C7H8"
+    }
+  ],
+  "balances": [
+    {
+      "bloque_id": "cv1",
+      "sistema": "abierto",
+      "relacion_de_salida": "salida_lineal",
+      "familias": {
+        "materia": {
+          "solicitado": null,
+          "activo": true,
+          "procedencia": "heredado del montaje",
+          "ejecutado": true,
+          "ecuaciones": [
+            "cv1:materia_especie_0",
+            "cv1:materia_especie_1",
+            "cv1:mezcla_perfecta_0",
+            "cv1:mezcla_perfecta_1",
+            "cv1:inventario_total",
+            "cv1:cierre_salida"
+          ],
+          "implementado": true
+        },
+        "energia": {
+          "solicitado": null,
+          "activo": false,
+          "procedencia": "heredado del montaje",
+          "ejecutado": false,
+          "ecuaciones": [],
+          "implementado": true
+        },
+        "momento": {
+          "solicitado": null,
+          "activo": false,
+          "procedencia": "heredado del montaje",
+          "ejecutado": false,
+          "ecuaciones": [],
+          "implementado": false
+        }
+      }
+    },
+    {
+      "bloque_id": "cv2",
+      "sistema": "abierto",
+      "relacion_de_salida": "salida_lineal",
+      "familias": {
+        "materia": {
+          "solicitado": null,
+          "activo": true,
+          "procedencia": "heredado del montaje",
+          "ejecutado": true,
+          "ecuaciones": [
+            "cv2:materia_especie_0",
+            "cv2:materia_especie_1",
+            "cv2:mezcla_perfecta_0",
+            "cv2:mezcla_perfecta_1",
+            "cv2:inventario_total",
+            "cv2:cierre_salida"
+          ],
+          "implementado": true
+        },
+        "energia": {
+          "solicitado": null,
+          "activo": false,
+          "procedencia": "heredado del montaje",
+          "ejecutado": false,
+          "ecuaciones": [],
+          "implementado": true
+        },
+        "momento": {
+          "solicitado": null,
+          "activo": false,
+          "procedencia": "heredado del montaje",
+          "ejecutado": false,
+          "ecuaciones": [],
+          "implementado": false
+        }
+      }
+    }
+  ],
+  "catalogo_variables": [
+    {
+      "id": "in.F",
+      "nombre": "Caudal · entrada in",
+      "papel_seleccionado": "especificacion",
+      "ruta": {
+        "campo": "especificaciones",
+        "clave": {
+          "bloque_id": "in",
+          "variable": "F"
+        },
+        "indice": 0
+      },
+      "efecto_en_recuento": "dato: fija la variable; es una especificacion que el recuento cuenta (resta un grado de libertad)",
+      "simbolo": "F",
+      "magnitud": "flujo_molar",
+      "unidad_interna": "mol/s",
+      "familia": "materia",
+      "bloque_ids": [
+        "in",
+        "cv1"
+      ],
+      "conexion_ids": [
+        "c1"
+      ],
+      "compartida": false,
+      "clase": "entrada",
+      "funcion": "especificacion",
+      "puede_especificarse": true,
+      "puede_calcularse": false,
+      "motivo_limitacion": "frontera de esta combinacion: su calculo inverso no esta admitido (solo con 'balance_general')",
+      "provisional": false
+    },
+    {
+      "id": "in.x0",
+      "nombre": "Fraccion molar · entrada in",
+      "papel_seleccionado": "especificacion",
+      "ruta": {
+        "campo": "especificaciones",
+        "clave": {
+          "bloque_id": "in",
+          "variable": "x0"
+        },
+        "indice": 1
+      },
+      "efecto_en_recuento": "dato: fija la variable; es una especificacion que el recuento cuenta (resta un grado de libertad)",
+      "simbolo": "x",
+      "magnitud": "fraccion_molar",
+      "unidad_interna": "mol/mol",
+      "familia": "materia",
+      "bloque_ids": [
+        "in",
+        "cv1"
+      ],
+      "conexion_ids": [
+        "c1"
+      ],
+      "compartida": false,
+      "clase": "entrada",
+      "funcion": "especificacion",
+      "puede_especificarse": true,
+      "puede_calcularse": false,
+      "motivo_limitacion": "frontera de esta combinacion: su calculo inverso no esta admitido (solo con 'balance_general')",
+      "provisional": false
+    },
+    {
+      "id": "in.x1",
+      "nombre": "Fraccion molar · entrada in",
+      "papel_seleccionado": "especificacion",
+      "ruta": {
+        "campo": "especificaciones",
+        "clave": {
+          "bloque_id": "in",
+          "variable": "x1"
+        },
+        "indice": null
+      },
+      "efecto_en_recuento": "dato: fija la variable; es una especificacion que el recuento cuenta (resta un grado de libertad)",
+      "simbolo": "x",
+      "magnitud": "fraccion_molar",
+      "unidad_interna": "mol/mol",
+      "familia": "materia",
+      "bloque_ids": [
+        "in",
+        "cv1"
+      ],
+      "conexion_ids": [
+        "c1"
+      ],
+      "compartida": false,
+      "clase": "entrada",
+      "funcion": "especificacion",
+      "puede_especificarse": true,
+      "puede_calcularse": false,
+      "motivo_limitacion": "frontera de esta combinacion: su calculo inverso no esta admitido (solo con 'balance_general')",
+      "provisional": false
+    },
+    {
+      "id": "medio.F",
+      "nombre": "Caudal · corriente medio",
+      "papel_seleccionado": "calculada",
+      "ruta": {
+        "campo": "especificaciones",
+        "clave": {
+          "bloque_id": "medio",
+          "variable": "F"
+        },
+        "indice": null
+      },
+      "efecto_en_recuento": "calculada por una relacion del modelo: darla como dato la sobreespecificaria en esta combinacion",
+      "simbolo": "F",
+      "magnitud": "flujo_molar",
+      "unidad_interna": "mol/s",
+      "familia": "materia",
+      "bloque_ids": [
+        "medio",
+        "cv1",
+        "cv2"
+      ],
+      "conexion_ids": [
+        "c2",
+        "c3"
+      ],
+      "compartida": true,
+      "clase": "algebraica",
+      "funcion": "calculada",
+      "puede_especificarse": false,
+      "puede_calcularse": true,
+      "motivo_limitacion": "la determina cv1:cierre_salida",
+      "provisional": false
+    },
+    {
+      "id": "medio.x0",
+      "nombre": "Fraccion molar · corriente medio",
+      "papel_seleccionado": "calculada",
+      "ruta": {
+        "campo": "especificaciones",
+        "clave": {
+          "bloque_id": "medio",
+          "variable": "x0"
+        },
+        "indice": null
+      },
+      "efecto_en_recuento": "calculada por una relacion del modelo: darla como dato la sobreespecificaria en esta combinacion",
+      "simbolo": "x",
+      "magnitud": "fraccion_molar",
+      "unidad_interna": "mol/mol",
+      "familia": "materia",
+      "bloque_ids": [
+        "medio",
+        "cv1",
+        "cv2"
+      ],
+      "conexion_ids": [
+        "c2",
+        "c3"
+      ],
+      "compartida": true,
+      "clase": "algebraica",
+      "funcion": "calculada",
+      "puede_especificarse": false,
+      "puede_calcularse": true,
+      "motivo_limitacion": "la determina cv1:mezcla_perfecta_0",
+      "provisional": false
+    },
+    {
+      "id": "medio.x1",
+      "nombre": "Fraccion molar · corriente medio",
+      "papel_seleccionado": "calculada",
+      "ruta": {
+        "campo": "especificaciones",
+        "clave": {
+          "bloque_id": "medio",
+          "variable": "x1"
+        },
+        "indice": null
+      },
+      "efecto_en_recuento": "calculada por una relacion del modelo: darla como dato la sobreespecificaria en esta combinacion",
+      "simbolo": "x",
+      "magnitud": "fraccion_molar",
+      "unidad_interna": "mol/mol",
+      "familia": "materia",
+      "bloque_ids": [
+        "medio",
+        "cv1",
+        "cv2"
+      ],
+      "conexion_ids": [
+        "c2",
+        "c3"
+      ],
+      "compartida": true,
+      "clase": "algebraica",
+      "funcion": "calculada",
+      "puede_especificarse": false,
+      "puede_calcularse": true,
+      "motivo_limitacion": "la determina cv1:mezcla_perfecta_1",
+      "provisional": false
+    },
+    {
+      "id": "out.F",
+      "nombre": "Caudal · salida out",
+      "papel_seleccionado": "calculada",
+      "ruta": {
+        "campo": "especificaciones",
+        "clave": {
+          "bloque_id": "out",
+          "variable": "F"
+        },
+        "indice": null
+      },
+      "efecto_en_recuento": "calculada por una relacion del modelo: darla como dato la sobreespecificaria en esta combinacion",
+      "simbolo": "F",
+      "magnitud": "flujo_molar",
+      "unidad_interna": "mol/s",
+      "familia": "materia",
+      "bloque_ids": [
+        "out",
+        "cv2"
+      ],
+      "conexion_ids": [
+        "c4"
+      ],
+      "compartida": false,
+      "clase": "algebraica",
+      "funcion": "calculada",
+      "puede_especificarse": false,
+      "puede_calcularse": true,
+      "motivo_limitacion": "la determina cv2:cierre_salida",
+      "provisional": false
+    },
+    {
+      "id": "out.x0",
+      "nombre": "Fraccion molar · salida out",
+      "papel_seleccionado": "calculada",
+      "ruta": {
+        "campo": "especificaciones",
+        "clave": {
+          "bloque_id": "out",
+          "variable": "x0"
+        },
+        "indice": null
+      },
+      "efecto_en_recuento": "calculada por una relacion del modelo: darla como dato la sobreespecificaria en esta combinacion",
+      "simbolo": "x",
+      "magnitud": "fraccion_molar",
+      "unidad_interna": "mol/mol",
+      "familia": "materia",
+      "bloque_ids": [
+        "out",
+        "cv2"
+      ],
+      "conexion_ids": [
+        "c4"
+      ],
+      "compartida": false,
+      "clase": "algebraica",
+      "funcion": "calculada",
+      "puede_especificarse": false,
+      "puede_calcularse": true,
+      "motivo_limitacion": "la determina cv2:mezcla_perfecta_0",
+      "provisional": false
+    },
+    {
+      "id": "out.x1",
+      "nombre": "Fraccion molar · salida out",
+      "papel_seleccionado": "calculada",
+      "ruta": {
+        "campo": "especificaciones",
+        "clave": {
+          "bloque_id": "out",
+          "variable": "x1"
+        },
+        "indice": null
+      },
+      "efecto_en_recuento": "calculada por una relacion del modelo: darla como dato la sobreespecificaria en esta combinacion",
+      "simbolo": "x",
+      "magnitud": "fraccion_molar",
+      "unidad_interna": "mol/mol",
+      "familia": "materia",
+      "bloque_ids": [
+        "out",
+        "cv2"
+      ],
+      "conexion_ids": [
+        "c4"
+      ],
+      "compartida": false,
+      "clase": "algebraica",
+      "funcion": "calculada",
+      "puede_especificarse": false,
+      "puede_calcularse": true,
+      "motivo_limitacion": "la determina cv2:mezcla_perfecta_1",
+      "provisional": false
+    },
+    {
+      "id": "cv1.n0",
+      "nombre": "Inventario · recipiente cv1",
+      "papel_seleccionado": "estado",
+      "ruta": {
+        "campo": "estudio.condiciones_iniciales",
+        "clave": {
+          "bloque_id": "cv1",
+          "componente": "benzene",
+          "magnitud": "n"
+        },
+        "indice": 0
+      },
+      "efecto_en_recuento": "estado: lo determina su ecuacion diferencial; en temporal su valor inicial es obligatorio y no cuenta como especificacion",
+      "simbolo": "n",
+      "magnitud": "cantidad_sustancia",
+      "unidad_interna": "mol",
+      "familia": "materia",
+      "bloque_ids": [
+        "cv1"
+      ],
+      "conexion_ids": [],
+      "compartida": false,
+      "clase": "diferencial",
+      "funcion": "estado",
+      "puede_especificarse": false,
+      "puede_calcularse": true,
+      "motivo_limitacion": "estado: su valor inicial va en condiciones_iniciales",
+      "provisional": false
+    },
+    {
+      "id": "cv1.n1",
+      "nombre": "Inventario · recipiente cv1",
+      "papel_seleccionado": "estado",
+      "ruta": {
+        "campo": "estudio.condiciones_iniciales",
+        "clave": {
+          "bloque_id": "cv1",
+          "componente": "toluene",
+          "magnitud": "n"
+        },
+        "indice": 1
+      },
+      "efecto_en_recuento": "estado: lo determina su ecuacion diferencial; en temporal su valor inicial es obligatorio y no cuenta como especificacion",
+      "simbolo": "n",
+      "magnitud": "cantidad_sustancia",
+      "unidad_interna": "mol",
+      "familia": "materia",
+      "bloque_ids": [
+        "cv1"
+      ],
+      "conexion_ids": [],
+      "compartida": false,
+      "clase": "diferencial",
+      "funcion": "estado",
+      "puede_especificarse": false,
+      "puede_calcularse": true,
+      "motivo_limitacion": "estado: su valor inicial va en condiciones_iniciales",
+      "provisional": false
+    },
+    {
+      "id": "cv1.N",
+      "nombre": "Inventario total · recipiente cv1",
+      "papel_seleccionado": "calculada",
+      "ruta": {
+        "campo": "especificaciones",
+        "clave": {
+          "bloque_id": "cv1",
+          "variable": "N"
+        },
+        "indice": null
+      },
+      "efecto_en_recuento": "calculada por una relacion del modelo: darla como dato la sobreespecificaria en esta combinacion",
+      "simbolo": "N",
+      "magnitud": "cantidad_sustancia",
+      "unidad_interna": "mol",
+      "familia": "materia",
+      "bloque_ids": [
+        "cv1"
+      ],
+      "conexion_ids": [],
+      "compartida": false,
+      "clase": "algebraica",
+      "funcion": "calculada",
+      "puede_especificarse": false,
+      "puede_calcularse": true,
+      "motivo_limitacion": "la determina cv1:inventario_total",
+      "provisional": false
+    },
+    {
+      "id": "cv1.k_salida",
+      "nombre": "Constante de salida · recipiente cv1",
+      "papel_seleccionado": "parametro",
+      "ruta": {
+        "campo": "almacenamiento",
+        "clave": {
+          "bloque_id": "cv1",
+          "parametro": "k_salida"
+        },
+        "indice": 0
+      },
+      "efecto_en_recuento": "dato: fija la variable; es una especificacion que el recuento cuenta (resta un grado de libertad)",
+      "simbolo": "k",
+      "magnitud": "constante_salida",
+      "unidad_interna": "1/s",
+      "familia": "materia",
+      "bloque_ids": [
+        "cv1"
+      ],
+      "conexion_ids": [],
+      "compartida": false,
+      "clase": "parametro",
+      "funcion": "parametro",
+      "puede_especificarse": true,
+      "puede_calcularse": false,
+      "motivo_limitacion": "parametro declarado; calcularlo seria un problema inverso",
+      "provisional": false
+    },
+    {
+      "id": "cv2.n0",
+      "nombre": "Inventario · recipiente cv2",
+      "papel_seleccionado": "estado",
+      "ruta": {
+        "campo": "estudio.condiciones_iniciales",
+        "clave": {
+          "bloque_id": "cv2",
+          "componente": "benzene",
+          "magnitud": "n"
+        },
+        "indice": 2
+      },
+      "efecto_en_recuento": "estado: lo determina su ecuacion diferencial; en temporal su valor inicial es obligatorio y no cuenta como especificacion",
+      "simbolo": "n",
+      "magnitud": "cantidad_sustancia",
+      "unidad_interna": "mol",
+      "familia": "materia",
+      "bloque_ids": [
+        "cv2"
+      ],
+      "conexion_ids": [],
+      "compartida": false,
+      "clase": "diferencial",
+      "funcion": "estado",
+      "puede_especificarse": false,
+      "puede_calcularse": true,
+      "motivo_limitacion": "estado: su valor inicial va en condiciones_iniciales",
+      "provisional": false
+    },
+    {
+      "id": "cv2.n1",
+      "nombre": "Inventario · recipiente cv2",
+      "papel_seleccionado": "estado",
+      "ruta": {
+        "campo": "estudio.condiciones_iniciales",
+        "clave": {
+          "bloque_id": "cv2",
+          "componente": "toluene",
+          "magnitud": "n"
+        },
+        "indice": 3
+      },
+      "efecto_en_recuento": "estado: lo determina su ecuacion diferencial; en temporal su valor inicial es obligatorio y no cuenta como especificacion",
+      "simbolo": "n",
+      "magnitud": "cantidad_sustancia",
+      "unidad_interna": "mol",
+      "familia": "materia",
+      "bloque_ids": [
+        "cv2"
+      ],
+      "conexion_ids": [],
+      "compartida": false,
+      "clase": "diferencial",
+      "funcion": "estado",
+      "puede_especificarse": false,
+      "puede_calcularse": true,
+      "motivo_limitacion": "estado: su valor inicial va en condiciones_iniciales",
+      "provisional": false
+    },
+    {
+      "id": "cv2.N",
+      "nombre": "Inventario total · recipiente cv2",
+      "papel_seleccionado": "calculada",
+      "ruta": {
+        "campo": "especificaciones",
+        "clave": {
+          "bloque_id": "cv2",
+          "variable": "N"
+        },
+        "indice": null
+      },
+      "efecto_en_recuento": "calculada por una relacion del modelo: darla como dato la sobreespecificaria en esta combinacion",
+      "simbolo": "N",
+      "magnitud": "cantidad_sustancia",
+      "unidad_interna": "mol",
+      "familia": "materia",
+      "bloque_ids": [
+        "cv2"
+      ],
+      "conexion_ids": [],
+      "compartida": false,
+      "clase": "algebraica",
+      "funcion": "calculada",
+      "puede_especificarse": false,
+      "puede_calcularse": true,
+      "motivo_limitacion": "la determina cv2:inventario_total",
+      "provisional": false
+    },
+    {
+      "id": "cv2.k_salida",
+      "nombre": "Constante de salida · recipiente cv2",
+      "papel_seleccionado": "parametro",
+      "ruta": {
+        "campo": "almacenamiento",
+        "clave": {
+          "bloque_id": "cv2",
+          "parametro": "k_salida"
+        },
+        "indice": 1
+      },
+      "efecto_en_recuento": "dato: fija la variable; es una especificacion que el recuento cuenta (resta un grado de libertad)",
+      "simbolo": "k",
+      "magnitud": "constante_salida",
+      "unidad_interna": "1/s",
+      "familia": "materia",
+      "bloque_ids": [
+        "cv2"
+      ],
+      "conexion_ids": [],
+      "compartida": false,
+      "clase": "parametro",
+      "funcion": "parametro",
+      "puede_especificarse": true,
+      "puede_calcularse": false,
+      "motivo_limitacion": "parametro declarado; calcularlo seria un problema inverso",
+      "provisional": false
+    }
+  ],
+  "recuento": {
+    "version": 1,
+    "estado_completitud": "listo",
+    "puede_resolver": true,
+    "motivo": "el analisis no encuentra nada que falte ni sobre",
+    "origen_analisis": "estructural",
+    "ambito": "modelo ensamblado: incognitas = variables diferenciales y algebraicas (sin entradas ni parametros)",
+    "advertencia": "GL = 0 no prueba existencia, consistencia ni unicidad; un rango numerico local tampoco. El estacionario lineal del balance general tiene un rango NUMERICO con tolerancia, global para ese sistema lineal (§25).",
+    "indicador": {
+      "variables": 12,
+      "ecuaciones_fisicas_independientes": 12,
+      "datos_definidos": 8,
+      "especificaciones_independientes": 2,
+      "especificaciones_faltantes": 0,
+      "faltantes_es_cota_inferior": false,
+      "motivos_null": {},
+      "definiciones": {
+        "variables": "incognitas del problema en el 'ambito' (cada corriente compartida una vez)",
+        "ecuaciones_fisicas_independientes": "balances y relaciones constitutivas que cuentan; NO las verificaciones globales ni las derivadas de restricciones",
+        "datos_definidos": "cantidades declaradas, validas y USADAS por el problema: especificaciones, parametros e iniciales",
+        "especificaciones_independientes": "datos que aportan una ecuacion independiente",
+        "especificaciones_faltantes": "datos independientes que faltan para cerrar el problema (rango_numerico: GL reales; estructural: uno por dato requerido ausente)"
+      }
+    },
+    "desglose": {
+      "especificaciones": {
+        "declaradas": [
+          {
+            "variable_id": "in.F",
+            "funcion": "especificacion",
+            "codigo": null,
+            "ruta": {
+              "campo": "especificaciones",
+              "clave": {
+                "bloque_id": "in",
+                "variable": "F"
+              },
+              "indice": 0
+            },
+            "bloque_ids": [
+              "in"
+            ],
+            "conexion_ids": [
+              "c1"
+            ]
+          },
+          {
+            "variable_id": "in.x0",
+            "funcion": "especificacion",
+            "codigo": null,
+            "ruta": {
+              "campo": "especificaciones",
+              "clave": {
+                "bloque_id": "in",
+                "variable": "x0"
+              },
+              "indice": 1
+            },
+            "bloque_ids": [
+              "in"
+            ],
+            "conexion_ids": [
+              "c1"
+            ]
+          }
+        ],
+        "usadas": [
+          {
+            "variable_id": "in.F",
+            "funcion": "especificacion",
+            "codigo": null,
+            "ruta": {
+              "campo": "especificaciones",
+              "clave": {
+                "bloque_id": "in",
+                "variable": "F"
+              },
+              "indice": 0
+            },
+            "bloque_ids": [
+              "in"
+            ],
+            "conexion_ids": [
+              "c1"
+            ]
+          },
+          {
+            "variable_id": "in.x0",
+            "funcion": "especificacion",
+            "codigo": null,
+            "ruta": {
+              "campo": "especificaciones",
+              "clave": {
+                "bloque_id": "in",
+                "variable": "x0"
+              },
+              "indice": 1
+            },
+            "bloque_ids": [
+              "in"
+            ],
+            "conexion_ids": [
+              "c1"
+            ]
+          }
+        ],
+        "no_usadas": [],
+        "invalidas": [],
+        "redundantes": [],
+        "en_conflicto": []
+      },
+      "parametros": {
+        "requeridos": [
+          {
+            "variable_id": "cv1.k_salida",
+            "funcion": "parametro",
+            "codigo": null,
+            "ruta": {
+              "campo": "almacenamiento",
+              "clave": {
+                "bloque_id": "cv1",
+                "parametro": "k_salida"
+              },
+              "indice": 0
+            },
+            "bloque_ids": [
+              "cv1"
+            ],
+            "conexion_ids": []
+          },
+          {
+            "variable_id": "cv2.k_salida",
+            "funcion": "parametro",
+            "codigo": null,
+            "ruta": {
+              "campo": "almacenamiento",
+              "clave": {
+                "bloque_id": "cv2",
+                "parametro": "k_salida"
+              },
+              "indice": 1
+            },
+            "bloque_ids": [
+              "cv2"
+            ],
+            "conexion_ids": []
+          }
+        ],
+        "definidos": [
+          {
+            "variable_id": "cv1.k_salida",
+            "funcion": "parametro",
+            "codigo": null,
+            "ruta": {
+              "campo": "almacenamiento",
+              "clave": {
+                "bloque_id": "cv1",
+                "parametro": "k_salida"
+              },
+              "indice": 0
+            },
+            "bloque_ids": [
+              "cv1"
+            ],
+            "conexion_ids": []
+          },
+          {
+            "variable_id": "cv2.k_salida",
+            "funcion": "parametro",
+            "codigo": null,
+            "ruta": {
+              "campo": "almacenamiento",
+              "clave": {
+                "bloque_id": "cv2",
+                "parametro": "k_salida"
+              },
+              "indice": 1
+            },
+            "bloque_ids": [
+              "cv2"
+            ],
+            "conexion_ids": []
+          }
+        ],
+        "faltantes": []
+      },
+      "iniciales": {
+        "aplica": true,
+        "requeridas": [
+          {
+            "variable_id": "cv1.n0",
+            "funcion": "inicial",
+            "codigo": null,
+            "ruta": {
+              "campo": "estudio.condiciones_iniciales",
+              "clave": {
+                "bloque_id": "cv1",
+                "componente": "benzene",
+                "magnitud": "n"
+              },
+              "indice": 0
+            },
+            "bloque_ids": [
+              "cv1"
+            ],
+            "conexion_ids": []
+          },
+          {
+            "variable_id": "cv1.n1",
+            "funcion": "inicial",
+            "codigo": null,
+            "ruta": {
+              "campo": "estudio.condiciones_iniciales",
+              "clave": {
+                "bloque_id": "cv1",
+                "componente": "toluene",
+                "magnitud": "n"
+              },
+              "indice": 1
+            },
+            "bloque_ids": [
+              "cv1"
+            ],
+            "conexion_ids": []
+          },
+          {
+            "variable_id": "cv2.n0",
+            "funcion": "inicial",
+            "codigo": null,
+            "ruta": {
+              "campo": "estudio.condiciones_iniciales",
+              "clave": {
+                "bloque_id": "cv2",
+                "componente": "benzene",
+                "magnitud": "n"
+              },
+              "indice": 2
+            },
+            "bloque_ids": [
+              "cv2"
+            ],
+            "conexion_ids": []
+          },
+          {
+            "variable_id": "cv2.n1",
+            "funcion": "inicial",
+            "codigo": null,
+            "ruta": {
+              "campo": "estudio.condiciones_iniciales",
+              "clave": {
+                "bloque_id": "cv2",
+                "componente": "toluene",
+                "magnitud": "n"
+              },
+              "indice": 3
+            },
+            "bloque_ids": [
+              "cv2"
+            ],
+            "conexion_ids": []
+          }
+        ],
+        "definidas": [
+          {
+            "variable_id": "cv1.n0",
+            "funcion": "inicial",
+            "codigo": null,
+            "ruta": {
+              "campo": "estudio.condiciones_iniciales",
+              "clave": {
+                "bloque_id": "cv1",
+                "componente": "benzene",
+                "magnitud": "n"
+              },
+              "indice": 0
+            },
+            "bloque_ids": [
+              "cv1"
+            ],
+            "conexion_ids": []
+          },
+          {
+            "variable_id": "cv1.n1",
+            "funcion": "inicial",
+            "codigo": null,
+            "ruta": {
+              "campo": "estudio.condiciones_iniciales",
+              "clave": {
+                "bloque_id": "cv1",
+                "componente": "toluene",
+                "magnitud": "n"
+              },
+              "indice": 1
+            },
+            "bloque_ids": [
+              "cv1"
+            ],
+            "conexion_ids": []
+          },
+          {
+            "variable_id": "cv2.n0",
+            "funcion": "inicial",
+            "codigo": null,
+            "ruta": {
+              "campo": "estudio.condiciones_iniciales",
+              "clave": {
+                "bloque_id": "cv2",
+                "componente": "benzene",
+                "magnitud": "n"
+              },
+              "indice": 2
+            },
+            "bloque_ids": [
+              "cv2"
+            ],
+            "conexion_ids": []
+          },
+          {
+            "variable_id": "cv2.n1",
+            "funcion": "inicial",
+            "codigo": null,
+            "ruta": {
+              "campo": "estudio.condiciones_iniciales",
+              "clave": {
+                "bloque_id": "cv2",
+                "componente": "toluene",
+                "magnitud": "n"
+              },
+              "indice": 3
+            },
+            "bloque_ids": [
+              "cv2"
+            ],
+            "conexion_ids": []
+          }
+        ],
+        "faltantes": [],
+        "inconsistentes": [],
+        "invalidas": []
+      },
+      "restricciones": [],
+      "ecuaciones": {
+        "balances": {
+          "total": 4,
+          "cuentan": 4
+        },
+        "constitutivas": {
+          "total": 8,
+          "cuentan": 8
+        },
+        "verificaciones": {
+          "total": 2,
+          "cuentan": 0
+        }
+      },
+      "datos_invalidos": []
+    },
+    "referencias": {
+      "pendientes": [],
+      "conflictos": [],
+      "redundancias": []
+    }
+  },
+  "fronteras_materiales": [
+    {
+      "bloque_id": "cv1",
+      "intencion_solicitada": null,
+      "fronteras_conectadas": {
+        "entrada": [
+          "c1"
+        ],
+        "salida": [
+          "c2"
+        ]
+      },
+      "fronteras_pendientes": [],
+      "contradicciones": [],
+      "interpretacion_efectiva": "abierto (inferido: tiene corrientes de materia)",
+      "alcance_cerrado": "cerrado = sin corrientes de materia con el exterior del modelo (entradas, salidas o corrientes); una interfaz de materia ENTRE volumenes del modelo no lo abre; no implica adiabatico ni rigido"
+    },
+    {
+      "bloque_id": "cv2",
+      "intencion_solicitada": null,
+      "fronteras_conectadas": {
+        "entrada": [
+          "c3"
+        ],
+        "salida": [
+          "c4"
+        ]
+      },
+      "fronteras_pendientes": [],
+      "contradicciones": [],
+      "interpretacion_efectiva": "abierto (inferido: tiene corrientes de materia)",
+      "alcance_cerrado": "cerrado = sin corrientes de materia con el exterior del modelo (entradas, salidas o corrientes); una interfaz de materia ENTRE volumenes del modelo no lo abre; no implica adiabatico ni rigido"
+    }
+  ],
+  "dominio_trayectoria": {
+    "desigualdades": [
+      {
+        "id": "cv1.n0>=0",
+        "expresion": "n_{benzene} >= 0",
+        "pieza": "cv1",
+        "evento_entre_muestras": "dominio (inventario)",
+        "minimo": 100.0,
+        "tolerancia": 4.990078847080696e-06,
+        "muestras_fuera": 0,
+        "primer_instante_s": null
+      },
+      {
+        "id": "cv1.n1>=0",
+        "expresion": "n_{toluene} >= 0",
+        "pieza": "cv1",
+        "evento_entre_muestras": "dominio (inventario)",
+        "minimo": 250.00030721061827,
+        "tolerancia": 4.990078847080696e-06,
+        "muestras_fuera": 0,
+        "primer_instante_s": null
+      },
+      {
+        "id": "cv2.n0>=0",
+        "expresion": "n_{benzene} >= 0",
+        "pieza": "cv2",
+        "evento_entre_muestras": "dominio (inventario)",
+        "minimo": 0.0,
+        "tolerancia": 4.990078847080696e-06,
+        "muestras_fuera": 0,
+        "primer_instante_s": null
+      },
+      {
+        "id": "cv2.n1>=0",
+        "expresion": "n_{toluene} >= 0",
+        "pieza": "cv2",
+        "evento_entre_muestras": "dominio (inventario)",
+        "minimo": 0.0,
+        "tolerancia": 4.990078847080696e-06,
+        "muestras_fuera": 0,
+        "primer_instante_s": null
+      },
+      {
+        "id": "in.F>=0",
+        "expresion": "F >= 0",
+        "pieza": "in",
+        "evento_entre_muestras": "no hace falta: F >= 0 por construccion (dato, F_ent o k N con N >= 0)",
+        "minimo": 10.0,
+        "tolerancia": 1e-11,
+        "muestras_fuera": 0,
+        "primer_instante_s": null
+      },
+      {
+        "id": "medio.F>=0",
+        "expresion": "F >= 0",
+        "pieza": "medio",
+        "evento_entre_muestras": "no hace falta: F >= 0 por construccion (dato, F_ent o k N con N >= 0)",
+        "minimo": 8.0,
+        "tolerancia": 1e-11,
+        "muestras_fuera": 0,
+        "primer_instante_s": null
+      },
+      {
+        "id": "out.F>=0",
+        "expresion": "F >= 0",
+        "pieza": "out",
+        "evento_entre_muestras": "no hace falta: F >= 0 por construccion (dato, F_ent o k N con N >= 0)",
+        "minimo": 0.0,
+        "tolerancia": 1e-11,
+        "muestras_fuera": 0,
+        "primer_instante_s": null
+      }
+    ],
+    "muestras": 61,
+    "cumple": true,
+    "alcance": "cada desigualdad, en cada muestra publicada; entre muestras la vigila el evento indicado (cambio de signo localizado por el integrador); al inicio y en cada reinicio por escalon, la comprobacion previa. Una muestra dentro no garantiza por si sola lo que ocurre entre muestras."
+  },
+  "base_materia": {
+    "version": 1,
+    "presentacion": "molar",
+    "estado_interno": "molar",
+    "masas_molares": [
+      {
+        "componente": "benzene",
+        "cas": "71-43-2",
+        "M": 0.07811184,
+        "unidad": "kg/mol",
+        "procedencia": "chemicals.identifiers: MW de benzene (CAS 71-43-2), 78.1118 g/mol"
+      },
+      {
+        "componente": "toluene",
+        "cas": "108-88-3",
+        "M": 0.09213842,
+        "unidad": "kg/mol",
+        "procedencia": "chemicals.identifiers: MW de toluene (CAS 108-88-3), 92.1384 g/mol"
+      }
+    ],
+    "conversiones": [],
+    "relaciones": [
+      "m_i = M_i n_i",
+      "m_dot = F sum_i x_i M_i",
+      "w_i = x_i M_i / sum_j x_j M_j"
+    ],
+    "nota": "La base es una forma de dar y de leer los datos: el modelo y su recuento son los mismos. Las conversiones son dependencias declaradas, no datos independientes."
+  },
+  "cantidades_normalizadas": [
+    {
+      "ruta": "especificaciones[0]",
+      "variable_id": "in.F",
+      "magnitud": "flujo_molar",
+      "declarado": {
+        "valor": 10.0,
+        "unidad": "mol/s"
+      },
+      "normalizado": {
+        "valor": 10.0,
+        "unidad": "mol/s"
+      }
+    },
+    {
+      "ruta": "especificaciones[1]",
+      "variable_id": "in.x0",
+      "magnitud": "fraccion_molar",
+      "declarado": {
+        "valor": 0.5,
+        "unidad": "mol/mol"
+      },
+      "normalizado": {
+        "valor": 0.5,
+        "unidad": "mol/mol"
+      }
+    },
+    {
+      "ruta": "almacenamiento[0].k_salida",
+      "variable_id": null,
+      "magnitud": "constante_salida",
+      "declarado": {
+        "valor": 0.02,
+        "unidad": "1/s"
+      },
+      "normalizado": {
+        "valor": 0.02,
+        "unidad": "1/s"
+      }
+    },
+    {
+      "ruta": "almacenamiento[1].k_salida",
+      "variable_id": null,
+      "magnitud": "constante_salida",
+      "declarado": {
+        "valor": 0.01,
+        "unidad": "1/s"
+      },
+      "normalizado": {
+        "valor": 0.01,
+        "unidad": "1/s"
+      }
+    },
+    {
+      "ruta": "estudio.condiciones_iniciales[0]",
+      "variable_id": null,
+      "magnitud": "cantidad_sustancia",
+      "declarado": {
+        "valor": 100.0,
+        "unidad": "mol"
+      },
+      "normalizado": {
+        "valor": 100.0,
+        "unidad": "mol"
+      }
+    },
+    {
+      "ruta": "estudio.condiciones_iniciales[1]",
+      "variable_id": null,
+      "magnitud": "cantidad_sustancia",
+      "declarado": {
+        "valor": 300.0,
+        "unidad": "mol"
+      },
+      "normalizado": {
+        "valor": 300.0,
+        "unidad": "mol"
+      }
+    },
+    {
+      "ruta": "estudio.condiciones_iniciales[2]",
+      "variable_id": null,
+      "magnitud": "cantidad_sustancia",
+      "declarado": {
+        "valor": 0.0,
+        "unidad": "mol"
+      },
+      "normalizado": {
+        "valor": 0.0,
+        "unidad": "mol"
+      }
+    },
+    {
+      "ruta": "estudio.condiciones_iniciales[3]",
+      "variable_id": null,
+      "magnitud": "cantidad_sustancia",
+      "declarado": {
+        "valor": 0.0,
+        "unidad": "mol"
+      },
+      "normalizado": {
+        "valor": 0.0,
+        "unidad": "mol"
+      }
+    },
+    {
+      "ruta": "estudio.tiempo.final",
+      "variable_id": null,
+      "magnitud": "tiempo",
+      "declarado": {
+        "valor": 600.0,
+        "unidad": "s"
+      },
+      "normalizado": {
+        "valor": 600.0,
+        "unidad": "s"
+      }
+    }
+  ],
+  "pendientes": [],
+  "contradicciones": [],
+  "modelo": {
+    "variables": [
+      {
+        "id": "in.F",
+        "clase": "entrada",
+        "magnitud": "F",
+        "unidad": "mol/s",
+        "bloque_ids": [
+          "in",
+          "cv1"
+        ],
+        "conexion_ids": [
+          "c1"
+        ],
+        "simbolo": "F_{1}",
+        "compartida": false,
+        "valor": 10.0,
+        "determinada_por": null
+      },
+      {
+        "id": "in.x0",
+        "clase": "entrada",
+        "magnitud": "x",
+        "unidad": "mol/mol",
+        "bloque_ids": [
+          "in",
+          "cv1"
+        ],
+        "conexion_ids": [
+          "c1"
+        ],
+        "simbolo": "x_{1,1}",
+        "compartida": false,
+        "valor": 0.5,
+        "determinada_por": null,
+        "componente": "benzene",
+        "procedencia": "especificada; valor base desde t = 0"
+      },
+      {
+        "id": "in.x1",
+        "clase": "entrada",
+        "magnitud": "x",
+        "unidad": "mol/mol",
+        "bloque_ids": [
+          "in",
+          "cv1"
+        ],
+        "conexion_ids": [
+          "c1"
+        ],
+        "simbolo": "x_{2,1}",
+        "compartida": false,
+        "valor": 0.5,
+        "determinada_por": null,
+        "componente": "toluene",
+        "procedencia": "cierre de la composicion; valor base desde t = 0"
+      },
+      {
+        "id": "medio.F",
+        "clase": "algebraica",
+        "magnitud": "F",
+        "unidad": "mol/s",
+        "bloque_ids": [
+          "medio",
+          "cv1",
+          "cv2"
+        ],
+        "conexion_ids": [
+          "c2",
+          "c3"
+        ],
+        "simbolo": "F_{3}",
+        "compartida": true,
+        "valor": null,
+        "determinada_por": "cv1:cierre_salida"
+      },
+      {
+        "id": "medio.x0",
+        "clase": "algebraica",
+        "magnitud": "x",
+        "unidad": "mol/mol",
+        "bloque_ids": [
+          "medio",
+          "cv1",
+          "cv2"
+        ],
+        "conexion_ids": [
+          "c2",
+          "c3"
+        ],
+        "simbolo": "x_{1,3}",
+        "compartida": true,
+        "valor": null,
+        "determinada_por": "cv1:mezcla_perfecta_0",
+        "componente": "benzene",
+        "procedencia": null
+      },
+      {
+        "id": "medio.x1",
+        "clase": "algebraica",
+        "magnitud": "x",
+        "unidad": "mol/mol",
+        "bloque_ids": [
+          "medio",
+          "cv1",
+          "cv2"
+        ],
+        "conexion_ids": [
+          "c2",
+          "c3"
+        ],
+        "simbolo": "x_{2,3}",
+        "compartida": true,
+        "valor": null,
+        "determinada_por": "cv1:mezcla_perfecta_1",
+        "componente": "toluene",
+        "procedencia": null
+      },
+      {
+        "id": "out.F",
+        "clase": "algebraica",
+        "magnitud": "F",
+        "unidad": "mol/s",
+        "bloque_ids": [
+          "out",
+          "cv2"
+        ],
+        "conexion_ids": [
+          "c4"
+        ],
+        "simbolo": "F_{5}",
+        "compartida": false,
+        "valor": null,
+        "determinada_por": "cv2:cierre_salida"
+      },
+      {
+        "id": "out.x0",
+        "clase": "algebraica",
+        "magnitud": "x",
+        "unidad": "mol/mol",
+        "bloque_ids": [
+          "out",
+          "cv2"
+        ],
+        "conexion_ids": [
+          "c4"
+        ],
+        "simbolo": "x_{1,5}",
+        "compartida": false,
+        "valor": null,
+        "determinada_por": "cv2:mezcla_perfecta_0",
+        "componente": "benzene",
+        "procedencia": null
+      },
+      {
+        "id": "out.x1",
+        "clase": "algebraica",
+        "magnitud": "x",
+        "unidad": "mol/mol",
+        "bloque_ids": [
+          "out",
+          "cv2"
+        ],
+        "conexion_ids": [
+          "c4"
+        ],
+        "simbolo": "x_{2,5}",
+        "compartida": false,
+        "valor": null,
+        "determinada_por": "cv2:mezcla_perfecta_1",
+        "componente": "toluene",
+        "procedencia": null
+      },
+      {
+        "id": "cv1.n0",
+        "clase": "diferencial",
+        "magnitud": "n",
+        "unidad": "mol",
+        "bloque_ids": [
+          "cv1"
+        ],
+        "conexion_ids": [],
+        "simbolo": "n_{1,2}",
+        "compartida": false,
+        "valor": null,
+        "determinada_por": "cv1:materia_especie_0",
+        "componente": "benzene"
+      },
+      {
+        "id": "cv1.n1",
+        "clase": "diferencial",
+        "magnitud": "n",
+        "unidad": "mol",
+        "bloque_ids": [
+          "cv1"
+        ],
+        "conexion_ids": [],
+        "simbolo": "n_{2,2}",
+        "compartida": false,
+        "valor": null,
+        "determinada_por": "cv1:materia_especie_1",
+        "componente": "toluene"
+      },
+      {
+        "id": "cv1.N",
+        "clase": "algebraica",
+        "magnitud": "N",
+        "unidad": "mol",
+        "bloque_ids": [
+          "cv1"
+        ],
+        "conexion_ids": [],
+        "simbolo": "N_{2}",
+        "compartida": false,
+        "valor": null,
+        "determinada_por": "cv1:inventario_total"
+      },
+      {
+        "id": "cv1.k_salida",
+        "clase": "parametro",
+        "magnitud": "k",
+        "unidad": "1/s",
+        "bloque_ids": [
+          "cv1"
+        ],
+        "conexion_ids": [],
+        "simbolo": "k_{2}",
+        "compartida": false,
+        "valor": 0.02,
+        "determinada_por": null
+      },
+      {
+        "id": "cv2.n0",
+        "clase": "diferencial",
+        "magnitud": "n",
+        "unidad": "mol",
+        "bloque_ids": [
+          "cv2"
+        ],
+        "conexion_ids": [],
+        "simbolo": "n_{1,4}",
+        "compartida": false,
+        "valor": null,
+        "determinada_por": "cv2:materia_especie_0",
+        "componente": "benzene"
+      },
+      {
+        "id": "cv2.n1",
+        "clase": "diferencial",
+        "magnitud": "n",
+        "unidad": "mol",
+        "bloque_ids": [
+          "cv2"
+        ],
+        "conexion_ids": [],
+        "simbolo": "n_{2,4}",
+        "compartida": false,
+        "valor": null,
+        "determinada_por": "cv2:materia_especie_1",
+        "componente": "toluene"
+      },
+      {
+        "id": "cv2.N",
+        "clase": "algebraica",
+        "magnitud": "N",
+        "unidad": "mol",
+        "bloque_ids": [
+          "cv2"
+        ],
+        "conexion_ids": [],
+        "simbolo": "N_{4}",
+        "compartida": false,
+        "valor": null,
+        "determinada_por": "cv2:inventario_total"
+      },
+      {
+        "id": "cv2.k_salida",
+        "clase": "parametro",
+        "magnitud": "k",
+        "unidad": "1/s",
+        "bloque_ids": [
+          "cv2"
+        ],
+        "conexion_ids": [],
+        "simbolo": "k_{4}",
+        "compartida": false,
+        "valor": 0.01,
+        "determinada_por": null
+      }
+    ],
+    "ecuaciones": [
+      {
+        "id": "cv1:materia_especie_0",
+        "tipo": "balance",
+        "clase": "diferencial",
+        "titulo": "Materia de benzene · Primer volumen",
+        "latex_general": "\\frac{dn_{i}}{dt} = F_{ent} x_{i,ent} - F_{sal} x_{i,sal} + G_i - C_i",
+        "latex_activo": "\\frac{dn_{1,2}}{dt} = F_{1} x_{1,1} - F_{3} x_{1,3}",
+        "terminos_descartados": [
+          {
+            "termino": "generacion_y_consumo",
+            "latex": "G_i - C_i",
+            "supuesto": "sinReaccion",
+            "motivo": "Ninguna reaccion declarada en este volumen."
+          }
+        ],
+        "origen_bloques": [
+          "cv1",
+          "in",
+          "medio"
+        ],
+        "origen_conexiones": [
+          "c1",
+          "c2"
+        ],
+        "variables": [
+          "cv1.n0",
+          "in.F",
+          "in.x0",
+          "medio.F",
+          "medio.x0"
+        ],
+        "cuenta_como_ecuacion": true,
+        "ejecutada": true,
+        "residuo": null,
+        "nota": null,
+        "acumulacion": [
+          "cv1.n0"
+        ],
+        "terminos": [
+          {
+            "rol": "entrada",
+            "signo": 1,
+            "latex": "F_{1} x_{1,1}",
+            "variables": [
+              "in.F",
+              "in.x0"
+            ],
+            "bloque_id": "in",
+            "conexion_id": "c1",
+            "coeficiente": null,
+            "clave": "corriente:in",
+            "nota": null
+          },
+          {
+            "rol": "salida",
+            "signo": -1,
+            "latex": "F_{3} x_{1,3}",
+            "variables": [
+              "medio.F",
+              "medio.x0"
+            ],
+            "bloque_id": "medio",
+            "conexion_id": "c2",
+            "coeficiente": null,
+            "clave": "corriente:medio",
+            "nota": null
+          }
+        ],
+        "residuo_terminos": 8.881784197001253e-17,
+        "dimensional": {
+          "estado": "compatible",
+          "motivo": null,
+          "terminos_en_conflicto": [],
+          "fuente": "terminos tipados del ensamblaje (los mismos que se evaluan)",
+          "lado_izquierdo": {
+            "forma": "derivada temporal",
+            "variables": [
+              "cv1.n0"
+            ],
+            "unidad": "mol/s",
+            "latex_unidad": "\\frac{\\mathrm{mol}}{\\mathrm{s}}",
+            "dimension": "[substance] / [time]"
+          },
+          "terminos": [
+            {
+              "indice": 0,
+              "rol": "entrada",
+              "latex": "F_{1} x_{1,1}",
+              "bloque_id": "in",
+              "conexion_id": "c1",
+              "clave": "corriente:in",
+              "factores": [
+                {
+                  "variable_id": "in.F",
+                  "unidad": "mol/s",
+                  "exponente": 1,
+                  "naturaleza": null
+                },
+                {
+                  "variable_id": "in.x0",
+                  "unidad": "mol/mol",
+                  "exponente": 1,
+                  "naturaleza": null
+                }
+              ],
+              "unidad": "mol/s",
+              "latex_unidad": "\\frac{\\mathrm{mol}}{\\mathrm{s}}",
+              "dimension": "[substance] / [time]",
+              "estado": "compatible"
+            },
+            {
+              "indice": 1,
+              "rol": "salida",
+              "latex": "F_{3} x_{1,3}",
+              "bloque_id": "medio",
+              "conexion_id": "c2",
+              "clave": "corriente:medio",
+              "factores": [
+                {
+                  "variable_id": "medio.F",
+                  "unidad": "mol/s",
+                  "exponente": 1,
+                  "naturaleza": null
+                },
+                {
+                  "variable_id": "medio.x0",
+                  "unidad": "mol/mol",
+                  "exponente": 1,
+                  "naturaleza": null
+                }
+              ],
+              "unidad": "mol/s",
+              "latex_unidad": "\\frac{\\mathrm{mol}}{\\mathrm{s}}",
+              "dimension": "[substance] / [time]",
+              "estado": "compatible"
+            }
+          ],
+          "unidad_ecuacion": "mol/s",
+          "latex_unidad": "\\frac{\\mathrm{mol}}{\\mathrm{s}}"
+        }
+      },
+      {
+        "id": "cv1:materia_especie_1",
+        "tipo": "balance",
+        "clase": "diferencial",
+        "titulo": "Materia de toluene · Primer volumen",
+        "latex_general": "\\frac{dn_{i}}{dt} = F_{ent} x_{i,ent} - F_{sal} x_{i,sal} + G_i - C_i",
+        "latex_activo": "\\frac{dn_{2,2}}{dt} = F_{1} x_{2,1} - F_{3} x_{2,3}",
+        "terminos_descartados": [
+          {
+            "termino": "generacion_y_consumo",
+            "latex": "G_i - C_i",
+            "supuesto": "sinReaccion",
+            "motivo": "Ninguna reaccion declarada en este volumen."
+          }
+        ],
+        "origen_bloques": [
+          "cv1",
+          "in",
+          "medio"
+        ],
+        "origen_conexiones": [
+          "c1",
+          "c2"
+        ],
+        "variables": [
+          "cv1.n1",
+          "in.F",
+          "in.x1",
+          "medio.F",
+          "medio.x1"
+        ],
+        "cuenta_como_ecuacion": true,
+        "ejecutada": true,
+        "residuo": null,
+        "nota": null,
+        "acumulacion": [
+          "cv1.n1"
+        ],
+        "terminos": [
+          {
+            "rol": "entrada",
+            "signo": 1,
+            "latex": "F_{1} x_{2,1}",
+            "variables": [
+              "in.F",
+              "in.x1"
+            ],
+            "bloque_id": "in",
+            "conexion_id": "c1",
+            "coeficiente": null,
+            "clave": "corriente:in",
+            "nota": null
+          },
+          {
+            "rol": "salida",
+            "signo": -1,
+            "latex": "F_{3} x_{2,3}",
+            "variables": [
+              "medio.F",
+              "medio.x1"
+            ],
+            "bloque_id": "medio",
+            "conexion_id": "c2",
+            "coeficiente": null,
+            "clave": "corriente:medio",
+            "nota": null
+          }
+        ],
+        "residuo_terminos": 1.776352861974139e-16,
+        "dimensional": {
+          "estado": "compatible",
+          "motivo": null,
+          "terminos_en_conflicto": [],
+          "fuente": "terminos tipados del ensamblaje (los mismos que se evaluan)",
+          "lado_izquierdo": {
+            "forma": "derivada temporal",
+            "variables": [
+              "cv1.n1"
+            ],
+            "unidad": "mol/s",
+            "latex_unidad": "\\frac{\\mathrm{mol}}{\\mathrm{s}}",
+            "dimension": "[substance] / [time]"
+          },
+          "terminos": [
+            {
+              "indice": 0,
+              "rol": "entrada",
+              "latex": "F_{1} x_{2,1}",
+              "bloque_id": "in",
+              "conexion_id": "c1",
+              "clave": "corriente:in",
+              "factores": [
+                {
+                  "variable_id": "in.F",
+                  "unidad": "mol/s",
+                  "exponente": 1,
+                  "naturaleza": null
+                },
+                {
+                  "variable_id": "in.x1",
+                  "unidad": "mol/mol",
+                  "exponente": 1,
+                  "naturaleza": null
+                }
+              ],
+              "unidad": "mol/s",
+              "latex_unidad": "\\frac{\\mathrm{mol}}{\\mathrm{s}}",
+              "dimension": "[substance] / [time]",
+              "estado": "compatible"
+            },
+            {
+              "indice": 1,
+              "rol": "salida",
+              "latex": "F_{3} x_{2,3}",
+              "bloque_id": "medio",
+              "conexion_id": "c2",
+              "clave": "corriente:medio",
+              "factores": [
+                {
+                  "variable_id": "medio.F",
+                  "unidad": "mol/s",
+                  "exponente": 1,
+                  "naturaleza": null
+                },
+                {
+                  "variable_id": "medio.x1",
+                  "unidad": "mol/mol",
+                  "exponente": 1,
+                  "naturaleza": null
+                }
+              ],
+              "unidad": "mol/s",
+              "latex_unidad": "\\frac{\\mathrm{mol}}{\\mathrm{s}}",
+              "dimension": "[substance] / [time]",
+              "estado": "compatible"
+            }
+          ],
+          "unidad_ecuacion": "mol/s",
+          "latex_unidad": "\\frac{\\mathrm{mol}}{\\mathrm{s}}"
+        }
+      },
+      {
+        "id": "cv1:mezcla_perfecta_0",
+        "tipo": "constitutiva",
+        "clase": "algebraica",
+        "titulo": "Mezcla perfecta, benzene · Primer volumen",
+        "latex_general": "x_{i,sal} = n_i / N",
+        "latex_activo": "x_{1,3} = n_{1,2} / N_{2}",
+        "terminos_descartados": [],
+        "origen_bloques": [
+          "cv1",
+          "medio"
+        ],
+        "origen_conexiones": [
+          "c2"
+        ],
+        "variables": [
+          "medio.x0",
+          "cv1.n0",
+          "cv1.N"
+        ],
+        "cuenta_como_ecuacion": true,
+        "ejecutada": true,
+        "residuo": null,
+        "nota": "Cierre de mezcla perfecta: la corriente de salida tiene la composicion del inventario. Es un supuesto, no una identidad.",
+        "acumulacion": null,
+        "terminos": null,
+        "residuo_terminos": null,
+        "dimensional": {
+          "estado": "compatible",
+          "motivo": null,
+          "terminos_en_conflicto": [],
+          "fuente": "forma tipada de la relacion, construida con la ecuacion",
+          "lado_izquierdo": {
+            "forma": "expresion",
+            "factores": [
+              {
+                "variable_id": "medio.x0",
+                "unidad": "mol/mol",
+                "exponente": 1,
+                "naturaleza": null
+              }
+            ],
+            "unidad": "1",
+            "latex_unidad": "1",
+            "dimension": "dimensionless"
+          },
+          "terminos": [
+            {
+              "indice": 0,
+              "rol": null,
+              "latex": null,
+              "bloque_id": null,
+              "conexion_id": null,
+              "clave": null,
+              "factores": [
+                {
+                  "variable_id": "cv1.n0",
+                  "unidad": "mol",
+                  "exponente": 1,
+                  "naturaleza": null
+                },
+                {
+                  "variable_id": "cv1.N",
+                  "unidad": "mol",
+                  "exponente": -1,
+                  "naturaleza": null
+                }
+              ],
+              "unidad": "1",
+              "latex_unidad": "1",
+              "dimension": "dimensionless",
+              "estado": "compatible"
+            }
+          ],
+          "unidad_ecuacion": "1",
+          "latex_unidad": "1"
+        }
+      },
+      {
+        "id": "cv1:mezcla_perfecta_1",
+        "tipo": "constitutiva",
+        "clase": "algebraica",
+        "titulo": "Mezcla perfecta, toluene · Primer volumen",
+        "latex_general": "x_{i,sal} = n_i / N",
+        "latex_activo": "x_{2,3} = n_{2,2} / N_{2}",
+        "terminos_descartados": [],
+        "origen_bloques": [
+          "cv1",
+          "medio"
+        ],
+        "origen_conexiones": [
+          "c2"
+        ],
+        "variables": [
+          "medio.x1",
+          "cv1.n1",
+          "cv1.N"
+        ],
+        "cuenta_como_ecuacion": true,
+        "ejecutada": true,
+        "residuo": null,
+        "nota": "Cierre de mezcla perfecta: la corriente de salida tiene la composicion del inventario. Es un supuesto, no una identidad.",
+        "acumulacion": null,
+        "terminos": null,
+        "residuo_terminos": null,
+        "dimensional": {
+          "estado": "compatible",
+          "motivo": null,
+          "terminos_en_conflicto": [],
+          "fuente": "forma tipada de la relacion, construida con la ecuacion",
+          "lado_izquierdo": {
+            "forma": "expresion",
+            "factores": [
+              {
+                "variable_id": "medio.x1",
+                "unidad": "mol/mol",
+                "exponente": 1,
+                "naturaleza": null
+              }
+            ],
+            "unidad": "1",
+            "latex_unidad": "1",
+            "dimension": "dimensionless"
+          },
+          "terminos": [
+            {
+              "indice": 0,
+              "rol": null,
+              "latex": null,
+              "bloque_id": null,
+              "conexion_id": null,
+              "clave": null,
+              "factores": [
+                {
+                  "variable_id": "cv1.n1",
+                  "unidad": "mol",
+                  "exponente": 1,
+                  "naturaleza": null
+                },
+                {
+                  "variable_id": "cv1.N",
+                  "unidad": "mol",
+                  "exponente": -1,
+                  "naturaleza": null
+                }
+              ],
+              "unidad": "1",
+              "latex_unidad": "1",
+              "dimension": "dimensionless",
+              "estado": "compatible"
+            }
+          ],
+          "unidad_ecuacion": "1",
+          "latex_unidad": "1"
+        }
+      },
+      {
+        "id": "cv1:inventario_total",
+        "tipo": "definicion",
+        "clase": "algebraica",
+        "titulo": "Inventario total · Primer volumen",
+        "latex_general": "N = \\sum_i n_i",
+        "latex_activo": "N_{2} = \\sum_i n_{i,2}",
+        "terminos_descartados": [],
+        "origen_bloques": [
+          "cv1"
+        ],
+        "origen_conexiones": [],
+        "variables": [
+          "cv1.N",
+          "cv1.n0",
+          "cv1.n1"
+        ],
+        "cuenta_como_ecuacion": true,
+        "ejecutada": true,
+        "residuo": null,
+        "nota": null,
+        "acumulacion": null,
+        "terminos": null,
+        "residuo_terminos": null,
+        "dimensional": {
+          "estado": "compatible",
+          "motivo": null,
+          "terminos_en_conflicto": [],
+          "fuente": "forma tipada de la relacion, construida con la ecuacion",
+          "lado_izquierdo": {
+            "forma": "expresion",
+            "factores": [
+              {
+                "variable_id": "cv1.N",
+                "unidad": "mol",
+                "exponente": 1,
+                "naturaleza": null
+              }
+            ],
+            "unidad": "mol",
+            "latex_unidad": "\\mathrm{mol}",
+            "dimension": "[substance]"
+          },
+          "terminos": [
+            {
+              "indice": 0,
+              "rol": null,
+              "latex": null,
+              "bloque_id": null,
+              "conexion_id": null,
+              "clave": null,
+              "factores": [
+                {
+                  "variable_id": "cv1.n0",
+                  "unidad": "mol",
+                  "exponente": 1,
+                  "naturaleza": null
+                }
+              ],
+              "unidad": "mol",
+              "latex_unidad": "\\mathrm{mol}",
+              "dimension": "[substance]",
+              "estado": "compatible"
+            },
+            {
+              "indice": 1,
+              "rol": null,
+              "latex": null,
+              "bloque_id": null,
+              "conexion_id": null,
+              "clave": null,
+              "factores": [
+                {
+                  "variable_id": "cv1.n1",
+                  "unidad": "mol",
+                  "exponente": 1,
+                  "naturaleza": null
+                }
+              ],
+              "unidad": "mol",
+              "latex_unidad": "\\mathrm{mol}",
+              "dimension": "[substance]",
+              "estado": "compatible"
+            }
+          ],
+          "unidad_ecuacion": "mol",
+          "latex_unidad": "\\mathrm{mol}"
+        }
+      },
+      {
+        "id": "cv1:cierre_salida",
+        "tipo": "constitutiva",
+        "clase": "algebraica",
+        "titulo": "Salida proporcional al inventario · Primer volumen",
+        "latex_general": "F_{sal} = k N",
+        "latex_activo": "F_{3} = k_{2} N_{2}",
+        "terminos_descartados": [],
+        "origen_bloques": [
+          "cv1",
+          "medio"
+        ],
+        "origen_conexiones": [
+          "c2"
+        ],
+        "variables": [
+          "medio.F",
+          "cv1.N",
+          "cv1.k_salida"
+        ],
+        "cuenta_como_ecuacion": true,
+        "ejecutada": true,
+        "residuo": null,
+        "nota": null,
+        "acumulacion": null,
+        "terminos": null,
+        "residuo_terminos": null,
+        "dimensional": {
+          "estado": "compatible",
+          "motivo": null,
+          "terminos_en_conflicto": [],
+          "fuente": "forma tipada de la relacion, construida con la ecuacion",
+          "lado_izquierdo": {
+            "forma": "expresion",
+            "factores": [
+              {
+                "variable_id": "medio.F",
+                "unidad": "mol/s",
+                "exponente": 1,
+                "naturaleza": null
+              }
+            ],
+            "unidad": "mol/s",
+            "latex_unidad": "\\frac{\\mathrm{mol}}{\\mathrm{s}}",
+            "dimension": "[substance] / [time]"
+          },
+          "terminos": [
+            {
+              "indice": 0,
+              "rol": null,
+              "latex": null,
+              "bloque_id": null,
+              "conexion_id": null,
+              "clave": null,
+              "factores": [
+                {
+                  "variable_id": "cv1.k_salida",
+                  "unidad": "1/s",
+                  "exponente": 1,
+                  "naturaleza": null
+                },
+                {
+                  "variable_id": "cv1.N",
+                  "unidad": "mol",
+                  "exponente": 1,
+                  "naturaleza": null
+                }
+              ],
+              "unidad": "mol/s",
+              "latex_unidad": "\\frac{\\mathrm{mol}}{\\mathrm{s}}",
+              "dimension": "[substance] / [time]",
+              "estado": "compatible"
+            }
+          ],
+          "unidad_ecuacion": "mol/s",
+          "latex_unidad": "\\frac{\\mathrm{mol}}{\\mathrm{s}}"
+        }
+      },
+      {
+        "id": "cv2:materia_especie_0",
+        "tipo": "balance",
+        "clase": "diferencial",
+        "titulo": "Materia de benzene · Segundo volumen",
+        "latex_general": "\\frac{dn_{i}}{dt} = F_{ent} x_{i,ent} - F_{sal} x_{i,sal} + G_i - C_i",
+        "latex_activo": "\\frac{dn_{1,4}}{dt} = F_{3} x_{1,3} - F_{5} x_{1,5}",
+        "terminos_descartados": [
+          {
+            "termino": "generacion_y_consumo",
+            "latex": "G_i - C_i",
+            "supuesto": "sinReaccion",
+            "motivo": "Ninguna reaccion declarada en este volumen."
+          }
+        ],
+        "origen_bloques": [
+          "cv2",
+          "medio",
+          "out"
+        ],
+        "origen_conexiones": [
+          "c3",
+          "c4"
+        ],
+        "variables": [
+          "cv2.n0",
+          "medio.F",
+          "medio.x0",
+          "out.F",
+          "out.x0"
+        ],
+        "cuenta_como_ecuacion": true,
+        "ejecutada": true,
+        "residuo": null,
+        "nota": null,
+        "acumulacion": [
+          "cv2.n0"
+        ],
+        "terminos": [
+          {
+            "rol": "entrada",
+            "signo": 1,
+            "latex": "F_{3} x_{1,3}",
+            "variables": [
+              "medio.F",
+              "medio.x0"
+            ],
+            "bloque_id": "medio",
+            "conexion_id": "c3",
+            "coeficiente": null,
+            "clave": "corriente:medio",
+            "nota": null
+          },
+          {
+            "rol": "salida",
+            "signo": -1,
+            "latex": "F_{5} x_{1,5}",
+            "variables": [
+              "out.F",
+              "out.x0"
+            ],
+            "bloque_id": "out",
+            "conexion_id": "c4",
+            "coeficiente": null,
+            "clave": "corriente:out",
+            "nota": null
+          }
+        ],
+        "residuo_terminos": 1.3242301780547942e-16,
+        "dimensional": {
+          "estado": "compatible",
+          "motivo": null,
+          "terminos_en_conflicto": [],
+          "fuente": "terminos tipados del ensamblaje (los mismos que se evaluan)",
+          "lado_izquierdo": {
+            "forma": "derivada temporal",
+            "variables": [
+              "cv2.n0"
+            ],
+            "unidad": "mol/s",
+            "latex_unidad": "\\frac{\\mathrm{mol}}{\\mathrm{s}}",
+            "dimension": "[substance] / [time]"
+          },
+          "terminos": [
+            {
+              "indice": 0,
+              "rol": "entrada",
+              "latex": "F_{3} x_{1,3}",
+              "bloque_id": "medio",
+              "conexion_id": "c3",
+              "clave": "corriente:medio",
+              "factores": [
+                {
+                  "variable_id": "medio.F",
+                  "unidad": "mol/s",
+                  "exponente": 1,
+                  "naturaleza": null
+                },
+                {
+                  "variable_id": "medio.x0",
+                  "unidad": "mol/mol",
+                  "exponente": 1,
+                  "naturaleza": null
+                }
+              ],
+              "unidad": "mol/s",
+              "latex_unidad": "\\frac{\\mathrm{mol}}{\\mathrm{s}}",
+              "dimension": "[substance] / [time]",
+              "estado": "compatible"
+            },
+            {
+              "indice": 1,
+              "rol": "salida",
+              "latex": "F_{5} x_{1,5}",
+              "bloque_id": "out",
+              "conexion_id": "c4",
+              "clave": "corriente:out",
+              "factores": [
+                {
+                  "variable_id": "out.F",
+                  "unidad": "mol/s",
+                  "exponente": 1,
+                  "naturaleza": null
+                },
+                {
+                  "variable_id": "out.x0",
+                  "unidad": "mol/mol",
+                  "exponente": 1,
+                  "naturaleza": null
+                }
+              ],
+              "unidad": "mol/s",
+              "latex_unidad": "\\frac{\\mathrm{mol}}{\\mathrm{s}}",
+              "dimension": "[substance] / [time]",
+              "estado": "compatible"
+            }
+          ],
+          "unidad_ecuacion": "mol/s",
+          "latex_unidad": "\\frac{\\mathrm{mol}}{\\mathrm{s}}"
+        }
+      },
+      {
+        "id": "cv2:materia_especie_1",
+        "tipo": "balance",
+        "clase": "diferencial",
+        "titulo": "Materia de toluene · Segundo volumen",
+        "latex_general": "\\frac{dn_{i}}{dt} = F_{ent} x_{i,ent} - F_{sal} x_{i,sal} + G_i - C_i",
+        "latex_activo": "\\frac{dn_{2,4}}{dt} = F_{3} x_{2,3} - F_{5} x_{2,5}",
+        "terminos_descartados": [
+          {
+            "termino": "generacion_y_consumo",
+            "latex": "G_i - C_i",
+            "supuesto": "sinReaccion",
+            "motivo": "Ninguna reaccion declarada en este volumen."
+          }
+        ],
+        "origen_bloques": [
+          "cv2",
+          "medio",
+          "out"
+        ],
+        "origen_conexiones": [
+          "c3",
+          "c4"
+        ],
+        "variables": [
+          "cv2.n1",
+          "medio.F",
+          "medio.x1",
+          "out.F",
+          "out.x1"
+        ],
+        "cuenta_como_ecuacion": true,
+        "ejecutada": true,
+        "residuo": null,
+        "nota": null,
+        "acumulacion": [
+          "cv2.n1"
+        ],
+        "terminos": [
+          {
+            "rol": "entrada",
+            "signo": 1,
+            "latex": "F_{3} x_{2,3}",
+            "variables": [
+              "medio.F",
+              "medio.x1"
+            ],
+            "bloque_id": "medio",
+            "conexion_id": "c3",
+            "coeficiente": null,
+            "clave": "corriente:medio",
+            "nota": null
+          },
+          {
+            "rol": "salida",
+            "signo": -1,
+            "latex": "F_{5} x_{2,5}",
+            "variables": [
+              "out.F",
+              "out.x1"
+            ],
+            "bloque_id": "out",
+            "conexion_id": "c4",
+            "coeficiente": null,
+            "clave": "corriente:out",
+            "nota": null
+          }
+        ],
+        "residuo_terminos": 3.552705723948278e-16,
+        "dimensional": {
+          "estado": "compatible",
+          "motivo": null,
+          "terminos_en_conflicto": [],
+          "fuente": "terminos tipados del ensamblaje (los mismos que se evaluan)",
+          "lado_izquierdo": {
+            "forma": "derivada temporal",
+            "variables": [
+              "cv2.n1"
+            ],
+            "unidad": "mol/s",
+            "latex_unidad": "\\frac{\\mathrm{mol}}{\\mathrm{s}}",
+            "dimension": "[substance] / [time]"
+          },
+          "terminos": [
+            {
+              "indice": 0,
+              "rol": "entrada",
+              "latex": "F_{3} x_{2,3}",
+              "bloque_id": "medio",
+              "conexion_id": "c3",
+              "clave": "corriente:medio",
+              "factores": [
+                {
+                  "variable_id": "medio.F",
+                  "unidad": "mol/s",
+                  "exponente": 1,
+                  "naturaleza": null
+                },
+                {
+                  "variable_id": "medio.x1",
+                  "unidad": "mol/mol",
+                  "exponente": 1,
+                  "naturaleza": null
+                }
+              ],
+              "unidad": "mol/s",
+              "latex_unidad": "\\frac{\\mathrm{mol}}{\\mathrm{s}}",
+              "dimension": "[substance] / [time]",
+              "estado": "compatible"
+            },
+            {
+              "indice": 1,
+              "rol": "salida",
+              "latex": "F_{5} x_{2,5}",
+              "bloque_id": "out",
+              "conexion_id": "c4",
+              "clave": "corriente:out",
+              "factores": [
+                {
+                  "variable_id": "out.F",
+                  "unidad": "mol/s",
+                  "exponente": 1,
+                  "naturaleza": null
+                },
+                {
+                  "variable_id": "out.x1",
+                  "unidad": "mol/mol",
+                  "exponente": 1,
+                  "naturaleza": null
+                }
+              ],
+              "unidad": "mol/s",
+              "latex_unidad": "\\frac{\\mathrm{mol}}{\\mathrm{s}}",
+              "dimension": "[substance] / [time]",
+              "estado": "compatible"
+            }
+          ],
+          "unidad_ecuacion": "mol/s",
+          "latex_unidad": "\\frac{\\mathrm{mol}}{\\mathrm{s}}"
+        }
+      },
+      {
+        "id": "cv2:mezcla_perfecta_0",
+        "tipo": "constitutiva",
+        "clase": "algebraica",
+        "titulo": "Mezcla perfecta, benzene · Segundo volumen",
+        "latex_general": "x_{i,sal} = n_i / N",
+        "latex_activo": "x_{1,5} = n_{1,4} / N_{4}",
+        "terminos_descartados": [],
+        "origen_bloques": [
+          "cv2",
+          "out"
+        ],
+        "origen_conexiones": [
+          "c4"
+        ],
+        "variables": [
+          "out.x0",
+          "cv2.n0",
+          "cv2.N"
+        ],
+        "cuenta_como_ecuacion": true,
+        "ejecutada": true,
+        "residuo": null,
+        "nota": "Cierre de mezcla perfecta: la corriente de salida tiene la composicion del inventario. Es un supuesto, no una identidad.",
+        "acumulacion": null,
+        "terminos": null,
+        "residuo_terminos": null,
+        "dimensional": {
+          "estado": "compatible",
+          "motivo": null,
+          "terminos_en_conflicto": [],
+          "fuente": "forma tipada de la relacion, construida con la ecuacion",
+          "lado_izquierdo": {
+            "forma": "expresion",
+            "factores": [
+              {
+                "variable_id": "out.x0",
+                "unidad": "mol/mol",
+                "exponente": 1,
+                "naturaleza": null
+              }
+            ],
+            "unidad": "1",
+            "latex_unidad": "1",
+            "dimension": "dimensionless"
+          },
+          "terminos": [
+            {
+              "indice": 0,
+              "rol": null,
+              "latex": null,
+              "bloque_id": null,
+              "conexion_id": null,
+              "clave": null,
+              "factores": [
+                {
+                  "variable_id": "cv2.n0",
+                  "unidad": "mol",
+                  "exponente": 1,
+                  "naturaleza": null
+                },
+                {
+                  "variable_id": "cv2.N",
+                  "unidad": "mol",
+                  "exponente": -1,
+                  "naturaleza": null
+                }
+              ],
+              "unidad": "1",
+              "latex_unidad": "1",
+              "dimension": "dimensionless",
+              "estado": "compatible"
+            }
+          ],
+          "unidad_ecuacion": "1",
+          "latex_unidad": "1"
+        }
+      },
+      {
+        "id": "cv2:mezcla_perfecta_1",
+        "tipo": "constitutiva",
+        "clase": "algebraica",
+        "titulo": "Mezcla perfecta, toluene · Segundo volumen",
+        "latex_general": "x_{i,sal} = n_i / N",
+        "latex_activo": "x_{2,5} = n_{2,4} / N_{4}",
+        "terminos_descartados": [],
+        "origen_bloques": [
+          "cv2",
+          "out"
+        ],
+        "origen_conexiones": [
+          "c4"
+        ],
+        "variables": [
+          "out.x1",
+          "cv2.n1",
+          "cv2.N"
+        ],
+        "cuenta_como_ecuacion": true,
+        "ejecutada": true,
+        "residuo": null,
+        "nota": "Cierre de mezcla perfecta: la corriente de salida tiene la composicion del inventario. Es un supuesto, no una identidad.",
+        "acumulacion": null,
+        "terminos": null,
+        "residuo_terminos": null,
+        "dimensional": {
+          "estado": "compatible",
+          "motivo": null,
+          "terminos_en_conflicto": [],
+          "fuente": "forma tipada de la relacion, construida con la ecuacion",
+          "lado_izquierdo": {
+            "forma": "expresion",
+            "factores": [
+              {
+                "variable_id": "out.x1",
+                "unidad": "mol/mol",
+                "exponente": 1,
+                "naturaleza": null
+              }
+            ],
+            "unidad": "1",
+            "latex_unidad": "1",
+            "dimension": "dimensionless"
+          },
+          "terminos": [
+            {
+              "indice": 0,
+              "rol": null,
+              "latex": null,
+              "bloque_id": null,
+              "conexion_id": null,
+              "clave": null,
+              "factores": [
+                {
+                  "variable_id": "cv2.n1",
+                  "unidad": "mol",
+                  "exponente": 1,
+                  "naturaleza": null
+                },
+                {
+                  "variable_id": "cv2.N",
+                  "unidad": "mol",
+                  "exponente": -1,
+                  "naturaleza": null
+                }
+              ],
+              "unidad": "1",
+              "latex_unidad": "1",
+              "dimension": "dimensionless",
+              "estado": "compatible"
+            }
+          ],
+          "unidad_ecuacion": "1",
+          "latex_unidad": "1"
+        }
+      },
+      {
+        "id": "cv2:inventario_total",
+        "tipo": "definicion",
+        "clase": "algebraica",
+        "titulo": "Inventario total · Segundo volumen",
+        "latex_general": "N = \\sum_i n_i",
+        "latex_activo": "N_{4} = \\sum_i n_{i,4}",
+        "terminos_descartados": [],
+        "origen_bloques": [
+          "cv2"
+        ],
+        "origen_conexiones": [],
+        "variables": [
+          "cv2.N",
+          "cv2.n0",
+          "cv2.n1"
+        ],
+        "cuenta_como_ecuacion": true,
+        "ejecutada": true,
+        "residuo": null,
+        "nota": null,
+        "acumulacion": null,
+        "terminos": null,
+        "residuo_terminos": null,
+        "dimensional": {
+          "estado": "compatible",
+          "motivo": null,
+          "terminos_en_conflicto": [],
+          "fuente": "forma tipada de la relacion, construida con la ecuacion",
+          "lado_izquierdo": {
+            "forma": "expresion",
+            "factores": [
+              {
+                "variable_id": "cv2.N",
+                "unidad": "mol",
+                "exponente": 1,
+                "naturaleza": null
+              }
+            ],
+            "unidad": "mol",
+            "latex_unidad": "\\mathrm{mol}",
+            "dimension": "[substance]"
+          },
+          "terminos": [
+            {
+              "indice": 0,
+              "rol": null,
+              "latex": null,
+              "bloque_id": null,
+              "conexion_id": null,
+              "clave": null,
+              "factores": [
+                {
+                  "variable_id": "cv2.n0",
+                  "unidad": "mol",
+                  "exponente": 1,
+                  "naturaleza": null
+                }
+              ],
+              "unidad": "mol",
+              "latex_unidad": "\\mathrm{mol}",
+              "dimension": "[substance]",
+              "estado": "compatible"
+            },
+            {
+              "indice": 1,
+              "rol": null,
+              "latex": null,
+              "bloque_id": null,
+              "conexion_id": null,
+              "clave": null,
+              "factores": [
+                {
+                  "variable_id": "cv2.n1",
+                  "unidad": "mol",
+                  "exponente": 1,
+                  "naturaleza": null
+                }
+              ],
+              "unidad": "mol",
+              "latex_unidad": "\\mathrm{mol}",
+              "dimension": "[substance]",
+              "estado": "compatible"
+            }
+          ],
+          "unidad_ecuacion": "mol",
+          "latex_unidad": "\\mathrm{mol}"
+        }
+      },
+      {
+        "id": "cv2:cierre_salida",
+        "tipo": "constitutiva",
+        "clase": "algebraica",
+        "titulo": "Salida proporcional al inventario · Segundo volumen",
+        "latex_general": "F_{sal} = k N",
+        "latex_activo": "F_{5} = k_{4} N_{4}",
+        "terminos_descartados": [],
+        "origen_bloques": [
+          "cv2",
+          "out"
+        ],
+        "origen_conexiones": [
+          "c4"
+        ],
+        "variables": [
+          "out.F",
+          "cv2.N",
+          "cv2.k_salida"
+        ],
+        "cuenta_como_ecuacion": true,
+        "ejecutada": true,
+        "residuo": null,
+        "nota": null,
+        "acumulacion": null,
+        "terminos": null,
+        "residuo_terminos": null,
+        "dimensional": {
+          "estado": "compatible",
+          "motivo": null,
+          "terminos_en_conflicto": [],
+          "fuente": "forma tipada de la relacion, construida con la ecuacion",
+          "lado_izquierdo": {
+            "forma": "expresion",
+            "factores": [
+              {
+                "variable_id": "out.F",
+                "unidad": "mol/s",
+                "exponente": 1,
+                "naturaleza": null
+              }
+            ],
+            "unidad": "mol/s",
+            "latex_unidad": "\\frac{\\mathrm{mol}}{\\mathrm{s}}",
+            "dimension": "[substance] / [time]"
+          },
+          "terminos": [
+            {
+              "indice": 0,
+              "rol": null,
+              "latex": null,
+              "bloque_id": null,
+              "conexion_id": null,
+              "clave": null,
+              "factores": [
+                {
+                  "variable_id": "cv2.k_salida",
+                  "unidad": "1/s",
+                  "exponente": 1,
+                  "naturaleza": null
+                },
+                {
+                  "variable_id": "cv2.N",
+                  "unidad": "mol",
+                  "exponente": 1,
+                  "naturaleza": null
+                }
+              ],
+              "unidad": "mol/s",
+              "latex_unidad": "\\frac{\\mathrm{mol}}{\\mathrm{s}}",
+              "dimension": "[substance] / [time]",
+              "estado": "compatible"
+            }
+          ],
+          "unidad_ecuacion": "mol/s",
+          "latex_unidad": "\\frac{\\mathrm{mol}}{\\mathrm{s}}"
+        }
+      },
+      {
+        "id": "global:materia_especie_0",
+        "tipo": "verificacion",
+        "clase": "algebraica",
+        "titulo": "Balance global de benzene",
+        "latex_general": "\\frac{d}{dt}\\sum_v n_{i,v} = F_{alim} x_{i,alim} - F_{sal} x_{i,sal} + \\sum_r \\nu_{i,r} \\xi_r",
+        "latex_activo": "\\frac{d}{dt}\\sum_v n_{1,v} = F_{1} x_{1,1} - F_{5} x_{1,5}",
+        "terminos_descartados": [],
+        "origen_bloques": [
+          "in",
+          "out",
+          "cv1",
+          "cv2"
+        ],
+        "origen_conexiones": [
+          "c1",
+          "c4"
+        ],
+        "variables": [
+          "in.F",
+          "in.x0",
+          "out.F",
+          "out.x0"
+        ],
+        "cuenta_como_ecuacion": false,
+        "ejecutada": true,
+        "residuo": 3.884300288821877e-14,
+        "nota": "Suma de los balances por volumen, termino a termino: la corriente intermedia aparece una vez con cada signo y se cancela (ver 'cancelaciones'). No es independiente; se MIDE.",
+        "acumulacion": [
+          "cv1.n0",
+          "cv2.n0"
+        ],
+        "terminos": [
+          {
+            "rol": "entrada",
+            "signo": 1,
+            "latex": "F_{1} x_{1,1}",
+            "variables": [
+              "in.F",
+              "in.x0"
+            ],
+            "bloque_id": "in",
+            "conexion_id": "c1",
+            "coeficiente": null,
+            "clave": "corriente:in",
+            "nota": null,
+            "ecuacion_origen": "cv1:materia_especie_0"
+          },
+          {
+            "rol": "salida",
+            "signo": -1,
+            "latex": "F_{5} x_{1,5}",
+            "variables": [
+              "out.F",
+              "out.x0"
+            ],
+            "bloque_id": "out",
+            "conexion_id": "c4",
+            "coeficiente": null,
+            "clave": "corriente:out",
+            "nota": null,
+            "ecuacion_origen": "cv2:materia_especie_0"
+          }
+        ],
+        "residuo_terminos": 0.0,
+        "cancelaciones": [
+          {
+            "clave": "corriente:medio",
+            "variables": [
+              "medio.F",
+              "medio.x0"
+            ],
+            "conexion_id": "c2",
+            "en": [
+              {
+                "ecuacion": "cv1:materia_especie_0",
+                "signo": -1
+              },
+              {
+                "ecuacion": "cv2:materia_especie_0",
+                "signo": 1
+              }
+            ]
+          }
+        ],
+        "dimensional": {
+          "estado": "compatible",
+          "motivo": null,
+          "terminos_en_conflicto": [],
+          "fuente": "terminos tipados del ensamblaje (los mismos que se evaluan)",
+          "lado_izquierdo": {
+            "forma": "derivada temporal",
+            "variables": [
+              "cv1.n0",
+              "cv2.n0"
+            ],
+            "unidad": "mol/s",
+            "latex_unidad": "\\frac{\\mathrm{mol}}{\\mathrm{s}}",
+            "dimension": "[substance] / [time]"
+          },
+          "terminos": [
+            {
+              "indice": 0,
+              "rol": "entrada",
+              "latex": "F_{1} x_{1,1}",
+              "bloque_id": "in",
+              "conexion_id": "c1",
+              "clave": "corriente:in",
+              "factores": [
+                {
+                  "variable_id": "in.F",
+                  "unidad": "mol/s",
+                  "exponente": 1,
+                  "naturaleza": null
+                },
+                {
+                  "variable_id": "in.x0",
+                  "unidad": "mol/mol",
+                  "exponente": 1,
+                  "naturaleza": null
+                }
+              ],
+              "unidad": "mol/s",
+              "latex_unidad": "\\frac{\\mathrm{mol}}{\\mathrm{s}}",
+              "dimension": "[substance] / [time]",
+              "estado": "compatible"
+            },
+            {
+              "indice": 1,
+              "rol": "salida",
+              "latex": "F_{5} x_{1,5}",
+              "bloque_id": "out",
+              "conexion_id": "c4",
+              "clave": "corriente:out",
+              "factores": [
+                {
+                  "variable_id": "out.F",
+                  "unidad": "mol/s",
+                  "exponente": 1,
+                  "naturaleza": null
+                },
+                {
+                  "variable_id": "out.x0",
+                  "unidad": "mol/mol",
+                  "exponente": 1,
+                  "naturaleza": null
+                }
+              ],
+              "unidad": "mol/s",
+              "latex_unidad": "\\frac{\\mathrm{mol}}{\\mathrm{s}}",
+              "dimension": "[substance] / [time]",
+              "estado": "compatible"
+            }
+          ],
+          "unidad_ecuacion": "mol/s",
+          "latex_unidad": "\\frac{\\mathrm{mol}}{\\mathrm{s}}"
+        }
+      },
+      {
+        "id": "global:materia_especie_1",
+        "tipo": "verificacion",
+        "clase": "algebraica",
+        "titulo": "Balance global de toluene",
+        "latex_general": "\\frac{d}{dt}\\sum_v n_{i,v} = F_{alim} x_{i,alim} - F_{sal} x_{i,sal} + \\sum_r \\nu_{i,r} \\xi_r",
+        "latex_activo": "\\frac{d}{dt}\\sum_v n_{2,v} = F_{1} x_{2,1} - F_{5} x_{2,5}",
+        "terminos_descartados": [],
+        "origen_bloques": [
+          "in",
+          "out",
+          "cv1",
+          "cv2"
+        ],
+        "origen_conexiones": [
+          "c1",
+          "c4"
+        ],
+        "variables": [
+          "in.F",
+          "in.x1",
+          "out.F",
+          "out.x1"
+        ],
+        "cuenta_como_ecuacion": false,
+        "ejecutada": true,
+        "residuo": 3.884300288821877e-14,
+        "nota": "Suma de los balances por volumen, termino a termino: la corriente intermedia aparece una vez con cada signo y se cancela (ver 'cancelaciones'). No es independiente; se MIDE.",
+        "acumulacion": [
+          "cv1.n1",
+          "cv2.n1"
+        ],
+        "terminos": [
+          {
+            "rol": "entrada",
+            "signo": 1,
+            "latex": "F_{1} x_{2,1}",
+            "variables": [
+              "in.F",
+              "in.x1"
+            ],
+            "bloque_id": "in",
+            "conexion_id": "c1",
+            "coeficiente": null,
+            "clave": "corriente:in",
+            "nota": null,
+            "ecuacion_origen": "cv1:materia_especie_1"
+          },
+          {
+            "rol": "salida",
+            "signo": -1,
+            "latex": "F_{5} x_{2,5}",
+            "variables": [
+              "out.F",
+              "out.x1"
+            ],
+            "bloque_id": "out",
+            "conexion_id": "c4",
+            "coeficiente": null,
+            "clave": "corriente:out",
+            "nota": null,
+            "ecuacion_origen": "cv2:materia_especie_1"
+          }
+        ],
+        "residuo_terminos": 1.7763568394002506e-16,
+        "cancelaciones": [
+          {
+            "clave": "corriente:medio",
+            "variables": [
+              "medio.F",
+              "medio.x1"
+            ],
+            "conexion_id": "c2",
+            "en": [
+              {
+                "ecuacion": "cv1:materia_especie_1",
+                "signo": -1
+              },
+              {
+                "ecuacion": "cv2:materia_especie_1",
+                "signo": 1
+              }
+            ]
+          }
+        ],
+        "dimensional": {
+          "estado": "compatible",
+          "motivo": null,
+          "terminos_en_conflicto": [],
+          "fuente": "terminos tipados del ensamblaje (los mismos que se evaluan)",
+          "lado_izquierdo": {
+            "forma": "derivada temporal",
+            "variables": [
+              "cv1.n1",
+              "cv2.n1"
+            ],
+            "unidad": "mol/s",
+            "latex_unidad": "\\frac{\\mathrm{mol}}{\\mathrm{s}}",
+            "dimension": "[substance] / [time]"
+          },
+          "terminos": [
+            {
+              "indice": 0,
+              "rol": "entrada",
+              "latex": "F_{1} x_{2,1}",
+              "bloque_id": "in",
+              "conexion_id": "c1",
+              "clave": "corriente:in",
+              "factores": [
+                {
+                  "variable_id": "in.F",
+                  "unidad": "mol/s",
+                  "exponente": 1,
+                  "naturaleza": null
+                },
+                {
+                  "variable_id": "in.x1",
+                  "unidad": "mol/mol",
+                  "exponente": 1,
+                  "naturaleza": null
+                }
+              ],
+              "unidad": "mol/s",
+              "latex_unidad": "\\frac{\\mathrm{mol}}{\\mathrm{s}}",
+              "dimension": "[substance] / [time]",
+              "estado": "compatible"
+            },
+            {
+              "indice": 1,
+              "rol": "salida",
+              "latex": "F_{5} x_{2,5}",
+              "bloque_id": "out",
+              "conexion_id": "c4",
+              "clave": "corriente:out",
+              "factores": [
+                {
+                  "variable_id": "out.F",
+                  "unidad": "mol/s",
+                  "exponente": 1,
+                  "naturaleza": null
+                },
+                {
+                  "variable_id": "out.x1",
+                  "unidad": "mol/mol",
+                  "exponente": 1,
+                  "naturaleza": null
+                }
+              ],
+              "unidad": "mol/s",
+              "latex_unidad": "\\frac{\\mathrm{mol}}{\\mathrm{s}}",
+              "dimension": "[substance] / [time]",
+              "estado": "compatible"
+            }
+          ],
+          "unidad_ecuacion": "mol/s",
+          "latex_unidad": "\\frac{\\mathrm{mol}}{\\mathrm{s}}"
+        }
+      }
+    ],
+    "clasificacion": {
+      "tipo_sistema": "ODE",
+      "energia": null,
+      "reaccion": null,
+      "interfaces_termicas": null,
+      "interfaces_materiales": null,
+      "volumenes_cerrados": null,
+      "acoplamiento": "monolitico: un unico vector de estado con los inventarios de todos los volumenes, evaluado en el mismo instante; sin particion ni transmision de estados finales entre piezas",
+      "variables_diferenciales": [
+        "cv1.n0",
+        "cv1.n1",
+        "cv2.n0",
+        "cv2.n1"
+      ],
+      "variables_algebraicas": [
+        "medio.F",
+        "medio.x0",
+        "medio.x1",
+        "out.F",
+        "out.x0",
+        "out.x1",
+        "cv1.N",
+        "cv2.N"
+      ],
+      "entradas": [
+        "in.F",
+        "in.x0",
+        "in.x1"
+      ],
+      "parametros": [
+        "cv1.k_salida",
+        "cv2.k_salida"
+      ],
+      "ecuaciones_diferenciales": 4,
+      "ecuaciones_algebraicas": 8,
+      "incognitas": 12,
+      "ecuaciones_independientes": 12,
+      "grados_libertad": 0,
+      "rango_origen": "estructural: cada ecuacion algebraica contada se resuelve para una variable distinta en orden aguas abajo (triangular), y cada balance diferencial define la derivada de un inventario distinto. No se calcula un rango numerico: contar ecuaciones no certifica rango, y la independencia aqui sale del orden, no del recuento.",
+      "restricciones": [],
+      "reduccion": "Todas las relaciones algebraicas son asignaciones explicitas en orden aguas abajo; no hay restricciones que reducir.",
+      "no_contadas": {
+        "verificacion": 2
+      },
+      "nota_corriente_intermedia": "La corriente intermedia es un estado sin almacenamiento: no aporta inventario ni igualdades de continuidad. Sus variables las citan los dos volumenes."
+    },
+    "parcial": false,
+    "analisis_dimensional": {
+      "compatibles": 14,
+      "incompatibles": [],
+      "no_evaluables": [],
+      "nota": "Analisis de las expresiones tipadas del ensamblaje (unidades SI de cada variable, con pint). 'compatible' solo dice que lo que se suma es sumable: no demuestra conservacion ni exactitud."
+    }
+  },
+  "condiciones_iniciales_usadas": {
+    "inventarios": [
+      {
+        "bloque_id": "cv1",
+        "componente": "benzene",
+        "valor": 100.0,
+        "unidad": "mol"
+      },
+      {
+        "bloque_id": "cv1",
+        "componente": "toluene",
+        "valor": 300.0,
+        "unidad": "mol"
+      },
+      {
+        "bloque_id": "cv2",
+        "componente": "benzene",
+        "valor": 0.0,
+        "unidad": "mol"
+      },
+      {
+        "bloque_id": "cv2",
+        "componente": "toluene",
+        "valor": 0.0,
+        "unidad": "mol"
+      }
+    ],
+    "energia": null,
+    "procedencia": "declarada",
+    "origen": null,
+    "residuo_estacionario_en_t0": null,
+    "escenario": null,
+    "perturbaciones": null,
+    "nota": "Tal como se dieron (n en mol; T en K, U en J)."
+  },
+  "entradas_usadas": {
+    "convencion": "continuas por la derecha: en el instante de un escalon ya rige el valor nuevo; los inventarios y U son continuos",
+    "tramos": [
+      {
+        "desde_s": 0.0,
+        "F": 10.0,
+        "unidad_F": "mol/s",
+        "x": [
+          0.5,
+          0.5
+        ],
+        "T": null,
+        "unidad_T": null,
+        "Q": null,
+        "unidad_Q": null
+      }
+    ],
+    "escalones": []
+  },
+  "integracion": {
+    "metodo": "Radau",
+    "descripcion_metodo": "Runge-Kutta implicito de orden 5. Para sistemas rigidos.",
+    "elegido_por": "peticion",
+    "motivo_eleccion": "Pedido en la peticion.",
+    "rtol": 1e-10,
+    "atol": {
+      "inventarios_mol": 1e-09,
+      "energias_J": null,
+      "integrales_de_flujo_mol": 6e-09,
+      "atol_relativo": 1e-12,
+      "escala_inventario_mol": 1000.0,
+      "escala_energia": null
+    },
+    "dominio_s": [
+      0.0,
+      600.0
+    ],
+    "unidad_tiempo_pedida": "s",
+    "tramos": [
+      {
+        "desde_s": 0.0,
+        "hasta_s": 600.0,
+        "F_alimentacion": 10.0,
+        "x_alimentacion": [
+          0.5,
+          0.5
+        ],
+        "T_alimentacion": null,
+        "Q": null,
+        "evaluaciones_de_funcion": 2807,
+        "evaluaciones_de_jacobiano": 3,
+        "estado_integrador": 0,
+        "mensaje": "The solver successfully reached the end of the integration interval."
+      }
+    ],
+    "rigidez": {
+      "autovalores_t0": [
+        {
+          "real": -0.009999999999621423,
+          "imaginaria": 0.0
+        },
+        {
+          "real": -0.009999999999621423,
+          "imaginaria": 0.0
+        },
+        {
+          "real": -0.019999999999242846,
+          "imaginaria": 0.0
+        },
+        {
+          "real": -0.01999999999835467,
+          "imaginaria": 0.0
+        }
+      ],
+      "cociente_de_rigidez": 2.0,
+      "horizonte_en_constantes_rapidas": 11.999999999545707,
+      "nota": "max|Re(lambda)| / min|Re(lambda)| del jacobiano en t = 0 (sin restringir, asi que incluye el modo de estabilizacion de cada restriccion). Un cociente grande sugiere un metodo implicito (Radau, BDF); es un dato para elegir, no una eleccion."
+    },
+    "acoplamiento": "monolitico: un unico vector de estado con los inventarios de todos los volumenes, evaluado en el mismo instante; sin particion ni transmision de estados finales entre piezas",
+    "eventos_vigilados": [
+      "salida de dominio (algun n_i < -1e-9 * escala, terminal)"
+    ]
+  },
+  "resultados": {
+    "t": [
+      0.0,
+      10.0,
+      20.0,
+      30.0,
+      40.0,
+      50.0,
+      60.0,
+      70.0,
+      80.0,
+      90.0,
+      100.0,
+      110.0,
+      120.0,
+      130.0,
+      140.0,
+      150.0,
+      160.0,
+      170.0,
+      180.0,
+      190.0,
+      200.0,
+      210.0,
+      220.0,
+      230.0,
+      240.0,
+      250.0,
+      260.0,
+      270.0,
+      280.0,
+      290.0,
+      300.0,
+      310.0,
+      320.0,
+      330.0,
+      340.0,
+      350.0,
+      360.0,
+      370.0,
+      380.0,
+      390.0,
+      400.0,
+      410.0,
+      420.0,
+      430.0,
+      440.0,
+      450.0,
+      460.0,
+      470.0,
+      480.0,
+      490.0,
+      500.0,
+      510.0,
+      520.0,
+      530.0,
+      540.0,
+      550.0,
+      560.0,
+      570.0,
+      580.0,
+      590.0,
+      600.0
+    ],
+    "unidad_tiempo": "s",
+    "n_muestras": 61,
+    "series": [
+      {
+        "id": "cv1.n0",
+        "bloque_id": "cv1",
+        "componente": "benzene",
+        "magnitud": "n",
+        "unidad": "mol",
+        "valores": [
+          100.0,
+          127.19038703843754,
+          149.45199309502743,
+          167.67825458501483,
+          182.60065538375957,
+          194.8180838253917,
+          204.82086821494022,
+          213.01045540868878,
+          219.71552230310354,
+          225.2051667681189,
+          229.69970751510513,
+          233.37952624691064,
+          236.3923070080287,
+          238.85896326312223,
+          240.87849060227848,
+          242.5319397416137,
+          243.88566940556973,
+          244.9940095078023,
+          245.9014416292051,
+          246.6443842228985,
+          247.25265416665752,
+          247.75066347726684,
+          248.15839901576305,
+          248.49222463801897,
+          248.7655379440691,
+          248.9893079486076,
+          249.17251533640209,
+          249.32251286058448,
+          249.4453204406534,
+          249.5458667888339,
+          249.62818717385758,
+          249.69558540378412,
+          249.75076640974842,
+          249.79594479545395,
+          249.83293372778223,
+          249.8632177042052,
+          249.88801212809935,
+          249.90831208595077,
+          249.92493228538,
+          249.93853975349117,
+          249.9496806057851,
+          249.95880196382913,
+          249.96626990131824,
+          249.97238413126897,
+          249.97739003896228,
+          249.98148852939738,
+          249.98484408946598,
+          249.98759138986912,
+          249.9898406895681,
+          249.99168226028326,
+          249.99319001030713,
+          249.99442445226174,
+          249.99543512762128,
+          249.99626259840633,
+          249.99694007454696,
+          249.99749474469445,
+          249.99794887056328,
+          249.99832067735687,
+          249.99862508690617,
+          249.99887431631856,
+          249.99907836814535
+        ]
+      },
+      {
+        "id": "cv1.n1",
+        "bloque_id": "cv1",
+        "componente": "toluene",
+        "magnitud": "n",
+        "unidad": "mol",
+        "valores": [
+          300.0,
+          290.9365376538542,
+          283.5160023016576,
+          277.44058180499513,
+          272.4664482054135,
+          268.3939720582028,
+          265.0597105950198,
+          262.3298481971036,
+          260.0948258989654,
+          258.264944410627,
+          256.7667641616316,
+          255.5401579176965,
+          254.53589766399048,
+          253.7136789122926,
+          253.04050313257383,
+          252.48935341946208,
+          252.03811019814344,
+          251.66866349739922,
+          251.3661861235983,
+          251.11853859236717,
+          250.9157819444475,
+          250.74977884091106,
+          250.61386699474562,
+          250.502591787327,
+          250.41148735197694,
+          250.3368973504641,
+          250.27582822119928,
+          250.2258290464718,
+          250.18489318644882,
+          250.15137773705533,
+          250.1239376087141,
+          250.1014715320719,
+          250.08307786341712,
+          250.06801840151527,
+          250.05568875740587,
+          250.04559409859823,
+          250.03732929063352,
+          250.03056263801642,
+          250.02502257153998,
+          250.02048674883628,
+          250.01677313140496,
+          250.0137326787236,
+          250.01124336622723,
+          250.00920528957698,
+          250.0075366536792,
+          250.00617049020084,
+          250.005051970178,
+          250.00413620337696,
+          250.00338643681064,
+          250.00277257990555,
+          250.00226999656428,
+          250.00185851591274,
+          250.0015216241262,
+          250.00124580053122,
+          250.00101997515102,
+          250.00083508510187,
+          250.00068370981225,
+          250.0005597742144,
+          250.00045830436463,
+          250.00037522789384,
+          250.00030721061827
+        ]
+      },
+      {
+        "id": "cv1.N",
+        "bloque_id": "cv1",
+        "componente": null,
+        "magnitud": "N",
+        "unidad": "mol",
+        "valores": [
+          400.0,
+          418.1269246922917,
+          432.967995396685,
+          445.11883639000996,
+          455.06710358917303,
+          463.21205588359453,
+          469.88057880996,
+          475.3403036057924,
+          479.8103482020689,
+          483.47011117874587,
+          486.4664716767368,
+          488.91968416460713,
+          490.9282046720192,
+          492.57264217541484,
+          493.9189937348523,
+          495.0212931610758,
+          495.9237796037132,
+          496.66267300520155,
+          497.2676277528034,
+          497.7629228152657,
+          498.16843611110505,
+          498.5004423181779,
+          498.7722660105087,
+          498.99481642534596,
+          499.17702529604605,
+          499.3262052990717,
+          499.44834355760133,
+          499.5483419070563,
+          499.6302136271022,
+          499.69724452588923,
+          499.7521247825717,
+          499.79705693585606,
+          499.83384427316554,
+          499.8639631969692,
+          499.8886224851881,
+          499.9088118028034,
+          499.92534141873284,
+          499.93887472396716,
+          499.94995485692,
+          499.95902650232745,
+          499.96645373719,
+          499.9725346425528,
+          499.9775132675455,
+          499.9815894208459,
+          499.98492669264147,
+          499.98765901959825,
+          499.98989605964397,
+          499.9917275932461,
+          499.99322712637877,
+          499.99445484018884,
+          499.99546000687144,
+          499.99628296817446,
+          499.99695675174746,
+          499.99750839893755,
+          499.997960049698,
+          499.9983298297963,
+          499.99863258037556,
+          499.99888045157127,
+          499.9990833912708,
+          499.9992495442124,
+          499.9993855787636
+        ]
+      },
+      {
+        "id": "cv2.n0",
+        "bloque_id": "cv2",
+        "componente": "benzene",
+        "magnitud": "n",
+        "unidad": "mol",
+        "valores": [
+          0.0,
+          21.74929149440593,
+          46.11141134770822,
+          71.98891428419073,
+          98.5426524046237,
+          125.13930457969771,
+          151.30895469594338,
+          176.71084614940702,
+          201.10578410166974,
+          224.33393867232638,
+          246.29703203309924,
+          266.9440805488988,
+          286.2600164557029,
+          304.2566390406649,
+          320.9654476367468,
+          336.43199239316203,
+          350.7114467969214,
+          363.86516174553356,
+          375.9580061567743,
+          387.056336179016,
+          397.2264650772451,
+          406.5335304439947,
+          415.040675282255,
+          422.8084757447701,
+          429.89456148554626,
+          436.3533851974112,
+          442.2361067535574,
+          447.5905640968197,
+          452.4613090081586,
+          456.88969038110616,
+          460.91397096039174,
+          464.5694672718584,
+          467.88870400375833,
+          470.9015764979101,
+          473.63551657574084,
+          476.11565784303554,
+          478.36499777807194,
+          480.40455465351346,
+          482.25351795025244,
+          483.9293913419874,
+          485.4481276769852,
+          486.82425573721474,
+          488.0709987397515,
+          489.2003845355829,
+          490.22334800582996,
+          491.1498257110265,
+          491.9888432167517,
+          492.74859552784835,
+          493.43652098343273,
+          494.05936903159846,
+          494.6232623687066,
+          495.1337538466759,
+          495.5958782125974,
+          496.0141996686671,
+          496.3928551012326,
+          496.7355933443434,
+          497.04581128322855,
+          497.32658628765813,
+          497.58070603729743,
+          497.8106955132087,
+          498.0188415223198
+        ]
+      },
+      {
+        "id": "cv2.n1",
+        "bloque_id": "cv2",
+        "componente": "toluene",
+        "magnitud": "n",
+        "unidad": "mol",
+        "valores": [
+          0.0,
+          56.191957477933194,
+          105.47569416556992,
+          148.7915481171283,
+          186.93908517525801,
+          220.5997919988575,
+          250.3559243729045,
+          276.70618208923247,
+          300.078762556068,
+          320.8422472831127,
+          339.3146952084927,
+          355.7712506860699,
+          370.4505199079923,
+          383.5599249589537,
+          395.28020815558034,
+          405.76922909933955,
+          415.16517240780604,
+          423.5892633858271,
+          431.14807246044677,
+          437.9354751277184,
+          444.034322816427,
+          449.51787101748005,
+          454.4510026674336,
+          458.89127893578103,
+          462.88984398291643,
+          466.4922058464105,
+          469.73891227080526,
+          472.6661368160716,
+          475.3061885718539,
+          477.6879565052934,
+          479.8372974366406,
+          481.7773759755833,
+          483.5289626848058,
+          485.1106962413897,
+          486.539314500851,
+          487.82985842853566,
+          488.9958524358766,
+          490.0494641366822,
+          491.0016461174331,
+          491.86226192681863,
+          492.6401981814733,
+          493.34346447499416,
+          493.97928253874386,
+          494.5541658199103,
+          495.0739907345224,
+          495.54406040451215,
+          495.9691617574888,
+          496.353616747042,
+          496.70132830766556,
+          497.01582161627346,
+          497.30028120153383,
+          497.557584343776,
+          497.79033098566913,
+          498.0008708316789,
+          498.1913276748625,
+          498.3636212466637,
+          498.51948709255424,
+          498.66049427275817,
+          498.7880614968265,
+          498.9034716171361,
+          499.0078847080696
+        ]
+      },
+      {
+        "id": "cv2.N",
+        "bloque_id": "cv2",
+        "componente": null,
+        "magnitud": "N",
+        "unidad": "mol",
+        "valores": [
+          0.0,
+          77.94124897233912,
+          151.58710551327815,
+          220.78046240131903,
+          285.4817375798817,
+          345.73909657855523,
+          401.6648790688479,
+          453.4170282386395,
+          501.18454665773777,
+          545.1761859554391,
+          585.611727241592,
+          622.7153312349687,
+          656.7105363636952,
+          687.8165639996186,
+          716.2456557923272,
+          742.2012214925016,
+          765.8766192047274,
+          787.4544251313607,
+          807.1060786172211,
+          824.9918113067345,
+          841.2607878936722,
+          856.0514014614748,
+          869.4916779496887,
+          881.6997546805511,
+          892.7844054684626,
+          902.8455910438217,
+          911.9750190243626,
+          920.2567009128913,
+          927.7674975800126,
+          934.5776468863996,
+          940.7512683970324,
+          946.3468432474417,
+          951.4176666885642,
+          956.0122727392998,
+          960.1748310765918,
+          963.9455162715713,
+          967.3608502139485,
+          970.4540187901957,
+          973.2551640676855,
+          975.791653268806,
+          978.0883258584586,
+          980.1677202122089,
+          982.0502812784953,
+          983.7545503554932,
+          985.2973387403524,
+          986.6938861155386,
+          987.9580049742406,
+          989.1022122748903,
+          990.1378492910983,
+          991.075190647872,
+          991.9235435702404,
+          992.6913381904519,
+          993.3862091982666,
+          994.015070500346,
+          994.5841827760951,
+          995.099214591007,
+          995.5652983757827,
+          995.9870805604163,
+          996.3687675341239,
+          996.7141671303448,
+          997.0267262303894
+        ]
+      },
+      {
+        "id": "in.F",
+        "bloque_id": "in",
+        "componente": null,
+        "magnitud": "F",
+        "unidad": "mol/s",
+        "valores": [
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0
+        ]
+      },
+      {
+        "id": "in.x0",
+        "bloque_id": "in",
+        "componente": "benzene",
+        "magnitud": "x",
+        "unidad": "mol/mol",
+        "valores": [
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ]
+      },
+      {
+        "id": "in.x1",
+        "bloque_id": "in",
+        "componente": "toluene",
+        "magnitud": "x",
+        "unidad": "mol/mol",
+        "valores": [
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ]
+      },
+      {
+        "id": "medio.F",
+        "bloque_id": "medio",
+        "componente": null,
+        "magnitud": "F",
+        "unidad": "mol/s",
+        "valores": [
+          8.0,
+          8.362538493845834,
+          8.6593599079337,
+          8.902376727800199,
+          9.101342071783462,
+          9.26424111767189,
+          9.3976115761992,
+          9.506806072115847,
+          9.596206964041379,
+          9.669402223574917,
+          9.729329433534735,
+          9.778393683292142,
+          9.818564093440383,
+          9.851452843508298,
+          9.878379874697046,
+          9.900425863221518,
+          9.918475592074262,
+          9.93325346010403,
+          9.945352555056068,
+          9.955258456305314,
+          9.9633687222221,
+          9.970008846363559,
+          9.975445320210174,
+          9.97989632850692,
+          9.98354050592092,
+          9.986524105981434,
+          9.988966871152027,
+          9.990966838141127,
+          9.992604272542044,
+          9.993944890517785,
+          9.995042495651433,
+          9.995941138717122,
+          9.99667688546331,
+          9.997279263939385,
+          9.997772449703763,
+          9.998176236056068,
+          9.998506828374659,
+          9.998777494479345,
+          9.9989990971384,
+          9.99918053004655,
+          9.999329074743802,
+          9.999450692851056,
+          9.999550265350909,
+          9.99963178841692,
+          9.99969853385283,
+          9.999753180391965,
+          9.99979792119288,
+          9.999834551864922,
+          9.999864542527575,
+          9.999889096803777,
+          9.999909200137427,
+          9.999925659363491,
+          9.99993913503495,
+          9.999950167978751,
+          9.99995920099396,
+          9.999966596595925,
+          9.99997265160751,
+          9.999977609031426,
+          9.999981667825416,
+          9.999984990884249,
+          9.999987711575272
+        ]
+      },
+      {
+        "id": "medio.x0",
+        "bloque_id": "medio",
+        "componente": "benzene",
+        "magnitud": "x",
+        "unidad": "mol/mol",
+        "valores": [
+          0.25,
+          0.3041908557599815,
+          0.3451802319894329,
+          0.37670446828292914,
+          0.40126094359175735,
+          0.42058077148654704,
+          0.4358998380688099,
+          0.4481220165697161,
+          0.45792159991216325,
+          0.4658099054335487,
+          0.4721799361082043,
+          0.47733714515028103,
+          0.4815211364072236,
+          0.4849212944677911,
+          0.48768825183424286,
+          0.4899424390269528,
+          0.49178055063311527,
+          0.4932804956438442,
+          0.49450522798046503,
+          0.4955057376068073,
+          0.4963234043826766,
+          0.4969918628861216,
+          0.49753848785676985,
+          0.4979855831331979,
+          0.49835133697616424,
+          0.4986505921504267,
+          0.4988954684713356,
+          0.4990958670962265,
+          0.49925987988153636,
+          0.499394122186129,
+          0.49950400367474956,
+          0.49959394906126875,
+          0.4996675780787194,
+          0.4997278523497461,
+          0.4997771953395176,
+          0.49981759033839057,
+          0.4998506605385211,
+          0.49987773450090955,
+          0.4998998996947718,
+          0.4999180462887945,
+          0.49993290297267107,
+          0.4999450662675563,
+          0.4999550245123875,
+          0.4999631774858443,
+          0.4999698524764373,
+          0.4999753174299823,
+          0.49997979171092133,
+          0.4999834549127568,
+          0.49998645406926767,
+          0.4999889095573811,
+          0.499990919931296,
+          0.4999925658810832,
+          0.4999939134664494,
+          0.4999950167730427,
+          0.49999592008275034,
+          0.4999966596484347,
+          0.4999972651532717,
+          0.4999977608981289,
+          0.49999816677918085,
+          0.49999849908617194,
+          0.499998771156017
+        ]
+      },
+      {
+        "id": "medio.x1",
+        "bloque_id": "medio",
+        "componente": "toluene",
+        "magnitud": "x",
+        "unidad": "mol/mol",
+        "valores": [
+          0.75,
+          0.6958091442400186,
+          0.6548197680105672,
+          0.623295531717071,
+          0.5987390564082427,
+          0.579419228513453,
+          0.5641001619311902,
+          0.5518779834302839,
+          0.5420784000878368,
+          0.5341900945664514,
+          0.5278200638917957,
+          0.522662854849719,
+          0.5184788635927765,
+          0.5150787055322088,
+          0.5123117481657572,
+          0.5100575609730471,
+          0.5082194493668848,
+          0.5067195043561559,
+          0.505494772019535,
+          0.5044942623931927,
+          0.5036765956173235,
+          0.5030081371138784,
+          0.5024615121432301,
+          0.502014416866802,
+          0.5016486630238357,
+          0.5013494078495734,
+          0.5011045315286645,
+          0.5009041329037734,
+          0.5007401201184637,
+          0.500605877813871,
+          0.5004959963252505,
+          0.5004060509387311,
+          0.5003324219212806,
+          0.500272147650254,
+          0.5002228046604823,
+          0.5001824096616095,
+          0.5001493394614788,
+          0.5001222654990903,
+          0.5001001003052282,
+          0.5000819537112056,
+          0.5000670970273289,
+          0.5000549337324436,
+          0.5000449754876126,
+          0.5000368225141556,
+          0.5000301475235627,
+          0.5000246825700176,
+          0.5000202082890787,
+          0.5000165450872432,
+          0.5000135459307323,
+          0.5000110904426188,
+          0.500009080068704,
+          0.5000074341189167,
+          0.5000060865335506,
+          0.5000049832269573,
+          0.5000040799172498,
+          0.5000033403515654,
+          0.5000027348467284,
+          0.5000022391018711,
+          0.5000018332208191,
+          0.500001500913828,
+          0.500001228843983
+        ]
+      },
+      {
+        "id": "out.F",
+        "bloque_id": "out",
+        "componente": null,
+        "magnitud": "F",
+        "unidad": "mol/s",
+        "valores": [
+          0.0,
+          0.7794124897233913,
+          1.5158710551327814,
+          2.2078046240131903,
+          2.854817375798817,
+          3.457390965785552,
+          4.016648790688479,
+          4.534170282386395,
+          5.011845466577377,
+          5.4517618595543915,
+          5.856117272415919,
+          6.227153312349687,
+          6.567105363636952,
+          6.878165639996185,
+          7.162456557923271,
+          7.422012214925017,
+          7.658766192047275,
+          7.874544251313607,
+          8.071060786172211,
+          8.249918113067345,
+          8.412607878936722,
+          8.560514014614748,
+          8.694916779496886,
+          8.816997546805512,
+          8.927844054684627,
+          9.028455910438218,
+          9.119750190243627,
+          9.202567009128913,
+          9.277674975800124,
+          9.345776468863995,
+          9.407512683970324,
+          9.463468432474418,
+          9.514176666885643,
+          9.560122727392997,
+          9.601748310765919,
+          9.639455162715713,
+          9.673608502139485,
+          9.704540187901957,
+          9.732551640676856,
+          9.75791653268806,
+          9.780883258584584,
+          9.80167720212209,
+          9.820502812784955,
+          9.837545503554932,
+          9.852973387403523,
+          9.866938861155386,
+          9.879580049742405,
+          9.891022122748904,
+          9.901378492910982,
+          9.910751906478719,
+          9.919235435702404,
+          9.92691338190452,
+          9.933862091982666,
+          9.940150705003461,
+          9.945841827760951,
+          9.950992145910071,
+          9.955652983757828,
+          9.959870805604163,
+          9.963687675341241,
+          9.967141671303448,
+          9.970267262303894
+        ]
+      },
+      {
+        "id": "out.x0",
+        "bloque_id": "out",
+        "componente": "benzene",
+        "magnitud": "x",
+        "unidad": "mol/mol",
+        "valores": [
+          null,
+          0.2790472539402675,
+          0.30419085575632376,
+          0.3260656015537027,
+          0.3451802319826154,
+          0.3619472192126379,
+          0.37670446827891085,
+          0.3897313844516702,
+          0.40126094358413295,
+          0.41148888093703834,
+          0.4205807714835777,
+          0.42867754680055087,
+          0.4358998380637648,
+          0.4423514276414454,
+          0.4481220165750081,
+          0.4532894620095434,
+          0.4579215999061231,
+          0.46207774079729724,
+          0.4658099054350902,
+          0.46916385214289996,
+          0.47217993610734055,
+          0.47489383201750424,
+          0.4773371451477774,
+          0.4795379305713405,
+          0.4815211364046749,
+          0.48330898386835197,
+          0.48492129447434285,
+          0.48637577281731453,
+          0.4876882518393435,
+          0.4888729062836685,
+          0.48994243903147067,
+          0.49090824425182467,
+          0.4917805506305743,
+          0.4925685474189753,
+          0.4932804956412772,
+          0.4939238264052468,
+          0.4945052279842349,
+          0.49503072309639545,
+          0.49550573760604655,
+          0.49593516169242846,
+          0.49632340438263817,
+          0.49667444223914664,
+          0.49699186288542135,
+          0.497278903928631,
+          0.49753848785642024,
+          0.49777325330818406,
+          0.4979855831317239,
+          0.4981776295844581,
+          0.4983513369746595,
+          0.49850846201550947,
+          0.4986505921498789,
+          0.49877916205982087,
+          0.4988954684730107,
+          0.4990006835801736,
+          0.49909586709462345,
+          0.4991819770941185,
+          0.4992598798834542,
+          0.4993303587912257,
+          0.4993941221870507,
+          0.4994518106895814,
+          0.49950400367425996
+        ]
+      },
+      {
+        "id": "out.x1",
+        "bloque_id": "out",
+        "componente": "toluene",
+        "magnitud": "x",
+        "unidad": "mol/mol",
+        "valores": [
+          null,
+          0.7209527460597325,
+          0.6958091442436762,
+          0.6739343984462972,
+          0.6548197680173846,
+          0.6380527807873622,
+          0.6232955317210891,
+          0.6102686155483298,
+          0.5987390564158671,
+          0.5885111190629616,
+          0.5794192285164222,
+          0.5713224531994492,
+          0.5641001619362351,
+          0.5576485723585546,
+          0.551877983424992,
+          0.5467105379904565,
+          0.5420784000938769,
+          0.5379222592027029,
+          0.5341900945649096,
+          0.5308361478570999,
+          0.5278200638926593,
+          0.5251061679824958,
+          0.5226628548522226,
+          0.5204620694286595,
+          0.518478863595325,
+          0.5166910161316479,
+          0.5150787055256572,
+          0.5136242271826856,
+          0.5123117481606566,
+          0.5111270937163316,
+          0.5100575609685293,
+          0.5090917557481752,
+          0.5082194493694256,
+          0.5074314525810247,
+          0.5067195043587228,
+          0.5060761735947532,
+          0.5054947720157651,
+          0.5049692769036046,
+          0.5044942623939533,
+          0.5040648383075715,
+          0.5036765956173619,
+          0.5033255577608534,
+          0.5030081371145786,
+          0.502721096071369,
+          0.5024615121435798,
+          0.502226746691816,
+          0.5020144168682762,
+          0.5018223704155419,
+          0.5016486630253406,
+          0.5014915379844905,
+          0.5013494078501212,
+          0.501220837940179,
+          0.5011045315269893,
+          0.5009993164198263,
+          0.5009041329053766,
+          0.5008180229058815,
+          0.5007401201165458,
+          0.5006696412087742,
+          0.5006058778129492,
+          0.5005481893104187,
+          0.50049599632574
+        ]
+      }
+    ]
+  },
+  "eventos": [],
+  "conservacion": {
+    "por_volumen": [
+      {
+        "bloque_id": "cv1",
+        "entra_por": "in",
+        "sale_por": "medio",
+        "reacciones": [],
+        "residuo_integrado_max": 1.638985243819963e-15
+      },
+      {
+        "bloque_id": "cv2",
+        "entra_por": "medio",
+        "sale_por": "out",
+        "reacciones": [],
+        "residuo_integrado_max": 3.814193405560214e-14
+      }
+    ],
+    "global": {
+      "residuo_integrado_max": 3.884300288821877e-14,
+      "corrientes_usadas": [
+        "in",
+        "out"
+      ],
+      "nota": "Usa solo la alimentacion y la salida final: la corriente intermedia no aparece, porque se cancela al sumar los volumenes."
+    },
+    "residuo_instantaneo_max": 4.4408920985006264e-17,
+    "escala_instantaneo": "max |sum_v dn_i/dt - (F_i,alim - F_i,sal)| / F_alim",
+    "escala_integrado": "relativo al mayor de: inventario inicial, flujo acumulado de alimentacion e inventario de cualquier volumen",
+    "invariantes": [],
+    "energia": null,
+    "tolerancia": 1e-07,
+    "alcance": "comprueba el ensamblaje y los invariantes; la precision de la trayectoria se valida contra soluciones analiticas",
+    "cumple": true
+  },
+  "estacionario": null,
+  "contraste_estacionario": {
+    "evaluado": true,
+    "entradas": {
+      "F": 10.0,
+      "x": [
+        0.5,
+        0.5
+      ],
+      "T": null,
+      "Q": null,
+      "nota": "las del ultimo tramo"
+    },
+    "distancia_escalada": 0.003962316955360393,
+    "derivada_escalada": 0.001979315213970878,
+    "variacion_ventana_final": 0.003251972842174382,
+    "ventana_final_s": [
+      540.0,
+      600.0
+    ],
+    "tolerancia": 1e-06,
+    "estabilidad": {
+      "autovalores": [
+        {
+          "real": -0.009999999999621423,
+          "imaginaria": 0.0
+        },
+        {
+          "real": -0.010000000000509603,
+          "imaginaria": 0.0
+        },
+        {
+          "real": -0.019999999999242846,
+          "imaginaria": 0.0
+        },
+        {
+          "real": -0.020000000000427082,
+          "imaginaria": 0.0
+        }
+      ],
+      "unidad": "1/s",
+      "restringido_a_restricciones": false,
+      "acoplado": false,
+      "localmente_estable": true,
+      "constante_de_tiempo_mas_lenta_s": 100.00000000378577,
+      "alcance": "estabilidad lineal LOCAL del estacionario: dice que una perturbacion pequena decae, no que el estacionario se alcance desde cualquier estado inicial ni que sea unico globalmente."
+    },
+    "alcanzado": false,
+    "conclusion": "El final de la trayectoria NO es aun el estacionario de las entradas finales dentro de la tolerancia. Alarga el horizonte si se busca el limite; una curva que parece plana no basta."
+  },
+  "constantes_de_tiempo": [
+    {
+      "bloque_id": "cv1",
+      "tipo": "material",
+      "definicion": "tau = 1 / k",
+      "valor_s": 50.0,
+      "constante": true,
+      "nota": null
+    },
+    {
+      "bloque_id": "cv2",
+      "tipo": "material",
+      "definicion": "tau = 1 / k",
+      "valor_s": 100.0,
+      "constante": true,
+      "nota": null
+    }
+  ],
+  "diagnosticos": [
+    {
+      "codigo": "LAB_DIN_ESTACIONARIO_NO_ALCANZADO",
+      "severidad": "informacion",
+      "categoria": "fisica",
+      "mensaje": "El final de la trayectoria NO es aun el estacionario de las entradas finales dentro de la tolerancia. Alarga el horizonte si se busca el limite; una curva que parece plana no basta.",
+      "accion_sugerida": null,
+      "bloque_ids": [],
+      "conexion_ids": [],
+      "variable_ids": []
+    }
+  ],
+  "resumen_diagnosticos": {
+    "total": 1,
+    "por_severidad": {
+      "informacion": 1
+    },
+    "por_categoria": {
+      "fisica": 1
+    },
+    "hay_errores": false
+  },
+  "capacidades": {
+    "schema_version": 1,
+    "version_estudio": 1,
+    "revision_contrato": 15,
+    "estudios": [
+      "estacionario",
+      "temporal"
+    ],
+    "componentes": {
+      "min": 1,
+      "max": 8,
+      "nota": "una sola especie es un montaje valido (agua pura): x = 1 por el cierre de la composicion, sin componente ficticio. Las fracciones se llaman x0..x{n-1}; el alias 'x' vale solo con n = 2"
+    },
+    "unidades": {
+      "n": [
+        "kmol",
+        "mmol",
+        "mol"
+      ],
+      "densidad_molar": [
+        "kmol/m3",
+        "mol/L",
+        "mol/dm3",
+        "mol/m3"
+      ],
+      "k_salida": [
+        "1/h",
+        "1/min",
+        "1/s"
+      ],
+      "tiempo": [
+        "h",
+        "min",
+        "s"
+      ],
+      "F": [
+        "kmol/h",
+        "kmol/s",
+        "mol/h",
+        "mol/s"
+      ],
+      "V": [
+        "L",
+        "cm3",
+        "dm3",
+        "m3",
+        "mL"
+      ],
+      "x": [
+        "-",
+        "fraccion",
+        "mol/mol"
+      ]
+    },
+    "catalogo_variables": {
+      "donde": "en /validar y /resolver, tambien con el montaje incompleto (entonces 'provisional': true, desde la topologia)",
+      "campos": [
+        "id",
+        "nombre",
+        "simbolo",
+        "magnitud",
+        "unidad_interna",
+        "familia",
+        "bloque_ids",
+        "conexion_ids",
+        "compartida",
+        "clase",
+        "funcion",
+        "puede_especificarse",
+        "puede_calcularse",
+        "motivo_limitacion",
+        "provisional"
+      ],
+      "nota": "puede_calcularse es una eleccion ADMITIDA; no garantiza que cualquier combinacion de elecciones cierre el sistema"
+    },
+    "seleccion_variables": {
+      "version": 1,
+      "declaracion": "{version: 1, variables: [{variable_id, modo: 'dato' | 'calcular', cantidad: {valor, unidad}}]}",
+      "admitida_con": [
+        "balance_general"
+      ],
+      "con_otros_cierres": "LAB_DIN_ESPECIFICACION_NO_ADMITIDA: usan 'especificaciones'",
+      "duplicados": "la misma variable dos veces, o en seleccion_variables y en especificaciones: LAB_ESPECIFICACION_DUPLICADA (no se migra en silencio)",
+      "codigos": [
+        "LAB_DIN_ESPECIFICACION_NO_ADMITIDA",
+        "LAB_DIN_ESPECIFICACION_REDUNDANTE (advertencia)",
+        "LAB_DIN_ESPECIFICACION_CONTRADICTORIA",
+        "LAB_DIN_ESTACIONARIO_INDETERMINADO",
+        "LAB_FALTA_ESPECIFICACION (frontera pendiente)"
+      ],
+      "identidad": "entra en modelo_id NORMALIZADA a SI: una unidad equivalente no es un cambio fisico"
+    },
+    "recuento": {
+      "version": 1,
+      "donde": "campo 'recuento' de /validar y /resolver, calculado ANTES del solver y del mismo ensamblaje (el de /resolver es el de /validar)",
+      "estados": [
+        "incompleto",
+        "listo",
+        "redundante_compatible",
+        "conflicto",
+        "no_evaluable"
+      ],
+      "origenes": {
+        "rango_numerico": "estacionario lineal del balance general (rango exacto y global)",
+        "estructural": "modelo ensamblado (recuento triangular, sin rango numerico)",
+        "no_evaluado": "sin modelo ensamblado"
+      },
+      "nota": "con el estudio incompleto (p. ej. una inicial ausente) el modelo se ensambla SOLO para contar y para el catalogo; la respuesta sigue sin modelo"
+    },
+    "problemas_inversos": {
+      "temporal_con_objetivos_finales": false,
+      "motivo": "calcular un parametro o una frontera a partir de n(t_final) o T(t_final) es un problema inverso con otra validacion; 'estudio.objetivos' se rechaza, no se ignora"
+    },
+    "expresiones_arbitrarias": false,
+    "balances_por_volumen": {
+      "declaracion": "balances_por_volumen: [{bloque_id, materia, energia, momento, procedencia}]; cada familia true, false o null",
+      "herencia": "null o ausente hereda del montaje: materia si, energia si hay modelo_energetico, momento no",
+      "procedencias": [
+        "elegido",
+        "preset",
+        "migrado",
+        "declarado (sin procedencia)",
+        "heredado del montaje"
+      ],
+      "admitido": [
+        "materia activa en todos los volumenes",
+        "energia en todos, en ninguno o en un prefijo de la cadena (fila 'materia+energia_en_prefijo')",
+        "momento false o null"
+      ],
+      "no_admitido": {
+        "materia desactivada": "LAB_DIN_BALANCE_NO_SOPORTADO (n no tendria ley)",
+        "momento activo": "LAB_DIN_BALANCE_NO_SOPORTADO (no implementado; no se ejecuta)",
+        "energia aguas abajo de un volumen sin ella": "LAB_DIN_BALANCE_NO_SOPORTADO con la relacion pendiente",
+        "energia activa sin modelo_energetico, o modelo declarado sin ningun volumen con energia": "LAB_DIN_BALANCE_INCOHERENTE",
+        "fuente de calor, T especificada o T/U inicial en un volumen sin energia": "LAB_DIN_BALANCE_INCOHERENTE"
+      },
+      "respuesta": "balances (por volumen y familia: solicitado, activo, procedencia, implementado, ejecutado, ecuaciones; sistema abierto/cerrado y relacion de salida), pendientes y contradicciones",
+      "momento": {
+        "implementado": false
+      }
+    },
+    "fisica": {
+      "materia_por_especie": true,
+      "energia": true,
+      "reaccion": true,
+      "interfaz_termica": true,
+      "pared_solida": true,
+      "condensacion": "cuasiestacionaria (camara_vapor, IAPWS-IF97)",
+      "volumenes_cerrados": true,
+      "transferencia_de_materia_entre_volumenes": true,
+      "transferencia_de_materia_con_energia": true,
+      "momento": false
+    },
+    "interfaces_materiales": {
+      "declaracion": "conexion {tipo: 'transferencia_materia'} entre dos volumenes cerrados y 'interfaces_materiales': [{conexion_id, especie, conductancia: {valor, unidad}, reparto: {valor, unidad}}]",
+      "ley": "dot n = L (c_desde - c_hacia / H), c = n / V",
+      "convencion": "positivo de 'desde' a 'hacia': resta en n_desde, suma en n_hacia",
+      "inversion": "invertir la conexion con la MISMA fisica exige H' = 1/H y L' = L/H; invertir la flecha conservando L y H es OTRA fisica",
+      "especie": "el identificador de 'componentes' o su CAS; una por interfaz. No se deduce del nombre ni de la formula",
+      "unidades_L": [
+        "L/h",
+        "L/min",
+        "L/s",
+        "m3/h",
+        "m3/min",
+        "m3/s"
+      ],
+      "unidades_H": [
+        "(mol/m3)/(mol/m3)",
+        "adimensional"
+      ],
+      "valores_por_omision": "ninguno: sin L no hay ley (L = 0 se declara) y H = 1 tambien se declara",
+      "requiere": "dos volumenes CERRADOS con cierre 'volumen_fijo'; sin reaccion. Con energia, solo 'ideal_volumen_fijo' (y entonces admite una interfaz termica separada)",
+      "energia": {
+        "modelo": "ideal_volumen_fijo",
+        "energia_transportada": "E_12 = dot n u_i(T_donante)",
+        "aproximacion": "soluto diluido, v_i ~ 0: sin trabajo de flujo",
+        "modos_termicos": [
+          "calor (Q impuesto)",
+          "adiabatico"
+        ],
+        "no": [
+          "temperatura impuesta",
+          "proveedor_liquido (hito B)",
+          "ideal_incompresible"
+        ]
+      },
+      "hito_B_proveedor": {
+        "disponible": false,
+        "falta": [
+          "entalpia (o energia) molar PARCIAL de la especie que cruza, o la de exceso: UNIFAC da gamma pero no h^E validada",
+          "relacion de volumen coherente con V fijo y N variable (volumenes molares parciales y presion)",
+          "una referencia independiente del proveedor con que validarlo"
+        ],
+        "diagnostico": "LAB_DIN_MODELO_ENERGETICO_NO_SOPORTADO"
+      },
+      "cierre": "'volumen_fijo': V geometrico fijo, N = sum n_i libre (no se impone sum n = rho V)",
+      "estacionario": "indeterminado (familia fijada por el total conservado)",
+      "transferencia_estacionario_a_temporal": false,
+      "limitaciones": [
+        "soluto diluido en compartimentos de volumen geometrico constante",
+        "coeficientes L y H constantes (no dependen de T ni de la composicion)",
+        "equilibrio lineal c_hacia = H c_desde (sin actividad ni potencial quimico)",
+        "una especie por interfaz: sin difusion cruzada ni transferencia multicomponente",
+        "sin osmosis, sin electromigracion y sin cambio de volumen",
+        "isotermo por alcance: sin balance de energia"
+      ],
+      "almacenamiento": "ninguno: sin inventario ni derivada propia"
+    },
+    "combinaciones": [
+      {
+        "id": "materia",
+        "fisica": [
+          "materia"
+        ],
+        "cierres": [
+          "inventario_constante",
+          "salida_lineal",
+          "salida_impuesta"
+        ],
+        "estudios": [
+          "estacionario",
+          "temporal"
+        ],
+        "estados_diferenciales": [
+          "{vol}.n{i}"
+        ],
+        "algebraicas": [
+          "{corriente}.F",
+          "{corriente}.x{i}",
+          "{vol}.N (inventario variable)"
+        ],
+        "especificaciones": [
+          "F y x de la alimentacion (base y escalones)"
+        ],
+        "restricciones": [
+          "sum_i n_i = rho V con inventario constante (indice 2, reducida; invariante medido)"
+        ],
+        "iniciales": [
+          "n por especie y volumen (temporal)"
+        ],
+        "dominio": [
+          "n_i >= 0",
+          "F > 0 en cada tramo"
+        ],
+        "metodo": {
+          "temporal": "solve_ivp sobre el vector conjunto; LSODA por omision (declarado como omision, con el cociente de rigidez), Radau, BDF o RK45 a peticion; reinicio en cada escalon",
+          "estacionario": "Newton amortiguado sobre el mismo residuo, jacobiano por diferencias centradas; con reaccion, dos arranques declarados; con salida impuesta, existencia decidida por estructura"
+        },
+        "eventos": [
+          "vaciado (salida impuesta)",
+          "dominio (n_i < 0)"
+        ],
+        "no_soportado": [
+          "densidad dependiente de x o T"
+        ],
+        "transferencia_estacionario_a_temporal": "si: /laboratorio/estudios/transferir; rama obligatoria si hay varias"
+      },
+      {
+        "id": "materia+reaccion",
+        "fisica": [
+          "materia",
+          "reaccion"
+        ],
+        "cierres": [
+          "inventario_constante",
+          "salida_lineal",
+          "salida_impuesta"
+        ],
+        "estudios": [
+          "estacionario",
+          "temporal"
+        ],
+        "estados_diferenciales": [
+          "{vol}.n{i}"
+        ],
+        "algebraicas": [
+          "{rx}.r_directa",
+          "{rx}.r_inversa",
+          "{rx}.avance",
+          "{corriente}.F",
+          "{corriente}.x{i}"
+        ],
+        "especificaciones": [
+          "F y x de la alimentacion",
+          "T de cada reactor (isotermo declarado)"
+        ],
+        "restricciones": [
+          "sum_i n_i = rho V; F_sal = F_ent + sum_r (sum_i nu) xi"
+        ],
+        "iniciales": [
+          "n por especie y volumen"
+        ],
+        "dominio": [
+          "n_i >= 0",
+          "F_sal >= 0"
+        ],
+        "metodo": {
+          "temporal": "solve_ivp sobre el vector conjunto; LSODA por omision (declarado como omision, con el cociente de rigidez), Radau, BDF o RK45 a peticion; reinicio en cada escalon",
+          "estacionario": "Newton amortiguado sobre el mismo residuo, jacobiano por diferencias centradas; con reaccion, dos arranques declarados"
+        },
+        "eventos": [
+          "agotamiento",
+          "caudal_negativo",
+          "vaciado",
+          "dominio"
+        ],
+        "no_soportado": [
+          "tasas fijas",
+          "base volumetrica sin V fijo",
+          "el calor que mantiene la T (no se calcula)"
+        ],
+        "transferencia_estacionario_a_temporal": "si: /laboratorio/estudios/transferir; rama obligatoria si hay varias"
+      },
+      {
+        "id": "materia+energia",
+        "fisica": [
+          "materia",
+          "energia"
+        ],
+        "cierres": [
+          "inventario_constante"
+        ],
+        "estudios": [
+          "estacionario",
+          "temporal"
+        ],
+        "estados_diferenciales": [
+          "{vol}.n{i}",
+          "{vol}.U (salvo T impuesta)"
+        ],
+        "algebraicas": [
+          "{vol}.T (cierre U = U(n,T), indice 1)",
+          "{corriente}.T",
+          "{corriente}.h",
+          "{vol}.U y {calor}.Q con T impuesta"
+        ],
+        "especificaciones": [
+          "T de la alimentacion",
+          "por volumen UNA de: Q de su fuente, T del volumen, adiabatico"
+        ],
+        "restricciones": [
+          "sum_i n_i = rho V (indice 2)",
+          "U = U(n, T*) con T impuesta (indice 2 en Q)"
+        ],
+        "iniciales": [
+          "n por especie",
+          "T o U por volumen (las dos si son consistentes); con T impuesta, ninguna o la misma"
+        ],
+        "dominio": [
+          "dominio_T declarado",
+          "liquido (proveedor_liquido)"
+        ],
+        "metodo": {
+          "temporal": "solve_ivp sobre el vector conjunto; LSODA por omision (declarado como omision, con el cociente de rigidez), Radau, BDF o RK45 a peticion; reinicio en cada escalon",
+          "estacionario": "Newton amortiguado sobre el mismo residuo, jacobiano por diferencias centradas; con reaccion, dos arranques declarados"
+        },
+        "eventos": [
+          "dominio_termico",
+          "frontera_de_fase (proveedor_liquido)",
+          "dominio (n_i < 0)"
+        ],
+        "no_soportado": [
+          "frontera movil",
+          "trabajo de eje",
+          "cambio de fase"
+        ],
+        "transferencia_estacionario_a_temporal": "si: /laboratorio/estudios/transferir; rama obligatoria si hay varias"
+      },
+      {
+        "id": "materia+energia+reaccion",
+        "fisica": [
+          "materia",
+          "energia",
+          "reaccion"
+        ],
+        "cierres": [
+          "inventario_constante"
+        ],
+        "estudios": [
+          "estacionario",
+          "temporal"
+        ],
+        "estados_diferenciales": [
+          "{vol}.n{i}",
+          "{vol}.U (salvo T impuesta)"
+        ],
+        "algebraicas": [
+          "las de materia+energia",
+          "{rx}.r_directa",
+          "{rx}.r_inversa",
+          "{rx}.avance"
+        ],
+        "especificaciones": [
+          "las de materia+energia"
+        ],
+        "restricciones": [
+          "las de materia+energia; F_sal con sum(nu) != 0"
+        ],
+        "iniciales": [
+          "n por especie",
+          "T o U"
+        ],
+        "dominio": [
+          "los de materia+energia",
+          "F_sal >= 0"
+        ],
+        "metodo": {
+          "temporal": "solve_ivp sobre el vector conjunto; LSODA por omision (declarado como omision, con el cociente de rigidez), Radau, BDF o RK45 a peticion; reinicio en cada escalon",
+          "estacionario": "Newton amortiguado sobre el mismo residuo, jacobiano por diferencias centradas; con reaccion, dos arranques declarados"
+        },
+        "eventos": [
+          "agotamiento",
+          "caudal_negativo",
+          "dominio_termico",
+          "frontera_de_fase"
+        ],
+        "referencia_energia": "sensible con fuente quimica - sum_r xi_r dH_r(298.15 K); T_referencia = 298.15 K obligatoria",
+        "no_soportado": [
+          "tasas fijas",
+          "especies sin H_f"
+        ],
+        "transferencia_estacionario_a_temporal": "si: /laboratorio/estudios/transferir; rama obligatoria si hay varias"
+      },
+      {
+        "id": "materia+energia+interfaz",
+        "fisica": [
+          "materia",
+          "energia",
+          "interfaz_termica"
+        ],
+        "cierres": [
+          "inventario_constante (los dos volumenes)"
+        ],
+        "estudios": [
+          "estacionario (solo en cadena)",
+          "temporal"
+        ],
+        "estados_diferenciales": [
+          "{vol}.n{i}",
+          "{vol}.U"
+        ],
+        "algebraicas": [
+          "las de materia+energia",
+          "{conexion}.Q = G (T_desde - T_hacia)"
+        ],
+        "especificaciones": [
+          "G por conexion termica",
+          "y las de materia+energia por volumen (la interfaz no cuenta como su fuente externa)"
+        ],
+        "restricciones": [
+          "las de materia+energia"
+        ],
+        "iniciales": [
+          "n por especie",
+          "T o U por volumen"
+        ],
+        "dominio": [
+          "los de materia+energia",
+          "G >= 0"
+        ],
+        "metodo": {
+          "temporal": "solve_ivp sobre el vector conjunto; LSODA por omision (declarado como omision, con el cociente de rigidez), Radau, BDF o RK45 a peticion; reinicio en cada escalon",
+          "estacionario": "Newton amortiguado sobre el mismo residuo, jacobiano por diferencias centradas; con reaccion, dos arranques declarados"
+        },
+        "eventos": [
+          "dominio_termico",
+          "frontera_de_fase"
+        ],
+        "no_soportado": [
+          "pared con almacenamiento propio entre los volumenes",
+          "mas de una interfaz por par",
+          "interfaz sin energia"
+        ],
+        "transferencia_estacionario_a_temporal": "si: /laboratorio/estudios/transferir; rama obligatoria si hay varias"
+      },
+      {
+        "id": "materia+energia+reaccion+interfaz",
+        "fisica": [
+          "materia",
+          "energia",
+          "reaccion",
+          "interfaz_termica"
+        ],
+        "cierres": [
+          "inventario_constante (los dos volumenes, en cadena)"
+        ],
+        "estudios": [
+          "estacionario",
+          "temporal"
+        ],
+        "estados_diferenciales": [
+          "{vol}.n{i}",
+          "{vol}.U (salvo T impuesta)"
+        ],
+        "algebraicas": [
+          "{vol}.T",
+          "{corriente}.T",
+          "{corriente}.h",
+          "{rx}.r_directa",
+          "{rx}.r_inversa",
+          "{rx}.avance",
+          "{conexion}.Q = G (T_desde - T_hacia)",
+          "{vol}.U y {calor}.Q con T impuesta"
+        ],
+        "especificaciones": [
+          "T de la alimentacion",
+          "G por conexion termica",
+          "por volumen UNA de: Q de su fuente, T del volumen, adiabatico (al exterior; la interfaz es interna)"
+        ],
+        "restricciones": [
+          "sum_i n_i = rho V (indice 2); F_sal = F_ent + sum_r (sum_i nu) xi",
+          "U = U(n, T*) con T impuesta (indice 2)"
+        ],
+        "iniciales": [
+          "n por especie",
+          "T o U por volumen"
+        ],
+        "dominio": [
+          "dominio_T declarado",
+          "liquido (proveedor_liquido)",
+          "n_i >= 0",
+          "F_sal >= 0",
+          "G >= 0"
+        ],
+        "metodo": {
+          "temporal": "solve_ivp sobre el vector conjunto; LSODA por omision (declarado como omision, con el cociente de rigidez), Radau, BDF o RK45 a peticion; reinicio en cada escalon",
+          "estacionario": "Newton amortiguado sobre el mismo residuo, jacobiano por diferencias centradas; con reaccion, dos arranques declarados; continuacion pseudo-transitoria si un arranque no converge"
+        },
+        "eventos": [
+          "agotamiento",
+          "caudal_negativo",
+          "dominio_termico",
+          "frontera_de_fase"
+        ],
+        "referencia_energia": "sensible con fuente quimica - sum_r xi_r dH_r(298.15 K); T_referencia = 298.15 K obligatoria",
+        "evaluacion": "composicion, T de los dos volumenes, tasas y Q_12 en el MISMO instante, en un unico vector de estado",
+        "no_soportado": [
+          "volumenes cerrados con reaccion (es un lote)",
+          "pared con almacenamiento propio",
+          "tasas fijas",
+          "busqueda exhaustiva de ramas"
+        ],
+        "transferencia_estacionario_a_temporal": "si: /laboratorio/estudios/transferir; rama obligatoria si hay varias"
+      },
+      {
+        "id": "volumenes_cerrados",
+        "fisica": [
+          "energia",
+          "interfaz_termica (opcional)"
+        ],
+        "cierres": [
+          "inventario_constante, sin corrientes"
+        ],
+        "estudios": [
+          "temporal"
+        ],
+        "estados_diferenciales": [
+          "{vol}.n{i} (constantes)",
+          "{vol}.U"
+        ],
+        "algebraicas": [
+          "{vol}.T",
+          "{conexion}.Q"
+        ],
+        "especificaciones": [
+          "por volumen UNA de: Q de su fuente, T del volumen, adiabatico (al exterior)"
+        ],
+        "restricciones": [
+          "sum_i n_i = rho V como VERIFICACION del inicial: con dn/dt = 0 no determina nada"
+        ],
+        "iniciales": [
+          "n por especie",
+          "T o U"
+        ],
+        "dominio": [
+          "los de materia+energia"
+        ],
+        "metodo": {
+          "temporal": "solve_ivp sobre el vector conjunto; LSODA por omision (declarado como omision, con el cociente de rigidez), Radau, BDF o RK45 a peticion; reinicio en cada escalon",
+          "estacionario": "indeterminado: el limite depende del estado inicial (conservacion), LAB_DIN_ESTACIONARIO_INDETERMINADO"
+        },
+        "eventos": [
+          "dominio_termico",
+          "frontera_de_fase"
+        ],
+        "no_soportado": [
+          "estacionario",
+          "reaccion (es un lote: /laboratorio/lote)",
+          "sin energia (salvo con una interfaz de materia: ver 'materia+interfaz_material')"
+        ],
+        "transferencia_estacionario_a_temporal": "no: el estacionario es indeterminado (depende del estado inicial)"
+      },
+      {
+        "id": "materia+interfaz_material",
+        "fisica": [
+          "materia",
+          "interfaz_material"
+        ],
+        "cierres": [
+          "volumen_fijo (los dos compartimentos, cerrados)"
+        ],
+        "estudios": [
+          "temporal"
+        ],
+        "estados_diferenciales": [
+          "{vol}.n{i}"
+        ],
+        "algebraicas": [
+          "{vol}.N = sum_i n_i",
+          "{vol}.c{i} = n_i / V (la especie que cruza)",
+          "{conexion}.tasa = L (c_desde - c_hacia / H)"
+        ],
+        "especificaciones": [
+          "V por compartimento",
+          "por conexion: especie, L (m3/s) y H (adimensional), todos declarados"
+        ],
+        "restricciones": [
+          "ninguna: V fijo no fija N (sin densidad molar total)"
+        ],
+        "iniciales": [
+          "n por especie y compartimento (>= 0)"
+        ],
+        "dominio": [
+          "n_i >= 0",
+          "V > 0",
+          "L >= 0",
+          "H > 0"
+        ],
+        "metodo": {
+          "temporal": "solve_ivp sobre el vector conjunto; LSODA por omision (declarado como omision, con el cociente de rigidez), Radau, BDF o RK45 a peticion; reinicio en cada escalon",
+          "estacionario": "indeterminado: familia de equilibrios fijada por el total conservado; LAB_DIN_ESTACIONARIO_INDETERMINADO"
+        },
+        "evaluacion": "inventarios de los dos compartimentos y tasa de la interfaz en el MISMO instante, en un unico vector de estado",
+        "eventos": [
+          "dominio (n_i < 0)"
+        ],
+        "contraste": "el temporal compara su final con el limite que fija el total conservado del estado inicial (no con un estacionario unico)",
+        "isotermo": "T es parametro del alcance: sin balance de energia ni calor",
+        "limitaciones": [
+          "soluto diluido en compartimentos de volumen geometrico constante",
+          "coeficientes L y H constantes (no dependen de T ni de la composicion)",
+          "equilibrio lineal c_hacia = H c_desde (sin actividad ni potencial quimico)",
+          "una especie por interfaz: sin difusion cruzada ni transferencia multicomponente",
+          "sin osmosis, sin electromigracion y sin cambio de volumen",
+          "isotermo por alcance: sin balance de energia"
+        ],
+        "no_soportado": [
+          "energia: ver 'materia+energia+interfaz_material'",
+          "reaccion + transporte selectivo",
+          "actividad o potencial quimico (equilibrio no ideal)",
+          "compartimentos con corrientes",
+          "interfaz termica a la vez",
+          "mas de una especie o de una interfaz por par",
+          "estacionario con total impuesto"
+        ],
+        "transferencia_estacionario_a_temporal": "no: el estacionario es indeterminado (depende del estado inicial)"
+      },
+      {
+        "id": "materia+energia+interfaz_material",
+        "fisica": [
+          "materia",
+          "energia",
+          "interfaz_material"
+        ],
+        "cierres": [
+          "volumen_fijo (los dos compartimentos, cerrados)"
+        ],
+        "modelo_energetico": "ideal_volumen_fijo (c_v y u_referencia por especie, T_referencia y dominio_T declarados)",
+        "estudios": [
+          "temporal"
+        ],
+        "estados_diferenciales": [
+          "{vol}.n{i}",
+          "{vol}.U"
+        ],
+        "algebraicas": [
+          "{vol}.T (U = sum n_i u_i(T) + C_w (T - T_ref), explicita)",
+          "{vol}.N",
+          "{vol}.c{i}",
+          "{conexion}.tasa",
+          "{conexion}.E = tasa u_i(T_donante)"
+        ],
+        "especificaciones": [
+          "V por compartimento",
+          "por conexion: especie, L y H",
+          "por compartimento UNA de: Q de su fuente o adiabatico (T impuesta NO)"
+        ],
+        "restricciones": [
+          "ninguna: V fijo no fija N"
+        ],
+        "iniciales": [
+          "n por especie",
+          "T o U por compartimento"
+        ],
+        "dominio": [
+          "dominio_T declarado (evento)",
+          "n_i >= 0",
+          "L >= 0",
+          "H > 0",
+          "capacidad termica > 0"
+        ],
+        "metodo": {
+          "temporal": "solve_ivp sobre el vector conjunto; LSODA por omision (declarado como omision, con el cociente de rigidez), Radau, BDF o RK45 a peticion; reinicio en cada escalon",
+          "estacionario": "indeterminado: familia fijada por los totales de especie (y de energia si es adiabatico)"
+        },
+        "evaluacion": "inventarios, T de los dos compartimentos, tasa y E_12 en el MISMO instante, en un unico vector [n, U]",
+        "energia_transportada": "E_12 = dot n u_i(T_donante), estado del lado de donde viene el flujo neto; misma referencia que U. Continua en dot n = 0. Nunca un intercambio bruto",
+        "aproximacion": "soluto diluido: v_i ~ 0, sin trabajo de flujo (h_i = u_i); no rigurosa",
+        "eventos": [
+          "dominio_termico",
+          "dominio (n_i < 0)"
+        ],
+        "contraste": "limite condicionado por los totales iniciales: inventarios y, sin calor exterior, T (comun con interfaz termica; sin ella el donante conserva su T)",
+        "limitaciones": [
+          "soluto diluido en compartimentos de volumen geometrico constante",
+          "coeficientes L y H constantes (no dependen de T ni de la composicion)",
+          "equilibrio lineal c_hacia = H c_desde (sin actividad ni potencial quimico)",
+          "una especie por interfaz: sin difusion cruzada ni transferencia multicomponente",
+          "sin osmosis, sin electromigracion y sin cambio de volumen",
+          "propiedades termicas constantes (c_v); mezcla ideal sin energia de exceso"
+        ],
+        "no_soportado": [
+          "proveedor_liquido (hito B: faltan entalpia molar parcial y relacion de volumen)",
+          "ideal_incompresible (exige inventario constante)",
+          "T impuesta",
+          "reaccion",
+          "corrientes",
+          "estacionario"
+        ],
+        "transferencia_estacionario_a_temporal": "no: el estacionario es indeterminado (depende del estado inicial)"
+      },
+      {
+        "id": "materia+energia+interfaz_material+interfaz_termica",
+        "fisica": [
+          "materia",
+          "energia",
+          "interfaz_material",
+          "interfaz_termica"
+        ],
+        "cierres": [
+          "volumen_fijo (los dos compartimentos, cerrados)"
+        ],
+        "modelo_energetico": "ideal_volumen_fijo (c_v y u_referencia por especie, T_referencia y dominio_T declarados)",
+        "estudios": [
+          "temporal"
+        ],
+        "estados_diferenciales": [
+          "{vol}.n{i}",
+          "{vol}.U"
+        ],
+        "algebraicas": [
+          "{vol}.T (U = sum n_i u_i(T) + C_w (T - T_ref), explicita)",
+          "{vol}.N",
+          "{vol}.c{i}",
+          "{conexion}.tasa",
+          "{conexion}.E = tasa u_i(T_donante)",
+          "{conexion_termica}.Q = G (T_desde - T_hacia)"
+        ],
+        "especificaciones": [
+          "V por compartimento",
+          "por conexion: especie, L y H",
+          "por compartimento UNA de: Q de su fuente o adiabatico (T impuesta NO)",
+          "G por conexion termica (separada de la material)"
+        ],
+        "restricciones": [
+          "ninguna: V fijo no fija N"
+        ],
+        "iniciales": [
+          "n por especie",
+          "T o U por compartimento"
+        ],
+        "dominio": [
+          "dominio_T declarado (evento)",
+          "n_i >= 0",
+          "L >= 0",
+          "H > 0",
+          "capacidad termica > 0",
+          "G >= 0"
+        ],
+        "metodo": {
+          "temporal": "solve_ivp sobre el vector conjunto; LSODA por omision (declarado como omision, con el cociente de rigidez), Radau, BDF o RK45 a peticion; reinicio en cada escalon",
+          "estacionario": "indeterminado: familia fijada por los totales de especie (y de energia si es adiabatico)"
+        },
+        "evaluacion": "inventarios, T de los dos compartimentos, tasa y E_12 en el MISMO instante, en un unico vector [n, U]",
+        "energia_transportada": "E_12 = dot n u_i(T_donante), estado del lado de donde viene el flujo neto; misma referencia que U. Continua en dot n = 0. Nunca un intercambio bruto; el calor de la interfaz termica es OTRO termino (Q_12), con su propia conexion y su propia cancelacion",
+        "aproximacion": "soluto diluido: v_i ~ 0, sin trabajo de flujo (h_i = u_i); no rigurosa",
+        "eventos": [
+          "dominio_termico",
+          "dominio (n_i < 0)"
+        ],
+        "contraste": "limite condicionado por los totales iniciales: inventarios y, sin calor exterior, T (comun con interfaz termica; sin ella el donante conserva su T)",
+        "limitaciones": [
+          "soluto diluido en compartimentos de volumen geometrico constante",
+          "coeficientes L y H constantes (no dependen de T ni de la composicion)",
+          "equilibrio lineal c_hacia = H c_desde (sin actividad ni potencial quimico)",
+          "una especie por interfaz: sin difusion cruzada ni transferencia multicomponente",
+          "sin osmosis, sin electromigracion y sin cambio de volumen",
+          "propiedades termicas constantes (c_v); mezcla ideal sin energia de exceso"
+        ],
+        "no_soportado": [
+          "proveedor_liquido (hito B: faltan entalpia molar parcial y relacion de volumen)",
+          "ideal_incompresible (exige inventario constante)",
+          "T impuesta",
+          "reaccion",
+          "corrientes",
+          "estacionario"
+        ],
+        "transferencia_estacionario_a_temporal": "no: el estacionario es indeterminado (depende del estado inicial)"
+      },
+      {
+        "id": "materia+energia_en_prefijo",
+        "fisica": [
+          "materia",
+          "energia (solo en los primeros volumenes de la cadena)"
+        ],
+        "declaracion": "balances_por_volumen con energia: false en los volumenes de aguas abajo",
+        "cierres": [
+          "con energia: inventario_constante",
+          "sin energia: cualquiera de los de materia"
+        ],
+        "estudios": [
+          "estacionario",
+          "temporal"
+        ],
+        "estados_diferenciales": [
+          "{vol}.n{i}",
+          "{vol}.U (solo con energia)"
+        ],
+        "algebraicas": [
+          "las de materia",
+          "T, h de los volumenes con energia y de sus corrientes de salida"
+        ],
+        "especificaciones": [
+          "T de la alimentacion",
+          "por volumen CON energia UNA de: Q, T o adiabatico; los volumenes sin energia, ninguna"
+        ],
+        "restricciones": [
+          "las de materia; las de energia en el subsistema energetico"
+        ],
+        "iniciales": [
+          "n por especie",
+          "T o U solo en los volumenes con energia"
+        ],
+        "dominio": [
+          "los de materia+energia en el subsistema energetico"
+        ],
+        "metodo": {
+          "temporal": "solve_ivp sobre el vector conjunto; LSODA por omision (declarado como omision, con el cociente de rigidez), Radau, BDF o RK45 a peticion; reinicio en cada escalon",
+          "estacionario": "Newton amortiguado sobre el mismo residuo, jacobiano por diferencias centradas; con reaccion, dos arranques declarados"
+        },
+        "eventos": [
+          "los de materia",
+          "dominio_termico en los volumenes con energia"
+        ],
+        "frontera_energetica": "el balance global de energia es el del subsistema: sale por la corriente de salida del ultimo volumen con energia",
+        "no_soportado": [
+          "energia aguas abajo de un volumen sin ella (falta T y h de su entrada: relacion pendiente)",
+          "reaccion o interfaces en un volumen sin energia",
+          "volumenes cerrados sin energia en un montaje con energia"
+        ],
+        "transferencia_estacionario_a_temporal": "si: /laboratorio/estudios/transferir; rama obligatoria si hay varias"
+      },
+      {
+        "id": "materia_balance_general",
+        "fisica": [
+          "materia"
+        ],
+        "cierres": [
+          "balance_general (todos los volumenes)"
+        ],
+        "componentes": [
+          1,
+          1
+        ],
+        "estudios": [
+          "estacionario",
+          "temporal"
+        ],
+        "estados_diferenciales": [
+          "{vol}.n0 (temporal)"
+        ],
+        "algebraicas": [
+          "{vol}.N",
+          "{corriente}.x0 (= 1)",
+          "el F de cada corriente que no sea dato (estacionario)"
+        ],
+        "especificaciones": {
+          "estacionario": "seleccion_variables: el F de cada corriente y el n0 de cada volumen, 'dato' o 'calcular'; el sistema lineal dice si quedan determinados, redundantes, en conflicto o indeterminados",
+          "temporal": "seleccion_variables: el F de TODAS las corrientes como dato (fronteras); n en condiciones_iniciales"
+        },
+        "restricciones": [
+          "ninguna: sin F_sal = k N ni N = rho V"
+        ],
+        "iniciales": [
+          "n por volumen (temporal)"
+        ],
+        "dominio": [
+          "F >= 0",
+          "n >= 0"
+        ],
+        "metodo": {
+          "temporal": "solve_ivp sobre el vector conjunto; LSODA por omision (declarado como omision, con el cociente de rigidez), Radau, BDF o RK45 a peticion; reinicio en cada escalon",
+          "estacionario": "sistema lineal A u = b con rango por SVD (exacto y global para un sistema lineal); solve exacto con rango completo"
+        },
+        "eventos": [
+          "vaciado (n = 0) con los caudales declarados",
+          "dominio (n < 0)"
+        ],
+        "no_soportado": [
+          "varias especies",
+          "energia, reaccion, interfaces o volumenes cerrados",
+          "mezcla con otros cierres",
+          "calcular un caudal en un temporal (seria un problema inverso)",
+          "objetivos al final de un temporal (problema inverso)",
+          "expresiones nuevas o relaciones de salida arbitrarias"
+        ],
+        "transferencia_estacionario_a_temporal": "no: el estacionario es indeterminado (depende del estado inicial)"
+      },
+      {
+        "id": "materia_balance_general+energia",
+        "fisica": [
+          "materia",
+          "energia"
+        ],
+        "cierres": [
+          "balance_general (todos los volumenes)"
+        ],
+        "modelo_energetico": "ideal_incompresible (c_p, densidad, T_referencia y dominio_T declarados); presion_sistema declarada",
+        "componentes": [
+          1,
+          1
+        ],
+        "estudios": [
+          "temporal",
+          "estacionario"
+        ],
+        "volumen_de_control": "sigue la superficie del liquido: V_liquido = n / rho y el trabajo de desplazamiento P dV_liquido/dt explicito; con h = u + P/rho se reduce a n c_p dT/dt = F_ent c_p (T_ent - T) + Q",
+        "estados_diferenciales": [
+          "{vol}.n0",
+          "{vol}.U"
+        ],
+        "algebraicas": [
+          "{vol}.T",
+          "{vol}.N",
+          "{vol}.V_liquido",
+          "{vol}.W_frontera",
+          "{corriente}.T",
+          "{corriente}.h"
+        ],
+        "especificaciones": [
+          "F de cada corriente (seleccion_variables, dato)",
+          "T de la alimentacion",
+          "por volumen UNA de: Q de su fuente o adiabatico",
+          "presion_sistema"
+        ],
+        "parametros_opcionales": [
+          "capacidad_maxima (volumen del recipiente)",
+          "area (da el nivel V_liquido / area)"
+        ],
+        "restricciones": [
+          "ninguna: V_liquido es una relacion, no una restriccion"
+        ],
+        "iniciales": [
+          "n > 0 por volumen (sin liquido la T no esta definida)",
+          "T o U"
+        ],
+        "dominio": [
+          "dominio_T declarado (evento)",
+          "n > 0"
+        ],
+        "metodo": {
+          "temporal": "solve_ivp sobre el vector conjunto; LSODA por omision (declarado como omision, con el cociente de rigidez), Radau, BDF o RK45 a peticion; reinicio en cada escalon",
+          "estacionario": "materia: sistema lineal con rango; energia: u(T) = u(T_ent) + Q/F_ent, explicito"
+        },
+        "eventos": [
+          "vaciado: N < 1e-6 x el inicial (resolucion de T)",
+          "capacidad_maxima (sin rebose)",
+          "dominio_termico"
+        ],
+        "no_soportado": [
+          "T impuesta",
+          "proveedor_liquido",
+          "varias especies",
+          "reaccion",
+          "rebose",
+          "tanque inicialmente vacio",
+          "transferencia estacionario -> temporal"
+        ],
+        "transferencia_estacionario_a_temporal": "no: el estacionario es indeterminado (depende del estado inicial)"
+      },
+      {
+        "id": "dos_circuitos+energia+interfaz",
+        "fisica": [
+          "materia",
+          "energia",
+          "interfaz_termica"
+        ],
+        "topologia": "dos alimentaciones, cada una con su cadena (un volumen por circuito); los circuitos NO comparten corrientes y solo se unen por conexiones 'termica'",
+        "cierres": [
+          "inventario_constante en los dos (estacionario y temporal)",
+          "balance_general en un circuito + inventario_constante en el otro (solo temporal)"
+        ],
+        "modelo_energetico": "ideal_incompresible (el mismo fluido en los dos circuitos)",
+        "componentes": [
+          1,
+          1
+        ],
+        "estudios": [
+          "estacionario (cantidades constantes)",
+          "temporal"
+        ],
+        "estados_diferenciales": [
+          "{vol}.n0",
+          "{vol}.U de cada circuito, en un unico vector"
+        ],
+        "algebraicas": [
+          "{vol}.T",
+          "{corriente}.T",
+          "{corriente}.h",
+          "{conexion}.Q = G (T_desde - T_hacia)"
+        ],
+        "especificaciones": [
+          "F, x y T de CADA alimentacion",
+          "G de cada conexion termica",
+          "por volumen: Q de su fuente o adiabatico (al exterior; la interfaz es interna)"
+        ],
+        "restricciones": [
+          "sum n = rho V en los volumenes de inventario constante"
+        ],
+        "iniciales": [
+          "n y T (o U) de cada volumen"
+        ],
+        "dominio": [
+          "dominio_T declarado",
+          "G >= 0"
+        ],
+        "metodo": {
+          "temporal": "solve_ivp sobre el vector conjunto; LSODA por omision (declarado como omision, con el cociente de rigidez), Radau, BDF o RK45 a peticion; reinicio en cada escalon",
+          "estacionario": "Newton amortiguado sobre el mismo residuo, jacobiano por diferencias centradas; con reaccion, dos arranques declarados"
+        },
+        "eventos": [
+          "dominio_termico",
+          "vaciado y capacidad_maxima (balance general)"
+        ],
+        "escalones": "en F, x y T de cualquier alimentacion, y en Q",
+        "conservacion": "global sumando las fronteras de cada circuito; la interfaz se cancela una vez",
+        "no_soportado": [
+          "mas de dos circuitos",
+          "dos circuitos sin energia",
+          "reaccion",
+          "estacionario con balance general",
+          "balances_por_volumen mixtos",
+          "mezcla de los dos circuitos"
+        ],
+        "transferencia_estacionario_a_temporal": "si: /laboratorio/estudios/transferir; rama obligatoria si hay varias"
+      },
+      {
+        "id": "pared_solida+energia",
+        "fisica": [
+          "energia",
+          "interfaz_termica",
+          "pared_solida"
+        ],
+        "topologia": "una o mas piezas 'pared' unidas a volumenes con energia por conexiones 'termica' (volumen <-> pared); los volumenes, en una cadena, en dos circuitos o cerrados",
+        "cierres": [
+          "los de los volumenes de la combinacion de base (materia+energia, volumenes_cerrados, dos_circuitos+energia+interfaz, materia_balance_general+energia)"
+        ],
+        "modelo_energetico": "ideal_incompresible (el limite ponderado del cerrado lo exige); los demas modelos con energia, sin contraste del limite",
+        "estudios": [
+          "temporal",
+          "estacionario (si lo admite la combinacion de base)"
+        ],
+        "estados_diferenciales": [
+          "{pared}.U de cada pared con almacenamiento"
+        ],
+        "algebraicas": [
+          "{pared}.T = T_ref + U_w / C_w",
+          "{pared}.T = sum G_k T_k / sum G_k (sin almacenamiento)",
+          "{conexion}.Q = G (T_desde - T_hacia)"
+        ],
+        "especificaciones": [
+          "almacenamiento de cada pared",
+          "C_w (o masa x calor especifico) si almacena",
+          "G de cada conexion termica"
+        ],
+        "iniciales": [
+          "T o U de cada pared que almacena (ninguna si no almacena)"
+        ],
+        "dominio": [
+          "C_w > 0",
+          "G >= 0; sin almacenamiento, al menos dos interfaces y sum G > 0"
+        ],
+        "metodo": {
+          "temporal": "solve_ivp sobre el vector conjunto; LSODA por omision (declarado como omision, con el cociente de rigidez), Radau, BDF o RK45 a peticion; reinicio en cada escalon",
+          "estacionario": "Newton amortiguado sobre el mismo residuo, jacobiano por diferencias centradas; con reaccion, dos arranques declarados"
+        },
+        "eventos": [
+          "los de los volumenes (la pared no tiene dominio de fase)"
+        ],
+        "conservacion": "U total = sum U_v + sum U_w; las interfaces se cancelan una vez; una pared sin almacenamiento cierra su suma instantanea",
+        "contraste": "cerrados sin calor exterior: T_lim = sum C_k T_k(0) / sum C_k",
+        "no_soportado": [
+          "pared con pared",
+          "pared unida a una fuente 'calor'",
+          "conduccion distribuida (perfil en el espesor)",
+          "C_w dependiente de T",
+          "transferencia estacionario -> temporal"
+        ],
+        "transferencia_estacionario_a_temporal": "no: la condicion inicial de la pared no forma parte del contrato"
+      },
+      {
+        "id": "camara_vapor_saturado+energia",
+        "fisica": [
+          "energia",
+          "interfaz_termica",
+          "condensacion_cuasiestacionaria"
+        ],
+        "topologia": "una pieza 'camara_vapor' unida por conexiones 'termica' a volumenes con energia o a paredes; su vapor y su condensado NO se mezclan con ningun volumen",
+        "regimen": "vapor saturado cuasiestacionario a P declarada con purgador; el almacenamiento del lado de vapor se desprecia explicitamente. No es un volumen bifasico transitorio",
+        "componentes": [
+          1,
+          1
+        ],
+        "sustancia": "agua (CAS 7732-18-5)",
+        "propiedades": "IAPWS-IF97 regiones 1, 2 y 4 (chemicals.iapws), verificadas contra las tablas 5, 15, 35 y 36 de IF97",
+        "estudios": [
+          "temporal",
+          "estacionario (circuitos abiertos)"
+        ],
+        "estados_diferenciales": [
+          "ninguno en la camara"
+        ],
+        "algebraicas": [
+          "{camara}.T = T_sat(P)",
+          "{camara}.h_vapor, {camara}.h_liquido",
+          "{camara}.F_condensado = Q / (h'' - h')",
+          "{camara}.F_vapor = F_condensado"
+        ],
+        "especificaciones": [
+          "P de la camara",
+          "G de cada conexion termica",
+          "suministro_maximo (opcional)"
+        ],
+        "iniciales": [
+          "ninguna en la camara"
+        ],
+        "dominio": [
+          "611.213 Pa <= P <= 16.529 MPa (regiones 1/2/4)",
+          "Q >= 0 (condensa)",
+          "F_condensado <= suministro_maximo"
+        ],
+        "metodo": {
+          "temporal": "solve_ivp sobre el vector conjunto; LSODA por omision (declarado como omision, con el cociente de rigidez), Radau, BDF o RK45 a peticion; reinicio en cada escalon",
+          "estacionario": "Newton amortiguado sobre el mismo residuo, jacobiano por diferencias centradas; con reaccion, dos arranques declarados"
+        },
+        "eventos": [
+          "regimen_condensacion (Q < -G x 1e-6 K)",
+          "suministro_de_vapor"
+        ],
+        "conservacion": "int F_c (h'' - h') = calor cedido (cuadratura propia del condensado); entra en el global como frontera",
+        "contraste": "cerrados con una camara: T_lim = T_sat(P)",
+        "no_soportado": [
+          "volumen bifasico transitorio (estados m, U, calidad)",
+          "vapor sobrecalentado o humedo a la entrada",
+          "subenfriamiento del condensado",
+          "condensado que entra a un volumen",
+          "P variable o escalones de P",
+          "otra sustancia",
+          "incondensables",
+          "transferencia estacionario -> temporal"
+        ],
+        "transferencia_estacionario_a_temporal": "no: no verificada con camaras de vapor"
+      }
+    ],
+    "base_materia": {
+      "version": 1,
+      "estado_interno": "molar",
+      "peticion": "base_materia: {version: 1, presentacion: 'molar' | 'masica'}; solo presentacion: no cambia el modelo ni el modelo_id",
+      "alias_de_entrada": {
+        "especificaciones": "variable 'm_dot' en una alimentacion (kg/s, kg/h, g/s, t/h): F = m_dot / sum_i x_i M_i, SOLO si la composicion de esa corriente esta dada",
+        "condiciones_iniciales": "magnitud 'm' por especie (kg, g, t): n_i = m_i / M_i",
+        "entradas_temporales": "'m_dot' con la composicion de la corriente constante",
+        "seleccion_variables": "'{s}.m_dot' y '{v}.m{i}'"
+      },
+      "masa_molar": "por la identidad quimica (CAS) con chemicals.identifiers; se publica con su procedencia; nunca desde una etiqueta",
+      "dependencias": "un alias y su variable molar son UNA variable: iguales -> LAB_DIN_ESPECIFICACION_REDUNDANTE; distintos -> LAB_DIN_ESPECIFICACION_CONTRADICTORIA; sin composicion -> LAB_DIN_CONVERSION_MASICA_NO_DETERMINADA",
+      "resultados_masicos": [
+        "{v}.m{i}",
+        "{v}.m_total",
+        "{s}.m_dot",
+        "{s}.w{i}",
+        "{v}.fuente_masica{i}",
+        "{interfaz}.tasa_masica",
+        "conservacion.masa (kg, sin fuentes quimicas)"
+      ],
+      "alcance": "agua pura y mezclas de especies identificadas en todas las combinaciones de estudios; 'kg/h -> mol/s' NO es un factor universal: el campo F sigue siendo molar",
+      "no": [
+        "fraccion masica como dato",
+        "F_salida en masa",
+        "caudal masico de una corriente de composicion incognita"
+      ]
+    },
+    "analisis_dimensional": {
+      "fuente": "expresiones tipadas del ensamblaje (terminos[] de balances y formas tipadas de las constitutivas), unidades SI con pint; no se interpreta LaTeX",
+      "por_ecuacion": "modelo.ecuaciones[].dimensional: estado compatible | incompatible | no_evaluable, motivo, lado_izquierdo, terminos[] (unidad, latex_unidad, dimension, factores, estado), unidad_ecuacion, latex_unidad",
+      "resumen": "modelo.analisis_dimensional",
+      "temperaturas": "una temperatura absoluta no es factor de un producto; solo una diferencia",
+      "no_evaluable": "condiciones (fijan un valor) y derivadas de restricciones",
+      "incompatible": "LAB_DIN_DIMENSION_INCOMPATIBLE (fallo del ensamblaje)",
+      "nota": "compatible no demuestra conservacion ni exactitud"
+    },
+    "fuentes_exteriores": {
+      "ruta_oficial_Q": "una pieza 'calor' conectada a UN volumen y su especificacion {bloque_id: <fuente>, variable: 'Q', valor, unidad} (escalones: entradas_temporales sobre la misma fuente). No hay Q local en el volumen (LAB_VARIABLE_DESCONOCIDA)",
+      "fuentes_por_volumen": 1,
+      "destinos_por_fuente": 1,
+      "termino": "una fuente es UN termino 'calor:<id>' en su volumen y en el global; mostrarla junto al volumen no la duplica",
+      "omisiones": "Q ausente o null: pendiente (LAB_FALTA_ESPECIFICACION, variable <fuente>.Q); Q = 0 con unidad: dato",
+      "exclusiones": [
+        "adiabatico efectivo + fuente: LAB_SUPUESTO_INCOHERENTE",
+        "T impuesta + Q impuesto: LAB_ESPECIFICACION_EXCLUYENTE",
+        "fuente en un volumen sin energia: LAB_DIN_BALANCE_INCOHERENTE",
+        "dos fuentes en un volumen o una fuente en dos: LAB_TOPOLOGIA_NO_SOPORTADA (sin sumar ni repartir)"
+      ]
+    },
+    "fronteras_materiales": {
+      "version": 1,
+      "peticion": "{version: 1, volumenes: [{bloque_id, intencion: 'pendiente' | 'cerrado' | 'abierto', fronteras_pendientes: ['entrada', 'salida'] (solo con 'abierto')}]}; opcional; intencion null = sin declarar",
+      "pendiente": "borrador: LAB_DIN_FRONTERA_PENDIENTE; ni cerrado ni listo",
+      "cerrado": "cerrado = sin corrientes de materia con el exterior del modelo (entradas, salidas o corrientes); una interfaz de materia ENTRE volumenes del modelo no lo abre; no implica adiabatico ni rigido; con corrientes conectadas: LAB_DIN_FRONTERA_CONTRADICTORIA",
+      "abierto": "cada frontera en fronteras_pendientes sin conectar: LAB_DIN_FRONTERA_PENDIENTE (no es caudal cero); una que falta sin declararse pendiente: regimen de una sola frontera NO soportado (LAB_TOPOLOGIA_NO_SOPORTADA)",
+      "identidad": "no entra en modelo_id: o confirma la interpretacion (no cambia la fisica) o bloquea la resolucion",
+      "respuesta": "fronteras_materiales[] por volumen: intencion_solicitada, interpretacion_efectiva, fronteras_conectadas, fronteras_pendientes, contradicciones, alcance_cerrado"
+    },
+    "modelo_parcial": "si la fisica se lee entera y faltan datos del estudio, /validar y /resolver publican el ensamblaje con modelo.parcial = true, ninguna ecuacion ejecutada y las variables sin dato con pendiente = true",
+    "dominio_trayectoria": "cada desigualdad (n >= 0, F >= 0, T en el dominio, capacidad, contactos de camaras, suministro) en cada muestra, con el evento que la vigila entre muestras",
+    "nota_combinaciones": "Lo soportado es lo que esta en 'combinaciones', no cualquier producto de las capacidades individuales.",
+    "interfaces_termicas": {
+      "declaracion": "conexion {tipo: 'termica'} entre dos volumenes y 'interfaces_termicas': [{conexion_id, conductancia: {valor, unidad}}]",
+      "ley": "Q = G (T_desde - T_hacia)",
+      "convencion": "positivo de 'desde' a 'hacia': resta en U_desde, suma en U_hacia; invertir la conexion invierte el signo, no la fisica",
+      "unidades_G": [
+        "MW/K",
+        "W/K",
+        "kW/K"
+      ],
+      "requiere": "modelo_energetico; los dos volumenes con inventario constante",
+      "adiabatico": "'adiabatico' (global o del volumen) es sin intercambio con el EXTERIOR; la interfaz es interna y se suma aparte. No cambia ningun montaje existente: antes no habia interfaces",
+      "almacenamiento": "ninguno: sin inventario ni derivada propia"
+    },
+    "volumenes_cerrados": {
+      "que_es": "un volumen sin corrientes de materia (ni entrada ni salida)",
+      "requiere": "modelo_energetico e 'inventario_constante'; o, sin energia, una interfaz de transferencia de materia y 'volumen_fijo'",
+      "estacionario": "indeterminado (depende del estado inicial)",
+      "reaccion": false
+    },
+    "procedencia_por_termino": "cada balance y cada verificacion trae 'terminos' (rol, signo, variables, pieza, conexion, clave) y 'residuo_terminos'; las globales, ademas, 'cancelaciones'",
+    "reaccion": {
+      "donde": "en piezas 'reactor', una o varias reacciones por volumen, en uno o en los dos volumenes",
+      "tasas": "leyes de velocidad de core/cinetica.py (las mismas que el CSTR estacionario y el lote): 'ley_directa' y 'ley_inversa' propia o {'desde_equilibrio': true}",
+      "tasas_fijas": false,
+      "nota_tasas_fijas": "Una tasa que no depende del estado no describe un volumen que evoluciona; siguen en /laboratorio/resolver.",
+      "bases_de_tasa": [
+        "integrada (mol/s)",
+        "volumetrica (mol/(m3*s)), solo con 'inventario_constante', que fija V"
+      ],
+      "bases_de_actividad": [
+        "actividad",
+        "fraccion_molar"
+      ],
+      "brutas": "generacion y consumo brutos por especie, por construccion",
+      "temperatura": "con energia, la del volumen; sin energia, la T declarada del reactor (isotermo, sin calcular el calor)",
+      "energia": "referencia sensible con fuente quimica explicita - sum_r xi_r dH_r(298.15 K), dH = nu . H_f; sin Kirchhoff (ya esta en las entalpias sensibles). Exige T_referencia = 298.15 K.",
+      "inventario": "con inventario constante y sum(nu) != 0, F_sal = F_ent + sum_r sum_i nu_ir xi_r",
+      "eventos": [
+        "agotamiento de una especie consumida",
+        "caudal de salida negativo"
+      ],
+      "estacionario": "Newton con dos arranques declarados; estabilidad del sistema acoplado; aviso si el estacionario es inestable"
+    },
+    "topologia": {
+      "volumenes": [
+        1,
+        2
+      ],
+      "en_serie": true,
+      "alimentaciones": [
+        1,
+        2
+      ],
+      "circuitos": "con dos alimentaciones, dos cadenas independientes unidas solo por conexiones termicas (ver la combinacion 'dos_circuitos+energia+interfaz')",
+      "reciclos": false,
+      "divisores_o_mezcladores": false,
+      "nota": "La aceptacion es de DOS volumenes; uno es la prueba unitaria."
+    },
+    "cierres_de_almacenamiento": {
+      "inventario_constante": {
+        "descripcion": "Volumen y densidad molar constantes: el inventario total N = rho V no cambia y la salida es la que lo mantiene.",
+        "parametros": [
+          "V",
+          "densidad_molar"
+        ],
+        "relacion_de_salida": "la que mantiene N = rho V",
+        "clase": "restriccion algebraica (DAE de indice 2, reducida a ODE)",
+        "inventario": "constante",
+        "admite_energia": true,
+        "modelos_energeticos": [
+          "ideal_incompresible",
+          "proveedor_liquido"
+        ]
+      },
+      "salida_lineal": {
+        "descripcion": "Salida proporcional al inventario: F_sal,i = k n_i. El inventario total varia y tiende a F_ent / k.",
+        "parametros": [
+          "k_salida"
+        ],
+        "relacion_de_salida": "F_sal = k N",
+        "clase": "ODE",
+        "inventario": "variable",
+        "admite_energia": false,
+        "modelos_energeticos": []
+      },
+      "salida_impuesta": {
+        "descripcion": "Caudal de salida dado. El inventario cambia a ritmo F_ent - F_s y el volumen puede vaciarse (evento).",
+        "parametros": [
+          "F_salida"
+        ],
+        "relacion_de_salida": "F_sal = F_s",
+        "clase": "ODE",
+        "inventario": "variable",
+        "admite_energia": false,
+        "modelos_energeticos": []
+      },
+      "balance_general": {
+        "descripcion": "Balance general sin relacion de salida: entrada, salida y acumulacion. El caudal de cada corriente es una ESPECIFICACION (dato) o una INCOGNITA (seleccion_variables); no se anade F_sal = k N ni N = rho V. Una especie, sin energia ni reaccion en esta entrega.",
+        "parametros": [],
+        "relacion_de_salida": "ninguna: el caudal es dato o incognita",
+        "clase": "ninguna relacion de salida: el caudal se especifica o se calcula",
+        "inventario": "variable",
+        "admite_energia": false,
+        "modelos_energeticos": []
+      },
+      "volumen_fijo": {
+        "descripcion": "Volumen geometrico fijo declarado, SIN densidad molar total: N = sum_i n_i es una definicion y puede cambiar. Para compartimentos cerrados que intercambian una especie por una interfaz de transferencia de materia (soluto diluido). V fijo no significa N fijo.",
+        "parametros": [
+          "V"
+        ],
+        "relacion_de_salida": "ninguna (cerrado)",
+        "clase": "ninguna restriccion: sin corrientes, solo la interfaz cambia n",
+        "inventario": "variable",
+        "admite_energia": true,
+        "modelos_energeticos": [
+          "ideal_volumen_fijo"
+        ]
+      }
+    },
+    "energia": {
+      "activacion": "declarar 'modelo_energetico' en la peticion y 'energia' en el almacenamiento de cada volumen",
+      "modelos_de_fluido": {
+        "ideal_incompresible": {
+          "descripcion": "u_i = cp_i (T - T_ref), h_i = u_i + P/rho. Caso de prueba con solucion analitica; no es el proveedor real.",
+          "parametros": [
+            "densidad_molar",
+            "cp (por especie)",
+            "T_referencia",
+            "dominio_T"
+          ],
+          "comprueba_fase": false
+        },
+        "proveedor_liquido": {
+          "descripcion": "h_i(T) del proveedor (liquido, h_i(298.15 K) = 0, mezcla ideal), u_i = h_i - P/rho, cp_i(T) variable.",
+          "parametros": [
+            "densidad_molar",
+            "dominio_T"
+          ],
+          "comprueba_fase": true
+        },
+        "ideal_volumen_fijo": {
+          "descripcion": "Para compartimentos 'volumen_fijo' con interfaz de transferencia de materia: u_i = u_ref,i + c_v,i (T - T_ref), U = sum n_i u_i + C_w (T - T_ref). Soluto diluido: la especie que cruza lleva u_i(T_donante) y su volumen molar parcial se desprecia (sin trabajo de flujo). Sin densidad.",
+          "parametros": [
+            "cv (por especie)",
+            "u_referencia (por especie)",
+            "T_referencia",
+            "dominio_T"
+          ],
+          "comprueba_fase": false
+        }
+      },
+      "almacenamiento_termico": {
+        "solo_fluido": {
+          "descripcion": "Solo el fluido almacena energia.",
+          "parametros": []
+        },
+        "fluido_y_pared": {
+          "descripcion": "Fluido mas una pared de capacidad C_w a la temperatura del fluido (contacto perfecto).",
+          "parametros": [
+            "capacidad_pared"
+          ]
+        }
+      },
+      "modos_termicos": {
+        "calor": "Q impuesto (constante o escalones) en la fuente conectada; T se calcula",
+        "adiabatico": "Q = 0 por supuesto global o del volumen; la ecuacion de energia SIGUE",
+        "temperatura": "T del volumen impuesta (constante); U algebraica y Q calculado en la fuente conectada"
+      },
+      "pares_de_especificacion": {
+        "excluyentes": [
+          "T del volumen y Q de su fuente",
+          "T del volumen y adiabatico",
+          "fuente de calor conectada y adiabatico"
+        ],
+        "obligatorio_por_volumen": "uno de: Q, T, adiabatico",
+        "alimentacion": "T obligatoria",
+        "condicion_inicial": "T o U por volumen (las dos se aceptan si son consistentes); con T impuesta, ninguna o la misma"
+      },
+      "geometria": "rigida: solo con 'inventario_constante'; sin trabajo de frontera",
+      "trabajo_de_eje": false,
+      "energias_cinetica_y_potencial": false,
+      "dominio_de_fase": "liquido monofasico. 'proveedor_liquido' comprueba la burbuja y la frontera es un evento terminal; 'ideal_incompresible' no tiene equilibrio de fases",
+      "unidades": {
+        "U": [
+          "J",
+          "MJ",
+          "kJ"
+        ],
+        "cp": [
+          "J/(kmol*K)",
+          "J/(mol*K)",
+          "kJ/(kmol*K)",
+          "kJ/(mol*K)"
+        ],
+        "capacidad_pared": [
+          "J/K",
+          "MJ/K",
+          "kJ/K"
+        ],
+        "T": [
+          "C",
+          "K",
+          "degC",
+          "°C"
+        ],
+        "Q": [
+          "J/s",
+          "MW",
+          "W",
+          "kW"
+        ],
+        "p": [
+          "MPa",
+          "Pa",
+          "atm",
+          "bar",
+          "kPa"
+        ]
+      }
+    },
+    "supuesto_de_mezcla": "perfecta: la salida tiene la composicion y la temperatura del contenido",
+    "integradores": {
+      "LSODA": "Adams/BDF con deteccion automatica de rigidez. Por omision: una red con constantes muy distintas se vuelve rigida sin avisar.",
+      "Radau": "Runge-Kutta implicito de orden 5. Para sistemas rigidos.",
+      "BDF": "Formulas de diferenciacion hacia atras. Para sistemas rigidos.",
+      "RK45": "Runge-Kutta explicito 4(5). Rapido si el sistema NO es rigido; con constantes muy distintas da pasos diminutos."
+    },
+    "integrador_por_omision": {
+      "metodo": "LSODA",
+      "rtol": 1e-10,
+      "atol_relativo": 1e-12,
+      "nota": "Por omision, no por analisis; la respuesta lo declara y da el cociente de rigidez en t = 0."
+    },
+    "entradas_temporales": {
+      "formas": [
+        "escalon"
+      ],
+      "variables": [
+        "F, x0..x{n-1} y T de la alimentacion",
+        "Q de una fuente de calor en modo 'calor'"
+      ],
+      "max_escalones": 32,
+      "convencion": "continuas por la derecha",
+      "no_soportado": [
+        "rampas y perfiles",
+        "expresiones libres",
+        "F = 0 en un tramo",
+        "escalones de la T impuesta de un volumen"
+      ]
+    },
+    "dae": {
+      "soportadas": [
+        "inventario constante con densidad molar constante (indice 2, reducida a ODE con invariante medido)",
+        "T de un volumen impuesta con energia (indice 2 en Q, reducida: U algebraica)",
+        "cierre energetico U = U(n, T) (indice 1, T algebraica por inversion monotona)"
+      ],
+      "no_soportadas": [
+        "densidad molar dependiente de la composicion o de T",
+        "frontera movil con energia (trabajo de frontera)"
+      ]
+    },
+    "eventos": [
+      "vaciado (salida impuesta)",
+      "salida de dominio (n_i < 0)",
+      "dominio termico declarado",
+      "frontera de fase (proveedor_liquido)",
+      "agotamiento de una especie consumida en un reactor",
+      "caudal de salida negativo en un reactor"
+    ],
+    "transferencias": {
+      "estacionario_a_temporal": true,
+      "nota_estacionario_a_temporal": "POST /laboratorio/estudios/transferir con el estudio estacionario; el objeto 'condicion_inicial' que devuelve va en estudio.condicion_inicial_transferida del temporal. Solo n_i y U, de la rama elegida; rechazada con estacionario indeterminado (volumenes cerrados).",
+      "temporal_a_estacionario": "contraste con solucion independiente (distancia, derivada, ventana final y, con energia, distancia termica)"
+    },
+    "estabilidad": "lineal local en el estacionario, del sistema acoplado (n, U), restringida a las restricciones",
+    "no_soportado": [
+      "tasas fijas en un estudio (siguen en /laboratorio/resolver)",
+      "momento",
+      "transferencia de materia con energia, reaccion o corrientes",
+      "trabajo de eje y energias cinetica y potencial",
+      "frontera movil con energia",
+      "cambio de fase (el modelo es liquido monofasico)",
+      "mas de dos volumenes, reciclos, divisores y mezcladores",
+      "densidad dependiente de la composicion (DAE no soportada)",
+      "CFD y mallado"
+    ],
+    "tolerancias": {
+      "conservacion": 1e-07,
+      "newton": 1e-12,
+      "contraste": 1e-06,
+      "contraste_termico_K": 1e-06,
+      "inicial_consistente": 1e-09
+    }
+  }
+}

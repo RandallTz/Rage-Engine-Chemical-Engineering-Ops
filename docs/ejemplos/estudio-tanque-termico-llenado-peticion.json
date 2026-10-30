@@ -1,0 +1,147 @@
+{
+  "version": 1,
+  "componentes": [
+    "water"
+  ],
+  "bloques": [
+    {
+      "id": "in",
+      "tipo": "entrada",
+      "nombre": "Entrada de agua"
+    },
+    {
+      "id": "tk",
+      "tipo": "recipiente",
+      "nombre": "Tanque"
+    },
+    {
+      "id": "out",
+      "tipo": "salida",
+      "nombre": "Salida de agua"
+    },
+    {
+      "id": "q1",
+      "tipo": "calor",
+      "nombre": "Calefactor"
+    }
+  ],
+  "conexiones": [
+    {
+      "id": "c1",
+      "desde": "in",
+      "hacia": "tk"
+    },
+    {
+      "id": "c2",
+      "desde": "tk",
+      "hacia": "out"
+    },
+    {
+      "id": "cq",
+      "desde": "q1",
+      "hacia": "tk"
+    }
+  ],
+  "supuestos": {
+    "sinReaccion": true,
+    "sinTrabajo": true,
+    "sinMovimiento": true,
+    "adiabatico": false
+  },
+  "especificaciones": [
+    {
+      "bloque_id": "in",
+      "variable": "T",
+      "valor": 350.0,
+      "unidad": "K"
+    },
+    {
+      "bloque_id": "q1",
+      "variable": "Q",
+      "valor": 5000.0,
+      "unidad": "W"
+    }
+  ],
+  "almacenamiento": [
+    {
+      "bloque_id": "tk",
+      "cierre": "balance_general",
+      "energia": {
+        "modelo": "solo_fluido",
+        "adiabatico": false
+      }
+    }
+  ],
+  "modelo_energetico": {
+    "tipo": "ideal_incompresible",
+    "densidad_molar": {
+      "valor": 55000.0,
+      "unidad": "mol/m3"
+    },
+    "cp": [
+      {
+        "componente": "water",
+        "valor": 75.3,
+        "unidad": "J/(mol*K)"
+      }
+    ],
+    "T_referencia": {
+      "valor": 298.15,
+      "unidad": "K"
+    },
+    "dominio_T": {
+      "min": 273.15,
+      "max": 373.15,
+      "unidad": "K"
+    }
+  },
+  "presion_sistema": {
+    "valor": 101325.0,
+    "unidad": "Pa"
+  },
+  "seleccion_variables": {
+    "version": 1,
+    "variables": [
+      {
+        "variable_id": "in.F",
+        "modo": "dato",
+        "cantidad": {
+          "valor": 2.0,
+          "unidad": "mol/s"
+        }
+      },
+      {
+        "variable_id": "out.F",
+        "modo": "dato",
+        "cantidad": {
+          "valor": 1.0,
+          "unidad": "mol/s"
+        }
+      }
+    ]
+  },
+  "estudio": {
+    "version": 1,
+    "tipo": "temporal",
+    "condiciones_iniciales": [
+      {
+        "bloque_id": "tk",
+        "componente": "water",
+        "magnitud": "n",
+        "valor": 1000.0,
+        "unidad": "mol"
+      },
+      {
+        "bloque_id": "tk",
+        "magnitud": "T",
+        "valor": 300.0,
+        "unidad": "K"
+      }
+    ],
+    "tiempo": {
+      "final": 500.0,
+      "unidad": "s",
+      "muestras": 51
+    }
+  }
+}

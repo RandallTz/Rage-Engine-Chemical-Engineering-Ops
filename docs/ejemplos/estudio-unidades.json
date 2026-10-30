@@ -1,0 +1,1058 @@
+{
+  "schema_version": 1,
+  "revision_catalogo": 1,
+  "forma": "valor_SI = valor * factor + desplazamiento",
+  "fuente": "tabla unica de core/unidades_estudios.py, comprobada contra el registro pint del proyecto al cargar; es la MISMA que usa el calculo de /laboratorio/estudios",
+  "magnitudes": {
+    "tiempo": {
+      "dimension": "[time]",
+      "unidad_interna": "s",
+      "tipo": "afin",
+      "base": null,
+      "semantica": null,
+      "solo_presentacion": false,
+      "unidades": [
+        {
+          "simbolo": "s",
+          "etiqueta": "s",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "s"
+        },
+        {
+          "simbolo": "min",
+          "etiqueta": "min",
+          "factor": 60.0,
+          "desplazamiento": 0.0,
+          "pint": "min"
+        },
+        {
+          "simbolo": "h",
+          "etiqueta": "h",
+          "factor": 3600.0,
+          "desplazamiento": 0.0,
+          "pint": "h"
+        }
+      ]
+    },
+    "cantidad_sustancia": {
+      "dimension": "[substance]",
+      "unidad_interna": "mol",
+      "tipo": "afin",
+      "base": null,
+      "semantica": null,
+      "solo_presentacion": false,
+      "unidades": [
+        {
+          "simbolo": "mol",
+          "etiqueta": "mol",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "mol"
+        },
+        {
+          "simbolo": "kmol",
+          "etiqueta": "kmol",
+          "factor": 1000.0,
+          "desplazamiento": 0.0,
+          "pint": "kmol"
+        },
+        {
+          "simbolo": "mmol",
+          "etiqueta": "mmol",
+          "factor": 0.001,
+          "desplazamiento": 0.0,
+          "pint": "mmol"
+        }
+      ]
+    },
+    "flujo_molar": {
+      "dimension": "[substance] / [time]",
+      "unidad_interna": "mol/s",
+      "tipo": "afin",
+      "base": null,
+      "semantica": null,
+      "solo_presentacion": false,
+      "unidades": [
+        {
+          "simbolo": "mol/s",
+          "etiqueta": "mol/s",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "mol/s"
+        },
+        {
+          "simbolo": "mol/h",
+          "etiqueta": "mol/h",
+          "factor": 0.0002777777777777778,
+          "desplazamiento": 0.0,
+          "pint": "mol/h"
+        },
+        {
+          "simbolo": "kmol/h",
+          "etiqueta": "kmol/h",
+          "factor": 0.2777777777777778,
+          "desplazamiento": 0.0,
+          "pint": "kmol/h"
+        },
+        {
+          "simbolo": "kmol/s",
+          "etiqueta": "kmol/s",
+          "factor": 1000.0,
+          "desplazamiento": 0.0,
+          "pint": "kmol/s"
+        }
+      ]
+    },
+    "fraccion_molar": {
+      "dimension": "dimensionless",
+      "unidad_interna": "mol/mol",
+      "tipo": "afin",
+      "base": "fraccion MOLAR: mol de la especie / mol totales, en [0, 1]",
+      "semantica": null,
+      "solo_presentacion": false,
+      "unidades": [
+        {
+          "simbolo": "mol/mol",
+          "etiqueta": "mol/mol",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "mol/mol"
+        },
+        {
+          "simbolo": "-",
+          "etiqueta": "—",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "dimensionless"
+        },
+        {
+          "simbolo": "fraccion",
+          "etiqueta": "fracción",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "dimensionless"
+        }
+      ]
+    },
+    "volumen": {
+      "dimension": "[length] ** 3",
+      "unidad_interna": "m3",
+      "tipo": "afin",
+      "base": null,
+      "semantica": null,
+      "solo_presentacion": false,
+      "unidades": [
+        {
+          "simbolo": "m3",
+          "etiqueta": "m³",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "m**3"
+        },
+        {
+          "simbolo": "L",
+          "etiqueta": "L",
+          "factor": 0.001,
+          "desplazamiento": 0.0,
+          "pint": "L"
+        },
+        {
+          "simbolo": "dm3",
+          "etiqueta": "dm³",
+          "factor": 0.001,
+          "desplazamiento": 0.0,
+          "pint": "dm**3"
+        },
+        {
+          "simbolo": "cm3",
+          "etiqueta": "cm³",
+          "factor": 1e-06,
+          "desplazamiento": 0.0,
+          "pint": "cm**3"
+        },
+        {
+          "simbolo": "mL",
+          "etiqueta": "mL",
+          "factor": 1e-06,
+          "desplazamiento": 0.0,
+          "pint": "mL"
+        }
+      ]
+    },
+    "area": {
+      "dimension": "[length] ** 2",
+      "unidad_interna": "m2",
+      "tipo": "afin",
+      "base": null,
+      "semantica": "area de la seccion de un recipiente: solo para el nivel V_liquido / area; no interviene en los balances",
+      "solo_presentacion": false,
+      "unidades": [
+        {
+          "simbolo": "m2",
+          "etiqueta": "m²",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "m**2"
+        },
+        {
+          "simbolo": "dm2",
+          "etiqueta": "dm²",
+          "factor": 0.01,
+          "desplazamiento": 0.0,
+          "pint": "dm**2"
+        },
+        {
+          "simbolo": "cm2",
+          "etiqueta": "cm²",
+          "factor": 0.0001,
+          "desplazamiento": 0.0,
+          "pint": "cm**2"
+        }
+      ]
+    },
+    "longitud": {
+      "dimension": "[length]",
+      "unidad_interna": "m",
+      "tipo": "afin",
+      "base": null,
+      "semantica": "nivel del liquido (V_liquido / area); ninguna entrada la acepta",
+      "solo_presentacion": true,
+      "unidades": [
+        {
+          "simbolo": "m",
+          "etiqueta": "m",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "m"
+        },
+        {
+          "simbolo": "cm",
+          "etiqueta": "cm",
+          "factor": 0.01,
+          "desplazamiento": 0.0,
+          "pint": "cm"
+        },
+        {
+          "simbolo": "mm",
+          "etiqueta": "mm",
+          "factor": 0.001,
+          "desplazamiento": 0.0,
+          "pint": "mm"
+        }
+      ]
+    },
+    "densidad_molar": {
+      "dimension": "[substance] / [length] ** 3",
+      "unidad_interna": "mol/m3",
+      "tipo": "afin",
+      "base": null,
+      "semantica": null,
+      "solo_presentacion": false,
+      "unidades": [
+        {
+          "simbolo": "mol/m3",
+          "etiqueta": "mol/m³",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "mol/m**3"
+        },
+        {
+          "simbolo": "kmol/m3",
+          "etiqueta": "kmol/m³",
+          "factor": 1000.0,
+          "desplazamiento": 0.0,
+          "pint": "kmol/m**3"
+        },
+        {
+          "simbolo": "mol/L",
+          "etiqueta": "mol/L",
+          "factor": 1000.0,
+          "desplazamiento": 0.0,
+          "pint": "mol/L"
+        },
+        {
+          "simbolo": "mol/dm3",
+          "etiqueta": "mol/dm³",
+          "factor": 1000.0,
+          "desplazamiento": 0.0,
+          "pint": "mol/dm**3"
+        }
+      ]
+    },
+    "temperatura": {
+      "dimension": "[temperature]",
+      "unidad_interna": "K",
+      "tipo": "absoluta",
+      "base": null,
+      "semantica": "temperatura ABSOLUTA: degC lleva desplazamiento (+273.15). Una diferencia de temperatura es otra magnitud ('temperatura_diferencia') y no se convierte asi",
+      "solo_presentacion": false,
+      "unidades": [
+        {
+          "simbolo": "K",
+          "etiqueta": "K",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "K"
+        },
+        {
+          "simbolo": "degC",
+          "etiqueta": "°C",
+          "factor": 1.0,
+          "desplazamiento": 273.15,
+          "pint": "degC"
+        },
+        {
+          "simbolo": "C",
+          "etiqueta": "°C",
+          "factor": 1.0,
+          "desplazamiento": 273.15,
+          "pint": "degC"
+        },
+        {
+          "simbolo": "°C",
+          "etiqueta": "°C",
+          "factor": 1.0,
+          "desplazamiento": 273.15,
+          "pint": "degC"
+        }
+      ]
+    },
+    "temperatura_diferencia": {
+      "dimension": "[temperature]",
+      "unidad_interna": "K",
+      "tipo": "diferencia",
+      "base": null,
+      "semantica": "DIFERENCIA de temperatura: sin desplazamiento (1 delta_degC = 1 K). Ningun campo de entrada de los estudios la acepta hoy; se publica para presentar diferencias",
+      "solo_presentacion": true,
+      "unidades": [
+        {
+          "simbolo": "K",
+          "etiqueta": "K",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "K"
+        },
+        {
+          "simbolo": "delta_degC",
+          "etiqueta": "Δ°C",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "delta_degC"
+        }
+      ]
+    },
+    "presion": {
+      "dimension": "[mass] / [length] / [time] ** 2",
+      "unidad_interna": "Pa",
+      "tipo": "absoluta",
+      "base": null,
+      "semantica": "presion ABSOLUTA; una relativa (barg) necesitaria la referencia y no se admite",
+      "solo_presentacion": false,
+      "unidades": [
+        {
+          "simbolo": "Pa",
+          "etiqueta": "Pa",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "Pa"
+        },
+        {
+          "simbolo": "kPa",
+          "etiqueta": "kPa",
+          "factor": 1000.0,
+          "desplazamiento": 0.0,
+          "pint": "kPa"
+        },
+        {
+          "simbolo": "bar",
+          "etiqueta": "bar",
+          "factor": 100000.0,
+          "desplazamiento": 0.0,
+          "pint": "bar"
+        },
+        {
+          "simbolo": "MPa",
+          "etiqueta": "MPa",
+          "factor": 1000000.0,
+          "desplazamiento": 0.0,
+          "pint": "MPa"
+        },
+        {
+          "simbolo": "atm",
+          "etiqueta": "atm",
+          "factor": 101325.0,
+          "desplazamiento": 0.0,
+          "pint": "atm"
+        }
+      ]
+    },
+    "energia": {
+      "dimension": "[mass] * [length] ** 2 / [time] ** 2",
+      "unidad_interna": "J",
+      "tipo": "afin",
+      "base": null,
+      "semantica": null,
+      "solo_presentacion": false,
+      "unidades": [
+        {
+          "simbolo": "J",
+          "etiqueta": "J",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "J"
+        },
+        {
+          "simbolo": "kJ",
+          "etiqueta": "kJ",
+          "factor": 1000.0,
+          "desplazamiento": 0.0,
+          "pint": "kJ"
+        },
+        {
+          "simbolo": "MJ",
+          "etiqueta": "MJ",
+          "factor": 1000000.0,
+          "desplazamiento": 0.0,
+          "pint": "MJ"
+        }
+      ]
+    },
+    "energia_molar": {
+      "dimension": "[mass] * [length] ** 2 / [time] ** 2 / [substance]",
+      "unidad_interna": "J/mol",
+      "tipo": "afin",
+      "base": null,
+      "semantica": null,
+      "solo_presentacion": false,
+      "unidades": [
+        {
+          "simbolo": "J/mol",
+          "etiqueta": "J/mol",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "J/mol"
+        },
+        {
+          "simbolo": "kJ/mol",
+          "etiqueta": "kJ/mol",
+          "factor": 1000.0,
+          "desplazamiento": 0.0,
+          "pint": "kJ/mol"
+        },
+        {
+          "simbolo": "kJ/kmol",
+          "etiqueta": "kJ/kmol",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "kJ/kmol"
+        },
+        {
+          "simbolo": "J/kmol",
+          "etiqueta": "J/kmol",
+          "factor": 0.001,
+          "desplazamiento": 0.0,
+          "pint": "J/kmol"
+        }
+      ]
+    },
+    "potencia": {
+      "dimension": "[mass] * [length] ** 2 / [time] ** 3",
+      "unidad_interna": "W",
+      "tipo": "afin",
+      "base": null,
+      "semantica": null,
+      "solo_presentacion": false,
+      "unidades": [
+        {
+          "simbolo": "W",
+          "etiqueta": "W",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "W"
+        },
+        {
+          "simbolo": "J/s",
+          "etiqueta": "J/s",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "J/s"
+        },
+        {
+          "simbolo": "kW",
+          "etiqueta": "kW",
+          "factor": 1000.0,
+          "desplazamiento": 0.0,
+          "pint": "kW"
+        },
+        {
+          "simbolo": "MW",
+          "etiqueta": "MW",
+          "factor": 1000000.0,
+          "desplazamiento": 0.0,
+          "pint": "MW"
+        }
+      ]
+    },
+    "capacidad_calorifica_molar": {
+      "dimension": "[mass] * [length] ** 2 / [time] ** 2 / [substance] / [temperature]",
+      "unidad_interna": "J/(mol*K)",
+      "tipo": "afin",
+      "base": null,
+      "semantica": null,
+      "solo_presentacion": false,
+      "unidades": [
+        {
+          "simbolo": "J/(mol*K)",
+          "etiqueta": "J/(mol·K)",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "J/(mol*K)"
+        },
+        {
+          "simbolo": "kJ/(kmol*K)",
+          "etiqueta": "kJ/(kmol·K)",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "kJ/(kmol*K)"
+        },
+        {
+          "simbolo": "J/(kmol*K)",
+          "etiqueta": "J/(kmol·K)",
+          "factor": 0.001,
+          "desplazamiento": 0.0,
+          "pint": "J/(kmol*K)"
+        },
+        {
+          "simbolo": "kJ/(mol*K)",
+          "etiqueta": "kJ/(mol·K)",
+          "factor": 1000.0,
+          "desplazamiento": 0.0,
+          "pint": "kJ/(mol*K)"
+        }
+      ]
+    },
+    "capacidad_termica": {
+      "dimension": "[mass] * [length] ** 2 / [time] ** 2 / [temperature]",
+      "unidad_interna": "J/K",
+      "tipo": "afin",
+      "base": null,
+      "semantica": null,
+      "solo_presentacion": false,
+      "unidades": [
+        {
+          "simbolo": "J/K",
+          "etiqueta": "J/K",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "J/K"
+        },
+        {
+          "simbolo": "kJ/K",
+          "etiqueta": "kJ/K",
+          "factor": 1000.0,
+          "desplazamiento": 0.0,
+          "pint": "kJ/K"
+        },
+        {
+          "simbolo": "MJ/K",
+          "etiqueta": "MJ/K",
+          "factor": 1000000.0,
+          "desplazamiento": 0.0,
+          "pint": "MJ/K"
+        }
+      ]
+    },
+    "masa": {
+      "dimension": "[mass]",
+      "unidad_interna": "kg",
+      "tipo": "afin",
+      "base": null,
+      "semantica": "masa: de una pared solida (parametro) o de una especie (alias m_i = M_i n_i, convertido en el servidor con la masa molar de la especie identificada)",
+      "solo_presentacion": false,
+      "unidades": [
+        {
+          "simbolo": "kg",
+          "etiqueta": "kg",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "kg"
+        },
+        {
+          "simbolo": "g",
+          "etiqueta": "g",
+          "factor": 0.001,
+          "desplazamiento": 0.0,
+          "pint": "g"
+        },
+        {
+          "simbolo": "t",
+          "etiqueta": "t",
+          "factor": 1000.0,
+          "desplazamiento": 0.0,
+          "pint": "t"
+        }
+      ]
+    },
+    "masa_molar": {
+      "dimension": "[mass] / [substance]",
+      "unidad_interna": "kg/mol",
+      "tipo": "afin",
+      "base": null,
+      "semantica": "masa molar de una especie identificada (resultado publicado, no un dato del usuario)",
+      "solo_presentacion": false,
+      "unidades": [
+        {
+          "simbolo": "kg/mol",
+          "etiqueta": "kg/mol",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "kg/mol"
+        },
+        {
+          "simbolo": "g/mol",
+          "etiqueta": "g/mol",
+          "factor": 0.001,
+          "desplazamiento": 0.0,
+          "pint": "g/mol"
+        }
+      ]
+    },
+    "fraccion_masica": {
+      "dimension": "dimensionless",
+      "unidad_interna": "kg/kg",
+      "tipo": "afin",
+      "base": "fraccion MASICA w_i = x_i M_i / sum_j x_j M_j: solo resultado (no se admite como dato en esta entrega)",
+      "semantica": null,
+      "solo_presentacion": false,
+      "unidades": [
+        {
+          "simbolo": "kg/kg",
+          "etiqueta": "kg/kg",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "kg/kg"
+        }
+      ]
+    },
+    "flujo_masico": {
+      "dimension": "[mass] / [time]",
+      "unidad_interna": "kg/s",
+      "tipo": "afin",
+      "base": null,
+      "semantica": "caudal masico m_dot = F sum_i x_i M_i: alias de F, convertido en el servidor solo si la composicion de la corriente esta dada. NO es un factor universal de kg/h a mol/s",
+      "solo_presentacion": false,
+      "unidades": [
+        {
+          "simbolo": "kg/s",
+          "etiqueta": "kg/s",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "kg/s"
+        },
+        {
+          "simbolo": "kg/h",
+          "etiqueta": "kg/h",
+          "factor": 0.0002777777777777778,
+          "desplazamiento": 0.0,
+          "pint": "kg/h"
+        },
+        {
+          "simbolo": "g/s",
+          "etiqueta": "g/s",
+          "factor": 0.001,
+          "desplazamiento": 0.0,
+          "pint": "g/s"
+        },
+        {
+          "simbolo": "t/h",
+          "etiqueta": "t/h",
+          "factor": 0.2777777777777778,
+          "desplazamiento": 0.0,
+          "pint": "t/h"
+        }
+      ]
+    },
+    "calor_especifico": {
+      "dimension": "[length] ** 2 / [time] ** 2 / [temperature]",
+      "unidad_interna": "J/(kg*K)",
+      "tipo": "afin",
+      "base": null,
+      "semantica": "calor especifico masico de un solido",
+      "solo_presentacion": false,
+      "unidades": [
+        {
+          "simbolo": "J/(kg*K)",
+          "etiqueta": "J/(kg·K)",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "J/(kg*K)"
+        },
+        {
+          "simbolo": "kJ/(kg*K)",
+          "etiqueta": "kJ/(kg·K)",
+          "factor": 1000.0,
+          "desplazamiento": 0.0,
+          "pint": "kJ/(kg*K)"
+        }
+      ]
+    },
+    "conductancia_termica": {
+      "dimension": "[mass] * [length] ** 2 / [time] ** 3 / [temperature]",
+      "unidad_interna": "W/K",
+      "tipo": "afin",
+      "base": null,
+      "semantica": null,
+      "solo_presentacion": false,
+      "unidades": [
+        {
+          "simbolo": "W/K",
+          "etiqueta": "W/K",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "W/K"
+        },
+        {
+          "simbolo": "kW/K",
+          "etiqueta": "kW/K",
+          "factor": 1000.0,
+          "desplazamiento": 0.0,
+          "pint": "kW/K"
+        },
+        {
+          "simbolo": "MW/K",
+          "etiqueta": "MW/K",
+          "factor": 1000000.0,
+          "desplazamiento": 0.0,
+          "pint": "MW/K"
+        }
+      ]
+    },
+    "conductancia_material": {
+      "dimension": "[length] ** 3 / [time]",
+      "unidad_interna": "m3/s",
+      "tipo": "afin",
+      "base": null,
+      "semantica": "conductancia material global L de una interfaz (un caudal volumetrico equivalente, k A); NO es un caudal de proceso",
+      "solo_presentacion": false,
+      "unidades": [
+        {
+          "simbolo": "m3/s",
+          "etiqueta": "m³/s",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "m**3/s"
+        },
+        {
+          "simbolo": "m3/min",
+          "etiqueta": "m³/min",
+          "factor": 0.016666666666666666,
+          "desplazamiento": 0.0,
+          "pint": "m**3/min"
+        },
+        {
+          "simbolo": "m3/h",
+          "etiqueta": "m³/h",
+          "factor": 0.0002777777777777778,
+          "desplazamiento": 0.0,
+          "pint": "m**3/h"
+        },
+        {
+          "simbolo": "L/s",
+          "etiqueta": "L/s",
+          "factor": 0.001,
+          "desplazamiento": 0.0,
+          "pint": "L/s"
+        },
+        {
+          "simbolo": "L/min",
+          "etiqueta": "L/min",
+          "factor": 1.6666666666666667e-05,
+          "desplazamiento": 0.0,
+          "pint": "L/min"
+        },
+        {
+          "simbolo": "L/h",
+          "etiqueta": "L/h",
+          "factor": 2.7777777777777776e-07,
+          "desplazamiento": 0.0,
+          "pint": "L/h"
+        }
+      ]
+    },
+    "constante_salida": {
+      "dimension": "1 / [time]",
+      "unidad_interna": "1/s",
+      "tipo": "afin",
+      "base": null,
+      "semantica": "k de la relacion particular F_sal = k N ('salida_lineal'); no pertenece al balance general",
+      "solo_presentacion": false,
+      "unidades": [
+        {
+          "simbolo": "1/s",
+          "etiqueta": "1/s",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "1/s"
+        },
+        {
+          "simbolo": "1/min",
+          "etiqueta": "1/min",
+          "factor": 0.016666666666666666,
+          "desplazamiento": 0.0,
+          "pint": "1/min"
+        },
+        {
+          "simbolo": "1/h",
+          "etiqueta": "1/h",
+          "factor": 0.0002777777777777778,
+          "desplazamiento": 0.0,
+          "pint": "1/h"
+        }
+      ]
+    },
+    "reparto": {
+      "dimension": "dimensionless",
+      "unidad_interna": "adimensional",
+      "tipo": "afin",
+      "base": "cociente de CONCENTRACIONES molares c_hacia,eq / c_desde,eq",
+      "semantica": null,
+      "solo_presentacion": false,
+      "unidades": [
+        {
+          "simbolo": "adimensional",
+          "etiqueta": "—",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "dimensionless"
+        },
+        {
+          "simbolo": "(mol/m3)/(mol/m3)",
+          "etiqueta": "(mol/m³)/(mol/m³)",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "dimensionless"
+        }
+      ]
+    },
+    "tasa_integrada": {
+      "dimension": "[substance] / [time]",
+      "unidad_interna": "mol/s",
+      "tipo": "afin",
+      "base": null,
+      "semantica": "tasa de reaccion integrada sobre el volumen",
+      "solo_presentacion": false,
+      "unidades": [
+        {
+          "simbolo": "mol/s",
+          "etiqueta": "mol/s",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "mol/s"
+        },
+        {
+          "simbolo": "mol/h",
+          "etiqueta": "mol/h",
+          "factor": 0.0002777777777777778,
+          "desplazamiento": 0.0,
+          "pint": "mol/h"
+        },
+        {
+          "simbolo": "kmol/s",
+          "etiqueta": "kmol/s",
+          "factor": 1000.0,
+          "desplazamiento": 0.0,
+          "pint": "kmol/s"
+        },
+        {
+          "simbolo": "kmol/h",
+          "etiqueta": "kmol/h",
+          "factor": 0.2777777777777778,
+          "desplazamiento": 0.0,
+          "pint": "kmol/h"
+        }
+      ]
+    },
+    "tasa_volumetrica": {
+      "dimension": "[substance] / [length] ** 3 / [time]",
+      "unidad_interna": "mol/(m3*s)",
+      "tipo": "afin",
+      "base": null,
+      "semantica": "tasa de reaccion por unidad de volumen; integrarla exige el V del reactor",
+      "solo_presentacion": false,
+      "unidades": [
+        {
+          "simbolo": "mol/(m3*s)",
+          "etiqueta": "mol/(m³·s)",
+          "factor": 1.0,
+          "desplazamiento": 0.0,
+          "pint": "mol/(m**3*s)"
+        },
+        {
+          "simbolo": "mol/(m3*h)",
+          "etiqueta": "mol/(m³·h)",
+          "factor": 0.0002777777777777778,
+          "desplazamiento": 0.0,
+          "pint": "mol/(m**3*h)"
+        },
+        {
+          "simbolo": "kmol/(m3*s)",
+          "etiqueta": "kmol/(m³·s)",
+          "factor": 1000.0,
+          "desplazamiento": 0.0,
+          "pint": "kmol/(m**3*s)"
+        },
+        {
+          "simbolo": "kmol/(m3*h)",
+          "etiqueta": "kmol/(m³·h)",
+          "factor": 0.2777777777777778,
+          "desplazamiento": 0.0,
+          "pint": "kmol/(m**3*h)"
+        },
+        {
+          "simbolo": "mol/(L*s)",
+          "etiqueta": "mol/(L·s)",
+          "factor": 1000.0,
+          "desplazamiento": 0.0,
+          "pint": "mol/(L*s)"
+        },
+        {
+          "simbolo": "mol/(dm3*s)",
+          "etiqueta": "mol/(dm³·s)",
+          "factor": 1000.0,
+          "desplazamiento": 0.0,
+          "pint": "mol/(dm**3*s)"
+        },
+        {
+          "simbolo": "mol/(cm3*s)",
+          "etiqueta": "mol/(cm³·s)",
+          "factor": 1000000.0,
+          "desplazamiento": 0.0,
+          "pint": "mol/(cm**3*s)"
+        }
+      ]
+    }
+  },
+  "porcentaje": "no admitido: su semantica (molar o masico, base) no esta declarada",
+  "conversiones_no_afines": [
+    {
+      "de": "flujo_masico (kg/h, kg/s)",
+      "a": "flujo_molar",
+      "requiere": [
+        "masa molar de cada especie",
+        "composicion de la corriente"
+      ],
+      "admitida": false
+    },
+    {
+      "de": "caudal volumetrico de proceso (m3/h, L/min)",
+      "a": "flujo_molar",
+      "requiere": [
+        "densidad molar de la corriente (y su T, p, composicion)"
+      ],
+      "admitida": false
+    },
+    {
+      "de": "presion relativa (barg, kPag)",
+      "a": "presion",
+      "requiere": [
+        "presion de referencia (atmosferica local)"
+      ],
+      "admitida": false
+    },
+    {
+      "de": "porcentaje (%)",
+      "a": "fraccion_molar",
+      "requiere": [
+        "declarar si es molar o masico y su base"
+      ],
+      "admitida": false
+    },
+    {
+      "de": "temperatura",
+      "a": "temperatura_diferencia",
+      "requiere": [
+        "son magnitudes distintas: una diferencia no lleva el desplazamiento de degC"
+      ],
+      "admitida": false
+    }
+  ],
+  "campos": {
+    "especificaciones[F]": "flujo_molar",
+    "especificaciones[x*]": "fraccion_molar",
+    "especificaciones[T]": "temperatura",
+    "especificaciones[p]": "presion",
+    "especificaciones[Q]": "potencia",
+    "especificaciones[m_dot]": "flujo_masico",
+    "estudio.condiciones_iniciales[m]": "masa",
+    "estudio.entradas_temporales[m_dot]": "flujo_masico",
+    "seleccion_variables.variables[{s}.m_dot]": "flujo_masico",
+    "seleccion_variables.variables[{v}.m{i}]": "masa",
+    "almacenamiento[].V": "volumen",
+    "almacenamiento[].densidad_molar": "densidad_molar",
+    "almacenamiento[].capacidad_maxima": "volumen",
+    "almacenamiento[].area": "area",
+    "almacenamiento[].k_salida": "constante_salida",
+    "almacenamiento[].F_salida": "flujo_molar",
+    "almacenamiento[].energia.capacidad_pared": "capacidad_termica",
+    "estudio.condiciones_iniciales[n]": "cantidad_sustancia",
+    "estudio.condiciones_iniciales[T]": "temperatura",
+    "estudio.condiciones_iniciales[U]": "energia",
+    "estudio.tiempo.final": "tiempo",
+    "estudio.entradas_temporales[].instante": "tiempo",
+    "estudio.entradas_temporales[F|x*|T|Q]": "segun la variable",
+    "modelo_energetico.densidad_molar": "densidad_molar",
+    "modelo_energetico.cp[]": "capacidad_calorifica_molar",
+    "modelo_energetico.cv[]": "capacidad_calorifica_molar",
+    "modelo_energetico.u_referencia[]": "energia_molar",
+    "modelo_energetico.T_referencia": "temperatura",
+    "modelo_energetico.dominio_T": "temperatura",
+    "presion_sistema": "presion",
+    "interfaces_termicas[].conductancia": "conductancia_termica",
+    "paredes[].capacidad": "capacidad_termica",
+    "paredes[].masa": "masa",
+    "paredes[].calor_especifico": "calor_especifico",
+    "camaras_vapor[].presion": "presion",
+    "camaras_vapor[].suministro_maximo": "flujo_molar",
+    "interfaces_materiales[].conductancia": "conductancia_material",
+    "interfaces_materiales[].reparto": "reparto",
+    "seleccion_variables.variables[].cantidad": "la magnitud de la variable"
+  },
+  "magnitud_de_variable": {
+    "F": "flujo_molar",
+    "x": "fraccion_molar",
+    "n": "cantidad_sustancia",
+    "N": "cantidad_sustancia",
+    "T": "temperatura",
+    "U": "energia",
+    "h": "energia_molar",
+    "Q": "potencia",
+    "V": "volumen",
+    "rho": "densidad_molar",
+    "k": "constante_salida",
+    "cp": "capacidad_calorifica_molar",
+    "cv": "capacidad_calorifica_molar",
+    "u": "energia_molar",
+    "C_w": "capacidad_termica",
+    "G": "conductancia_termica",
+    "L": "conductancia_material",
+    "H": "reparto",
+    "c": "densidad_molar",
+    "r": "flujo_molar",
+    "xi": "flujo_molar",
+    "dot_n": "flujo_molar",
+    "E": "potencia",
+    "p": "presion",
+    "A": "area",
+    "m": "masa",
+    "m_dot": "flujo_masico",
+    "M": "masa_molar",
+    "w": "fraccion_masica"
+  },
+  "reglas": [
+    "Las peticiones mandan {valor, unidad}; el servidor valida y normaliza a SI antes de resolver.",
+    "null es ausente; 0 es cero; un no finito se rechaza.",
+    "Cambiar la unidad de presentacion conserva la cantidad (10 min = 600 s); no es escribir un valor nuevo.",
+    "No se convierte por parecido de nombres: kg/h no es mol/s."
+  ]
+}

@@ -1,0 +1,204 @@
+{
+  "version": 1,
+  "componentes": [
+    "benzene",
+    "toluene"
+  ],
+  "bloques": [
+    {
+      "id": "in",
+      "tipo": "entrada",
+      "nombre": "Alimentacion"
+    },
+    {
+      "id": "cv1",
+      "tipo": "recipiente",
+      "nombre": "Primer volumen"
+    },
+    {
+      "id": "q1",
+      "tipo": "calor",
+      "nombre": "Calefactor"
+    },
+    {
+      "id": "medio",
+      "tipo": "corriente",
+      "nombre": "Corriente compartida"
+    },
+    {
+      "id": "cv2",
+      "tipo": "recipiente",
+      "nombre": "Segundo volumen"
+    },
+    {
+      "id": "out",
+      "tipo": "salida",
+      "nombre": "Salida final"
+    }
+  ],
+  "conexiones": [
+    {
+      "id": "c1",
+      "desde": "in",
+      "hacia": "cv1",
+      "tipo": "materia"
+    },
+    {
+      "id": "c2",
+      "desde": "cv1",
+      "hacia": "medio",
+      "tipo": "materia"
+    },
+    {
+      "id": "c3",
+      "desde": "medio",
+      "hacia": "cv2",
+      "tipo": "materia"
+    },
+    {
+      "id": "c4",
+      "desde": "cv2",
+      "hacia": "out",
+      "tipo": "materia"
+    },
+    {
+      "id": "cq",
+      "desde": "q1",
+      "hacia": "cv1",
+      "tipo": "calor"
+    }
+  ],
+  "supuestos": {
+    "estacionario": false,
+    "adiabatico": false,
+    "sinTrabajo": true,
+    "sinReaccion": true,
+    "sinMovimiento": true
+  },
+  "especificaciones": [
+    {
+      "bloque_id": "in",
+      "variable": "F",
+      "valor": 10.0,
+      "unidad": "mol/s"
+    },
+    {
+      "bloque_id": "in",
+      "variable": "x0",
+      "valor": 0.5,
+      "unidad": "mol/mol"
+    },
+    {
+      "bloque_id": "in",
+      "variable": "T",
+      "valor": 300.0,
+      "unidad": "K"
+    },
+    {
+      "bloque_id": "q1",
+      "variable": "Q",
+      "valor": 120000.0,
+      "unidad": "W"
+    }
+  ],
+  "almacenamiento": [
+    {
+      "bloque_id": "cv1",
+      "cierre": "inventario_constante",
+      "V": {
+        "valor": 0.05,
+        "unidad": "m3"
+      },
+      "densidad_molar": {
+        "valor": 10000.0,
+        "unidad": "mol/m3"
+      },
+      "energia": {
+        "modelo": "solo_fluido"
+      }
+    },
+    {
+      "bloque_id": "cv2",
+      "cierre": "inventario_constante",
+      "V": {
+        "valor": 0.2,
+        "unidad": "m3"
+      },
+      "densidad_molar": {
+        "valor": 10000.0,
+        "unidad": "mol/m3"
+      },
+      "energia": {
+        "modelo": "solo_fluido",
+        "adiabatico": true
+      }
+    }
+  ],
+  "modelo_energetico": {
+    "tipo": "proveedor_liquido",
+    "densidad_molar": {
+      "valor": 10000.0,
+      "unidad": "mol/m3"
+    },
+    "dominio_T": {
+      "min": 250.0,
+      "max": 400.0,
+      "unidad": "K"
+    }
+  },
+  "presion_sistema": {
+    "valor": 101325.0,
+    "unidad": "Pa"
+  },
+  "estudio": {
+    "version": 1,
+    "tipo": "temporal",
+    "condiciones_iniciales": [
+      {
+        "bloque_id": "cv1",
+        "componente": "benzene",
+        "magnitud": "n",
+        "valor": 250.0,
+        "unidad": "mol"
+      },
+      {
+        "bloque_id": "cv1",
+        "componente": "toluene",
+        "magnitud": "n",
+        "valor": 250.0,
+        "unidad": "mol"
+      },
+      {
+        "bloque_id": "cv2",
+        "componente": "benzene",
+        "magnitud": "n",
+        "valor": 1000.0,
+        "unidad": "mol"
+      },
+      {
+        "bloque_id": "cv2",
+        "componente": "toluene",
+        "magnitud": "n",
+        "valor": 1000.0,
+        "unidad": "mol"
+      },
+      {
+        "bloque_id": "cv1",
+        "magnitud": "T",
+        "valor": 300.0,
+        "unidad": "K"
+      },
+      {
+        "bloque_id": "cv2",
+        "magnitud": "T",
+        "valor": 300.0,
+        "unidad": "K"
+      }
+    ],
+    "tiempo": {
+      "final": 1500.0,
+      "unidad": "s",
+      "muestras": 61
+    }
+  }
+}

@@ -210,7 +210,7 @@
   }
  },
  "matematico": {
-  "id": "19a9bba9-5b77-43bc-a8c0-85c43bc9adf2",
+  "id": "f89605ee-217c-4dfa-b232-a7bed75ade4b",
   "revision": 1,
   "simbolos": [
    {
@@ -453,18 +453,59 @@
    "frontera": ""
   }
  },
- "motores": {},
+ "motores": {
+  "materialDerivation": {
+   "format": "rage.material-derivation",
+   "version": 1,
+   "volumes": {
+    "dominio": {
+     "origin": "recorded",
+     "operations": [
+      {
+       "id": "history-2",
+       "title": "Integrate local component conservation",
+       "changes": {
+        "vista": "integral"
+       }
+      },
+      {
+       "id": "history-3",
+       "title": "Define total component inventories",
+       "changes": {
+        "vista": "cantidad"
+       }
+      },
+      {
+       "id": "history-4",
+       "title": "Fixed closed boundary with no convective or diffusive transport",
+       "changes": {
+        "fija": true,
+        "restoImpermeable": true,
+        "campo": {
+         "sinReaccion": false,
+         "sinDifusion": true,
+         "sinConveccion": true,
+         "estacionario": false,
+         "difusion": "flujo"
+        }
+       }
+      }
+     ]
+    }
+   }
+  }
+ },
  "procedencia": {
   "tipo": "hoja_motor_materia",
   "hojaId": "motor-prueba-materia-v1-6",
   "firmaHoja": "(omitida en el ejemplo)",
   "pasos": [
    {
-    "titulo": "Conservación local",
+    "titulo": "Local conservation",
     "operacion": null
    },
    {
-    "titulo": "Declarar A y B",
+    "titulo": "Declare components A and B",
     "operacion": {
      "componentes": [
       {
@@ -481,13 +522,19 @@
     }
    },
    {
-    "titulo": "Usar balances de cantidad por componente",
+    "titulo": "Integrate local component conservation",
+    "operacion": {
+     "vista": "integral"
+    }
+   },
+   {
+    "titulo": "Define total component inventories",
     "operacion": {
      "vista": "cantidad"
     }
    },
    {
-    "titulo": "Cerrar el dominio y retirar transporte",
+    "titulo": "Fixed closed boundary with no convective or diffusive transport",
     "operacion": {
      "fija": true,
      "restoImpermeable": true,

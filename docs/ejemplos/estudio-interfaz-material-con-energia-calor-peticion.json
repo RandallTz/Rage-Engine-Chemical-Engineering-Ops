@@ -1,0 +1,175 @@
+{
+  "version": 1,
+  "componentes": [
+    "water",
+    "acetic acid"
+  ],
+  "bloques": [
+    {
+      "id": "cv1",
+      "tipo": "recipiente",
+      "nombre": "Compartimento 1"
+    },
+    {
+      "id": "cv2",
+      "tipo": "recipiente",
+      "nombre": "Compartimento 2"
+    },
+    {
+      "id": "q1",
+      "tipo": "calor",
+      "nombre": "Calefactor"
+    }
+  ],
+  "conexiones": [
+    {
+      "id": "im",
+      "desde": "cv1",
+      "hacia": "cv2",
+      "tipo": "transferencia_materia"
+    },
+    {
+      "id": "cq",
+      "desde": "q1",
+      "hacia": "cv1"
+    }
+  ],
+  "supuestos": {
+    "sinReaccion": true
+  },
+  "especificaciones": [
+    {
+      "bloque_id": "q1",
+      "variable": "Q",
+      "valor": 50.0,
+      "unidad": "W"
+    }
+  ],
+  "almacenamiento": [
+    {
+      "bloque_id": "cv1",
+      "cierre": "volumen_fijo",
+      "V": {
+        "valor": 0.001,
+        "unidad": "m3"
+      },
+      "energia": {
+        "modelo": "solo_fluido",
+        "adiabatico": false
+      }
+    },
+    {
+      "bloque_id": "cv2",
+      "cierre": "volumen_fijo",
+      "V": {
+        "valor": 0.002,
+        "unidad": "m3"
+      },
+      "energia": {
+        "modelo": "solo_fluido",
+        "adiabatico": true
+      }
+    }
+  ],
+  "interfaces_materiales": [
+    {
+      "conexion_id": "im",
+      "especie": "acetic acid",
+      "conductancia": {
+        "valor": 1e-06,
+        "unidad": "m3/s"
+      },
+      "reparto": {
+        "valor": 2.0,
+        "unidad": "adimensional"
+      }
+    }
+  ],
+  "estudio": {
+    "version": 1,
+    "tipo": "temporal",
+    "condiciones_iniciales": [
+      {
+        "bloque_id": "cv1",
+        "componente": "water",
+        "magnitud": "n",
+        "valor": 55.0,
+        "unidad": "mol"
+      },
+      {
+        "bloque_id": "cv1",
+        "componente": "acetic acid",
+        "magnitud": "n",
+        "valor": 5.0,
+        "unidad": "mol"
+      },
+      {
+        "bloque_id": "cv2",
+        "componente": "water",
+        "magnitud": "n",
+        "valor": 110.0,
+        "unidad": "mol"
+      },
+      {
+        "bloque_id": "cv2",
+        "componente": "acetic acid",
+        "magnitud": "n",
+        "valor": 0.0,
+        "unidad": "mol"
+      },
+      {
+        "bloque_id": "cv1",
+        "magnitud": "T",
+        "valor": 340.0,
+        "unidad": "K"
+      },
+      {
+        "bloque_id": "cv2",
+        "magnitud": "T",
+        "valor": 300.0,
+        "unidad": "K"
+      }
+    ],
+    "tiempo": {
+      "final": 600.0,
+      "unidad": "s",
+      "muestras": 81
+    }
+  },
+  "modelo_energetico": {
+    "tipo": "ideal_volumen_fijo",
+    "cv": [
+      {
+        "componente": "water",
+        "valor": 75.0,
+        "unidad": "J/(mol*K)"
+      },
+      {
+        "componente": "acetic acid",
+        "valor": 120.0,
+        "unidad": "J/(mol*K)"
+      }
+    ],
+    "u_referencia": [
+      {
+        "componente": "water",
+        "valor": 0.0,
+        "unidad": "J/mol"
+      },
+      {
+        "componente": "acetic acid",
+        "valor": 0.0,
+        "unidad": "J/mol"
+      }
+    ],
+    "T_referencia": {
+      "valor": 298.15,
+      "unidad": "K"
+    },
+    "dominio_T": {
+      "min": 273.15,
+      "max": 373.15,
+      "unidad": "K"
+    }
+  }
+}
