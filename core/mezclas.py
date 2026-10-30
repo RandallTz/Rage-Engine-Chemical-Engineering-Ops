@@ -393,6 +393,14 @@ class Sistema:
             lg = self._lngamma(T, x, idx)
             return gL[idx] + R * T * (np.log(x) + lg)
 
+    def lv_ln_k(self, T, P, x, idx):
+        """ln K_i = ln(y_i / x_i) of an L-V pair in equilibrium, from the same potentials as `mu`:
+        (g_L,i - g_ig0,i) / RT + ln gamma_i(x) - ln(P / P0). Finite at x_i = 0 (infinite dilution), so a
+        continuation can reach the pure-component ends; mu(liquid, x) = mu(vapor, K x) wherever x_i > 0."""
+        x = np.asarray(x, dtype=float)
+        gig, gL = self._g_puros(T, P)
+        return (gL[idx] - gig[idx]) / (R * T) + self._lngamma(T, x, idx) - math.log(P / P0)
+
     def _lngamma(self, T, x, idx):
         return self._modelo_sub(idx).lngamma(T, x)
 
