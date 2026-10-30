@@ -1,5 +1,6 @@
+import modulePath from 'node:path';
 import fs from 'node:fs';import ts from 'typescript';import assert from 'node:assert/strict';import katex from 'katex';
-const cache=new Map();function cargar(n){if(cache.has(n))return cache.get(n);const m={exports:{}};new Function('exports','module','require',ts.transpileModule(fs.readFileSync(`app/motor/${n}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(m.exports,m,r=>cargar(r.slice(2)));cache.set(n,m.exports);return m.exports;}
+const cache=new Map();function cargar(n){if(cache.has(n))return cache.get(n);const m={exports:{}};new Function('exports','module','require',ts.transpileModule(fs.readFileSync(`app/motor/${n}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(m.exports,m,r=>cargar(modulePath.posix.join(modulePath.posix.dirname(n),r)));cache.set(n,m.exports);return m.exports;}
 const red=cargar('ensamblajeMateria'),hoja=cargar('modeloHojaMotor'),ejemplos=cargar('hojasPruebaAcoplamiento');let checks=0;
 const check=(v,m)=>{checks++;assert.ok(v,m);};const cerca=(x,y,tol,m)=>check(Math.abs(x-y)<tol,`${m}: ${x} / ${y}`);
 const casos=ejemplos.crearHojasPruebaAcoplamiento();

@@ -1,8 +1,9 @@
+import modulePath from 'node:path';
 import fs from 'node:fs';
 import ts from 'typescript';
 import assert from 'node:assert/strict';
 const cache=new Map();
-function cargar(n){if(n.endsWith('.json'))return JSON.parse(fs.readFileSync(`app/motor/${n}`,'utf8'));if(cache.has(n))return cache.get(n);const m={exports:{}};cache.set(n,m.exports);new Function('exports','module','require',ts.transpileModule(fs.readFileSync(`app/motor/${n}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText)(m.exports,m,id=>cargar(id.slice(2)));return m.exports;}
+function cargar(n){if(n.endsWith('.json'))return JSON.parse(fs.readFileSync(`app/motor/${n}`,'utf8'));if(cache.has(n))return cache.get(n);const m={exports:{}};cache.set(n,m.exports);new Function('exports','module','require',ts.transpileModule(fs.readFileSync(`app/motor/${n}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText)(m.exports,m,id=>cargar(modulePath.posix.join(modulePath.posix.dirname(n),id)));return m.exports;}
 const lector=cargar('lectorDiagramasEquilibrio'),datos=cargar('datosDiagramaEquilibrio'),ctx=cargar('contextoMuestraEquilibrio');
 let checks=0;const check=(v,m)=>{checks++;assert.ok(v,m);},rechaza=f=>{checks++;assert.throws(f);};
 const leer=n=>JSON.parse(fs.readFileSync(n,'utf8')),dir='../docs/ejemplos/motor-diagramas/';

@@ -1,3 +1,4 @@
+import modulePath from 'node:path';
 // Structural conservation and framework checks. No new property model is certified here.
 import fs from 'node:fs';
 import ts from 'typescript';
@@ -7,7 +8,7 @@ const cache=new Map();
 function cargar(n){
   if(cache.has(n))return cache.get(n);
   const m={exports:{}};cache.set(n,m.exports);
-  new Function('exports','module','require',ts.transpileModule(fs.readFileSync(`app/motor/${n}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(m.exports,m,r=>cargar(r.slice(2)));
+  new Function('exports','module','require',ts.transpileModule(fs.readFileSync(`app/motor/${n}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(m.exports,m,r=>cargar(modulePath.posix.join(modulePath.posix.dirname(n),r)));
   return m.exports;
 }
 const {estructurarTermodinamica,estructuraSolicitudDinamica}=cargar('estructuraTermodinamica');

@@ -1,7 +1,7 @@
 // Synthetic metadata exercises the contract and presentation only. These group
 // assignments are NOT chemical data, are never installed in the app or sent to a flash.
 import fs from 'node:fs';
-import path from 'node:path';
+import modulePath from 'node:path';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import ts from 'typescript';
@@ -13,7 +13,7 @@ function cargar(n){
   if(cache.has(n))return cache.get(n);
   const f=['ts','tsx'].map(ext=>`app/motor/${n}.${ext}`).find(f=>fs.existsSync(f));
   const m={exports:{}};cache.set(n,m.exports);
-  new Function('exports','module','require',ts.transpileModule(fs.readFileSync(f,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText)(m.exports,m,id=>id.startsWith('./')?cargar(path.posix.join(path.posix.dirname(n),id)):require(id));
+  new Function('exports','module','require',ts.transpileModule(fs.readFileSync(f,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText)(m.exports,m,id=>id.startsWith('.')?cargar(modulePath.posix.join(modulePath.posix.dirname(n),id)):require(id));
   return m.exports;
 }
 let checks=0;const check=(v,m)=>{checks++;assert.ok(v,m);},igual=(a,b,m)=>{checks++;assert.deepEqual(a,b,m);},rechaza=(f,m)=>{checks++;assert.throws(f,undefined,m);};
@@ -68,9 +68,9 @@ check(leer(mismos),'A subgroup can appear with different counts in different mol
 const Componente=cargar('CoberturaGruposPaquete').default;
 const render=c=>renderToStaticMarkup(React.createElement(Componente,{cobertura:c,componentes:[...cs,{id:8,nombre:'Sin identificar'},{id:9,nombre:'Fuera',identidadQuimica:{cas:'108-88-3'}}]}));
 const html=render(original);
-for(const texto of ['UNIFAC original','2 × Fixture A (1)','10 → 20, 20 → 10','Identidad sin declarar','Sin asignación en esta tabla','Fuera del catálogo publicado','SHA-256','El estado y su estabilidad se comprueban al evaluar.'])check(html.includes(texto),'Visible coverage: '+texto);
+for(const texto of ['UNIFAC original','2 × Fixture A (1)','10 → 20, 20 → 10','Identidad sin declarar','No assignment in this table','Outside the published catalog','SHA-256','Data coverage. State and stability are checked during evaluation.'])check(html.includes(texto),'Visible coverage: '+texto);
 check(!html.includes('<details open'),'Sources remain collapsed');
-check(!html.includes('Certificación física · cumple'),'Coverage is not a physics certificate');
+check(!html.includes('Physical certification · passed'),'Coverage is not a physics certificate');
 const escapado=structuredClone(original);escapado.especies[0].subgrupos[0].nombre='<script>dato</script>';
 check(render(escapado).includes('&lt;script&gt;dato&lt;/script&gt;'),'Publication text is escaped');
 const leerJson=f=>JSON.parse(fs.readFileSync(f,'utf8').replace(/^\uFEFF/,''));
@@ -95,7 +95,7 @@ const ambiguo=structuredClone(nueva);ambiguo.paquetes[1].pares=[];rechaza(()=>re
 const ambiguoD=structuredClone(nuevaD);ambiguoD.paquetes[0].pares=[];rechaza(()=>diagramas.leerCapacidadesDiagramas(ambiguoD),'Diagram group package requires null pairs');
 const Alcance=cargar('AlcancePaqueteRed').default;
 const alcance=renderToStaticMarkup(React.createElement(Alcance,{paquete:p,componentes:cs}));
-check(alcance.includes('Alcance y evidencia del paquete')&&alcance.includes('Cobertura de grupos del paquete'),'Coverage inside existing scope panel');
+check(alcance.includes('Package scope and evidence')&&alcance.includes('Cobertura de grupos del paquete'),'Coverage inside existing scope panel');
 const antiguo=renderToStaticMarkup(React.createElement(Alcance,{paquete:cap.paquetes[1],componentes:cs}));
 check(!antiguo.includes('Cobertura de grupos del paquete'),'No group requirements on non-group packages');
 igual(JSON.stringify(original),antes,'Group metadata preserved intact');
@@ -106,11 +106,11 @@ const estado=cargar('estadoResolucionRed').estadoResolucionRed;
 const rechazoBase=leerJson('../docs/ejemplos/motor-n-componentes/motor-ensamblaje-v2-validar-nrtl-4-par-ausente-respuesta.json');
 for(const codigo of ['MOTOR_ENS_DATO_PURO_AUSENTE','MOTOR_ENS_PARAMETRO_AUSENTE','MOTOR_ENS_UNIFAC_ASIGNACION_AUSENTE','MOTOR_ENS_UNIFAC_GRUPO_DESCONOCIDO','MOTOR_ENS_UNIFAC_INTERACCION_AUSENTE']){
   const r=structuredClone(rechazoBase);r.diagnosticos[0].codigo=codigo;
-  check(estado(r).estado==='Faltan datos del paquete'&&!estado(r).puedeResolver,'Missing model data remain distinct from structural completeness');
+  check(estado(r).estado==='Missing package data'&&!estado(r).puedeResolver,'Missing model data remain distinct from structural completeness');
   check(r.recuento.gradosLibertad===0&&r.recuento.datosFaltantes===0,'No fabricated DOF deficit for thermodynamic data');
 }
 const otro=structuredClone(rechazoBase);otro.diagnosticos[0].codigo='MOTOR_ENS_COMBINACION_NO_SOPORTADA';
-check(estado(otro).estado==='Modelo no disponible','Unsupported physics is not relabeled as missing data');
+check(estado(otro).estado==='Model unavailable','Unsupported physics is not relabeled as missing data');
 const i=process.argv.indexOf('--capacidades');
 if(i>=0){const c=red.leerCapacidadesV2(leerJson(process.argv[i+1]));checks++;console.log('Servicio: '+c.paquetes.map(p=>`${p.modelo.id}@${p.modelo.version}${p.coberturaGrupos?' · grupos publicados':''}`).join(', '));}
 console.log(`${checks} comprobaciones de cobertura de grupos OK. Metadata y presentación; no calcula ni certifica termodinámica.`);

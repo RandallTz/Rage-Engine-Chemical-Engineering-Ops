@@ -1,8 +1,9 @@
+import modulePath from 'node:path';
 import fs from 'node:fs';
 import ts from 'typescript';
 import assert from 'node:assert/strict';
 const cache=new Map();
-function cargar(n){if(n.endsWith('.json'))return JSON.parse(fs.readFileSync(`app/motor/${n}`,'utf8'));if(cache.has(n))return cache.get(n);const m={exports:{}};cache.set(n,m.exports);new Function('exports','module','require',ts.transpileModule(fs.readFileSync(`app/motor/${n}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText)(m.exports,m,id=>cargar(id.slice(2)));return m.exports;}
+function cargar(n){if(n.endsWith('.json'))return JSON.parse(fs.readFileSync(`app/motor/${n}`,'utf8'));if(cache.has(n))return cache.get(n);const m={exports:{}};cache.set(n,m.exports);new Function('exports','module','require',ts.transpileModule(fs.readFileSync(`app/motor/${n}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText)(m.exports,m,id=>cargar(modulePath.posix.join(modulePath.posix.dirname(n),id)));return m.exports;}
 const lector=cargar('lectorEnsamblajeV2'),meta=cargar('metadatosRed'),adapt=cargar('resultadoEnsamblajeV2');
 let checks=0;const check=(v,m)=>{checks++;assert.ok(v,m);},rechaza=f=>{checks++;assert.throws(f);};
 const leer=n=>JSON.parse(fs.readFileSync(n,'utf8')),dir='../docs/ejemplos/motor-v2/';
@@ -28,10 +29,10 @@ const qa='qa_multifasico_2026_10_15/consolidacion/';
 for(const nombre of ['no-cumple','no-evaluable']){
   const s=leer(qa+nombre+'-peticion.json'),r=lector.leerResolucionV2(leer(qa+nombre+'-respuesta.json'),s),a=r.resultados;
   check(r.estado==='resuelto','Numerical completion is independent');check(a.certificacion.estado===nombre.replace('-','_'),'Actual backend certification outcome');
-  if(nombre==='no-cumple'){check(meta.intervaloNoCertificado(a)[0]===a.tiempos[a.certificacion.ultimaMuestraCertificada],'Use authoritative cut');check(meta.resumenCertificacion(a).includes('sin certificar'),'Failed certificate is prominent');}
-  else {check(meta.intervaloNoCertificado(a)===null,'No-evaluable is not a failure');check(meta.resumenCertificacion(a).includes('no evaluable'),'No-evaluable is never shown as passing');check(!a.series.some(s=>s.variableId==='red.Sgen'),'Missing boundary T does not fabricate entropy generation');}
+  if(nombre==='no-cumple'){check(meta.intervaloNoCertificado(a)[0]===a.tiempos[a.certificacion.ultimaMuestraCertificada],'Use authoritative cut');check(meta.resumenCertificacion(a).includes('Uncertified'),'Failed certificate is prominent');}
+  else {check(meta.intervaloNoCertificado(a)===null,'No-evaluable is not a failure');check(meta.resumenCertificacion(a).includes('not evaluable'),'No-evaluable is never shown as passing');check(!a.series.some(s=>s.variableId==='red.Sgen'),'Missing boundary T does not fabricate entropy generation');}
   const anterior=structuredClone(r);delete anterior.resultados.certificacion;delete anterior.resultados.catalogoSeries;
-  check(meta.resumenCertificacion(anterior.resultados).includes('anterior'),'Historical execution has explicit missing certification');
+  check(meta.resumenCertificacion(anterior.resultados).includes('previous run'),'Historical execution has explicit missing certification');
 }
 // Synthetic metadata-only negative control: preserve failed residuals as evidence,
 // while rejecting a certificate that falsely says those same residuals pass.
@@ -39,8 +40,8 @@ const s=leer(qa+'no-cumple-peticion.json'),r=leer(qa+'no-cumple-respuesta.json')
 res.maximoEscalado=res.tolerancia*2;rechaza(()=>lector.leerResolucionV2(x,s));
 Object.assign(x.resultados.certificacion.aspectos.find(q=>q.id==='conservacion'),{estado:'no_cumple',referencias:[res.ecuacionId],primeraMuestraNoCumple:1});
 lector.leerResolucionV2(x,s);check(x.resultados.residuos.includes(res),'Explicit failure remains inspectable');
-check(meta.nombreEventoRed('sustitucion_fase')==='Sustitución de fase','Replacement is a distinct event');
-check(meta.nombreEventoRed('cambio_denominacion').includes('sin transición'),'Supercritical naming is not evaporation');
+check(meta.nombreEventoRed('sustitucion_fase')==='Phase substitution','Replacement is a distinct event');
+check(meta.nombreEventoRed('cambio_denominacion').includes('no first-order transition'),'Supercritical naming is not evaporation');
 const sd=leer(qa+'liquido-superviviente-peticion.json'),rd=lector.leerResolucionV2(leer(qa+'liquido-superviviente-respuesta.json'),sd),ad=rd.resultados;
 check(ad.certificacion.estado==='cumple','Depletion trajectory certified by backend');
 check(ad.estados.D.at(-1).evaluacion.fases.map(f=>f.id).join()==='liquido-2','Surviving liquid keeps its ID');

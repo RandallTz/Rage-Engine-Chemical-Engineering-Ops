@@ -1,4 +1,4 @@
-/** Dónde se muestra cada ecuación del Engine (regla de ARQUITECTURA_MOTOR.md §8: cada ecuación va en su lugar).
+/** Dónde se muestra cada ecuación del Engine (regla de ARCHITECTURE.md §8: cada ecuación va en su lugar).
  *
  * Un panel de la hoja muestra solo las ecuaciones de su familia física:
  *   materia        conservación por componente, transporte material de cada corriente (caudal y composición
@@ -15,6 +15,10 @@ export type EcuacionUbicable = { id: string; familia: string };
 
 export function panelDeEcuacion(e: EcuacionUbicable): VistaHoja | null {
   switch (e.familia) {
+    case 'matter': return 'materia';
+    case 'energy': return 'energia';
+    case 'momentum': return 'momento';
+    case 'thermodynamics': return 'termodinamica';
     case 'materia': return 'materia';
     case 'energia': return 'energia';
     case 'momento': return 'momento';
@@ -32,4 +36,4 @@ export function panelDeEcuacion(e: EcuacionUbicable): VistaHoja | null {
   }
 }
 
-export const TITULO_PANEL: Record<VistaHoja, string> = { materia: 'Ecuaciones de materia', energia: 'Ecuaciones de energía', momento: 'Ecuaciones de momento', termodinamica: 'Ecuaciones termodinámicas' };
+export const TITULO_PANEL: Record<VistaHoja, string> = { materia: 'Matter equations', energia: 'Energy equations', momento: 'Momentum equations', termodinamica: 'Thermodynamic equations' };

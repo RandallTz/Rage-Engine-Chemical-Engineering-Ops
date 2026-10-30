@@ -1,8 +1,9 @@
+import modulePath from 'node:path';
 import fs from 'node:fs';
 import ts from 'typescript';
 import assert from 'node:assert/strict';
 const cache=new Map();
-function cargar(n){if(n.endsWith('.json'))return JSON.parse(fs.readFileSync(`app/motor/${n}`,'utf8'));if(cache.has(n))return cache.get(n);const m={exports:{}};cache.set(n,m.exports);new Function('exports','module','require',ts.transpileModule(fs.readFileSync(`app/motor/${n}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText)(m.exports,m,id=>cargar(id.slice(2)));return m.exports;}
+function cargar(n){if(n.endsWith('.json'))return JSON.parse(fs.readFileSync(`app/motor/${n}`,'utf8'));if(cache.has(n))return cache.get(n);const m={exports:{}};cache.set(n,m.exports);new Function('exports','module','require',ts.transpileModule(fs.readFileSync(`app/motor/${n}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText)(m.exports,m,id=>cargar(modulePath.posix.join(modulePath.posix.dirname(n),id)));return m.exports;}
 let checks=0;const check=(x,m)=>{checks++;assert.ok(x,m);},igual=(a,b,m)=>{checks++;assert.deepEqual(a,b,m);};
 const leer=p=>JSON.parse(fs.readFileSync(p,'utf8')),dir='../docs/ejemplos/motor-n-componentes/';
 const lector=cargar('lectorEnsamblajeV2'),adapt=cargar('resultadoEnsamblajeV2'),ctx=cargar('contextoMuestraEquilibrio'),graficas=cargar('datosGraficasMotor'),estado=cargar('estadoResolucionRed').estadoResolucionRed;
@@ -53,7 +54,7 @@ for(const f of fs.readdirSync(dir).filter(f=>f.endsWith('-peticion.json'))){
   if(f.includes('-validar-')){
     lector.leerValidacionV2(r,s);checks++;
     check(r.recuento.gradosLibertad===0&&r.recuento.estado==='listo','Canonical structural count is retained even for a missing parameter');
-    check(!estado(r).puedeResolver&&estado(r).estado==='Faltan datos del paquete','A missing parameter blocks Resolver despite GL=0');
+    check(!estado(r).puedeResolver&&estado(r).estado==='Missing package data','A missing parameter blocks Resolver despite GL=0');
     check(estado(r).diagnostico.codigo==='MOTOR_ENS_PARAMETRO_AUSENTE','Original missing-parameter diagnostic is retained');
     const sinDiagnostico=structuredClone(r);sinDiagnostico.diagnosticos=[];
     checks++;assert.throws(()=>lector.leerValidacionV2(sinDiagnostico,s),'An uncertified ready model needs its physical rejection diagnostic');

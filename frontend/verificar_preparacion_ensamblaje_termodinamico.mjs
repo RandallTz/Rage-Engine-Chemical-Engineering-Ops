@@ -1,6 +1,7 @@
+import modulePath from 'node:path';
 // Structural preparation only. These tests do not certify thermophysical initialization or dynamics.
 import fs from 'node:fs';import ts from 'typescript';import assert from 'node:assert/strict';
-const cache=new Map();function cargar(n){if(cache.has(n))return cache.get(n);const m={exports:{}};cache.set(n,m.exports);new Function('exports','module','require',ts.transpileModule(fs.readFileSync(`app/motor/${n}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(m.exports,m,r=>cargar(r.slice(2)));return m.exports;}
+const cache=new Map();function cargar(n){if(cache.has(n))return cache.get(n);const m={exports:{}};cache.set(n,m.exports);new Function('exports','module','require',ts.transpileModule(fs.readFileSync(`app/motor/${n}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(m.exports,m,r=>cargar(modulePath.posix.join(modulePath.posix.dirname(n),r)));return m.exports;}
 const prep=cargar('prepararEnsamblajeTermodinamico'),hoja=cargar('modeloHojaMotor'),estado=cargar('estadoTermodinamicoHoja'),ener=cargar('estadoEnergiaHoja'),rec=cargar('recorridoEnergia'),termo=cargar('recorridoTermodinamico'),vol=cargar('volumenControl'),red=cargar('ensamblajeMateria');
 let checks=0;const check=(v,m)=>{checks++;assert.ok(v,m);},rechaza=(f,m)=>{checks++;assert.throws(f,undefined,m);};
 const casos=cargar('hojasPruebaEnergia').crearHojasPruebaEnergia(),cierre={modelo:{id:'agua-iapws95',version:'1'},politica:{cantidad:'monofasico',cambioInterno:'prohibido',evaluacion:'equilibrio_estable'}};

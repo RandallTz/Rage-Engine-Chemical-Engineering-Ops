@@ -1,12 +1,9 @@
-// Batería multifísica (ARQUITECTURA_MOTOR.md §10): TODAS las hojas de prueba del Engine
-// (materia, energía, acoplamiento, multicomponente, multifásico, N componentes, UNIFAC,
-// demostración) recorren el camino común: ecuaciones fundamentales + supuestos de la hoja ->
-// modelo común -> compilador común (POST /modelo/resolver). Por hoja:
-//   - resuelta: estado y eventos frente al cálculo que hace hoy el Engine (solver TS o
-//     ensamblaje v2 en vivo);
-//   - no llega: el motivo exacto (adaptador o compilador). Es la lista de lo que falta.
-// Escribe la matriz en docs/BATERIA_MULTIFISICA.md (generado; no editar a mano).
-// Ejecutar desde frontend/:  node verificar_bateria_multifisica.mjs   (~10 min)
+// Internal multiphysics regression inputs, never installed product examples.
+// Fundamental laws and recorded assumptions -> common model -> common compiler.
+// Compare accepted physical states/events with the TS or native v2 reference;
+// preserve unsupported-case diagnostics. The generated canonical report is
+// docs/engine/multiphysics-battery.md; do not edit that report by hand.
+// Run from frontend/: node verificar_bateria_multifisica.mjs (~10 min).
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -38,16 +35,9 @@ const { modeloBalancesDesdeHoja, cabeEnBalances } = cargar(path.join(AQUI, "moto
 const { resolverHoja } = motor("modeloHojaMotor");
 const { balancesHoja } = motor("seleccionBalances");
 
-const CONJUNTOS = [
-  ["Materia", motor("hojasPruebaMateria").crearHojasPruebaMateria()],
-  ["Energía", motor("hojasPruebaEnergia").crearHojasPruebaEnergia()],
-  ["Acoplamiento", motor("hojasPruebaAcoplamiento").crearHojasPruebaAcoplamiento()],
-  ["Multicomponente", motor("hojasPruebaAcoplamiento").crearHojasPruebaMulticomponente()],
-  ["Multifásico", motor("hojasPruebaMultifasico").crearHojasPruebaMultifasico()],
-  ["N componentes", motor("hojasPruebaNComponentes").crearHojasPruebaNComponentes()],
-  ["UNIFAC", motor("hojasPruebaUNIFAC").crearHojasPruebaUNIFAC()],
-  ["Demostración", motor("hojasDemostracion").crearHojasDemostracion()],
-];
+// Consume the same inventory as /models so future examples cannot be omitted.
+const { REGRESSION_MODELS } = cargar(path.join(AQUI, "testing/modelFixtures"));
+const CONJUNTOS = REGRESSION_MODELS.map(template => [template.name, template.create()]);
 
 const casos = [];
 for (const [conjunto, hojas] of CONJUNTOS) for (const h of hojas) {
@@ -130,7 +120,11 @@ for (const c of casos) if (c.via !== "adaptador") c.r = respuestas[k++];
 const interp = (xs, ys, x) => { if (x <= xs[0]) return ys[0]; for (let i = 1; i < xs.length; i++) if (x <= xs[i]) { const a = (x - xs[i - 1]) / (xs[i] - xs[i - 1]); return ys[i - 1] * (1 - a) + ys[i] * a; } return ys.at(-1); };
 for (const c of casos) if ((c.via === "materia" || c.via === "balances") && c.r.ok) {
   const rm = c.via === "balances" ? await resolverHoja(c.hoja) : await resolverMotor(c.hoja.historial.pasos[c.hoja.historial.activo].formulacion, c.hoja.config);
-  const ids = Object.keys(c.r.ok.series);
+  // Compare only physical states. Budget integrals (campo.aux_*) and
+  // derived observables (observable.*) have no state column in the TS solver.
+  const ids = Object.keys(c.r.ok.series).filter(id => id.startsWith("campo.") && !id.startsWith("campo.aux_"));
+  assert(ids.length > 0 && rm.valores.length === rm.tiempos.length && rm.valores.every(f => f.length === ids.length && f.every(v => v.length === 1 && Number.isFinite(v[0]))), `${c.nombre}: physical state columns do not match the TS reference`);
+  assert(ids.every(id => c.r.ok.series[id].length === c.r.ok.t.length && c.r.ok.series[id].every(Number.isFinite)), `${c.nombre}: invalid compiler state series`);
   let peor = 0, escala = 0;
   ids.forEach((id, j) => c.r.ok.t.forEach((x, q) => { const v = c.r.ok.series[id][q]; escala = Math.max(escala, Math.abs(v)); peor = Math.max(peor, Math.abs(v - interp(rm.tiempos, rm.valores.map(f => f[j][0]), x))); }));
   c.motor = { estado: rm.estado, peor: peor / Math.max(escala, 1e-300) };
@@ -143,46 +137,46 @@ const ok = (v, m) => { n++; if (!v) fallos.push(m); };
 const filas = [], faltas = new Map();
 for (const c of casos) {
   let estado, detalle;
-  if (c.via === "adaptador") { estado = "no llega"; detalle = `adaptador: ${c.motivo}`; }
-  else if (c.r.no_soportado && c.r.motor_rechaza) { estado = "rechazada, como el Engine actual"; detalle = `${c.r.no_soportado} (Engine actual: ${c.r.motor_estado})`; }
-  else if (c.r.no_soportado) { estado = "no llega"; detalle = `compilador: ${c.r.no_soportado}`; }
+  if (c.via === "adaptador") { estado = "not reached"; detalle = `adapter: ${c.motivo}`; }
+  else if (c.r.no_soportado && c.r.motor_rechaza) { estado = "rejected, as by the current Engine"; detalle = `${c.r.no_soportado} (current Engine: ${c.r.motor_estado})`; }
+  else if (c.r.no_soportado) { estado = "not reached"; detalle = `compiler: ${c.r.no_soportado}`; }
   else if (c.r.error) { estado = "ERROR"; detalle = c.r.error; }
   else {
     const m = c.via === "red" ? c.r.motor : c.motor;
-    const ev = c.r.ok.eventos.map(([e, t]) => `${e} ${(+t).toPrecision(6)}`).join(", ") || "sin eventos";
+    const ev = c.r.ok.eventos.map(([e, t]) => `${e} ${(+t).toPrecision(6)}`).join(", ") || "no events";
     estado = c.r.ok.estado;
-    detalle = m?.error ? `referencia: ${m.error}` : `frente al Engine actual: ${m.peor.toExponential(1)} (${m.estado}); ${ev}`;
+    detalle = m?.error ? `reference: ${m.error}` : `against the current Engine: ${m.peor.toExponential(1)} (${m.estado}); ${ev}`;
     ok(!m?.error && m.peor < 1e-4 && m.estado === c.r.ok.estado, `${c.conjunto} · ${c.nombre}: igual que el Engine actual (${detalle})`);
   }
-  if (estado === "no llega") { const clave = detalle.replace(/^(adaptador|compilador): /, "$1: ").replace(/volumen \\S+|corriente \\S+/g, "").slice(0, 160); faltas.set(clave, [...(faltas.get(clave) ?? []), `${c.conjunto} · ${c.nombre}`]); }
+  if (estado === "not reached") { const clave = detalle.replace(/^(adapter|compiler): /, "$1: ").replace(/volumen \\S+|corriente \\S+/g, "").slice(0, 160); faltas.set(clave, [...(faltas.get(clave) ?? []), `${c.conjunto} · ${c.nombre}`]); }
   ok(estado !== "ERROR", `${c.conjunto} · ${c.nombre}: sin errores no tratados (${detalle})`);
   const mod = c.r?.modelo;
-  filas.push(`| ${c.conjunto} | ${c.nombre} | ${c.via} | ${c.fisica.join(" + ")} | ${mod ? `${mod.volumenes} vol · ${mod.componentes} comp · ${mod.corrientes} corr · ${mod.intercambios} calor · ${mod.paquetes.join(", ") || "estado supuesto"}` : "—"} | **${estado}** | ${detalle.replace(/\|/g, "/")} | ${c.r ? c.r.segundos.toFixed(1) : "—"} |`);
+  filas.push(`| ${c.conjunto} | ${c.nombre} | ${c.via} | ${c.fisica.join(" + ")} | ${mod ? `${mod.volumenes} vol · ${mod.componentes} comp · ${mod.corrientes} streams · ${mod.intercambios} heat · ${mod.paquetes.join(", ") || "assumed state"}` : "—"} | **${estado}** | ${detalle.replace(/\|/g, "/")} | ${c.r ? c.r.segundos.toFixed(1) : "—"} |`);
 }
 const resueltas = filas.filter(f => /\*\*(resuelto|parcial)\*\*/.test(f)).length;
-const rechazadas = filas.filter(f => /\*\*rechazada/.test(f)).length;
-const md = `# Batería multifísica del Engine
+const rechazadas = filas.filter(f => /\*\*rejected/.test(f)).length;
+const md = `# Engine multiphysics battery
 
-Generado por \`frontend/verificar_bateria_multifisica.mjs\` el ${new Date().toISOString().slice(0, 10)}. No editar a mano.
+Generated by \`frontend/verificar_bateria_multifisica.mjs\` on ${new Date().toISOString().slice(0, 10)}. Do not edit by hand.
 
-Cada hoja de prueba del Engine recorre el camino común: ecuaciones fundamentales y supuestos de la hoja, modelo común, compilador común (\`POST /modelo/resolver\`). Se compara con el cálculo que hace hoy el Engine: el solver TS o el ensamblaje v2 en vivo.
+Every internal regression model goes through the common path: fundamental equations and assumptions, the common model, the common compiler (\`POST /modelo/resolver\`). These fixtures are not installed product examples and do not repopulate the library. Results are compared with the TS solver or the live v2 assembly. Historical fixture names and published rejection identifiers retain their compatible values.
 
-Vía de cada hoja: **balances**, ecuaciones generadas en el servidor por el motor de balances (\`core/balances\`) desde los supuestos de la hoja; **red**, solicitud termodinámica v2 (compilador estructural con cierre de equilibrio); **materia**, ecuaciones escritas por el adaptador del cliente (las formas que el motor de balances todavía no genera).
+Path of each sheet: **balances**, equations generated on the server by the balance engine (\`core/balances\`) from the sheet's assumptions; **red** (network), a v2 thermodynamic request (structural compiler with an equilibrium closure); **materia** (matter), equations written by the client's adapter (the forms the balance engine does not generate yet).
 
-**${resueltas} de ${casos.length} hojas resueltas por el camino común**${rechazadas ? `, y ${rechazadas} de diagnóstico rechazadas con su motivo, igual que el Engine actual` : ""}. Todas las resueltas coinciden con el Engine actual (tolerancia 1e-4 relativa; en la práctica entre 1e-16 y 1e-7).
+**${resueltas} of ${casos.length} sheets solved through the common path**${rechazadas ? `, and ${rechazadas} diagnostic sheet(s) rejected with their reason, as by the current Engine` : ""}. Every solved sheet matches the current Engine (tolerance 1e-4 relative; in practice between 1e-16 and 1e-7).
 
-## Lo que falta, agrupado por motivo
+## What is missing, grouped by reason
 
 ${[...faltas].sort((a, b) => b[1].length - a[1].length).map(([m, hs]) => `- **${hs.length}** · ${m}\n  - ${hs.join("\n  - ")}`).join("\n")}
 
-## Matriz
+## Matrix
 
-| Conjunto | Hoja | Vía | Física | Modelo común | Estado | Detalle | s |
+| Set | Sheet | Path | Physics | Common model | Status | Detail | s |
 |---|---|---|---|---|---|---|---|
 ${filas.join("\n")}
 `;
-fs.writeFileSync(path.join(RAIZ, "docs/BATERIA_MULTIFISICA.md"), md);
-console.log(md.split("## Matriz")[0]);
+fs.writeFileSync(path.join(RAIZ, "docs/engine/multiphysics-battery.md"), md);
+console.log(md.split("## Matrix")[0]);
 for (const f of fallos) console.log("FALLO " + f);
 console.log(`Batería multifísica: ${n - fallos.length} de ${n} comprobaciones correctas; ${resueltas} de ${casos.length} hojas por el camino común.`);
 assert.equal(fallos.length, 0, `${fallos.length} hojas resueltas difieren del Engine actual o fallan`);

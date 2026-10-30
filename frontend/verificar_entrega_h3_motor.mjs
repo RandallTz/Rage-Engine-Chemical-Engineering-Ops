@@ -1,6 +1,7 @@
+import modulePath from 'node:path';
 // Uses real endpoint examples. Mutation fixtures exercise the reader, not a new flash algorithm.
 import fs from 'node:fs';import ts from 'typescript';import assert from 'node:assert/strict';
-const cache=new Map();function cargar(n){if(cache.has(n))return cache.get(n);const m={exports:{}};cache.set(n,m.exports);new Function('exports','module','require',ts.transpileModule(fs.readFileSync(`app/motor/${n}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(m.exports,m,r=>cargar(r.slice(2)));return m.exports;}
+const cache=new Map();function cargar(n){if(cache.has(n))return cache.get(n);const m={exports:{}};cache.set(n,m.exports);new Function('exports','module','require',ts.transpileModule(fs.readFileSync(`app/motor/${n}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(m.exports,m,r=>cargar(modulePath.posix.join(modulePath.posix.dirname(n),r)));return m.exports;}
 const c=cargar('contratoTermodinamica'),estado=cargar('estadoTermodinamicoHoja');
 const leer=n=>JSON.parse(fs.readFileSync(`../docs/ejemplos/motor-termodinamica-${n}.json`,'utf8'));
 let checks=0;const check=(v,m)=>{checks++;assert.ok(v,m);},rechaza=(fn,m)=>{checks++;assert.throws(fn,undefined,m);},cerca=(a,b,m)=>check(Math.abs(a-b)<=1e-9+1e-8*Math.max(Math.abs(a),Math.abs(b)),m);

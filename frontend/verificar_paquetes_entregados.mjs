@@ -1,3 +1,4 @@
+import modulePath from 'node:path';
 // Offline protocol/presentation checks on original endpoint fixtures.
 // This runner neither evaluates thermodynamics nor grants model availability.
 import fs from 'node:fs';
@@ -7,12 +8,12 @@ import ts from 'typescript';
 const args=process.argv.slice(2),permitidos=['--directorio','--modelo','--version'],opts={};
 for(let i=0;i<args.length;i+=2){if(!permitidos.includes(args[i])||!args[i+1]||args[i+1].startsWith('--'))throw new Error('Uso: node verificar_paquetes_entregados.mjs --directorio <carpeta> [--modelo <id> --version <versión>]');opts[args[i]]=args[i+1];}
 if(!opts['--directorio']||!!opts['--modelo']!==!!opts['--version'])throw new Error('Declara --directorio; el filtro requiere --modelo y --version juntos.');
-const dir=path.resolve(opts['--directorio']);if(!fs.statSync(dir).isDirectory())throw new Error('La carpeta de ejemplos no existe.');
+const dir=modulePath.resolve(opts['--directorio']);if(!fs.statSync(dir).isDirectory())throw new Error('La carpeta de ejemplos no existe.');
 const cache=new Map();
-function cargar(n){if(n.endsWith('.json'))return JSON.parse(fs.readFileSync(`app/motor/${n}`,'utf8'));if(cache.has(n))return cache.get(n);const m={exports:{}};cache.set(n,m.exports);new Function('exports','module','require',ts.transpileModule(fs.readFileSync(`app/motor/${n}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText)(m.exports,m,id=>cargar(id.slice(2)));return m.exports;}
+function cargar(n){if(n.endsWith('.json'))return JSON.parse(fs.readFileSync(`app/motor/${n}`,'utf8'));if(cache.has(n))return cache.get(n);const m={exports:{}};cache.set(n,m.exports);new Function('exports','module','require',ts.transpileModule(fs.readFileSync(`app/motor/${n}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText)(m.exports,m,id=>cargar(modulePath.posix.join(modulePath.posix.dirname(n),id)));return m.exports;}
 const lector=cargar('lectorEnsamblajeV2'),termo=cargar('contratoTermodinamica'),diagramas=cargar('lectorDiagramasEquilibrio'),adapt=cargar('resultadoEnsamblajeV2'),graficas=cargar('datosGraficasMotor');
 const acepta=m=>!opts['--modelo']||m.id===opts['--modelo']&&m.version===opts['--version'];
-const leer=f=>JSON.parse(fs.readFileSync(path.join(dir,f),'utf8'));
+const leer=f=>JSON.parse(fs.readFileSync(modulePath.join(dir,f),'utf8'));
 let checks=0;const check=(v,m)=>{checks++;assert.ok(v,m);};
 const resumen={capacidades:0,estadosPuntuales:0,validaciones:0,resoluciones:0,diagramas:0,estadosPorVolumen:0,certificacion:{cumple:0,no_cumple:0,no_evaluable:0,no_publicada:0},rechazos:0};
 for(const f of fs.readdirSync(dir).filter(f=>f.endsWith('.json')&&!f.endsWith('-peticion.json')&&!f.endsWith('-respuesta.json'))){
@@ -25,7 +26,7 @@ for(const f of fs.readdirSync(dir).filter(f=>f.endsWith('.json')&&!f.endsWith('-
 for(const f of fs.readdirSync(dir).filter(f=>f.endsWith('-peticion.json'))){
   const s=leer(f),modelos=s.paquetes?.map(p=>p.modelo)??[s.declaracion?.modelo??s.modelo].filter(Boolean);
   if(!modelos.some(acepta))continue;
-  const respuesta=f.replace(/-peticion\.json$/,'-respuesta.json');check(fs.existsSync(path.join(dir,respuesta)),`Falta respuesta original de ${f}`);
+  const respuesta=f.replace(/-peticion\.json$/,'-respuesta.json');check(fs.existsSync(modulePath.join(dir,respuesta)),`Falta respuesta original de ${f}`);
   const r=leer(respuesta),antes=JSON.stringify({s,r});
   if(s.revision===2&&Array.isArray(s.volumenes)){
     if(r.validacion){

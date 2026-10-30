@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
-import path from 'node:path';
+import modulePath from 'node:path';
 import {createRequire} from 'node:module';
 import ts from 'typescript';
 import React from 'react';
@@ -11,7 +11,7 @@ function cargar(n){
   if(cache.has(n))return cache.get(n);
   const f=['ts','tsx'].map(ext=>`app/motor/${n}.${ext}`).find(f=>fs.existsSync(f));
   const m={exports:{}};cache.set(n,m.exports);
-  new Function('exports','module','require',ts.transpileModule(fs.readFileSync(f,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText)(m.exports,m,id=>id.startsWith('./')?cargar(path.posix.join(path.posix.dirname(n),id)):require(id));
+  new Function('exports','module','require',ts.transpileModule(fs.readFileSync(f,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText)(m.exports,m,id=>id.startsWith('.')?cargar(modulePath.posix.join(modulePath.posix.dirname(n),id)):require(id));
   return m.exports;
 }
 let checks=0;const igual=(a,b,m)=>{checks++;assert.deepEqual(a,b,m);},check=(v,m)=>{checks++;assert.ok(v,m);};
@@ -67,9 +67,9 @@ const html=renderToStaticMarkup(React.createElement(Editor,{red:{solicitud:s,nom
 check(html.includes(`id="red-identidad-${componente.id}"`),'Catalog exposes stable CAS focus target');
 const Nav=cargar('NavegacionHoja').default;
 const nav=renderToStaticMarkup(React.createElement(Nav,{id:'hoja',actual:'resolver',propietarioId:'volumen:B'}));
-check(nav.includes('/estado?elemento=volumen%3AB')&&nav.includes('/resolver?elemento=volumen%3AB'),'Switching between state and solver preserves selected owner');
+check(nav.includes('/model/state?elemento=volumen%3AB')&&nav.includes('/solve?elemento=volumen%3AB'),'Switching between Model and Solve preserves selected owner');
 const navCatalogo=renderToStaticMarkup(React.createElement(Nav,{id:'hoja',actual:'estado',propietarioId:'componentes'}));
-check(!navCatalogo.includes('/resolver?elemento=componentes'),'Catalog does not become a hidden solver section');
+check(!navCatalogo.includes('/solve?elemento=componentes'),'Catalog does not become a hidden solver section');
 const navLegacy=renderToStaticMarkup(React.createElement(Nav,{id:'hoja',actual:'estado'}));
 check(!navLegacy.includes('elemento='),'Older sheet navigation remains unchanged');
 igual(JSON.stringify(s),original,'Navigation never modifies physics or declarations');

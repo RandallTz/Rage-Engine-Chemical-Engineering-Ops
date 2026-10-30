@@ -1,9 +1,10 @@
+import modulePath from 'node:path';
 // Real endpoint fixtures supplied by Claude. No numerical values are manufactured here.
 import fs from 'node:fs';
 import ts from 'typescript';
 import assert from 'node:assert/strict';
 const cache=new Map();
-function cargar(n){if(cache.has(n))return cache.get(n);const m={exports:{}};cache.set(n,m.exports);new Function('exports','module','require',ts.transpileModule(fs.readFileSync(`app/motor/${n}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(m.exports,m,r=>cargar(r.slice(2)));return m.exports;}
+function cargar(n){if(cache.has(n))return cache.get(n);const m={exports:{}};cache.set(n,m.exports);new Function('exports','module','require',ts.transpileModule(fs.readFileSync(`app/motor/${n}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(m.exports,m,r=>cargar(modulePath.posix.join(modulePath.posix.dirname(n),r)));return m.exports;}
 const c=cargar('contratoTermodinamica'),estado=cargar('estadoTermodinamicoHoja'),modelo=cargar('modeloHojaMotor');
 const dir='../docs/ejemplos',leer=n=>JSON.parse(fs.readFileSync(`${dir}/${n}`,'utf8'));
 let checks=0;const check=(v,m)=>{checks++;assert.ok(v,m);},rechaza=(fn,m)=>{checks++;assert.throws(fn,undefined,m);};

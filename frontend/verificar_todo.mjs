@@ -34,8 +34,6 @@ const NECESITA = {
   "verificar_adimensionalizacion.mjs": "logica",
   "verificar_integracion_adimensionalizacion.mjs": "logica",
   "verificar_capa_dimensional.mjs": "logica",
-  "verificar_enlace.mjs": "logica",
-  "verificar_plantillas.mjs": "api",
 };
 
 const URL_FRONTEND = process.env.URL_PRUEBAS ?? "http://localhost:3000";

@@ -1,8 +1,9 @@
+import modulePath from 'node:path';
 import fs from 'node:fs';
 import ts from 'typescript';
 import assert from 'node:assert/strict';
 const cache=new Map();
-function cargar(nombre){if(cache.has(nombre))return cache.get(nombre);const m={exports:{}};new Function('exports','module','require',ts.transpileModule(fs.readFileSync(`app/motor/${nombre}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(m.exports,m,r=>cargar(r.slice(2)));cache.set(nombre,m.exports);return m.exports;}
+function cargar(nombre){if(cache.has(nombre))return cache.get(nombre);const m={exports:{}};new Function('exports','module','require',ts.transpileModule(fs.readFileSync(`app/motor/${nombre}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(m.exports,m,r=>cargar(modulePath.posix.join(modulePath.posix.dirname(nombre),r)));cache.set(nombre,m.exports);return m.exports;}
 const {crearHojasPruebaMateria}=cargar('hojasPruebaMateria'),{analizarMotor}=cargar('modeloNumerico'),{resolverMotor}=cargar('integracionMotor'),alm=cargar('hojasMotor');
 let comprobaciones=0;const comprobar=(v,m)=>{comprobaciones++;assert.ok(v,m);};
 const cerca=(x,y,tol,m)=>comprobar(Math.abs(x-y)<=tol,m+`: ${x} frente a ${y}`);

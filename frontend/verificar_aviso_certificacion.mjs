@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import path from 'node:path';
+import modulePath from 'node:path';
 import {createRequire} from 'node:module';
 import assert from 'node:assert/strict';
 import ts from 'typescript';
@@ -10,7 +10,7 @@ function cargar(n){
   if(n.endsWith('.css'))return {};
   if(cache.has(n))return cache.get(n);
   const f=['ts','tsx'].map(ext=>`app/motor/${n}.${ext}`).find(f=>fs.existsSync(f)),m={exports:{}};cache.set(n,m.exports);
-  new Function('exports','module','require',ts.transpileModule(fs.readFileSync(f,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText)(m.exports,m,id=>id.startsWith('./')?cargar(path.posix.join(path.posix.dirname(n),id)):require(id));return m.exports;
+  new Function('exports','module','require',ts.transpileModule(fs.readFileSync(f,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText)(m.exports,m,id=>id.startsWith('.')?cargar(modulePath.posix.join(modulePath.posix.dirname(n),id)):require(id));return m.exports;
 }
 const lector=cargar('lectorEnsamblajeV2'),meta=cargar('metadatosRed'),Aviso=cargar('AvisoCertificacionRed').default;
 let checks=0;const check=(v,m)=>{checks++;assert.ok(v,m);};
@@ -28,10 +28,10 @@ for(const [base,estado,cert] of casos){
   const html=renderToStaticMarkup(React.createElement(Aviso,{resultado:a,verDetalles(){}}));
   check(html.includes(`data-certificacion="${cert}"`),'Machine-readable original certification status');
   check(html.includes(cert==='no_cumple'?'role="alert"':'role="status"'),'Failed certification remains an accessible alert');
-  check(html.includes('Ver certificación'),'Details remain reachable');
+  check(html.includes('View certification'),'Details remain reachable');
   check(!html.includes('incumplimiento físico'),'Banner does not invent a physical cause for a failed check');
   if(cert==='no_cumple'){
-    check(html.includes('Trayectoria sin certificar · verificación no superada'),'Failure never presented as successful');
+    check(html.includes('Uncertified trajectory · verification failed'),'Failure never presented as successful');
     check(a.certificacion.aspectos.find(x=>x.id==='cierre_constitutivo').referencias.includes('mecanica.A.trabajo'),'Actual failing equation remains inspectable');
     check(a.residuos.find(x=>x.ecuacionId==='mecanica.A.trabajo').maximoEscalado>1,'Original failed residual is not relaxed');
     const corte=meta.intervaloNoCertificado(a);
@@ -43,9 +43,9 @@ for(const [base,estado,cert] of casos){
 const base='qa_fiabilidad_motor_2026_10_16/nrtl-chemsep',s=leer(`${base}-peticion.json`),r=leer(`${base}-resolver-respuesta.json`);
 const falsa=structuredClone(r);falsa.resultados.certificacion.estado='cumple';checks++;assert.throws(()=>lector.leerResolucionV2(falsa,s));
 const historica=structuredClone(r.resultados);delete historica.certificacion;
-check(meta.resumenCertificacion(historica).includes('no disponible'),'Historical response never silently becomes certified');
+check(meta.resumenCertificacion(historica).includes('unavailable'),'Historical response never silently becomes certified');
 const sinAprobadas=structuredClone(r.resultados);sinAprobadas.certificacion.ultimaMuestraCertificada=null;
 const html=renderToStaticMarkup(React.createElement(Aviso,{resultado:sinAprobadas,verDetalles(){}}));
-check(html.includes('sin muestras aprobadas; evidencia completa'),'Null canonical cut is explicitly represented');
+check(html.includes('no approved samples; full evidence retained'),'Null canonical cut is explicitly represented');
 check(meta.intervaloNoCertificado(sinAprobadas)[0]===sinAprobadas.tiempos[0],'Null cut starts at initial sample');
 console.log(`${checks} comprobaciones del aviso: estados independientes, causa no inventada, evidencia íntegra, corte canónico y rechazo de certificación falsa.`);

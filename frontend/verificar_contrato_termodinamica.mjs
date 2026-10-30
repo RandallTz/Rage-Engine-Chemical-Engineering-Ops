@@ -1,5 +1,6 @@
+import modulePath from 'node:path';
 import fs from 'node:fs';import ts from 'typescript';import assert from 'node:assert/strict';import katex from 'katex';
-const cache=new Map();function cargar(n){if(cache.has(n))return cache.get(n);const m={exports:{}};cache.set(n,m.exports);new Function('exports','module','require',ts.transpileModule(fs.readFileSync(`app/motor/${n}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(m.exports,m,r=>cargar(r.slice(2)));return m.exports;}
+const cache=new Map();function cargar(n){if(cache.has(n))return cache.get(n);const m={exports:{}};cache.set(n,m.exports);new Function('exports','module','require',ts.transpileModule(fs.readFileSync(`app/motor/${n}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(m.exports,m,r=>cargar(modulePath.posix.join(modulePath.posix.dirname(n),r)));return m.exports;}
 const contrato=cargar('contratoTermodinamica'),estado=cargar('estadoTermodinamicoHoja'),modelo=cargar('modeloHojaMotor'),relaciones=cargar('relacionesTermodinamicas'),servicio=cargar('servicioTermodinamica');
 let checks=0;const check=(v,m)=>{checks++;assert.ok(v,m);},rechaza=(fn,m)=>{checks++;assert.throws(fn,undefined,m);};
 // Synthetic protocol fixture. These numbers are NOT thermophysical data or equilibrium evidence.

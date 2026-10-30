@@ -19,3 +19,9 @@
 .group li[data-done=true] .check::after { content:''; position:absolute; left:4px; top:1px; width:5px; height:9px; border:solid #fff; border-width:0 1.5px 1.5px 0; transform:rotate(45deg); }
 @media(max-width:900px) { .grid { grid-template-columns:1fr; gap:42px; } .header { margin-bottom:28px; flex-wrap:wrap; } .section h2 { padding-bottom:18px; } }
 @media print { .header a { display:none; } .page { padding:0; } .grid { gap:22px; } .group li { break-inside:avoid; font-size:10px; padding:6px 0; } }
+
+.header p { max-width:72ch; font-size:12px; color:#687060; line-height:1.7; margin-top:10px; }
+.navigation { max-width:1400px; margin:0 auto 30px; display:flex; flex-wrap:wrap; gap:12px 24px; font-size:12px; }
+.navigation a { text-underline-offset:4px; }
+.navigation a:focus-visible { outline:2px solid #536844; outline-offset:4px; }
+.workspace { font-size:11px; color:#687060; line-height:1.6; margin:-14px 0 24px; }

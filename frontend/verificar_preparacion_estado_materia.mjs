@@ -1,5 +1,6 @@
+import modulePath from 'node:path';
 import fs from 'node:fs';import ts from 'typescript';import assert from 'node:assert/strict';
-const cache=new Map();function cargar(n){if(cache.has(n))return cache.get(n);const m={exports:{}};cache.set(n,m.exports);new Function('exports','module','require',ts.transpileModule(fs.readFileSync(`app/motor/${n}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(m.exports,m,r=>cargar(r.slice(2)));return m.exports;}
+const cache=new Map();function cargar(n){if(cache.has(n))return cache.get(n);const m={exports:{}};cache.set(n,m.exports);new Function('exports','module','require',ts.transpileModule(fs.readFileSync(`app/motor/${n}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(m.exports,m,r=>cargar(modulePath.posix.join(modulePath.posix.dirname(n),r)));return m.exports;}
 const red=cargar('ensamblajeMateria'),hoja=cargar('modeloHojaMotor'),m=cargar('modeloNumerico'),rec=cargar('recorridoMateria'),alm=cargar('hojasMotor'),reg=cargar('reglasEstadoMateria'),int=cargar('integracionMotor');
 const ejemplos=cargar('hojasPruebaAcoplamiento'),casos=[...ejemplos.crearHojasPruebaAcoplamiento(),...ejemplos.crearHojasPruebaMulticomponente()];
 let checks=0;const check=(x,s)=>{checks++;assert.ok(x,s);},cerca=(a,b,t,s)=>check(Math.abs(a-b)<=t,`${s}: ${a} / ${b}`);

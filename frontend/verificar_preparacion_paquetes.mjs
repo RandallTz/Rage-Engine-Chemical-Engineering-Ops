@@ -1,6 +1,6 @@
 // Metadata, UI and invalidation only. Synthetic model IDs below do not enable a package.
 import fs from 'node:fs';
-import path from 'node:path';
+import modulePath from 'node:path';
 import {createRequire} from 'node:module';
 import assert from 'node:assert/strict';
 import ts from 'typescript';
@@ -13,7 +13,7 @@ function cargar(n){
   if(cache.has(n))return cache.get(n);
   const f=['ts','tsx'].map(ext=>`app/motor/${n}.${ext}`).find(f=>fs.existsSync(f));if(!f)throw new Error(`Módulo no encontrado: ${n}`);
   const m={exports:{}};cache.set(n,m.exports);
-  new Function('exports','module','require',ts.transpileModule(fs.readFileSync(f,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText)(m.exports,m,id=>id.startsWith('./')?cargar(path.posix.join(path.posix.dirname(n),id)):require(id));
+  new Function('exports','module','require',ts.transpileModule(fs.readFileSync(f,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText)(m.exports,m,id=>id.startsWith('.')?cargar(modulePath.posix.join(modulePath.posix.dirname(n),id)):require(id));
   return m.exports;
 }
 let checks=0;const check=(x,m)=>{checks++;assert.ok(x,m);},igual=(a,b,m)=>{checks++;assert.deepEqual(a,b,m);},rechaza=f=>{checks++;assert.throws(f);};
@@ -112,7 +112,7 @@ const parRepetido=structuredClone(paresAparte),pr=parRepetido.paquetes.find(p=>p
 pr.pares[0].componentesCAS=['64-17-5','64-17-5'];rechaza(()=>lector.leerCapacidadesV2(parRepetido));
 // All stored endpoint capability responses, including UNIFAC, still pass unchanged.
 const capacidadesReales=[];
-function recorrer(d){for(const e of fs.readdirSync(d,{withFileTypes:true})){const f=path.join(d,e.name);if(e.isDirectory())recorrer(f);else if(e.name.endsWith('.json')&&e.name.includes('capacidades'))capacidadesReales.push(f);}}
+function recorrer(d){for(const e of fs.readdirSync(d,{withFileTypes:true})){const f=modulePath.join(d,e.name);if(e.isDirectory())recorrer(f);else if(e.name.endsWith('.json')&&e.name.includes('capacidades'))capacidadesReales.push(f);}}
 recorrer('../docs/ejemplos');
 let reales=0;const protocolosLeidos=new Set();
 for(const f of capacidadesReales){
@@ -171,7 +171,7 @@ const orden=structuredClone(nSaved);for(const estados of Object.values(orden.res
 igual(renderToStaticMarkup(React.createElement(Paquetes,{ejecucion:orden})),renderToStaticMarkup(React.createElement(Paquetes,{ejecucion:nSaved})),'Component IDs, not array positions, select executed masses and sources');
 delete prueba.respuesta.resultados.procedenciaModelo;
 const historico=renderToStaticMarkup(React.createElement(Paquetes,{ejecucion:prueba}));
-check(historico.includes('No publicada en esta ejecución'),'Historical response does not invent a fingerprint');
+check(historico.includes('Not published in this run'),'Historical response does not invent a fingerprint');
 const sinEstado=structuredClone(saved);delete sinEstado.respuesta.resultados.estados;
 // The complete reader requires states. Test this display component's missing-data
 // branch without treating the synthetic fragment as a valid backend response.

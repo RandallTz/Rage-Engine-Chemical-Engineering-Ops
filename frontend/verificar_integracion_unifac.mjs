@@ -1,6 +1,6 @@
 // Original delivery fixtures plus optional real HTTP. Does not recompute a flash.
 import fs from 'node:fs';
-import path from 'node:path';
+import modulePath from 'node:path';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {execFileSync} from 'node:child_process';
@@ -14,7 +14,7 @@ function cargar(n){
   if(cache.has(n))return cache.get(n);
   const f=['ts','tsx'].map(ext=>`app/motor/${n}.${ext}`).find(f=>fs.existsSync(f));
   const m={exports:{}};cache.set(n,m.exports);
-  new Function('exports','module','require',ts.transpileModule(fs.readFileSync(f,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText)(m.exports,m,id=>id.startsWith('./')?cargar(path.posix.join(path.posix.dirname(n),id)):require(id));return m.exports;
+  new Function('exports','module','require',ts.transpileModule(fs.readFileSync(f,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText)(m.exports,m,id=>id.startsWith('.')?cargar(modulePath.posix.join(modulePath.posix.dirname(n),id)):require(id));return m.exports;
 }
 execFileSync(process.execPath,['sincronizar_ejemplos_unifac.mjs','--check'],{stdio:'inherit'});
 execFileSync(process.execPath,['verificar_paquetes_entregados.mjs','--directorio',dir],{stdio:'inherit'});
@@ -41,7 +41,17 @@ check(lle.componentesCAS.length===lle.coberturaGrupos.especies.length&&!lle.comp
 check(new Set(cap.paquetes.filter(p=>modelos.includes(p.modelo.id)).map(p=>p.coberturaGrupos.datos.sha256_interacciones)).size===3,'Independent table identities');
 for(const [i,h] of hojas.entries()){
   const original=leer(ejemplos[i].fuente),s=h.redTermodinamica.solicitud;
-  igual({...s,solicitudId:original.solicitudId},original,'Worksheet is input-only original request');
+  const rebuilt = structuredClone(s), material = cargar('materialDerivation');
+  const journal = material.journalInRequest(rebuilt.derivacion);
+  check(!!journal && rebuilt.volumenes.every(volume => material.journalMatches(journal.volumes[volume.id], volume.formulacionMateria)), 'Material formulation is derived through recorded shared operations');
+  const physical = cargar('physicalDerivation');
+  const energy=physical.energyJournalInRequest(rebuilt.derivacion),thermo=physical.thermodynamicJournalInRequest(rebuilt.derivacion);
+  check(!!energy&&!!thermo&&rebuilt.volumenes.every(v=>physical.energyJournalMatches(energy.volumes[v.id],v.formulacionEnergia)&&physical.thermodynamicJournalMatches(thermo.volumes[v.id],v.formulacionEnergia,physical.configuredClosure(rebuilt,v))), 'First-law and constitutive selections reproduce the physical request');
+  delete rebuilt.derivacion.materialDerivation;
+  delete rebuilt.derivacion.energyDerivation;
+  delete rebuilt.derivacion.thermodynamicDerivation;
+  if (!Object.keys(rebuilt.derivacion).length) delete rebuilt.derivacion;
+  igual({...rebuilt,solicitudId:original.solicitudId},original,'Rebuilt template preserves every original physical input and adds only its deduction journal');
   check(!h.resultado&&!h.resultadoRef,'No preloaded answers');
   const respuesta=leer(ejemplos[i].fuente.replace('-peticion','-respuesta'));
   check(respuesta.resultados.certificacion.estado==='cumple','Original trajectory certified');

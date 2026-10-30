@@ -1,6 +1,6 @@
 // Protocol, admission and editing checks; no replacement thermodynamic calculation.
 import fs from 'node:fs';
-import path from 'node:path';
+import modulePath from 'node:path';
 import {createRequire} from 'node:module';
 import assert from 'node:assert/strict';
 import ts from 'typescript';
@@ -9,7 +9,7 @@ function cargar(n){
   if(n.endsWith('.json'))return JSON.parse(fs.readFileSync(`app/motor/${n}`,'utf8'));
   if(cache.has(n))return cache.get(n);
   const m={exports:{}};cache.set(n,m.exports);
-  new Function('exports','module','require',ts.transpileModule(fs.readFileSync(`app/motor/${n}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText)(m.exports,m,id=>id.startsWith('./')?cargar(path.posix.join(path.posix.dirname(n),id)):require(id));
+  new Function('exports','module','require',ts.transpileModule(fs.readFileSync(`app/motor/${n}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText)(m.exports,m,id=>id.startsWith('.')?cargar(modulePath.posix.join(modulePath.posix.dirname(n),id)):require(id));
   return m.exports;
 }
 let checks=0;const check=(v,m)=>{checks++;assert.ok(v,m);},igual=(a,b,m)=>{checks++;assert.deepEqual(a,b,m);},rechaza=f=>{checks++;assert.throws(f);};
@@ -74,7 +74,7 @@ editar.agregarComponenteRed(nuevo,metanol.sustancia.nombre,metanol.sustancia.cas
 check(!nuevo.solicitud.componentes.at(-1).masaMolar,'Choosing a registered species does not inject its mixture molar mass into IAPWS or other models');
 igual(JSON.stringify(red),redAntes,'Catalog inspection leaves worksheet declarations intact');igual(JSON.stringify(raw),antes,'Reader and choices leave original evidence intact');
 const {estadoResolucionRed}=cargar('estadoResolucionRed');
-igual(estadoResolucionRed({diagnosticos:[{codigo:'MOTOR_ENS_DATO_PURO_AUSENTE',estado:'no_soportado'}],recuento:{estado:'incompleto'}}).estado,'Faltan datos del paquete','Missing pure property is shown as package data, not free variables');
+igual(estadoResolucionRed({diagnosticos:[{codigo:'MOTOR_ENS_DATO_PURO_AUSENTE',estado:'no_soportado'}],recuento:{estado:'incompleto'}}).estado,'Missing package data','Missing pure property is shown as package data, not free variables');
 
 // F2.4–F2.6: every new real point, network and cut is read without rewriting it.
 const ct=cargar('contratoTermodinamica'),lv=cargar('lectorEnsamblajeV2'),ld=cargar('lectorDiagramasEquilibrio');
@@ -150,7 +150,7 @@ ct.validarRespuestaEstado(tpRespuesta,tpConCp,cpCap);checks++;
 const sinDominio=structuredClone(tpRespuesta);sinDominio.evaluacion.verificaciones=sinDominio.evaluacion.verificaciones.filter(v=>v.id!=='dominio');rechaza(()=>ct.validarRespuestaEstado(sinDominio,tpConCp,cpCap));
 const fueraIntervalo=structuredClone(tpConCp);fueraIntervalo.declaracion.datosPuros[etanol.cas].cp_gas_ideal.dominio.T=[310,400];rechaza(()=>ct.validarRespuestaEstado(tpRespuesta,fueraIntervalo,cpCap));
 rechaza(()=>ct.validarRespuestaEstado(tpRespuesta,tpOriginal,cpCap));
-for(const [codigo,estado] of [['MOTOR_ENS_SUSTITUCION_INVALIDA','Revisar propiedades del paquete'],['MOTOR_ENS_SUSTITUCION_NO_ADMITIDA','Sustitución no admitida'],['MOTOR_ENS_REFERENCIAS_INCOMPATIBLES','Referencias incompatibles']]){
+for(const [codigo,estado] of [['MOTOR_ENS_SUSTITUCION_INVALIDA','Review package properties'],['MOTOR_ENS_SUSTITUCION_NO_ADMITIDA','Unsupported substitution'],['MOTOR_ENS_REFERENCIAS_INCOMPATIBLES','Incompatible references']]){
   const resumen=estadoResolucionRed({modeloId:'cerrado',diagnosticos:[{codigo,estado:'invalido'}],recuento:{estado:'listo'},inicializacion:{estado:'compatible'}});
   check(!resumen.puedeResolver&&resumen.estado===estado,'Structural GL=0 does not hide a property or reference rejection');
 }

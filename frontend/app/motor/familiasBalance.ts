@@ -1,12 +1,12 @@
 export type FamiliaBalance='materia'|'energia'|'momento';
 /** Vista de la hoja: un balance o la termodinámica, que no es un balance que se activa:
- * es el cierre de estado de cada volumen y está siempre presente (ARQUITECTURA_MOTOR.md §3). */
+ * es el cierre de estado de cada volumen y está siempre presente (ARCHITECTURE.md §3). */
 export type VistaHoja=FamiliaBalance|'termodinamica';
-export const PANEL_TERMODINAMICA={id:'termodinamica' as const,nombre:'Termodinámica',descripcion:'Estado, fases y equilibrio de cada volumen.'};
+export const PANEL_TERMODINAMICA={id:'termodinamica' as const,nombre:"Thermodynamics",descripcion:"State, phases and equilibrium in each volume."};
 export const FAMILIAS_BALANCE=[
-  {id:'materia' as const,nombre:'Materia',descripcion:'Composición, transporte y transformación.'},
-  {id:'energia' as const,nombre:'Energía',descripcion:'Calor, trabajo y energía almacenada.'},
-  {id:'momento' as const,nombre:'Momento',descripcion:'Movimiento, presión y fuerzas.'},
+  {id:'materia' as const,nombre:"Matter",descripcion:"Composition, transport and sources."},
+  {id:'energia' as const,nombre:"Energy",descripcion:"Heat, work and stored energy."},
+  {id:'momento' as const,nombre:"Momentum",descripcion:"Motion, pressure and forces."},
 ];
 export type SupuestosFundamentales={estacionario:boolean;sinConduccion:boolean;sinTrabajoEsfuerzos:boolean;sinEsfuerzosViscosos:boolean;sinFuerzasVolumen:boolean};
 export const SIN_SUPUESTOS:SupuestosFundamentales={estacionario:false,sinConduccion:false,sinTrabajoEsfuerzos:false,sinEsfuerzosViscosos:false,sinFuerzasVolumen:false};

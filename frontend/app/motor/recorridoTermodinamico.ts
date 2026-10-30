@@ -1,4 +1,4 @@
-/** Derivación termodinámica de la hoja (ARQUITECTURA_MOTOR.md §2, principio 10 y §8 «cada ecuación en su
+/** Derivación termodinámica de la hoja (ARCHITECTURE.md §2, principio 10 y §8 «cada ecuación en su
  * lugar»): parte SIEMPRE de las relaciones termodinámicas fundamentales y, supuesto a supuesto, llega a la
  * relación de estado que usa el modelo. Los supuestos termodinámicos (número de fases, cambio de fase,
  * densidad constante, u(T) declarada) se declaran aquí, no en el balance de energía; el balance de energía
@@ -9,16 +9,16 @@ import type { HojaMotor } from './hojasMotor';
 export type SupuestosTermo = Pick<FormulacionEnergia, 'monofasico' | 'sinCambioFase' | 'densidadConstante' | 'modelo'>;
 export const CLAVES_TERMO = ['monofasico', 'sinCambioFase', 'densidadConstante', 'modelo'] as const;
 export const TERMO_FUNDAMENTAL: SupuestosTermo = { monofasico: false, sinCambioFase: false, densidadConstante: false, modelo: 'sin_declarar' };
-export type PasoTermo = { titulo: string; supuestos: SupuestosTermo; relaciones: string[] };
+export type PasoTermo = { titulo: string; supuestos: SupuestosTermo; relaciones: string[]; operation?: {changes:Partial<SupuestosTermo>} | null };
 export type RecorridoTermodinamico = { version: 1; pasos: PasoTermo[]; rehacer: PasoTermo[] };
 
-export const TITULO_FUNDAMENTAL_TERMO = 'Relaciones termodinámicas fundamentales';
-export const iniciarTermo = (): RecorridoTermodinamico => ({ version: 1, pasos: [{ titulo: TITULO_FUNDAMENTAL_TERMO, supuestos: { ...TERMO_FUNDAMENTAL }, relaciones: [] }], rehacer: [] });
+export const TITULO_FUNDAMENTAL_TERMO = 'Fundamental thermodynamic relations';
+export const iniciarTermo = (): RecorridoTermodinamico => ({ version: 1, pasos: [{ titulo: TITULO_FUNDAMENTAL_TERMO, supuestos: { ...TERMO_FUNDAMENTAL }, relaciones: [], operation:null }], rehacer: [] });
 export const actualTermo = (r: RecorridoTermodinamico) => r.pasos[r.pasos.length - 1];
 export function operarTermo(r: RecorridoTermodinamico, titulo: string, cambios: Partial<SupuestosTermo>, relaciones: string[] = []): RecorridoTermodinamico {
   const previa = actualTermo(r).supuestos, s = { ...previa, ...cambios };
   if (JSON.stringify(s) === JSON.stringify(previa)) return r;
-  return { version: 1, pasos: [...r.pasos, { titulo, supuestos: s, relaciones }], rehacer: [] };
+  return { version: 1, pasos: [...r.pasos, { titulo, supuestos: s, relaciones, operation:{changes:structuredClone(cambios)} }], rehacer: [] };
 }
 export function volverTermo(r: RecorridoTermodinamico, indice: number): RecorridoTermodinamico {
   if (!Number.isInteger(indice) || indice < 0 || indice >= r.pasos.length) return r;
@@ -28,17 +28,17 @@ export const rehacerTermo = (r: RecorridoTermodinamico): RecorridoTermodinamico 
 
 /** Los supuestos que se pueden declarar, con la relación que introducen. */
 export const OPERACIONES_TERMO: { clave: keyof SupuestosTermo; nombre: string; valor: SupuestosTermo[keyof SupuestosTermo]; relacion: string; efecto: string }[] = [
-  { clave: 'monofasico', nombre: 'Se asume una fase', valor: true, relacion: String.raw`N_{\mathrm{fases}}=1`, efecto: 'Las fases candidatas se reducen a una; si el equilibrio pidiera otra, el supuesto deja de valer.' },
-  { clave: 'sinCambioFase', nombre: 'Sin cambio de fase', valor: true, relacion: String.raw`\{\text{fases}\}(t)=\{\text{fases}\}(0)`, efecto: 'El régimen de fases se mantiene durante todo el cálculo.' },
-  { clave: 'densidadConstante', nombre: 'Densidad de mezcla constante', valor: true, relacion: String.raw`\rho=\rho_*,\qquad V=\frac{m}{\rho_*}`, efecto: 'Relación de estado del volumen: líquido incompresible de densidad declarada.' },
-  { clave: 'modelo', nombre: 'u(T) lineal declarada', valor: 'u_lineal', relacion: String.raw`u(T)=u_{\mathrm{ref}}+c_u\,(T-T_{\mathrm{ref}}),\qquad c_u>0`, efecto: 'Relación de estado de la energía interna; válida en [T_min, T_max], que el Engine vigila.' },
+  { clave: 'monofasico', nombre: 'Assume a single phase', valor: true, relacion: String.raw`N_{\mathrm{fases}}=1`, efecto: 'Restrict the present phase count to one; stop if equilibrium requires another phase.' },
+  { clave: 'sinCambioFase', nombre: 'No phase change', valor: true, relacion: String.raw`\{\text{fases}\}(t)=\{\text{fases}\}(0)`, efecto: 'The initial phase set must remain valid throughout the calculation.' },
+  { clave: 'densidadConstante', nombre: 'Constant mixture density', valor: true, relacion: String.raw`\rho=\rho_*,\qquad V=\frac{m}{\rho_*}`, efecto: 'Volume state relation: an incompressible liquid with declared density.' },
+  { clave: 'modelo', nombre: 'Declared linear u(T) law', valor: 'u_lineal', relacion: String.raw`u(T)=u_{\mathrm{ref}}+c_u\,(T-T_{\mathrm{ref}}),\qquad c_u>0`, efecto: 'Internal-energy relation, valid in the declared interval [T_min, T_max] monitored by the Engine.' },
 ];
 
 /** Relaciones de estado vigentes con los supuestos declarados (las que el balance de energía usa). */
 export function relacionesTermo(s: SupuestosTermo): string[] {
   const r: string[] = [];
   if (s.monofasico) r.push(String.raw`N_{\mathrm{fases}}=1`);
-  if (s.sinCambioFase) r.push(String.raw`\text{régimen de fase constante}`);
+  if (s.sinCambioFase) r.push(String.raw`\text{constant phase regime}`);
   if (s.modelo === 'u_lineal') r.push(String.raw`u(T)=u_{\mathrm{ref}}+c_u(T-T_{\mathrm{ref}}),\quad c_u>0`, String.raw`T=T_{\mathrm{ref}}+\frac{U/m-u_{\mathrm{ref}}}{c_u}`, String.raw`U=m\,u(T)`);
   if (s.densidadConstante) r.push(String.raw`V=\frac{m}{\rho_*},\quad\frac{dV}{dt}=\frac{1}{\rho_*}\frac{dm}{dt}`);
   return r;
@@ -58,7 +58,7 @@ export function separarTermodinamica(e: RecorridoEnergia): { energia: RecorridoE
     const cambiaTermo = JSON.stringify(antes) !== JSON.stringify(ahora);
     const cambiaEnergia = !i || JSON.stringify(sinTermo(e.pasos[i - 1].formulacion)) !== JSON.stringify(sinTermo(p.formulacion)) || JSON.stringify(e.pasos[i - 1].contexto) !== JSON.stringify(p.contexto);
     if (cambiaTermo) termo = { ...termo, pasos: [...termo.pasos, { titulo: p.titulo, supuestos: ahora, relaciones: cambiaEnergia ? [] : p.relaciones }] };
-    if (cambiaEnergia) pasos.push({ ...p, formulacion: sinTermo(p.formulacion) });
+    if (cambiaEnergia) pasos.push({ ...p, ...(p.operation?{operation:{changes:Object.fromEntries(Object.entries(p.operation.changes).filter(([key])=>!CLAVES_TERMO.includes(key as typeof CLAVES_TERMO[number])))}}:{}), formulacion: sinTermo(p.formulacion) });
   });
   return { energia: { ...e, pasos: pasos.length ? pasos : [{ ...e.pasos[0], formulacion: sinTermo(e.pasos[0].formulacion) }], rehacer: [] }, termo };
 }

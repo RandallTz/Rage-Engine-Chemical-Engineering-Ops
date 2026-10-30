@@ -1,9 +1,10 @@
+import modulePath from 'node:path';
 import fs from 'node:fs';
 import ts from 'typescript';
 import assert from 'node:assert/strict';
 import katex from 'katex';
 const cache=new Map();
-function cargar(n){if(cache.has(n))return cache.get(n);const m={exports:{}};cache.set(n,m.exports);new Function('exports','module','require',ts.transpileModule(fs.readFileSync(`app/motor/${n}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(m.exports,m,r=>cargar(r.slice(2)));return m.exports;}
+function cargar(n){if(cache.has(n))return cache.get(n);const m={exports:{}};cache.set(n,m.exports);new Function('exports','module','require',ts.transpileModule(fs.readFileSync(`app/motor/${n}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(m.exports,m,r=>cargar(modulePath.posix.join(modulePath.posix.dirname(n),r)));return m.exports;}
 const rec=cargar('recorridoEnergia'),estado=cargar('estadoEnergiaHoja'),vol=cargar('volumenControl'),modelo=cargar('modeloHojaMotor'),energia=cargar('modeloEnergia'),final=cargar('ecuacionesSistemaEnergia'),prep=cargar('prepararEnsamblajeTermodinamico'),roles=cargar('papelesVariables');
 const casos=cargar('hojasPruebaEnergia').crearHojasPruebaEnergia();
 let checks=0;const check=(v,m)=>{checks++;assert.ok(v,m);};
