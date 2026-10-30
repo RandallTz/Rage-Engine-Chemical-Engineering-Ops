@@ -119,3 +119,5 @@ resultados/
 !frontend/app/motor/hojas/*/resultados/page.tsx
 # Generated project-board datasets (tools/roadmap_board/README.md)
 tools/roadmap_board/out/
+# Shared code graph, rebuilt locally by each agent (tools/graphify/README.md)
+graphify-out/

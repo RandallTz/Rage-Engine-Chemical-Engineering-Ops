@@ -1,0 +1,19 @@
+# Paths excluded from the shared code graph (tools/graphify/README.md).
+# Graphify also honours .gitignore. Keep the graph to source code:
+# generated data, frozen examples and QA captures add noise, not structure.
+
+# Data files: frozen examples, fixtures, reference results, registries
+*.json
+docs/ejemplos/
+frontend/qa_*/
+tests/reference_data/
+tests/fixtures_ensamblaje/
+
+# Historical reference, packaging and build outputs
+archive/
+empaquetado/
+frontend/.next/
+frontend/node_modules/
+frontend/out/
+tools/roadmap_board/out/
+graphify-out/
