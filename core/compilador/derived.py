@@ -170,6 +170,7 @@ class DerivedSystem(DerivedGraph):
             target = equation.lhs
             if isinstance(target, (sp.Symbol, sp.core.function.AppliedUndef)) and target not in self.states and target not in self.replacements and target not in self.algebraic_quantities:
                 self.replacements[target] = equation.rhs
+        self._kinetic_declarations()
         self.runtime_replacements = dict(self.replacements)
         self.algebraic_block = None
         if self.algebraic_rows:
@@ -289,6 +290,59 @@ class DerivedSystem(DerivedGraph):
                 return value
             expression = current
         raise LoweringError('unsupported_derivative', 'A derivative cannot be lowered to the selected explicit states.')
+
+    def _dim(self, expression):
+        # SI-bound parameters still carry their original dimensions in
+        # reconstructed inventories (for example sum_i M_i*n_i).
+        declared = dict(self.replayed.units)
+        for quantity, parameter in getattr(self, 'parameter_symbols', {}).items():
+            unit = _known_unit(quantity, self.replayed.units)
+            if unit is not None:declared[parameter] = unit
+        return dimension(expression, declared, _known_unit) or {}
+
+    def _kinetic_declarations(self):
+        """Lower declared roots only after recorded source substitutions.
+
+        This is an explicit constitutive evaluator, not another balance/RHS.
+        Source identities must occur in the selected conservation ancestry.
+        """
+        config = self.model['motores'].get('kineticReactions')
+        if not config:
+            return
+        if self.selection['version'] != 1 or self.selection.get('scaling'):
+            raise LoweringError('kinetic_formulation_unsupported', 'Kinetic declarations currently require the identity explicit graph selection (version 1).')
+        from core.balances.reaction_equations import declarations
+        used = set()
+        def visit(key):
+            if key in used:return
+            used.add(key)
+            for parent in self.graph.nodes[key].inputs:visit(parent)
+        for row in self.selection['states']:visit(row['equationId'])
+        for volume in self.model['volumenes']:
+            owner = volume['id']
+            if owner not in config['volumes']:continue
+            state = volume['supuestos']['materia']
+            if state.get('vista') != 'cantidad' or not state.get('fija'):
+                raise LoweringError('kinetic_geometry_unsupported', 'This kinetic increment requires recorded total-form fixed-volume balances.')
+            graph, _, bindings, source_ids = declarations(self.model, owner)
+            if any(key not in used for key in source_ids):
+                raise LoweringError('kinetic_source_not_deduced', 'Apply every stoichiometric generation/consumption definition to its component law through recorded substitutions; zero-source and no-reaction flags cannot bypass this deduction.')
+            for quantity, data in bindings.items():
+                qid = next(key for key, q in self.quantities.items() if q == quantity)
+                if self.selection['parameters'].get(qid) != data:
+                    raise LoweringError('kinetic_binding_mismatch', 'Bind the declared kinetic quantity to its configured datum: '+data)
+            for key, node in graph.nodes.items():
+                target = node.equation.lhs
+                if target in self.parameter_symbols or target in self.states or target in self.algebraic_quantities:
+                    # Component amounts are states; source/rate definitions
+                    # must not be replaced by independent numerical data.
+                    if not key.startswith('reaction.'+owner+'.amount.'):
+                        raise LoweringError('kinetic_competing_binding', 'A kinetic source/closure cannot be an independent state or datum.', key)
+                    continue
+                if target in self.replacements:
+                    if sp.simplify(self.replacements[target]-node.equation.rhs) != 0:
+                        raise LoweringError('kinetic_competing_closure', 'A second relation competes with the declared kinetic definition.', key)
+                else:self.replacements[target] = node.equation.rhs
 
     def _initial_conditions(self):
         if self.is_dae:

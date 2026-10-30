@@ -5,6 +5,8 @@ FORMAT = 'rage.derived-execution'
 
 
 def read_definition(value, model=None):
+    if model is not None and model.get('motores', {}).get('kineticReactions', {}).get('volumes') and (not isinstance(value, dict) or value.get('version') != 1):
+        raise ValueError('Kinetic declarations currently require identity explicit execution version 1; algebraic, equilibrium and steady reaction execution remain pending.')
     if isinstance(value, dict) and value.get('version') == 5:
         return read_steady_definition(value, model)
     keys(value, ['format', 'version', 'sourceSignature', 'timeId', 'states',
@@ -115,6 +117,8 @@ def read_definition(value, model=None):
 
 def read_steady_definition(value, model=None):
     """Steady seeds and individual invariants are separate from initial data."""
+    if model is not None and model.get('motores', {}).get('kineticReactions', {}).get('volumes'):
+        raise ValueError('Steady reaction execution is not admitted by this kinetic increment.')
     import math
     import re
     keys(value, ['format', 'version', 'sourceSignature', 'timeId', 'states', 'algebraic',

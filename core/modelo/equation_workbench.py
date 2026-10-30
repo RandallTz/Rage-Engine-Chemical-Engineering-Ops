@@ -146,6 +146,9 @@ def _source_graph(model,*,unbound=False):
         for producer in (energy_graph,thermo_graph):
             physical,selected,physical_units=producer(model,owner)
             merge(physical,owner);final.extend(selected);units.update(physical_units)
+        from core.balances.reaction_equations import declarations as reaction_declarations
+        physical,physical_units,_,_=reaction_declarations(model,owner)
+        merge(physical,owner);units.update(physical_units)
         entry=model['motores'].get('momentumDerivation',{}).get('volumes',{}).get(owner)
         states=replay(entry,momentum.fundamental,momentum.normalize) if entry else [momentum.fundamental()]
         state=states[-1];local=EquationGraph();local_current=[]
@@ -371,6 +374,8 @@ def edit(model,action,*,unbound=False):
 
 
 def ensure_executable(model):
+    if model.get('motores', {}).get('kineticReactions', {}).get('volumes'):
+        raise JournalError('Kinetic declarations require explicit selection of the replayed derived graph. The earlier generated or equilibrium model will not be substituted.')
     definition=model.get('motores',{}).get('equationWorkbench')
     if definition and definition['cursor']:
         read_definition(definition)

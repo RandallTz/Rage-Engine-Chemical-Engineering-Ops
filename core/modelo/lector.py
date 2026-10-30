@@ -20,7 +20,7 @@ FUNCIONES_DATO = ["inicial", "frontera", "geometria", "estudio", "parametro"]
 FRONTERAS = ["rigida", "presion_prescrita", "sin_relacion", "malla_1d"]
 SUPUESTOS_CIERRE = ["fase_no_evaluada", "u_lineal"]
 PROCEDENCIAS = ["documento_adimensional", "ensamblaje_v2", "hoja_motor_materia", "nuevo"]
-MOTORES = ["adimensionalizacion", "materialDerivation", "energyDerivation", "thermodynamicDerivation", "dynamicDefinition", "momentumDerivation", "hydraulicNetwork", "equationWorkbench", "derivedExecution"]
+MOTORES = ["adimensionalizacion", "materialDerivation", "energyDerivation", "thermodynamicDerivation", "dynamicDefinition", "momentumDerivation", "hydraulicNetwork", "equationWorkbench", "derivedExecution", "kineticReactions"]
 
 
 class ErrorModelo(Exception):
@@ -207,6 +207,10 @@ def _read_model(dato, *, inspect_initialization):
     motores = _obj(m["motores"], "motores")
     for nombre, cfg in motores.items():
         _opcion(nombre, f"motores.{nombre}", MOTORES)
+    if 'kineticReactions' in motores:
+        from .reaction_definition import read_definition
+        try:read_definition(motores['kineticReactions'], m)
+        except (ValueError, TypeError, KeyError) as error:_fallo('motores.kineticReactions', str(error))
     if "adimensionalizacion" in motores:
         _leer_adim(motores["adimensionalizacion"], m)
     if 'equationWorkbench' in motores:

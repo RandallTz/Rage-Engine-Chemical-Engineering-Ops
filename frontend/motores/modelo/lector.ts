@@ -1,3 +1,4 @@
+import {readKineticReactions} from '../../app/models/kineticReactions';
 import {readEquationWorkbench} from '../../app/models/equationWorkbench';
 import {readDerivedExecution} from './derivedExecution';
 import { readThermodynamicJournal, thermodynamicJournalMatches } from '../../app/motor/physicalDerivation';
@@ -102,7 +103,8 @@ export function leerModeloComun(dato: unknown): ModeloComun {
       }
     });
   }
-  for (const k of Object.keys(obj(m.motores, "motores"))) if (!['adimensionalizacion', 'materialDerivation', 'energyDerivation', 'thermodynamicDerivation', 'dynamicDefinition', 'momentumDerivation','hydraulicNetwork','equationWorkbench','derivedExecution'].includes(k)) fallo(`motores.${k}`, "motor desconocido");
+  for (const k of Object.keys(obj(m.motores, "motores"))) if (!['adimensionalizacion', 'materialDerivation', 'energyDerivation', 'thermodynamicDerivation', 'dynamicDefinition', 'momentumDerivation','hydraulicNetwork','equationWorkbench','derivedExecution','kineticReactions'].includes(k)) fallo(`motores.${k}`, "motor desconocido");
+  if((m.motores as Obj).kineticReactions!==undefined)readKineticReactions((m.motores as Obj).kineticReactions,m as unknown as ModeloComun);
   if((m.motores as Obj).derivedExecution!==undefined)readDerivedExecution((m.motores as Obj).derivedExecution,m.datos as Record<string,unknown>);
   if((m.motores as Obj).equationWorkbench!==undefined)readEquationWorkbench((m.motores as Obj).equationWorkbench);
   if((m.motores as Obj).hydraulicNetwork!==undefined)readHydraulicNetwork((m.motores as Obj).hydraulicNetwork,m as unknown as ModeloComun);
