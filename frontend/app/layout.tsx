@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import "katex/dist/katex.min.css";
 import "./globals.css";
 import NavBar from "./components/NavBar";
-import BarraSimulacion from "./components/BarraSimulacion";
-import { SimulacionProvider } from "./components/SimulacionProvider";
+import { ConexionProvider } from "./components/ConexionProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,14 +16,14 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Simulador de Procesos",
-  description: "Operaciones unitarias y flowsheets sobre un nucleo termodinamico real (UNIFAC + thermo).",
+  title: "Rage · Simulation engine",
+  description: "Equation-oriented process simulation with a shared thermodynamic core.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
-      lang="es"
+      lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       {/* Dos cosas deliberadas aqui:
@@ -36,12 +36,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
              quedaba en cero y no se dibujaba nada ("The parent container
              needs a width and a height"). El scroll de las paginas largas
              lo lleva <main>, no el body. */}
-      <body className="flex h-screen flex-col overflow-hidden bg-zinc-950 text-zinc-100">
-        <SimulacionProvider>
+      <body className="flex h-dvh flex-col overflow-hidden bg-zinc-950 text-zinc-100">
+        <a href="#workspace" className="skip-link">Skip to workspace</a>
+        <ConexionProvider>
           <NavBar />
-          <BarraSimulacion />
-          <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</main>
-        </SimulacionProvider>
+          <main id="workspace" tabIndex={-1} className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</main>
+        </ConexionProvider>
       </body>
     </html>
   );
