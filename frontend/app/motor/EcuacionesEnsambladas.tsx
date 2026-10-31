@@ -6,7 +6,7 @@ import {estructuraSolicitudDinamica} from './estructuraTermodinamica';
 import type {EstructuraTermodinamica} from './estructuraTermodinamica';
 import FundamentoCierreEnsamblado from './FundamentoCierreEnsamblado';
 export default function EcuacionesEnsambladas({r,s,estructura}:{r:RespuestaValidacionDinamica;s:SolicitudEnsamblajeDinamico;estructura?:EstructuraTermodinamica}){
-  return <section className={styles.paper} aria-label="Ecuaciones ensambladas por el motor">
+  return <section className={styles.paper} aria-label="Equations assembled by the engine">
     <header className={styles.heading}><h2>Ecuaciones del modelo · {s.volumen.cierre.modelo.id}</h2></header>
     {r.ecuaciones.filter(e=>['materia','energia'].includes(e.familia)).map(e=><div id={anclaEcuacionDinamica(e.id)} tabIndex={-1} className={styles.balance} data-familia={e.familia} key={e.id}>
       <div className={styles.label}><span className={styles.family}>{nombreEcuacionDinamica(e.id)}</span><span>{s.volumen.id}</span></div>
