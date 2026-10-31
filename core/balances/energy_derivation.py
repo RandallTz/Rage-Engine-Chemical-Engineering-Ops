@@ -2,7 +2,7 @@
 from core.modelo.operation_journal import JournalError, keys, read_operations, replay, evidence, edit
 
 FORMAT = "rage.energy-derivation"
-THERMODYNAMIC_KEYS = ("monofasico", "sinCambioFase", "densidadConstante", "modelo")
+THERMODYNAMIC_KEYS = ("monofasico", "sinCambioFase", "densidadConstante", "modelo", "soloLiquido", "referenciaFormacion")
 
 
 def fundamental():

@@ -101,7 +101,22 @@ def parse_expression(text,quantities,conditions=None,units=None,unit_resolver=kn
                 conditions.append(sp.Ge(args[0],0,evaluate=False))
             return args[0]**args[1]
         if name=='neg':return -args[0]
-        raise JournalError('This expression editor currently accepts arithmetic and declared quantities only.')
+        if name in ('sqrt','exp','log'):
+            # Elementary functions of declared relations (30 October 2026). The
+            # real-domain premise is recorded as a typed condition, never assumed.
+            value=args[0]
+            if units is not None and name in ('exp','log') and infer(value,units):
+                raise JournalError('exp and log require a dimensionless argument; divide by a declared reference.')
+            if name=='sqrt':
+                if value.is_negative is True:raise JournalError('sqrt of a negative quantity is not real.')
+                if conditions is not None and value.is_nonnegative is not True:conditions.append(sp.Ge(value,0,evaluate=False))
+                return sp.sqrt(value)
+            if name=='log':
+                if value.is_positive is not True and value.is_nonpositive is True:raise JournalError('log requires a positive argument.')
+                if conditions is not None and value.is_positive is not True:conditions.append(sp.Gt(value,0,evaluate=False))
+                return sp.log(value)
+            return sp.exp(value)
+        raise JournalError('This expression editor currently accepts arithmetic, sqrt, exp, log and declared quantities only.')
     result=convert(tree)
     from .validity import finite
     finite(result)

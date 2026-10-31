@@ -114,8 +114,9 @@ class DerivedSystem(DerivedGraph):
             raise LoweringError('dae_method_unsupported', 'Semi-explicit index-1 execution requires BDF; no method substitution is allowed.')
         if model.get('matematico') is not None or model['motores'].get('adimensionalizacion') is not None:
             raise LoweringError('competing_formulation', 'Select the derived graph alone; cached mathematical trees and competing scaling selections are not execution inputs.')
-        if any(v['termodinamica']['tipo'] != 'supuesto' for v in model['volumenes']):
-            raise LoweringError('unsupported_closure', 'Derived explicit execution does not lower equilibrium closures.')
+        equilibrium = [v for v in model['volumenes'] if v['termodinamica']['tipo'] != 'supuesto']
+        if equilibrium and (self.selection['version'] != 1 or self.selection.get('scaling') or self.selection.get('algebraic')):
+            raise LoweringError('closure_formulation_unsupported', 'Package closures are lowered in the identity explicit selection (version 1) without scaling or algebraic blocks.')
         for volume in model['volumenes']:
             for balance, journal in [('materia', 'materialDerivation'), ('energia', 'energyDerivation')]:
                 if volume['balances'][balance] and volume['id'] not in model['motores'].get(journal, {}).get('volumes', {}):
@@ -150,6 +151,7 @@ class DerivedSystem(DerivedGraph):
             self.parameter_records.append({'id': qid, 'dataId': data_id,
                 'value': float(self.parameter_values[parameter]), 'unit': self._unit(q)})
         self.replacements = dict(self.parameter_symbols)
+        self._package_closures(equilibrium)
         self.algebraic_rows = self.selection.get('algebraic', [])
         self.algebraic_quantities = [self._quantity(row['quantityId']) for row in self.algebraic_rows]
         if any(not isinstance(q, sp.core.function.AppliedUndef) or q.args != (self.time,) for q in self.algebraic_quantities):
@@ -171,6 +173,9 @@ class DerivedSystem(DerivedGraph):
             if isinstance(target, (sp.Symbol, sp.core.function.AppliedUndef)) and target not in self.states and target not in self.replacements and target not in self.algebraic_quantities:
                 self.replacements[target] = equation.rhs
         self._kinetic_declarations()
+        for q in self.closure_quantities:
+            if q in self.replacements or q in self.states or q in self.algebraic_quantities:
+                raise LoweringError('competing_closure', 'A package closure output cannot also be a state, datum or authored reconstruction: ' + str(q))
         self.runtime_replacements = dict(self.replacements)
         self.algebraic_block = None
         if self.algebraic_rows:
@@ -243,6 +248,8 @@ class DerivedSystem(DerivedGraph):
             self.rates[derivative] = rate
             self.guards.extend((guard, row['equationId']) for guard in guards)
         self.reconstructed = [(row, self._expand(self._quantity(row['quantityId']))) for row in self.selection['reconstructions']]
+        for closure in self.closures:
+            closure.bind_inputs()
         self._initial_conditions()
         self.proof_conditions = []
         bound_coordinates = {p.args[1] for node in self.graph.nodes.values() for p in node.predicates if isinstance(p, HoldsOnInterval) and p.args[1] != self.time}
@@ -257,7 +264,11 @@ class DerivedSystem(DerivedGraph):
         analysis = analizar_modelo(self.lowered['matematico'])
         if analysis['estado'] != 'compatible':
             raise LoweringError('incompatible_lowering', 'The lowered AST does not preserve the declared equation dimensions: ' + str(analysis))
-        self.numeric = NonlinearRuntime(self) if self.nonlinear else SistemaExplicito(self.lowered)
+        if self.closures:
+            from .derived_closure import ClosureRuntime
+            self.numeric = ClosureRuntime(self)
+        else:
+            self.numeric = NonlinearRuntime(self) if self.nonlinear else SistemaExplicito(self.lowered)
         if self.algebraic_block is not None and not self.nonlinear:
             evaluator = copy.copy(self.numeric)
             evaluator.indice = {**self.numeric.indice, **{self.ids[q]: len(self.numeric.campos)+i for i, q in enumerate(self.algebraic_quantities)}}
@@ -275,6 +286,7 @@ class DerivedSystem(DerivedGraph):
                                for expression, strict, key, label in self.margins]
         self._physical_admission()
         self._validate_initial()
+        self._closure_admission()
         self.report = self._report()
         if self.dae:
             self.validate_accepted = self._validate_dae_accepted
@@ -354,18 +366,29 @@ class DerivedSystem(DerivedGraph):
         initial.update(self.parameter_values)
         initial.update({q: initial[p] for q, p in self.parameter_symbols.items()})
         pending = [q for q in self.states if q not in initial]
-        for _ in self.states:
-            for q in pending[:]:
-                for key in self.selection['initialEquations']:
-                    equation = self._equation(key).equation.xreplace(self.parameter_symbols).xreplace(initial)
-                    if not equation.has(q):
-                        continue
-                    value, guards = solve_unique(equation, q, self.graph.names)
-                    value = si_magnitude(value).subs(initial)
-                    if value.is_number is True and value.is_real is True and value.is_finite is True:
-                        if any(sp.simplify(si_magnitude(p).subs({**initial, q: value})) is sp.S.false for p in guards):
-                            raise LoweringError('invalid_initialization', 'Initialization violates an algebraic inversion condition.', key)
-                        initial[q] = value; pending.remove(q); break
+        # Chain the selected initial relations through intermediate quantities
+        # (for example H = U + P V with U(m, T) and V(m)): each pass solves every
+        # relation left with exactly one undetermined time-dependent quantity.
+        relations = [(key, self._equation(key).equation.xreplace(self.parameter_symbols)) for key in self.selection['initialEquations']]
+        progress = True
+        while pending and progress:
+            progress = False
+            for key, relation in relations:
+                equation = relation.xreplace(initial)
+                unknowns = [a for a in equation.atoms(sp.core.function.AppliedUndef) if a.args == (self.time,)]
+                if len(unknowns) != 1:
+                    continue
+                q = unknowns[0]
+                value, guards = solve_unique(equation, q, self.graph.names)
+                value = si_magnitude(value).subs(initial)
+                if value.is_number is True and value.is_real is True and value.is_finite is True:
+                    if any(sp.simplify(si_magnitude(p).subs({**initial, q: value})) is sp.S.false for p in guards):
+                        raise LoweringError('invalid_initialization', 'Initialization violates an algebraic inversion condition.', key)
+                    initial[q] = value; progress = True
+                    if q in pending:
+                        pending.remove(q)
+        if pending and self.closures:
+            self._closure_initialization(initial, pending)
         if pending:
             raise LoweringError('missing_initialization', 'Initial data and selected algebraic identities do not determine: ' + ', '.join(map(str, pending)))
         for q in self.replacements:
@@ -394,8 +417,13 @@ class DerivedSystem(DerivedGraph):
             if residual.is_number is not True or abs(float(residual)) > 1e-9:
                 raise LoweringError('invalid_initialization', 'The selected initial relation is inconsistent or underdetermined.', key)
         self.initial_values = {q: initial[q] for q in self.states}
+        self.initial_closure = {}
+        for closure in self.closures:
+            self.initial_closure.update(closure.initial_outputs(initial))
         for qid, data in self.selection['initialValues'].items():
             q = self._quantity(qid)
+            if q in self.closure_quantities:
+                continue  # Reproduced by the package closure in _closure_admission.
             value = si_magnitude(self._expand(q)).xreplace(initial)
             expected = self._datum(data, self._dim(q))
             if value.is_number is not True or not math.isclose(float(value), float(expected), rel_tol=1e-10, abs_tol=1e-10):
@@ -496,7 +524,8 @@ class DerivedSystem(DerivedGraph):
                 # branch selected by its initial data. A signed margin makes
                 # a crossing visible to the existing nonnegative-domain stop;
                 # abs(expression) would hide a jump across the excluded zero.
-                initial = delta.xreplace({**self.parameter_values, **self.initial_values, **getattr(self, 'initial_algebraic', {}), self.time: sp.S.Zero})
+                initial = delta.xreplace({**self.parameter_values, **self.initial_values, **getattr(self, 'initial_algebraic', {}),
+                                          **getattr(self, 'initial_closure', {}), self.time: sp.S.Zero})
                 if initial.is_number is not True or initial.is_real is not True or initial.is_finite is not True:
                     raise LoweringError('unsupported_condition', 'The nonzero condition needs a finite initial sign.', key)
                 if initial == 0:
@@ -581,6 +610,8 @@ class DerivedSystem(DerivedGraph):
             if binding is None or binding[0] != 'stream':
                 continue
             matter = streams[binding[1]]['materia']
+            if matter['modo'] == 'por_componente' and str(binding[2]) not in matter['caudalIds']:
+                continue  # A constitutive flow law (for example a phase donor) without a prescribed flow datum.
             if matter['modo'] != 'por_componente' or matter['base'] != 'masica':
                 raise LoweringError('unsupported_physical_binding',
                     'A substituted component port relation currently requires a declared component mass-flow datum.', key)
@@ -661,6 +692,10 @@ class DerivedSystem(DerivedGraph):
             for q in self.algebraic_quantities:
                 symbols.append(_symbol(self.ids[q], 'campo', self._dim(q)))
                 symbols[-1]['dependeDe'] = [self.ids[self.time]]
+        for q in self.closure_quantities:
+            # Evaluated by the package closure at every RHS call; never integrated.
+            symbols.append(_symbol(self.ids[q], 'campo', self._dim(q)))
+            symbols[-1]['dependeDe'] = [self.ids[self.time]]
         symbols.append(_symbol('final_time', 'parametro', {'T': 1}))
         datum('matematico.final_time', self._datum(study['tiempoId'], {'T': 1}), 's')
         for index, q in enumerate(self.states):
@@ -824,8 +859,9 @@ class DerivedSystem(DerivedGraph):
         report = {'format': 'rage.compilation', 'version': 1, 'formulation': 'physical',
             'sourceModelId': self.model['id'], 'sourceRevision': 1,
             'signature': hashlib.sha256(json.dumps([SOURCE_REVISION, self.selection,
-                {key: value['declaracion'] for key, value in self.model['datos'].items()}, self.model['estudio']], sort_keys=True).encode()).hexdigest(),
-            'method': self.method, 'closureStrategy': 'declared_assumption',
+                {key: value['declaracion'] for key, value in self.model['datos'].items()}, self.model['estudio']]
+                + ([[c.fingerprint for c in self.closures]] if self.closures else []), sort_keys=True).encode()).hexdigest(),
+            'method': self.method, 'closureStrategy': 'package_closure' if self.closures else 'declared_assumption',
             'variables': [{'id': self.ids[q], 'sourceId': self.ids[q], 'role': 'differential', 'unit': self._unit(q),
                 'physicalUnit': self._unit(q), 'scaleSI': 1, 'absoluteTolerance': float(self.numeric.atol[i])} for i, q in enumerate(self.states)],
             'equations': self.lowered['matematico']['ecuaciones'][:len(self.states)],
@@ -865,6 +901,12 @@ class DerivedSystem(DerivedGraph):
         if self.dae:
             report['derivedExecution']['dae'] = self.dae.proof
             report['matrix'] = 'Semi-explicit index-1 DAE: SciPy BDF integrates fixed-initial differential states; the existing damped Newton solves algebraic variables inside every RHS and BDF probe. No residual DAE backend or new dependency.'
+        if self.closures:
+            report['derivedExecution']['thermodynamicClosures'] = [closure.describe() for closure in self.closures]
+            report['matrix'] = ('The common RK45/BDF runtime integrates the lowered explicit AST; the package closure of each equilibrium volume is evaluated '
+                                'through core.termodinamica.derived_bridge at every RHS evaluation, BDF Jacobian probe and event probe, seeded with its previous state.')
+            report['limits'] = ('Package closures cover one vapour and one liquid candidate phase (a second liquid stops execution), the identity explicit selection '
+                                'and a prescribed pressure or rigid volume. Phase-set changes are located by the shared signature events.')
         if self.hydraulic_guards:
             report['derivedExecution']['runtimeConditions'].extend([
                 {'equationId': self.selection['states'][index]['equationId'], 'strict': False,
@@ -976,6 +1018,93 @@ class DerivedSystem(DerivedGraph):
         return error if self.algebraic_block is not None and isinstance(error, Detencion) else None
 
     def firma(self, t, state):
+        if getattr(self, 'closures', None):
+            return self._closure_event_state(t, state)[0]
+        return None
+
+    # --- package closures (FD-1 to FD-4, F5-C2) -----------------------------------------------------
+    def _package_closures(self, volumes):
+        from .derived_closure import PackageClosure
+        self.closures = [PackageClosure(self, volume) for volume in volumes]
+        self.closure_quantities = [q for closure in self.closures for q in closure.outputs]
+        reverse = {value: key for key, value in self.quantities.items()}
+        kinetic = (self.model['motores'].get('kineticReactions') or {}).get('volumes', {})
+        for closure in self.closures:
+            if closure.owner in kinetic and closure.anchor is None:
+                raise LoweringError('formation_reference_required', 'Reacting package volumes need a recorded formation reference so that caloric energies carry the reaction heat.')
+            values = dict(closure.constants)
+            for inlet in closure.inlets.values():
+                values.update(inlet['values'])
+            for q, value in values.items():
+                if q in self.parameter_symbols:
+                    # A declared molar mass (for example a kinetic datum) must agree with the package.
+                    if q in closure.constants and math.isclose(float(self.parameter_values[self.parameter_symbols[q]]), value, rel_tol=1e-9):
+                        continue
+                    code = 'inconsistent_molar_mass' if q in closure.constants else 'package_value_bound'
+                    raise LoweringError(code, 'This quantity is supplied by the selected package; a datum cannot replace or contradict it: ' + str(q))
+                parameter = sp.Symbol('package_' + hashlib.sha256(sp.srepr(q).encode()).hexdigest()[:12], real=True)
+                self.parameter_symbols[q] = parameter
+                self.parameter_values[parameter] = sp.Float(value, 17)
+                self.ids[parameter] = str(parameter)
+                self.parameter_records.append({'id': reverse.get(q, str(q)), 'dataId': 'package:' + closure.package,
+                                               'value': float(value), 'unit': self._unit(q), 'source': 'package'})
+                self.replacements[q] = parameter
+            for q in closure.outputs:
+                if q not in reverse:
+                    raise LoweringError('missing_quantity', 'The thermodynamic graph lacks the closure quantity ' + str(q))
+                self.ids[q] = reverse[q]
+
+    def closure_values(self, t, state):
+        return np.concatenate([closure.evaluate(t, state)[0] for closure in self.closures])
+
+    def _closure_initialization(self, initial, pending):
+        from .derived_closure import numeric_value
+        for closure in self.closures:
+            if closure.energy not in pending:
+                continue
+            temperature_id = next((qid for qid, q in self.quantities.items() if q == closure.T), None)
+            data = self.selection['initialValues'].get(temperature_id)
+            if data is None:
+                raise LoweringError('missing_initialization', 'Give the initial energy inventory or the initial temperature of package volume ' + closure.owner + '.')
+            amounts = [numeric_value(self, q, initial) for q in closure.amounts]
+            mechanical = numeric_value(self, closure.mechanical, initial)
+            if None in amounts or mechanical is None:
+                raise LoweringError('missing_initialization', 'The initial package amounts and mechanical datum must be determined before the energy inventory of ' + closure.owner + '.')
+            energy = closure.initial_energy(amounts, mechanical, float(self._datum(data, {'Theta': 1})))
+            initial[closure.energy] = sp.Float(energy, 17)
+            pending.remove(closure.energy)
+
+    def _closure_admission(self):
+        if not self.closures:
+            return
+        state = self.initial_state
+        for closure in self.closures:
+            row, values = closure.evaluate(0., state, 'initialization')
+            temperature_id = next((qid for qid, q in self.quantities.items() if q == closure.T), None)
+            data = self.selection['initialValues'].get(temperature_id)
+            if data is not None and abs(values['T'] - float(self._datum(data, {'Theta': 1}))) > 1e-6:
+                raise LoweringError('invalid_initialization', 'The package closure does not reproduce the initial temperature datum of ' + closure.owner + '.')
+            reason = closure.admits(values['phase_set'])
+            if reason:
+                raise LoweringError('invalid_initial_domain', reason)
+            closure.initial_signature = tuple(values['phase_set'])
+            closure.event_margins(0., state)
+        self.event_state = self._closure_event_state
+        self.admite = self._closure_admite
+
+    def _closure_event_state(self, t, state):
+        signature, margins = [], []
+        for closure in self.closures:
+            phase_set, rows = closure.event_margins(t, state)
+            signature.append((closure.owner, tuple(phase_set)))
+            margins.extend(rows)
+        return tuple(signature), margins
+
+    def _closure_admite(self, signature):
+        for (owner, phase_set), closure in zip(signature, self.closures):
+            reason = closure.admits(phase_set)
+            if reason:
+                return reason
         return None
 
     def dominio(self, t, state):
@@ -1007,6 +1136,34 @@ class DerivedSystem(DerivedGraph):
 def resolve(model):
     system = DerivedSystem(model)
     return resolve_system(system)
+
+
+def _closure_publication(system, times, values):
+    """Closure outputs and fresh package certificates at the published samples."""
+    rows = [[closure.evaluate(t, row, 'publication') for closure in system.closures] for t, row in zip(times, values)]
+    series, verifications = [], []
+    for index, closure in enumerate(system.closures):
+        for position, q in enumerate(closure.outputs):
+            series.append(serie('closure.' + closure.owner + '.' + system.ids[q], str(q), system._unit(q), ['t'],
+                                [float(sample[index][0][position]) for sample in rows]))
+        certificates = [sample[index][1]['certificate'] for sample in rows]
+        if closure.single:
+            value = max([c['residual'] / c['scale'] for c in certificates] or [0.])
+            verifications.append({'id': 'thermodynamics.closure.' + closure.owner, 'valor': value, 'tolerancia': 1e-9,
+                'descripcion': 'Single-phase package temperature reconstruction: |E(T) - E| / max(|E|, 1 J) at published samples; stability of the declared phase was tested at every evaluation.'})
+        else:
+            value = max([c['ratio'] for c in certificates] or [0.])
+            verifications.append({'id': 'thermodynamics.closure.' + closure.owner, 'valor': value if all(c['certified'] for c in certificates) else max(value, 2.),
+                'tolerancia': 1., 'descripcion': 'Largest package-certificate residual divided by its tolerance (fresh equilibrium, balance and stability checks) at published samples.'})
+    system.reaction_limits = []
+    kinetic = (system.model['motores'].get('kineticReactions') or {}).get('volumes', {})
+    if times:
+        from .derived_closure import reaction_limit
+        for closure in system.closures:
+            if closure.owner in kinetic:
+                row, detail = reaction_limit(system, closure, times, values)
+                verifications.append(row); system.reaction_limits.append(detail)
+    return series, verifications
 
 
 def resolve_system(system):
@@ -1080,6 +1237,9 @@ def resolve_system(system):
     for key, label, unit, function in system.numeric.observables:
         series.append(serie('observable.'+key, label, unit, ['t'], [float(function(t, row)) for t, row in zip(physical_times, values)]))
     verifications = []
+    if getattr(system, 'closures', None):
+        series_closure, verifications_closure = _closure_publication(system, physical_times, values)
+        series.extend(series_closure); verifications.extend(verifications_closure)
     if system.algebraic_block is not None:
         if solved is None:
             solved = [system.solve_algebraic(t, row) for t, row in zip(physical_times, values)]
@@ -1108,8 +1268,17 @@ def resolve_system(system):
                               'descripcion': 'Selected inventory change minus its integrated net rate, divided by the declared physical scale.'})
         series.append(serie('budget.'+selection['equationId'], 'Integrated net-rate budget', system._unit(inventory), ['t'], [float(row[system.size+index]) for row in values]))
         series.append(serie('inventory.'+selection['equationId'], 'Reconstructed dependent inventory', system._unit(inventory), ['t'], [float(function(t, row)) for t, row in zip(physical_times, values)]))
-    events = [evento(code, 't', t*(system.scaled.time_scale if system.scaled is not None else 1), message)
-              for code, t, _, _, message in trajectory.eventos]
+    events = []
+    for code, t, before, after, message in trajectory.eventos:
+        time = t*(system.scaled.time_scale if system.scaled is not None else 1)
+        if code == 'cambio_firma' and getattr(system, 'closures', None):
+            for (owner, previous), (_, current) in zip(before, after):
+                for phase in sorted(set(current) - set(previous)):
+                    events.append(evento('aparicion_fase', 't', time, phase + ' appears', 'volumen:' + owner))
+                for phase in sorted(set(previous) - set(current)):
+                    events.append(evento('desaparicion_fase', 't', time, phase + ' disappears', 'volumen:' + owner))
+        else:
+            events.append(evento(code, 't', time, message))
     return conjunto(system.model['id'], system.model['nombre'], 'fallido' if not values else 'parcial' if trajectory.detenida else 'resuelto',
         {'motor': 'rage.compilador.derived', 'metodo': system.method, 'firma': system.report['signature'],
          'compilation': system.report, 'pasos': trajectory.pasos, 'rechazos': trajectory.rechazos,
@@ -1119,6 +1288,8 @@ def resolve_system(system):
              'failures': nonlinear_failure or [], 'publishedSamples': len(values),
              'scope': 'Local regular roots; finite probes do not establish global uniqueness.'}} if system.nonlinear else {}),
          **({'daeDiagnostics': system.dae.evidence()} if system.dae else {}),
+         **({'thermodynamicClosures': [closure.describe() for closure in system.closures],
+             'reactionEquilibrium': getattr(system, 'reaction_limits', [])} if getattr(system, 'closures', None) else {}),
          **({'stop': stop} if stop is not None else {}),
          **({'mensaje': str(trajectory.detenida)} if trajectory.detenida else {})},
         [eje('t', 'Physical time', 'tiempo', 's', physical_times)], series, events, verifications, modeloId=system.model['id'])

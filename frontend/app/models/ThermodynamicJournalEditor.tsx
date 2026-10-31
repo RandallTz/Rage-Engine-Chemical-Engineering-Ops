@@ -8,7 +8,7 @@ import Link from 'next/link';
 import RecordedDerivation from './RecordedDerivation';
 import { ThermodynamicAssumptions } from '../motor/ModelAssumptions';
 import { appendRecordedOperation } from '../motor/physicalDerivation';
-import { OPERACIONES_TERMO, TERMO_FUNDAMENTAL } from '../motor/recorridoTermodinamico';
+import { OPERACIONES_TERMO, valorRetirado } from '../motor/recorridoTermodinamico';
 import { modelUrl } from './workflow';
 
 export default function ThermodynamicJournalEditor({ request, volume, save, restore, canRestore, modelId }: {
@@ -52,7 +52,7 @@ export default function ThermodynamicJournalEditor({ request, volume, save, rest
     const abort=new AbortController();controller.current?.abort();controller.current=abort;
     setPending('edit');setError('');
     try{
-      const changes:Partial<ThermodynamicState>={[operation.clave]:active?operation.valor:TERMO_FUNDAMENTAL[operation.clave]};
+      const changes:Partial<ThermodynamicState>={[operation.clave]:active?operation.valor:valorRetirado(operation.clave)};
       if(current.formulation.closure&&(operation.clave==='monofasico'||operation.clave==='sinCambioFase')){
         const closure=structuredClone(current.formulation.closure);
         if(operation.clave==='monofasico')closure.policy.cantidad=active?'monofasico':'sin_restriccion';

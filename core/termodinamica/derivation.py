@@ -6,6 +6,10 @@ FORMAT="rage.thermodynamic-derivation"
 def fundamental():
     return {"monofasico":False,"sinCambioFase":False,"densidadConstante":False,"modelo":"sin_declarar","closure":None}
 
+# Additive assumptions (30 October 2026): present in a state only once recorded,
+# so earlier journals and documents replay byte-identically.
+OPTIONAL={"soloLiquido":False,"referenciaFormacion":None}
+
 def closure(value):
     keys(value,["packageId","model","policy"])
     keys(value["model"],["id","version"])
@@ -19,13 +23,15 @@ def closure(value):
         raise JournalError("Invalid permitted phase types.")
 
 def changes(value):
-    keys(value,[],fundamental())
+    keys(value,[],{**fundamental(),**OPTIONAL})
     if not value:raise JournalError("Thermodynamic operation changes are required.")
     for key,item in value.items():
         if key=="closure":
             if item is not None:closure(item)
         elif key=="modelo":
             if item not in ("sin_declarar","u_lineal"):raise JournalError("Unknown declared caloric relation.")
+        elif key=="referenciaFormacion":
+            if item not in (None,"gas","liquido"):raise JournalError("Unknown formation reference.")
         elif type(item) is not bool:raise JournalError("Thermodynamic assumptions must be booleans.")
 
 def normalize(value):
@@ -35,6 +41,8 @@ def normalize(value):
     if bound is not None:
         if state["modelo"]!="sin_declarar" or state["densidadConstante"]:raise JournalError("A package closure conflicts with a manual caloric/density closure.")
         if state["monofasico"]!=(bound["policy"]["cantidad"]=="monofasico") or state["sinCambioFase"]!=(bound["policy"]["cambioInterno"]=="prohibido"):raise JournalError("The recorded phase policy differs from the thermodynamic assumptions.")
+        if state.get("soloLiquido") and (bound["policy"]["cantidad"]!="monofasico" or bound["policy"].get("tiposPermitidos")!=["liquido"]):raise JournalError("A liquid-only phase set requires the single-phase policy restricted to liquid.")
+    if state.get("soloLiquido") and state["modelo"]!="sin_declarar":raise JournalError("A liquid-only phase set belongs to an equilibrium package, not to a manual caloric law.")
     return state
 
 def read_journal(value):
@@ -59,6 +67,7 @@ def validate_model_journal(model):
         actual=replay(entry,fundamental,normalize)[-1]
         flags=volume['supuestos']['energia'] or {}
         expected={key:flags.get(key,value) for key,value in fundamental().items() if key!='closure'}
+        expected.update({key:flags[key] for key in OPTIONAL if key in flags})
         expected['closure']=expected_closure(model,volume)
         if actual!=expected:raise JournalError(f"Volume {owner}: thermodynamic operations do not produce the compiled closure and assumptions.")
         if expected['closure'] is None and actual['modelo']=='u_lineal' and volume['termodinamica'].get('supuesto')!='u_lineal':raise JournalError("The recorded caloric law differs from the declared state closure.")
@@ -72,6 +81,9 @@ CHOICES={
  'no_phase_change':('Keep the initial phase set',{'sinCambioFase':True}),
  'constant_density':('Declare constant mixture density',{'densidadConstante':True}),
  'linear_caloric':('Declare a linear specific internal-energy law',{'modelo':'u_lineal'}),
+ 'liquid_only':('Declare a liquid-only phase set: the vapour phase is not modelled',{'soloLiquido':True}),
+ 'liquid_formation_reference':('Anchor energies to the tabulated liquid formation data',{'referenciaFormacion':'liquido'}),
+ 'gas_formation_reference':('Anchor energies to the ideal-gas formation data',{'referenciaFormacion':'gas'}),
 }
 
 def edit_journal(journal,owner,action,configured=None):
@@ -96,6 +108,8 @@ RELATIONS={
  'sinCambioFase':r'\mathcal P(t)=\mathcal P(0)',
  'densidadConstante':r'\rho=\rho_*>0,\quad V=m/\rho_*,\quad dV/dt=(dm/dt)/\rho_*',
  'modelo':r'u(T)=u_{\mathrm{ref}}+c_u(T-T_{\mathrm{ref}}),\quad c_u>0,\quad T_{\min}\leq T\leq T_{\max}',
+ 'soloLiquido':r'\mathcal P\subseteq\{\mathrm{liquid}\},\quad \text{no vapour phase is evaluated}',
+ 'referenciaFormacion':r'\bar h_i(T_0,P_0)=\Delta_f h_i^{\circ},\quad \bar s_i(T_0,P_0)=s_i^{\circ}\ \text{(declared formation reference)}',
 }
 
 def describe_volume(journal,owner,fixed):
@@ -107,8 +121,8 @@ def describe_volume(journal,owner,fixed):
            {'id':'extensive-phase','title':'Homogeneous simple-compressible phase · Euler relation and Gibbs–Duhem identity','latex':r'G^k=\sum_i n_i^k\mu_i^k,\quad \sum_i n_i^k\,d\mu_i^k=-S^k\,dT+V^k\,dP'}]
     for operation,previous,state in zip(entry['operations'],states,states[1:]):
         for key,relation in RELATIONS.items():
-            if state[key]!=previous[key]:
-                steps.append({'id':operation['id']+'.'+key,'title':operation['title'],'latex':relation if state[key] not in (False,'sin_declarar') else r'\text{Previous restriction removed}'})
+            if state.get(key)!=previous.get(key):
+                steps.append({'id':operation['id']+'.'+key,'title':operation['title'],'latex':relation if state.get(key) not in (False,'sin_declarar',None) else r'\text{Previous restriction removed}'})
         if state['closure']!=previous['closure']:
             selected=state['closure']
             if selected is None:continue

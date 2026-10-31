@@ -19,7 +19,7 @@ import {cabeEnBalances,modeloBalancesDesdeHoja} from '../../motores/modelo/desde
 import {modeloDesdeHojaMotor} from '../../motores/modelo/desdeHojaMotor';
 import {describirTermodinamica,type DescripcionTermodinamica,type VolumenTermodinamico} from '../../motores/modelo/servicioModelo';
 import type {VistaHoja} from './familiasBalance';
-import {OPERACIONES_TERMO,TERMO_FUNDAMENTAL,TITULO_FUNDAMENTAL_TERMO,actualTermo,iniciarTermo,migrarTermoHoja,operarTermo,recorridoTermoHoja,rehacerTermo,relacionesTermo,volverTermo,type RecorridoTermodinamico} from './recorridoTermodinamico';
+import {OPERACIONES_TERMO,valorRetirado,TITULO_FUNDAMENTAL_TERMO,actualTermo,iniciarTermo,migrarTermoHoja,operarTermo,recorridoTermoHoja,rehacerTermo,relacionesTermo,volverTermo,type RecorridoTermodinamico} from './recorridoTermodinamico';
 import {aplicarPoliticaDinamica} from './datosEnsamblajeTermodinamico';
 
 type Relacion={id:string;titulo:string;latex:string;nota?:string};
@@ -96,7 +96,7 @@ export default function TermodinamicaHoja({h,onGuardar}:{h:HojaMotor;onVista:(v:
     if(!onGuardar)return;
     // Con un cierre real (IAPWS-95) las fases las decide el equilibrio: una fase o sin cambio de fase son su política.
     if(cierre&&(op.clave==='monofasico'||op.clave==='sinCambioFase')){onGuardar(q=>aplicarPoliticaDinamica(q,{...cierre.politica,...(op.clave==='monofasico'?{cantidad:activo?'monofasico':'sin_restriccion'}:{cambioInterno:activo?'prohibido':'permitido'})}));return;}
-    guardarTermo(operarTermo(recorrido,`${activo?'Apply':'Remove'}: ${op.nombre}`,{[op.clave]:activo?op.valor:TERMO_FUNDAMENTAL[op.clave]},activo?[op.relacion]:[]));
+    guardarTermo(operarTermo(recorrido,`${activo?'Apply':'Remove'}: ${op.nombre}`,{[op.clave]:activo?op.valor:valorRetirado(op.clave)},activo?[op.relacion]:[]));
   }
   const donde=(s:SupuestoTermodinamico,vid?:string)=>editable&&OPERACIONES_TERMO.some(o=>o.clave===(s.id==='monofasico'?'monofasico':s.id==='sin_cambio'?'sinCambioFase':s.id==='u_lineal'?'modelo':'_'))?<small>Defined in the assumptions above.</small>:<Link href={h.redTermodinamica?urlEnfoqueRed(h.id,'estado',{propietarioId:`volumen:${vid??d?.volumenes[0]?.id??''}`}):`/motor/hojas/${h.id}/estado`}>Configure in Model →</Link>;
   return <div className={styles.pagina}>

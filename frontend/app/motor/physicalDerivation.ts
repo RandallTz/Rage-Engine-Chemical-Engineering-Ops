@@ -1,12 +1,12 @@
 import type { SupuestosTermo, RecorridoTermodinamico } from './recorridoTermodinamico';
-import { TERMO_FUNDAMENTAL } from './recorridoTermodinamico';
+import { TERMO_FUNDAMENTAL, TERMO_OPCIONAL } from './recorridoTermodinamico';
 import type { SolicitudEnsamblajeV2, VolumenV2 } from './contratoEnsamblajeV2';
 /** Shared versioned journals for the first law and thermodynamic closures.
  * These functions validate document structure; Python develops the mathematics. */
 import type { FormulacionEnergia, RecorridoEnergia } from './recorridoEnergia';
 import { ENERGIA_FUNDAMENTAL } from './recorridoEnergia';
 
-export const stateKeys = ['monofasico', 'sinCambioFase', 'densidadConstante', 'modelo'] as const;
+export const stateKeys = ['monofasico', 'sinCambioFase', 'densidadConstante', 'modelo', 'soloLiquido', 'referenciaFormacion'] as const;
 export type EnergyState = Omit<FormulacionEnergia, typeof stateKeys[number]>;
 export type OperationEntry<S> = { origin: 'recorded' | 'reviewed_rebuild'; operations: { id: string; title: string; changes: Partial<S> }[] };
 /** Author a document operation; the server validates and develops its result. */
@@ -112,14 +112,14 @@ export function readThermodynamicJournal(value:unknown):ThermodynamicJournal {
       ids.add(operation.id);
       if(!operation.changes||typeof operation.changes!=='object'||Array.isArray(operation.changes)||!Object.keys(operation.changes).length)throw new Error('Thermodynamic changes are required.');
       for(const [key,item] of Object.entries(operation.changes)){
-        if(!Object.hasOwn(baseline,key))throw new Error('Unknown thermodynamic operation field.');
+        if(!Object.hasOwn(baseline,key)&&!Object.hasOwn(TERMO_OPCIONAL,key))throw new Error('Unknown thermodynamic operation field.');
         if(key==='closure'&&item!==null){
           exact(item,['packageId','model','policy']);exact(item.model,['id','version']);
           if([item.packageId,...Object.values(item.model)].some(value=>typeof value!=='string'||!value.trim()))throw new Error('A configured package and version are required.');
           const policy=item.policy as Record<string,unknown>;
           if(!policy||typeof policy!=='object'||Array.isArray(policy)||Object.keys(policy).some(key=>!['cantidad','cambioInterno','evaluacion','tiposPermitidos'].includes(key))||!['sin_restriccion','monofasico'].includes(policy.cantidad as string)||!['permitido','prohibido'].includes(policy.cambioInterno as string)||policy.evaluacion!=='equilibrio_estable')throw new Error('Invalid thermodynamic phase policy.');
           if(policy.tiposPermitidos!==undefined&&(!Array.isArray(policy.tiposPermitidos)||!policy.tiposPermitidos.length||new Set(policy.tiposPermitidos).size!==policy.tiposPermitidos.length||policy.tiposPermitidos.some(value=>!['vapor','liquido','solido'].includes(value))))throw new Error('Invalid permitted phase types.');
-        }else if(key==='modelo'?!['sin_declarar','u_lineal'].includes(item as string):key!=='closure'&&typeof item!=='boolean')throw new Error('Invalid thermodynamic assumption.');
+        }else if(key==='modelo'?!['sin_declarar','u_lineal'].includes(item as string):key==='referenciaFormacion'?![null,'gas','liquido'].includes(item as string|null):key!=='closure'&&typeof item!=='boolean')throw new Error('Invalid thermodynamic assumption.');
       }
     }
   }
@@ -132,6 +132,7 @@ export function replayThermodynamics(entry:OperationEntry<ThermodynamicState>):T
   for(const operation of entry.operations){
     state={...state,...structuredClone(operation.changes)};
     if(state.closure&&(state.modelo!=='sin_declarar'||state.densidadConstante||state.monofasico!==(state.closure.policy.cantidad==='monofasico')||state.sinCambioFase!==(state.closure.policy.cambioInterno==='prohibido')))throw new Error('The package closure conflicts with the recorded assumptions.');
+    if(state.soloLiquido&&(state.modelo!=='sin_declarar'||state.closure&&(state.closure.policy.cantidad!=='monofasico'||!sameDocument(state.closure.policy.tiposPermitidos,['liquido']))))throw new Error('A liquid-only phase set requires the single-phase liquid package policy.');
   }
   return state;
 }

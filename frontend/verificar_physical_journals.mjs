@@ -130,6 +130,19 @@ check(topologyNetwork.solicitud.derivacion.thermodynamicDerivation.volumes[newId
 topology.quitarElementoRed(topologyNetwork,'volumen',newId);
 check(!topologyNetwork.solicitud.derivacion.energyDerivation.volumes[newId]&&!topologyNetwork.solicitud.derivacion.thermodynamicDerivation.volumes[newId],'Deleting a volume removes both journal ownerships');
 for(const reader of [physical.readEnergyJournal,physical.readThermodynamicJournal]){assert.throws(()=>reader({format:'fake',version:true,volumes:{}}));checks++;}
+// Optional liquid-only assumptions (F5-C4): absent keys leave earlier journals unchanged; recorded keys pass the strict readers.
+{const liquidPolicy={cantidad:'monofasico',cambioInterno:'prohibido',evaluacion:'equilibrio_estable',tiposPermitidos:['liquido']};
+ const closure={packageId:'pkg',model:{id:'unifac-dortmund-public',version:'1'},policy:liquidPolicy};
+ const entry={origin:'recorded',operations:[{id:'edit-1',title:'Select the package',changes:{closure,monofasico:true,sinCambioFase:true}},
+   {id:'edit-2',title:'Liquid-only phase set',changes:{soloLiquido:true}},{id:'edit-3',title:'Liquid formation reference',changes:{referenciaFormacion:'liquido'}}]};
+ physical.readThermodynamicJournal({format:'rage.thermodynamic-derivation',version:1,volumes:{cell:entry}});checks++;
+ const formulation={monofasico:true,sinCambioFase:true,densidadConstante:false,modelo:'sin_declarar',soloLiquido:true,referenciaFormacion:'liquido'};
+ check(physical.thermodynamicJournalMatches(entry,formulation,closure),'A recorded liquid-only phase set and formation reference replay to the effective assumptions');
+ check(!physical.thermodynamicJournalMatches(entry,{...formulation,soloLiquido:undefined},closure),'A missing liquid-only flag is a journal mismatch, never silently ignored');
+ check(!Object.hasOwn(physical.replayThermodynamics({origin:'recorded',operations:[entry.operations[0]]}),'soloLiquido'),'Optional keys are absent until recorded');
+ check(physical.energyJournalMatches({origin:'recorded',operations:[]},{...physical.energyState({}),soloLiquido:true,referenciaFormacion:'liquido'}),'The first-law journal ignores the thermodynamic liquid-only keys');
+ assert.throws(()=>physical.readThermodynamicJournal({format:'rage.thermodynamic-derivation',version:1,volumes:{cell:{origin:'recorded',operations:[{id:'edit-1',title:'Bad reference',changes:{referenciaFormacion:'solid'}}]}}}));checks++;
+ assert.throws(()=>physical.replayThermodynamics({origin:'recorded',operations:[{id:'edit-1',title:'Package',changes:{closure:{...closure,policy:{cantidad:'sin_restriccion',cambioInterno:'permitido',evaluacion:'equilibrio_estable'}}}},{id:'edit-2',title:'Liquid only',changes:{soloLiquido:true}}]}));checks++;}
 const docPath=path.join(directory,'../docs/engine/engine-checklist.md');
 // Exercise the real document store in an isolated runtime, never user storage.
 const store=load(path.join(directory,'app/motor/hojasMotor'));

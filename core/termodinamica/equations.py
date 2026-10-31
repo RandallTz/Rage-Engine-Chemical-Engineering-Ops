@@ -128,4 +128,108 @@ def equation_graph(model,owner):
             final.append(add('phase-equilibrium-'+str(i),phase_mu,chemical,'Equal chemical potentials of present phases','equilibrium_condition',conditions=('Present phases at common temperature and pressure',),kind='constraint'))
         beta=quantity('phase_fraction','1',r'\beta_k');distance=quantity('phase_tangent_distance','J/mol',r'TPD_k')
         final.append(add('phase-stability',beta*distance,0,'Candidate-phase complementarity','equilibrium_condition',conditions=(r'\beta_k\geq0',r'TPD_k\geq0','Finite package candidate-phase search; no universal global-stability claim'),kind='constraint'))
+        # Instantiate the generic phase index over the candidate phases that
+        # derived execution evaluates; the package closure supplies these values.
+        phases=closure_phases(state,selected)
+        named=closure_quantities(owner,components,phases)
+        for q,(unit,display) in named.items():units[q]=unit;graph.names[q]=display
+        out=closure_outputs(owner,components,phases)
+        replacement={label:{phase_total:out['amount',label],
+            **{fraction:out['x',i,label] for i,fraction in zip(components,fractions)},
+            **{sp.Function('phase_'+name+'__'+owner)(k,t):out[key,label] for name,key in [('energy','u'),('enthalpy','h'),('volume','v')]}}
+            for label in phases}
+        def instantiate(expression):
+            return expression.replace(lambda e:isinstance(e,sp.Sum),lambda e:sum(e.function.xreplace(replacement[label]) for label in phases))
+        labels=', '.join(PHASES[label][0] for label in phases)
+        for source in [prefix+'component-partition-'+str(i) for i in components]+[prefix+'phase-'+name for name in ('energy','enthalpy','volume')]:
+            key=source+'-instances'
+            graph.transform(key,source,instantiate,'Instantiate the candidate phases · '+labels,'instantiate_candidate_phases',
+                            ('Candidate phases of the selected package: '+labels+'; an absent phase has zero amount',))
+            final.append(key)
+        masses=[sp.Symbol('molar_mass_'+str(i)+'__'+owner,real=True) for i in components]
+        for i,M,amount in zip(components,masses,n):
+            component_mass=sp.Function('m__'+owner+'__'+str(i))(t)
+            add('component-mass-'+str(i),component_mass,M*amount,'Relate the component mass inventory to its package amount',
+                conditions=('Package molar mass of component '+str(i)+' is positive',))
+            graph.isolate(prefix+'component-amount-'+str(i),prefix+'component-mass-'+str(i),amount,'Recover the package amount from the component mass',('Positive package molar mass',))
+            final.append(prefix+'component-amount-'+str(i))
+        for label in phases:
+            final.append(add('phase-molar-mass-'+label,out['M',label],sum(out['x',i,label]*M for i,M in zip(components,masses)),'Define the molar mass of phase '+PHASES[label][0]))
+            final.append(add('phase-presence-'+label,out['present',label],sp.Heaviside(out['amount',label],0),'Presence indicator of phase '+PHASES[label][0],
+                             conditions=('Nonnegative phase amount; the package closure decides presence',)))
+        if 'L' in phases:
+            final.append(add('liquid-volume',out['liquid_volume'],out['amount','L']*out['v','L'],'Define the liquid volume from the liquid amount and molar volume'))
+        for stream in model.get('corrientes',[]):
+            if stream['hasta']!=owner or stream['desde'] is not None or not stream.get('estadoExterior'):continue
+            s=stream['id'];h=out['stream_h',s];M=out['stream_M',s]
+            exterior=[sp.Symbol(name+'__'+s,real=True) for name in ('T_exterior','P_exterior')]
+            z=[sp.Symbol('z_exterior_'+str(i)+'__'+s,real=True) for i in components]
+            for q,unit,display in [(h,'J/mol',r'\bar h_{'+s+'}(t)'),(M,'kg/mol',r'M_{'+s+'}(t)'),(out['stream_hm',s],'J/kg',r'h_{'+s+'}(t)'),
+                                   (exterior[0],'K',r'T_{'+s+'}'),(exterior[1],'Pa',r'P_{'+s+'}'),*((zi,'1',r'z_{'+str(i)+','+s+'}') for i,zi in zip(components,z))]:
+                units[q]=unit;graph.names[q]=display
+            evaluated=sp.Function('h_package__'+owner)(*exterior,*z);units[evaluated]='J/mol'
+            final.append(add('stream-enthalpy-'+s,h,evaluated,'Evaluate the inlet molar enthalpy with the selected package at its declared exterior state','constitutive_choice',
+                conditions=('Declared exterior temperature, pressure and molar composition; a single stable phase',),kind='constitutive'))
+            final.append(add('stream-molar-mass-'+s,M,sum(zi*Mi for zi,Mi in zip(z,masses)),'Define the inlet molar mass from its declared composition'))
+            final.append(add('stream-specific-enthalpy-'+s,out['stream_hm',s],h/M,'Convert the inlet enthalpy to a mass basis',conditions=('Positive inlet molar mass',)))
+            for i,zi,Mi in zip(components,z,masses):
+                w=out['stream_w',s,i];units[w]='1';graph.names[w]=r'w_{'+str(i)+','+s+'}(t)'
+                final.append(add('stream-mass-fraction-'+str(i)+'-'+s,w,zi*Mi/M,'Define the inlet mass fraction of component '+str(i),conditions=('Positive inlet molar mass',)))
     return graph,final,units
+
+
+# Candidate phases evaluated by derived execution: one vapour and one liquid.
+# A second liquid is reported by the closure and stops execution explicitly.
+PHASES={'V':('vapour','V'),'L':('liquid','L')}
+
+
+def closure_phases(state,selected):
+    if state.get('soloLiquido'):return ('L',)
+    allowed=selected['policy'].get('tiposPermitidos') or ['vapor','liquido']
+    return tuple(label for label,kind in (('V','vapor'),('L','liquido')) if kind in allowed)
+
+
+def closure_outputs(owner,components,phases,streams=()):
+    """Typed quantities a package closure (or an inlet evaluation) supplies.
+
+    The same identities are used by the graph builder and by derived execution,
+    so lowering never recognizes a closure output by its display name.
+    """
+    t=sp.Symbol('t',real=True);out={}
+    for label in phases:
+        out['amount',label]=sp.Function('phase_amount__'+owner+'__'+label)(t)
+        for name in ('h','u','v','M','present'):
+            out[name,label]=sp.Function('phase_'+name+'__'+owner+'__'+label)(t)
+        for i in components:
+            out['x',i,label]=sp.Function('phase_x_'+str(i)+'__'+owner+'__'+label)(t)
+    out['liquid_volume']=sp.Function('liquid_volume__'+owner)(t)
+    return _StreamQuantities(out,owner)
+
+
+class _StreamQuantities(dict):
+    """Inlet quantities are created on first use; their stream IDs are model data."""
+    def __init__(self,values,owner):
+        super().__init__(values);self.owner=owner
+    def __missing__(self,key):
+        name,stream=key[:2];t=sp.Symbol('t',real=True)
+        base={'stream_h':'inlet_molar_enthalpy','stream_M':'inlet_molar_mass','stream_hm':'inlet_specific_enthalpy','stream_w':'inlet_mass_fraction'}[name]
+        value=sp.Function(base+('_'+str(key[2]) if len(key)>2 else '')+'__'+stream)(t)
+        self[key]=value;return value
+
+
+def closure_quantities(owner,components,phases):
+    out=closure_outputs(owner,components,phases);result={}
+    for label in phases:
+        tag=PHASES[label][1]
+        result[out['amount',label]]=('mol',r'n^{'+tag+'}(t)')
+        result[out['h',label]]=('J/mol',r'\bar h^{'+tag+'}(t)')
+        result[out['u',label]]=('J/mol',r'\bar u^{'+tag+'}(t)')
+        result[out['v',label]]=('m3/mol',r'\bar v^{'+tag+'}(t)')
+        result[out['M',label]]=('kg/mol',r'M^{'+tag+'}(t)')
+        result[out['present',label]]=('1',r'\mathbf 1^{'+tag+'}(t)')
+        for i in components:
+            result[out['x',i,label]]=('1',r'x^{'+tag+'}_{'+str(i)+'}(t)')
+    result[out['liquid_volume']]=('m3',r'V^{L}(t)')
+    for i in components:
+        result[sp.Symbol('molar_mass_'+str(i)+'__'+owner,real=True)]=('kg/mol',r'M_{'+str(i)+'}')
+    return result

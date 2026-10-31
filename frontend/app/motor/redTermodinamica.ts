@@ -44,7 +44,7 @@ export function cambiarRed(h:HojaMotor,fn:(r:RedTermodinamica)=>void):HojaMotor{
   if(thermodynamics&&oldThermodynamics)for(const volume of red.solicitud.volumenes){
     const previous=h.redTermodinamica.solicitud.volumenes.find(item=>item.id===volume.id),entry=thermodynamics.volumes[volume.id],before=oldThermodynamics.volumes[volume.id];
     if(previous&&entry&&before&&sameDocument(entry,before)&&thermodynamicJournalMatches(before,previous.formulacionEnergia,configuredClosure(h.redTermodinamica.solicitud,previous))){
-      const changes={...Object.fromEntries(Object.entries(volume.formulacionEnergia).filter(([key])=>['monofasico','sinCambioFase','densidadConstante','modelo'].includes(key))),closure:configuredClosure(red.solicitud,volume)};
+      const changes={...Object.fromEntries(Object.entries(volume.formulacionEnergia).filter(([key])=>['monofasico','sinCambioFase','densidadConstante','modelo','soloLiquido','referenciaFormacion'].includes(key))),closure:configuredClosure(red.solicitud,volume)};
       if(!thermodynamicJournalMatches(entry,volume.formulacionEnergia,changes.closure)){
         let id=entry.operations.length+1;while(entry.operations.some(op=>op.id===`state-edit-${id}`))id++;
         entry.operations.push({id:`state-edit-${id}`,title:'Record the explicit thermodynamic package, policy or state-assumption edit',changes});

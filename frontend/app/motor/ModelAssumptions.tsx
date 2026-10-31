@@ -119,9 +119,10 @@ export function ThermodynamicAssumptions({state,policy,equilibrium,disabled=fals
 }){
   return <><fieldset className={styles.assumptionControls} disabled={disabled}>
     {OPERACIONES_TERMO.map(operation=>{
-      const blocked=equilibrium&&(operation.clave==='modelo'||operation.clave==='densidadConstante');
-      const active=policy&&operation.clave==='monofasico'?policy.cantidad==='monofasico':policy&&operation.clave==='sinCambioFase'?policy.cambioInterno==='prohibido':operation.clave==='modelo'?state.modelo==='u_lineal':!!state[operation.clave];
-      return <label key={operation.clave}><input type="checkbox" aria-label={operation.nombre} checked={active} disabled={blocked} onChange={event=>change(operation,event.target.checked)}/><span>{operation.nombre}<small>{blocked?'The equilibrium package calculates this relation.':operation.efecto}</small>{active&&<small><FormulaLatex latex={operation.relacion} lectura={operation.nombre}/></small>}</span></label>;
+      const packageOnly=operation.clave==='soloLiquido'||operation.clave==='referenciaFormacion';
+      const blocked=equilibrium?operation.clave==='modelo'||operation.clave==='densidadConstante':packageOnly;
+      const active=policy&&operation.clave==='monofasico'?policy.cantidad==='monofasico':policy&&operation.clave==='sinCambioFase'?policy.cambioInterno==='prohibido':operation.clave==='modelo'?state.modelo==='u_lineal':operation.clave==='referenciaFormacion'?state.referenciaFormacion===operation.valor:!!state[operation.clave];
+      return <label key={`${operation.clave}-${String(operation.valor)}`}><input type="checkbox" aria-label={operation.nombre} checked={active} disabled={blocked} onChange={event=>change(operation,event.target.checked)}/><span>{operation.nombre}<small>{blocked?(packageOnly?'Requires an equilibrium package.':'The equilibrium package calculates this relation.'):operation.efecto}</small>{active&&<small><FormulaLatex latex={operation.relacion} lectura={operation.nombre}/></small>}</span></label>;
     })}
   </fieldset></>;
 }

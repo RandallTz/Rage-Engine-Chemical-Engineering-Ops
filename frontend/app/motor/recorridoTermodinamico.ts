@@ -6,9 +6,14 @@
 import type { FormulacionEnergia, RecorridoEnergia } from './recorridoEnergia';
 import type { HojaMotor } from './hojasMotor';
 
-export type SupuestosTermo = Pick<FormulacionEnergia, 'monofasico' | 'sinCambioFase' | 'densidadConstante' | 'modelo'>;
-export const CLAVES_TERMO = ['monofasico', 'sinCambioFase', 'densidadConstante', 'modelo'] as const;
+export type SupuestosTermo = Pick<FormulacionEnergia, 'monofasico' | 'sinCambioFase' | 'densidadConstante' | 'modelo' | 'soloLiquido' | 'referenciaFormacion'>;
+export const CLAVES_TERMO = ['monofasico', 'sinCambioFase', 'densidadConstante', 'modelo', 'soloLiquido', 'referenciaFormacion'] as const;
 export const TERMO_FUNDAMENTAL: SupuestosTermo = { monofasico: false, sinCambioFase: false, densidadConstante: false, modelo: 'sin_declarar' };
+/** Additive assumptions (30 October 2026): present only once recorded, so earlier documents are unchanged. */
+export const TERMO_OPCIONAL: Required<Pick<SupuestosTermo, 'soloLiquido' | 'referenciaFormacion'>> = { soloLiquido: false, referenciaFormacion: null };
+/** The value that removes an assumption: its fundamental value, or the optional default. */
+export const valorRetirado = (clave: keyof SupuestosTermo): SupuestosTermo[keyof SupuestosTermo] =>
+  Object.hasOwn(TERMO_FUNDAMENTAL, clave) ? TERMO_FUNDAMENTAL[clave] : TERMO_OPCIONAL[clave as keyof typeof TERMO_OPCIONAL];
 export type PasoTermo = { titulo: string; supuestos: SupuestosTermo; relaciones: string[]; operation?: {changes:Partial<SupuestosTermo>} | null };
 export type RecorridoTermodinamico = { version: 1; pasos: PasoTermo[]; rehacer: PasoTermo[] };
 
@@ -31,6 +36,9 @@ export const OPERACIONES_TERMO: { clave: keyof SupuestosTermo; nombre: string; v
   { clave: 'monofasico', nombre: 'Assume a single phase', valor: true, relacion: String.raw`N_{\mathrm{fases}}=1`, efecto: 'Restrict the present phase count to one; stop if equilibrium requires another phase.' },
   { clave: 'sinCambioFase', nombre: 'No phase change', valor: true, relacion: String.raw`\{\text{fases}\}(t)=\{\text{fases}\}(0)`, efecto: 'The initial phase set must remain valid throughout the calculation.' },
   { clave: 'densidadConstante', nombre: 'Constant mixture density', valor: true, relacion: String.raw`\rho=\rho_*,\qquad V=\frac{m}{\rho_*}`, efecto: 'Volume state relation: an incompressible liquid with declared density.' },
+  { clave: 'soloLiquido', nombre: 'Liquid-only phase set', valor: true, relacion: String.raw`\mathcal P\subseteq\{\mathrm{liquid}\}`, efecto: 'The vapour is not modelled (for example acetic acid); requires the single-phase liquid policy of the package.' },
+  { clave: 'referenciaFormacion', nombre: 'Liquid formation reference', valor: 'liquido', relacion: String.raw`\bar h_i(T_0,P_0)=\Delta_f h_i^{\circ,\mathrm{liq}}`, efecto: 'Package energies carry the tabulated liquid formation data, so the reaction heat needs no source term.' },
+  { clave: 'referenciaFormacion', nombre: 'Ideal-gas formation reference', valor: 'gas', relacion: String.raw`\bar h_i^{\mathrm{ig}}(T_0,P_0)=\Delta_f h_i^{\circ,\mathrm{ig}}`, efecto: 'Package energies carry the ideal-gas formation data; refused for liquid-only species.' },
   { clave: 'modelo', nombre: 'Declared linear u(T) law', valor: 'u_lineal', relacion: String.raw`u(T)=u_{\mathrm{ref}}+c_u\,(T-T_{\mathrm{ref}}),\qquad c_u>0`, efecto: 'Internal-energy relation, valid in the declared interval [T_min, T_max] monitored by the Engine.' },
 ];
 

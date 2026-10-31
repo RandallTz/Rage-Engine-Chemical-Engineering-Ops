@@ -14,6 +14,28 @@ from core.termodinamica.volumen import CierreVolumen
 from .compilador import AdmissionError, _Dato, temporal_method
 
 
+def _liquid_only_volume(model, volume, path, owner, reject):
+    _, package = capa._volumen(model, owner)
+    cas = capa._cas(model, volume)
+    try:
+        substitutions = catalogo.leer_sustituciones(package['datosPuros'], 'datosPuros', set(cas)) if package.get('datosPuros') else None
+        mezclas.Sistema(package['modelo']['id'], cas, sustituciones=substitutions, solo_liquido=True)
+    except (mezclas.FaltaParametro, catalogo.SustitucionRechazada, unifac.FaltaDatoUNIFAC) as error:
+        reject('unsupported_package', str(error), path+'.termodinamica', 'MOTOR_ENS_'+getattr(error, 'codigo', 'PAQUETE'))
+        return
+    except KeyError as error:
+        reject('unsupported_package', 'Unknown thermodynamic package: '+str(error), path+'.termodinamica', 'MOTOR_ENS_PAQUETE')
+        return
+    reject('liquid_only_vapour_operation', 'Volume '+owner+' declares a liquid-only phase set (fase_vapor not modelled): this compiler '
+           'evaluates every state with a UV/PH flash, which needs the vapour phase. Use the derived execution of the '
+           'single-phase liquid package closure.', path+'.termodinamica', 'MOTOR_ENS_ESPECIE_SOLO_LIQUIDO')
+    for index, stream in enumerate(model['corrientes']):
+        extraction = (stream.get('extraccion') or {}).get(owner)
+        if isinstance(extraction, dict) and extraction.get('fase') == 'vapor':
+            reject('liquid_only_vapour_operation', 'Stream '+stream['id']+' draws vapour from the liquid-only volume '+owner+'.',
+                   f'corrientes[{index}].extraccion.'+owner, 'MOTOR_ENS_ESPECIE_SOLO_LIQUIDO')
+
+
 def validate(model, *, initialization=True):
     errors, data, closures = [], {}, {}
     final_time = None
@@ -149,6 +171,12 @@ def validate(model, *, initialization=True):
         for failed, native, message in checks:
             if failed:
                 reject('formulation_'+native.lower(), message, path+'.supuestos', 'MOTOR_ENS_'+native)
+        if energy.get('soloLiquido'):
+            # F5-C4: the recorded liquid-only phase set admits a liquid-only species
+            # (Sistema(..., solo_liquido=True)), but each evaluation of this compiler is a
+            # UV/PH flash and each extraction may draw vapour: both need the vapour phase.
+            _liquid_only_volume(model, volume, path, owner, reject)
+            continue
         _, package = capa._volumen(model, owner)
         package_id = package['modelo']['id']
         if package_id == capa.AGUA and package.get('datosPuros'):
