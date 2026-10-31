@@ -49,6 +49,14 @@ P0 = 1e5
 from core import catalogo as _catalogo
 
 _ESPECIES = {c: (r.nombre, r.psat_tabla, r.vL, r.metodo_vL, r.M) for c, r in _catalogo.REGISTRO.items()}
+# Liquid-only species: same pure data view, kept apart so that especies_disponibles() (the published, vapour-liquid
+# set) does not change. Admission is decided by core/catalogo.faltantes(..., solo_liquido=True).
+_ESPECIES_SOLO_LIQUIDO = {c: (r.nombre, r.psat_tabla, r.vL, r.metodo_vL, r.M)
+                          for c, r in _catalogo.REGISTRO_SOLO_LIQUIDO.items()}
+
+
+def _vista(cas):
+    return _ESPECIES[cas] if cas in _ESPECIES else _ESPECIES_SOLO_LIQUIDO.get(cas)
 
 
 @dataclass(frozen=True)
@@ -137,9 +145,9 @@ def especie(cas):
 
 
 def _especie(cas):
-    if cas not in _ESPECIES:
+    if _vista(cas) is None:
         raise KeyError(cas)
-    nombre, tabla, vL, metodo, M = _ESPECIES[cas]
+    nombre, tabla, vL, metodo, M = _vista(cas)
     if tabla == "WagnerPoling":
         r = _vp.Psat_data_WagnerPoling.loc[cas]
         T_psat = (float(r.Tmin), float(r.Tmax))
@@ -157,11 +165,15 @@ def especies_disponibles():
     return list(_ESPECIES)
 
 
+def especies_solo_liquido():
+    return list(_ESPECIES_SOLO_LIQUIDO)
+
+
 @lru_cache(maxsize=None)
 def _faltantes_puros(cas):
-    if cas not in _ESPECIES:
+    if _vista(cas) is None:
         return (("registro", "sustancia no registrada"),)
-    nombre, tabla, vL, metodo, M = _ESPECIES[cas]
+    nombre, tabla, vL, metodo, M = _vista(cas)
     sal = []
     if not (M > 0):
         sal.append(("masa_molar", "masa molar no positiva en el registro"))

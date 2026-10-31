@@ -293,22 +293,26 @@ class EstadoMezcla:
 class Sistema:
     """Un paquete aplicado a un conjunto ordenado de especies."""
 
-    def __init__(self, paquete_id, cas, sustituciones=None):
-        """sustituciones: {cas: {propiedad: dato}} ya validado por core/catalogo.leer_sustituciones (F2.4)."""
+    def __init__(self, paquete_id, cas, sustituciones=None, solo_liquido=False):
+        """sustituciones: {cas: {propiedad: dato}} ya validado por core/catalogo.leer_sustituciones (F2.4).
+        solo_liquido: a liquid-only system. It also admits the liquid-only species of core/catalogo and rejects
+        every vapour evaluation (vapour potential, L-V K values, vapour stability trials, saturation and every
+        phase-equilibrium flash) with FaltaParametro code ESPECIE_SOLO_LIQUIDO."""
         if paquete_id not in PAQUETES:
             raise KeyError(paquete_id)
         self.paquete = PAQUETES[paquete_id]
         self.cas = tuple(cas)
-        faltan = [c for c in cas if c not in datos.especies_disponibles()]
+        self.solo_liquido = bool(solo_liquido)
+        from core import catalogo
+        faltan = [c for c in cas if c not in datos.especies_disponibles() and c not in catalogo.REGISTRO_SOLO_LIQUIDO]
         if faltan:
             raise FaltaParametro(f"Sin datos de componente puro para {', '.join(faltan)}.", tuple(faltan),
                                  codigo="COMPONENTE_NO_SOPORTADO",
                                  detalle={"tipo": "registro", "especies": list(faltan)})
         # Regla UNICA de admision por especie (core/catalogo.py): la misma para el limite puro y para las mezclas
         # (F9-R3). Los requisitos por par o grupo se comprueban despues, al construir el modelo de liquido.
-        from core import catalogo
         for c in cas:
-            f = catalogo.faltantes(self.paquete.liquido, c, self.paquete.id)
+            f = catalogo.faltantes(self.paquete.liquido, c, self.paquete.id, solo_liquido=self.solo_liquido)
             if f:
                 raise FaltaParametro(f[0]["mensaje"], (c,), codigo=f[0]["codigo"],
                                      detalle={"tipo": f[0]["dato"], "cas": c, "faltantes": f})
@@ -363,6 +367,14 @@ class Sistema:
             if rango is not None:           # tabla acotada por sus datos de ajuste (tambien para una especie)
                 self.T_rango = (max(self.T_rango[0], rango[0]), min(self.T_rango[1], rango[1]))
 
+    def _exigir_vapor(self, operacion):
+        """A liquid-only system has no vapour phase: fail closed instead of using the ideal vapour."""
+        if self.solo_liquido:
+            raise FaltaParametro(f"{operacion} needs a vapour phase, but this is a liquid-only system of package "
+                                 f"{self.paquete.id}; its liquid-only species have no valid vapour model.",
+                                 self.cas, codigo="ESPECIE_SOLO_LIQUIDO",
+                                 detalle={"tipo": "fase_vapor", "operacion": operacion, "especies": list(self.cas)})
+
     # --- dominio -------------------------------------------------------------
     def dominio(self, T, P):
         if not self.T_rango[0] <= T <= self.T_rango[1]:
@@ -389,6 +401,7 @@ class Sistema:
         gig, gL = self._g_puros(T, P)
         with np.errstate(divide="raise"):
             if tipo == "vapor":
+                self._exigir_vapor("The vapour chemical potential")
                 return gig[idx] + R * T * np.log(x * P / P0)
             lg = self._lngamma(T, x, idx)
             return gL[idx] + R * T * (np.log(x) + lg)
@@ -397,6 +410,7 @@ class Sistema:
         """ln K_i = ln(y_i / x_i) of an L-V pair in equilibrium, from the same potentials as `mu`:
         (g_L,i - g_ig0,i) / RT + ln gamma_i(x) - ln(P / P0). Finite at x_i = 0 (infinite dilution), so a
         continuation can reach the pure-component ends; mu(liquid, x) = mu(vapor, K x) wherever x_i > 0."""
+        self._exigir_vapor("An L-V equilibrium ratio")
         x = np.asarray(x, dtype=float)
         gig, gL = self._g_puros(T, P)
         return (gL[idx] - gig[idx]) / (R * T) + self._lngamma(T, x, idx) - math.log(P / P0)
@@ -465,6 +479,7 @@ class Sistema:
         sin_refinar = []
         self.__dict__["_minimos_sin_refinar"] = sin_refinar
         if incluir_vapor:
+            self._exigir_vapor("A vapour stability trial")
             c = (np.array([self.esp[i].g_ig0(T) for i in idx]) + RT * math.log(P / P0) - mu_ref) / RT
             e = np.exp(-(c - c.min()))
             w = e / e.sum()
@@ -540,6 +555,7 @@ class Sistema:
 
     # --- equilibrio TP -----------------------------------------------------------
     def equilibrio_TP(self, T, P, n, especificacion="TP"):
+        self._exigir_vapor("A TP phase-equilibrium flash")
         n = np.asarray(n, dtype=float)
         self.dominio(T, P)
         if np.any(n < 0) or not n.sum() > 0:
@@ -868,6 +884,7 @@ class Sistema:
     # --- componente puro -----------------------------------------------------------
     def P_saturacion(self, T, i):
         """P de coexistencia del componente puro i a T en este modelo (con Poynting)."""
+        self._exigir_vapor("A pure-component saturation pressure")
         e = self.esp[i]
         f = lambda P: e.g_L(T, P) - (e.g_ig0(T) + R * T * math.log(P / P0))
         Ps = e.Psat(T)
@@ -928,6 +945,7 @@ class Sistema:
         ensancha hasta encerrar la raiz, y cada TP de la busqueda parte de la evaluacion previa (flash con
         semilla y prueba de estabilidad, con caida al TP completo). La raiz, la certificacion y las mesetas
         son las mismas que sin semilla; solo cambia el coste."""
+        self._exigir_vapor("An isobaric phase-equilibrium flash")
         n = np.asarray(n, dtype=float)
         T_lo, T_hi = self.T_rango
         self.dominio(T_lo, P)
@@ -1096,6 +1114,7 @@ class Sistema:
         """P con V(T, P) = V. V es decreciente en P (vapor ideal, liquido
         incompresible). Si el liquido ocupa todo V a cualquier P, la presion
         queda indeterminada en este modelo: no se inventa."""
+        self._exigir_vapor("A TV phase-equilibrium flash")
         n = np.asarray(n, dtype=float)
         idx = [i for i in range(len(n)) if n[i] > 0]
         VL = float(np.sum(n[idx] * self.vL[idx]))
@@ -1146,6 +1165,7 @@ class Sistema:
         return e
 
     def equilibrio_UV(self, U, V, n):
+        self._exigir_vapor("A UV phase-equilibrium flash")
         n = np.asarray(n, dtype=float)
         e = _uv_acotado(self, U, V, n)
         if e is not None:
@@ -1397,6 +1417,7 @@ def flash_rapido(self, espec, a, b, n, semilla):
     positiva y prueba de estabilidad (vapor analitica + liquido en malla).
     Si algo falla se usa la operacion completa certificada (equilibrio_*).
     La semilla solo es el punto de partida: no fija ninguna propiedad."""
+    self._exigir_vapor("A seeded phase-equilibrium flash")
     sem = semilla
     for _ in range(3):
         try:
@@ -1764,6 +1785,8 @@ def _huella(self):
     }
     if getattr(self, "sustituciones", None):
         datos["sustituciones"] = self.sustituciones          # datos y FUENTES sustituidos (F2.4)
+    if getattr(self, "solo_liquido", False):
+        datos["soloLiquido"] = True                          # absent for vapour-liquid systems: fingerprints unchanged
     texto = json.dumps(datos, sort_keys=True, separators=(",", ":"), default=repr)
     return "sha256:" + hashlib.sha256(texto.encode("utf-8")).hexdigest()
 

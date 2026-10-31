@@ -94,29 +94,13 @@ class Esterification(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # Acetic acid is registered IN THIS PROCESS only (the pattern of tests/validar_motor_catalogo.py section 2):
-        # publishing it would admit it to the VLE packages, whose ideal vapour is wrong for a dimerising acid.
-        # Pure data checked on 30 October 2026: Psat 298.15 K 2076 Pa vs NIST Antoine 2114 Pa, 391.1 K 101516 vs
-        # 101609 Pa; cp_ig(298) 63.35 vs CRC 63.4 J/(mol K); v_L gives 1.042 vs 1.0446 g/cm3; DDBST CH3 + COOH.
-        from core import catalogo, mezclas_datos as md
+        # Acetic acid is a liquid-only species of core/catalogo.REGISTRO_SOLO_LIQUIDO (dec-f5-acetic-liquid-only):
+        # the VLE packages, whose ideal vapour is wrong for a dimerising acid, reject it; a liquid-only system
+        # admits it. Its pure data checks are recorded beside the registry entry.
         from core.mezclas import Sistema
-        cls._saved = (catalogo.REGISTRO, md._ESPECIES)
-        reg = catalogo.RegistroSustancia(ACOH, "acetic acid", 60.05196e-3, catalogo._M, "WagnerPoling",
-                                         5.763136122033062e-05, "DIPPR_PERRY_8E")
-        catalogo.REGISTRO = catalogo.MappingProxyType({**cls._saved[0], ACOH: reg})
-        md._ESPECIES = {**cls._saved[1], ACOH: (reg.nombre, reg.psat_tabla, reg.vL, reg.metodo_vL, reg.M)}
-        md.especie.cache_clear()
-        md._faltantes_puros.cache_clear()
         cls.cas = [ETOH, ACOH, ETOAC, H2O]
-        cls.sistema = Sistema("unifac-dortmund-public", cls.cas)
+        cls.sistema = Sistema("unifac-dortmund-public", cls.cas, solo_liquido=True)
         cls.A, _ = ce.element_matrix(cls.cas)
-
-    @classmethod
-    def tearDownClass(cls):
-        from core import catalogo, mezclas_datos as md
-        catalogo.REGISTRO, md._ESPECIES = cls._saved
-        md.especie.cache_clear()
-        md._faltantes_puros.cache_clear()
 
     def test_liquid_anchor_K_from_tabulated_liquid_data(self):
         from chemicals import reaction as rx
@@ -134,9 +118,9 @@ class Esterification(unittest.TestCase):
         self.assertTrue(out["certificate"]["phase_stability"]["stable"])
         self.assertLess(abs(out["extents"][0] - 2.0 / 3.0), 0.02)
         self.assertLess(L.anchor_gap[ACOH], -4e3)        # J/mol: the dimerisation error of the Psat route
-        gas_anchor = ce.PackagePhase(self.sistema, "liquido", anchor="gas")
-        biased = ce.solve_extents(gas_anchor, [[-1, -1, 1, 1]], [1.0, 1.0, 0.0, 0.0], ce.T0, ce.P0, self.A)
-        self.assertGreater(biased["extents"][0], 0.8)
+        with self.assertRaises(ce.ChemicalEquilibriumError) as x:       # the biased gas route (xi 0.868) is refused
+            ce.PackagePhase(self.sistema, "liquido", anchor="gas")
+        self.assertEqual(x.exception.code, "LIQUID_ANCHOR_REQUIRED")
 
 
 class MultiReaction(unittest.TestCase):

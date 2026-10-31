@@ -82,10 +82,23 @@ class PackagePhase:
     anchor='gas' (default): shift from ideal-gas Hfg, S0g; the liquid then inherits the package's ideal-gas +
     Psat route. anchor='liquid': shift so that the package's pure liquid reproduces the tabulated liquid Hfl,
     S0l at T0 (needed when that route is wrong, as for vapour-dimerising acids). Both are constant per species,
-    so every package derivative relation is kept; `anchor_gap` reports the difference between them."""
+    so every package derivative relation is kept; `anchor_gap` reports the difference between them. A system
+    holding a liquid-only species (`core.catalogo.REGISTRO_SOLO_LIQUIDO`) requires anchor='liquid': its gas
+    anchor would reach the liquid through the invalid monomer ideal-gas route."""
 
     def __init__(self, sistema, tipo, source=None, anchor="gas"):
         from chemicals import reaction as rx
+        from core.catalogo import REGISTRO_SOLO_LIQUIDO
+        if tipo == "vapor" and getattr(sistema, "solo_liquido", False):
+            raise ChemicalEquilibriumError("LIQUID_ONLY_SYSTEM", "A liquid-only system has no vapour phase.",
+                                           cas=list(sistema.cas))
+        liquid_only = [c for c in sistema.cas if c in REGISTRO_SOLO_LIQUIDO]
+        if anchor != "liquid" and liquid_only:
+            raise ChemicalEquilibriumError("LIQUID_ANCHOR_REQUIRED",
+                                           f"{', '.join(liquid_only)} is admitted only in the liquid: its formation "
+                                           "reference must be the tabulated liquid (anchor='liquid'), not the "
+                                           f"ideal gas (anchor={anchor!r}).", cas=liquid_only, anchor=anchor,
+                                           native_code="ESPECIE_SOLO_LIQUIDO")
         self.sistema, self.tipo, self.cas, self.anchor = sistema, tipo, tuple(sistema.cas), anchor
         refs = [formation_reference(c, source) for c in self.cas]
         self.Hf = np.array([r[0] for r in refs])
@@ -100,9 +113,15 @@ class PackagePhase:
             hL = np.array([e.h_L(T0, P0) for e in sistema.esp])
             sL = np.array([e.s_L(T0, P0) for e in sistema.esp])
             self.Hf, self.S0 = Hl - hL, Sl - sL          # shift: mu = mu_pkg + Hf - T S0, now liquid anchored
+            import chemicals
+            formation = {c: {"Hf": rx.Hfl_methods(c)[0], "S0": rx.S0l_methods(c)[0],
+                             "library": f"chemicals {chemicals.__version__}", "state": "pure liquid, 298.15 K, 1 bar"}
+                         for c in self.cas}
+        else:
+            formation = {c: r[2] for c, r in zip(self.cas, refs)}
         self.anchor_gap = {c: float(v) for c, v in zip(self.cas, (self.Hf - T0 * self.S0) - gas_shift_T0)}
         self.provenance = {"potentials": f"core.mezclas.Sistema('{sistema.paquete.id}').mu('{tipo}')",
-                           "formation": {c: r[2] for c, r in zip(self.cas, refs)}, "anchor": anchor,
+                           "formation": formation, "anchor": anchor,
                            "standard_state": ("pure ideal gas at T and P0" if tipo == "vapor" else
                                               "pure liquid at T and P (package g_L)")}
 
@@ -120,13 +139,16 @@ class PackagePhase:
 
     def stability(self, T, P, n):
         """Tangent-plane test of the package (vapor and liquid trials): min tm < 0 means this single phase is
-        not the stable state, so a single-phase chemical equilibrium is only a constrained stationary point."""
+        not the stable state, so a single-phase chemical equilibrium is only a constrained stationary point.
+        A liquid-only system has no vapour model, so only liquid trials run and `vapour_assessed` is False:
+        stability against vapour formation is then NOT certified."""
         n = np.asarray(n, dtype=float)
         idx = list(range(len(self.cas)))
         mu = self.sistema.mu(self.tipo, T, P, n / n.sum(), idx)
-        trials = self.sistema.prueba_estabilidad(T, P, mu, idx)
+        vapour = not getattr(self.sistema, "solo_liquido", False)
+        trials = self.sistema.prueba_estabilidad(T, P, mu, idx, incluir_vapor=vapour)
         worst = min(trials, key=lambda t: t[2]) if trials else None
-        return {"stable": worst is None or worst[2] >= -1e-9,
+        return {"stable": worst is None or worst[2] >= -1e-9, "vapour_assessed": vapour,
                 "min_tm": None if worst is None else float(worst[2]),
                 "trial_phase": None if worst is None else worst[0],
                 "trial_composition": None if worst is None else [float(v) for v in worst[1]]}
@@ -138,9 +160,12 @@ class IdealGasPhase:
     def __init__(self, cas_list, source=None):
         import chemicals.heat_capacity as hc
         from core.mezclas_datos import Especie
+        from core.catalogo import REGISTRO_SOLO_LIQUIDO, SOLO_LIQUIDO_MOTIVO
         self.cas = tuple(cas_list)
         self.especies = []
         for c in self.cas:
+            if c in REGISTRO_SOLO_LIQUIDO:
+                raise ChemicalEquilibriumError("LIQUID_ONLY_SPECIES", f"{c}: {SOLO_LIQUIDO_MOTIVO[c]}", cas=c)
             if c not in hc.Cp_data_Poling.index:
                 raise ChemicalEquilibriumError("CP_DATA_MISSING", f"No Poling ideal-gas cp for {c}.", cas=c)
             d = hc.Cp_data_Poling.loc[c]

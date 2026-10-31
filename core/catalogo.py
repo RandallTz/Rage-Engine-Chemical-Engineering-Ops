@@ -50,6 +50,24 @@ _REGISTROS = (
 # otro decimal (agua HEOS_FIT hoy 1.80686e-5 frente a 1.80683e-5 registrado) y cambiarlo alteraria las huellas.
 REGISTRO = MappingProxyType({r.cas: r for r in _REGISTROS})
 
+# Liquid-only species (user decision dec-f5-acetic-liquid-only, 30 October 2026). Their pure liquid data are sourced
+# like the rest, but the packages' ideal vapour is invalid for them (acetic acid dimerises in the vapour), so they are
+# NOT part of REGISTRO, the published catalog or any vapour-liquid route. Only a system built explicitly as
+# liquid-only (`core.mezclas.Sistema(..., solo_liquido=True)`) admits them, and it rejects every vapour evaluation.
+# Acetic acid, checked on 30 October 2026 (chemicals 1.5.2, thermo 0.6.1): Psat (Wagner, Poling) 298.15 K 2076 Pa vs
+# NIST Antoine 2114 Pa and 391.1 K 101516 vs 101609 Pa; cp_ig(298) 63.35 vs CRC 63.4 J/(mol K); v_L DIPPR (Perry 8th
+# ed.) gives 1.042 vs 1.0446 g/cm3 at 298.15 K; UNIFAC groups CH3 + COOH (DDBST) in the original and Dortmund tables.
+# Liquid formation data for the liquid anchor of core/reactions/chemical_equilibrium.py come from chemicals.reaction:
+# Hfl -483.58 kJ/mol (ATcT; CRC -484.3) and S0l 159.8 J/(mol K) (CRC).
+SOLO_LIQUIDO_MOTIVO = {
+    "64-19-7": "Acetic acid dimerises in the vapour; the packages' ideal vapour misplaces its pure-liquid Gibbs "
+               "energy by about 4.9 kJ/mol (F5-T1), so it is admitted only in liquid-only systems.",
+}
+REGISTRO_SOLO_LIQUIDO = MappingProxyType({r.cas: r for r in (
+    RegistroSustancia("64-19-7", "acetic acid", 60.05196e-3, _M, "WagnerPoling", 5.763136122033062e-05,
+                      "DIPPR_PERRY_8E"),
+)})
+
 # Datos puros que necesita un paquete de mezcla, por especie (id, magnitud, unidad SI)
 DATOS_PUROS_MEZCLA = (
     ("masa_molar", "masa molar", "kg/mol"),
@@ -72,17 +90,23 @@ def _falta(cas, dato, codigo, mensaje):
     return {"cas": cas, "dato": dato, "codigo": codigo, "mensaje": mensaje}
 
 
-def faltantes(liquido, cas, paquete_id=None):
+def faltantes(liquido, cas, paquete_id=None, solo_liquido=False):
     """Lo que le falta a la especie `cas` para un paquete cuyo liquido es `liquido` ('ideal', 'nrtl', 'nrtl_lle',
     'unifac_<variante>' o 'iapws95'). Lista vacia = admitida. Solo requisitos POR ESPECIE: los de pares o grupos
-    (NRTL, interacciones UNIFAC) dependen del conjunto y se comprueban al construir el modelo."""
+    (NRTL, interacciones UNIFAC) dependen del conjunto y se comprueban al construir el modelo.
+    solo_liquido: the caller builds a liquid-only system (no vapour phase); only then are the species of
+    REGISTRO_SOLO_LIQUIDO admitted. Otherwise they are reported as ESPECIE_SOLO_LIQUIDO."""
     nombre = paquete_id or liquido
     if liquido == "iapws95":
         if cas != CAS_AGUA:
             return [_falta(cas, "formulacion_iapws95", "COMPONENTE_NO_SOPORTADO",
                            f"El paquete {nombre} solo describe el agua ({CAS_AGUA}).")]
         return []
-    if cas not in REGISTRO:
+    if cas in REGISTRO_SOLO_LIQUIDO and not solo_liquido:
+        return [_falta(cas, "fase_vapor", "ESPECIE_SOLO_LIQUIDO",
+                       f"{cas} is admitted only in liquid-only systems of package {nombre}: "
+                       f"{SOLO_LIQUIDO_MOTIVO[cas]} Vapour-liquid packages, flashes and L-V paths reject it.")]
+    if cas not in REGISTRO and cas not in REGISTRO_SOLO_LIQUIDO:
         return [_falta(cas, "registro", "COMPONENTE_NO_SOPORTADO",
                        f"{cas} no esta en el registro de sustancias del motor: no hay datos de componente puro.")]
     from core import mezclas_datos
