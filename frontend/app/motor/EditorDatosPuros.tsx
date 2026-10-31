@@ -1,4 +1,5 @@
 'use client';
+import { englishLabel } from '../models/english';
 import {useEffect,useState} from 'react';
 import type {Componente} from './materiaEstado';
 import type {ModeloEstado} from './contratoTermodinamica';
@@ -23,7 +24,7 @@ function Contenido({modelo,componentes,datos,originales,alcance,cambiar}:Props){
   const [catalogo,setCatalogo]=useState<CatalogoMotor|null>(null),[error,setError]=useState(''),[intento,setIntento]=useState(0),[edicion,setEdicion]=useState<Edicion|null>(null);
   useEffect(()=>{const c=new AbortController();catalogoMotor(c.signal).then(x=>{if(!c.signal.aborted)setCatalogo(x);}).catch(e=>{if(!c.signal.aborted)setError((e as Error).message);});return()=>c.abort();},[intento]);
   if(error)return <div role="alert">{error}<button type="button" onClick={()=>{setError('');setIntento(n=>n+1);}}>Retry catalog</button></div>;
-  if(!catalogo)return <p role="status">Cargando datos originales…</p>;
+  if(!catalogo)return <p role="status">Loading original data…</p>;
   const paquete=catalogo.paquetes.find(p=>mismoModelo(p.modelo,modelo)),admite=!!paquete&&!paquete.requisitos.porEspecie.includes('formulacion_iapws95');
   const identidades=new Set([...(admite?componentes.flatMap(c=>c.identidadQuimica?.cas?[c.identidadQuimica.cas]:[]):[]),...Object.keys(datos??{})]);
   function editar(cas:string,id:PropiedadSustituible){
@@ -43,38 +44,38 @@ function Contenido({modelo,componentes,datos,originales,alcance,cambiar}:Props){
   const entrada=(k:string,nombre:string)=> <label key={k}>{nombre}<input aria-label={nombre} inputMode={k==='fuente'?undefined:'decimal'} value={edicion!.campos[k]??''} onChange={e=>setEdicion({...edicion!,campos:{...edicion!.campos,[k]:e.target.value}})}/></label>;
   return <div className={styles.content}>
     {alcance&&<p>{alcance}</p>}
-    {admite&&<small>h, s, Cp del líquido y densidad se derivan de estas entradas del potencial.</small>}
+    {admite&&<small>Liquid h, s, Cp and density are derived from these potential inputs.</small>}
     {!admite&&<p>{paquete?"This package uses a complete formulation and does not accept pure-property overrides.":"Package not published in the catalog."}</p>}
     {[...identidades].map(cas=>{
       const s=catalogo.sustancias.find(s=>s.cas===cas),nombre=componentes.find(c=>c.identidadQuimica?.cas===cas)?.nombre??s?.nombre??cas;
       const dentro=componentes.some(c=>c.identidadQuimica?.cas===cas),base=originales?.[cas]??s?.datosPuros.propiedades;
-      return <section key={cas}><h3>{nombre}<small>{cas}{!dentro?' · Fuera de la selección actual':''}</small></h3>
+      return <section key={cas}><h3>{nombre}<small>{cas}{!dentro?' · Outside the current selection':''}</small></h3>
         {(['volumen_liquido','cp_gas_ideal','presion_vapor'] as const).filter(id=>admite||datos?.[cas]?.[id]).map(id=>{
           const original=base?.find(p=>p.id===id),actual=datos?.[cas]?.[id],activa=edicion?.cas===cas&&edicion.id===id;
-          return <div className={styles.property} key={id}><header><strong>{nombresDatosPuros[id]}</strong><span>{actual?"Active substitution":'Registro'}</span></header>
-            {original&&<details><summary>{originales?.[cas]?'Registro al crear las sustituciones':'Registro actual'} · {descripcionDatoOriginal(original)}</summary><p>{original.fuente}</p>{'coeficientes'in original&&<p className={styles.coefficients}>{Object.entries(original.coeficientes).map(([k,v])=>`${k} = ${v}`).join(' · ')}</p>}</details>}
-            {actual&&<details><summary>Dato aplicado · {actual.fuente}</summary><pre>{JSON.stringify(actual,null,2)}</pre></details>}
-            <div className={styles.actions}><button type="button" aria-label={`${actual?"Edit":'Sustituir'} ${nombresDatosPuros[id]} de ${nombre}`} disabled={!admite||!dentro||!original} onClick={()=>editar(cas,id)}>{actual?"Edit override":'Sustituir'}</button>{actual&&<button type="button" aria-label={`Usar registro para ${nombresDatosPuros[id]} de ${nombre}`} onClick={()=>{if(cambiar(sustituirDatoPuro(datos,cas,id,undefined),originales??{}))setEdicion(null);}}>Usar registro</button>}</div>
+          return <div className={styles.property} key={id}><header><strong>{englishLabel(nombresDatosPuros[id])}</strong><span>{actual?"Active substitution":'Catalog record'}</span></header>
+            {original&&<details><summary>{originales?.[cas]?'Record when overrides were created':'Current record'} · {descripcionDatoOriginal(original)}</summary><p>{original.fuente}</p>{'coeficientes'in original&&<p className={styles.coefficients}>{Object.entries(original.coeficientes).map(([k,v])=>`${k} = ${v}`).join(' · ')}</p>}</details>}
+            {actual&&<details><summary>Applied datum · {actual.fuente}</summary><pre>{JSON.stringify(actual,null,2)}</pre></details>}
+            <div className={styles.actions}><button type="button" aria-label={`${actual?"Edit":'Override'} ${englishLabel(nombresDatosPuros[id])} for ${nombre}`} disabled={!admite||!dentro||!original} onClick={()=>editar(cas,id)}>{actual?"Edit override":'Override'}</button>{actual&&<button type="button" aria-label={`Use catalog record for ${englishLabel(nombresDatosPuros[id])} for ${nombre}`} onClick={()=>{if(cambiar(sustituirDatoPuro(datos,cas,id,undefined),originales??{}))setEdicion(null);}}>Use catalog record</button>}</div>
             {activa&&<div className={styles.form}>
-              {id==='volumen_liquido'?<>{entrada('valor','Volumen molar del líquido')}<label>Unidad<select aria-label="Unidad del volumen molar" value={edicion.campos.unidad} onChange={e=>setEdicion({...edicion,campos:{...edicion.campos,unidad:e.target.value}})}>{['m3/mol','cm3/mol','L/mol'].map(u=><option key={u}>{u}</option>)}</select></label></>:<>
-                {id==='presion_vapor'&&<label>Forma<select aria-label="Forma de presión de vapor" value={edicion.campos.forma} onChange={e=>setEdicion({...edicion,campos:{...edicion.campos,forma:e.target.value}})}><option>WagnerPoling</option><option>WagnerMcGarry</option></select></label>}
-                <small>{id==='cp_gas_ideal'?'Cp/R = a0 + a1 T + a2 T² + a3 T³ + a4 T⁴ · T en K':'Wagner · T y Tc en K; P y Pc en Pa'}</small>
+              {id==='volumen_liquido'?<>{entrada('valor','Liquid molar volume')}<label>Unit<select aria-label="Molar-volume unit" value={edicion.campos.unidad} onChange={e=>setEdicion({...edicion,campos:{...edicion.campos,unidad:e.target.value}})}>{['m3/mol','cm3/mol','L/mol'].map(u=><option key={u}>{u}</option>)}</select></label></>:<>
+                {id==='presion_vapor'&&<label>Form<select aria-label="Vapor-pressure form" value={edicion.campos.forma} onChange={e=>setEdicion({...edicion,campos:{...edicion.campos,forma:e.target.value}})}><option>WagnerPoling</option><option>WagnerMcGarry</option></select></label>}
+                <small>{id==='cp_gas_ideal'?'Cp/R = a0 + a1 T + a2 T² + a3 T³ + a4 T⁴ · T in K':'Wagner · T and Tc in K; P and Pc in Pa'}</small>
                 {(id==='cp_gas_ideal'?['a0','a1','a2','a3','a4']:['A','B','C','D','Tc','Pc']).map(k=>entrada(k,k==='Tc'?'Tc [K]':k==='Pc'?'Pc [Pa]':k))}
                 {entrada('Tmin','Tmin [K]')}{entrada('Tmax','Tmax [K]')}
               </>}
               {entrada('fuente',"Override source")}
-              {problema&&<small role="status">{problema}</small>}
-              <div className={styles.actions}><button type="button" disabled={!!problema} onClick={aplicar}>Apply override</button><button type="button" onClick={()=>setEdicion(null)}>Descartar borrador</button></div>
+              {problema&&<small role="status">{englishLabel(problema)}</small>}
+              <div className={styles.actions}><button type="button" disabled={!!problema} onClick={aplicar}>Apply override</button><button type="button" onClick={()=>setEdicion(null)}>Discard draft</button></div>
             </div>}
           </div>;
         })}
       </section>;
     })}
     {admite&&!identidades.size&&<p>Specify component identities to look up their data.</p>}
-    <small>El backend valida el potencial y sus derivadas al comprobar o evaluar el modelo.</small>
+    <small>The backend validates the potential and its derivatives when checking or evaluating the model.</small>
   </div>;
 }
 export default function EditorDatosPuros(props:Props){
   const [abierto,setAbierto]=useState(false),n=Object.values(props.datos??{}).reduce((n,x)=>n+Object.keys(x).length,0);
-  return <details id={props.id} tabIndex={-1} className={styles.editor} onToggle={e=>setAbierto(e.currentTarget.open)}><summary>Package properties{n?` · ${n} ${n===1?'sustitución':'sustituciones'}`:''}</summary>{abierto&&<Contenido key={JSON.stringify(props.modelo)} {...props}/>}</details>;
+  return <details id={props.id} tabIndex={-1} className={styles.editor} onToggle={e=>setAbierto(e.currentTarget.open)}><summary>Package properties{n?` · ${n} ${n===1?'override':'overrides'}`:''}</summary>{abierto&&<Contenido key={JSON.stringify(props.modelo)} {...props}/>}</details>;
 }

@@ -141,7 +141,7 @@ export default function MateriaFluida() {
         <svg className="matter-fallback" viewBox="0 0 500 500" fill="none"><path d="M136 184C103 121 169 72 228 93C294 54 337 99 341 151C409 174 415 263 363 295C368 372 293 413 235 371C168 399 108 349 131 287C91 250 99 211 136 184Z" fill="#bbc4b6"/><path d="M170 167C167 125 221 112 256 134C307 109 345 162 321 199C365 247 314 300 278 294C273 352 204 350 192 303" stroke="#e9ecdf" strokeWidth="20" strokeLinecap="round"/></svg>
         <canvas ref={canvasRef} className="matter-canvas" />
       </div>
-      <div className="matter-caption"><span>Materia en movimiento</span><button type="button" onClick={() => setPaused(p => !p)} aria-pressed={paused} aria-label={paused ? "Reanudar animación" : "Pausar animación"}>{paused ? "Reanudar" : "Pausar"}<span aria-hidden="true">{paused ? "▷" : "Ⅱ"}</span></button></div>
+      <div className="matter-caption"><span>Matter in motion</span><button type="button" onClick={() => setPaused(p => !p)} aria-pressed={paused} aria-label={paused ? "Resume animation" : "Pause animation"}>{paused ? "Resume" : "Pause"}<span aria-hidden="true">{paused ? "▷" : "Ⅱ"}</span></button></div>
     </div>
   );
 }

@@ -68,7 +68,7 @@ check(leer(mismos),'A subgroup can appear with different counts in different mol
 const Componente=cargar('CoberturaGruposPaquete').default;
 const render=c=>renderToStaticMarkup(React.createElement(Componente,{cobertura:c,componentes:[...cs,{id:8,nombre:'Sin identificar'},{id:9,nombre:'Fuera',identidadQuimica:{cas:'108-88-3'}}]}));
 const html=render(original);
-for(const texto of ['UNIFAC original','2 × Fixture A (1)','10 → 20, 20 → 10','Identidad sin declarar','No assignment in this table','Outside the published catalog','SHA-256','Data coverage. State and stability are checked during evaluation.'])check(html.includes(texto),'Visible coverage: '+texto);
+for(const texto of ['UNIFAC original','2 × Fixture A (1)','10 → 20, 20 → 10','Identity not declared','No assignment in this table','Outside the published catalog','SHA-256','Data coverage. State and stability are checked during evaluation.'])check(html.includes(texto),'Visible coverage: '+texto);
 check(!html.includes('<details open'),'Sources remain collapsed');
 check(!html.includes('Physical certification · passed'),'Coverage is not a physics certificate');
 const escapado=structuredClone(original);escapado.especies[0].subgrupos[0].nombre='<script>dato</script>';
@@ -95,9 +95,9 @@ const ambiguo=structuredClone(nueva);ambiguo.paquetes[1].pares=[];rechaza(()=>re
 const ambiguoD=structuredClone(nuevaD);ambiguoD.paquetes[0].pares=[];rechaza(()=>diagramas.leerCapacidadesDiagramas(ambiguoD),'Diagram group package requires null pairs');
 const Alcance=cargar('AlcancePaqueteRed').default;
 const alcance=renderToStaticMarkup(React.createElement(Alcance,{paquete:p,componentes:cs}));
-check(alcance.includes('Package scope and evidence')&&alcance.includes('Cobertura de grupos del paquete'),'Coverage inside existing scope panel');
+check(alcance.includes('Package scope and evidence')&&alcance.includes('Package group coverage'),'Coverage inside existing scope panel');
 const antiguo=renderToStaticMarkup(React.createElement(Alcance,{paquete:cap.paquetes[1],componentes:cs}));
-check(!antiguo.includes('Cobertura de grupos del paquete'),'No group requirements on non-group packages');
+check(!antiguo.includes('Package group coverage'),'No group requirements on non-group packages');
 igual(JSON.stringify(original),antes,'Group metadata preserved intact');
 igual(JSON.stringify(cap),capAntes,'Existing dynamic capabilities untouched');
 igual(JSON.stringify(capD),capDAntes,'Existing diagram capabilities untouched');

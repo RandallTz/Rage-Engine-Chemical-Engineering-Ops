@@ -39,7 +39,7 @@ const elegido=modeloElegido(opciones,claveModelo(revision));elegido.version='otr
 check(opciones[1].modelo.version==='2'&&JSON.stringify(publicados)===antes,'Neither input catalog nor option identities are mutable aliases');
 const Selector=cargar('SelectorModeloTermodinamico').default;
 const html=renderToStaticMarkup(React.createElement(Selector,{actual:desaparecido,publicados,catalogoCargado:true,nombre:'Paquete',elegir(){throw new Error('SSR cannot select');}}));
-check(html.includes('guardado; no publicado')&&html.includes('selected=""'),'Saved unavailable selection is shown rather than a placeholder or different model');
+check(html.includes('saved; not published')&&html.includes('selected=""'),'Saved unavailable selection is shown rather than a placeholder or different model');
 check(!html.includes('unifac'),'No unpublished UNIFAC option is fabricated');
 const htmlRevision=renderToStaticMarkup(React.createElement(Selector,{actual:revision,publicados,catalogoCargado:true,nombre:'Paquete',elegir(){}}));
 check(htmlRevision.includes('modelo-A · v2'),'Selected revision remains legible');
@@ -151,7 +151,7 @@ const saved={solicitud:leer(prefijo+'-peticion.json'),respuesta:leer(prefijo+'-r
 const Paquetes=cargar('PaquetesEjecutadosRed').default;
 const tabla=renderToStaticMarkup(React.createElement(Paquetes,{ejecucion:prueba}));
 for(const p of saved.respuesta.resultados.procedenciaModelo)check(tabla.includes(p.huella),'Original data fingerprint is visible in technical references');
-check(tabla.includes('Identidades y masas molares usadas'),'Executed material identity is inspectable in existing technical references');
+check(tabla.includes('Identities and molar masses used'),'Executed material identity is inspectable in existing technical references');
 for(const estados of Object.values(saved.respuesta.resultados.estados))for(const c of estados[0].evaluacion.componentes){
   check(tabla.includes(c.cas)&&tabla.includes(c.fuente),'Published identity and source retained per volume');
   check(tabla.includes(cargar('formatearNumeroMotor').formatearNumeroMotor(c.masaMolarKgMol,12)),'Actual molar mass shown without rounding to an input default');
@@ -177,6 +177,6 @@ const sinEstado=structuredClone(saved);delete sinEstado.respuesta.resultados.est
 // branch without treating the synthetic fragment as a valid backend response.
 sinEstado.respuesta.resultados.estados={};
 const incompleta=renderToStaticMarkup(React.createElement(Paquetes,{ejecucion:sinEstado}));
-check(incompleta.includes('No publicada')&&!incompleta.includes('0.018015268'),'Missing evaluation does not infer a molar mass from CAS');
+check(incompleta.includes('Not published')&&!incompleta.includes('0.018015268'),'Missing evaluation does not infer a molar mass from CAS');
 check(JSON.stringify(saved)===originalJSON,'Saved evidence remains unchanged');
 console.log(`${checks} comprobaciones de integración, incluidos ${reales} catálogos reales: alcance publicado, modelo/versión, selección sin sustituciones, caducidad de resultados/caché, identidades y masas molares. No amplía capacidades físicas.`);

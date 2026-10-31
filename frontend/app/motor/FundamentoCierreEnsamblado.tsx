@@ -1,3 +1,4 @@
+import { englishLabel } from '../models/english';
 import type {EstructuraTermodinamica} from './estructuraTermodinamica';
 import {fundamentosEquilibrio} from './relacionesTermodinamicas';
 import FormulaMateria from './FormulaMateria';
@@ -8,11 +9,11 @@ import styles from './ecuacionesFinales.module.css';
 export default function FundamentoCierreEnsamblado({estructura}:{estructura:EstructuraTermodinamica}){
   return <details className={styles.definitions}>
     <summary>Closure foundations and connections</summary>
-    <p className={styles.scope}>Marco termodinámico · las ecuaciones ejecutadas son las publicadas arriba por el motor.</p>
-    {estructura.cierres.map(c=><section className={styles.relations} key={c.volumenId} aria-label={`Fundamento del cierre ${c.volumenId}`}>
-      <h3>{c.volumenId} · {c.modelo?.id??'Modelo pendiente'} · marco del equilibrio</h3>
+    <p className={styles.scope}>Thermodynamic framework · the executed equations are those published above by the Engine.</p>
+    {estructura.cierres.map(c=><section className={styles.relations} key={c.volumenId} aria-label={`Closure foundation ${c.volumenId}`}>
+      <h3>{c.volumenId} · {c.modelo?.id??'Missing model'} · equilibrium framework</h3>
       {c.reconstruccion!=='pendiente'&&c.politica&&fundamentosEquilibrio(c.reconstruccion,c.politica).map(r=><div className={styles.relation} key={r.id}>
-        <span>{r.titulo}</span><FormulaMateria latex={r.latex} lectura={r.titulo} bloque/>
+        <span>{englishLabel(r.titulo)}</span><FormulaMateria latex={r.latex} lectura={englishLabel(r.titulo)} bloque/>
       </div>)}
     </section>)}
     <details className={styles.definitions}><summary>Structural conservation · shared transfers</summary>

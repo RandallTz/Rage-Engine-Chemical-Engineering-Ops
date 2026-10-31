@@ -78,10 +78,10 @@ const invalida=structuredClone(prueba.solicitud);invalida.datos[t].declaracion.t
 igual(JSON.stringify(prueba),antes,'Restrictions do not mutate input values');
 const meth={id:88,nombre:'Metanol de QA',identidadQuimica:{cas:'67-56-1'}};prueba.solicitud.componentes.push(meth);
 const html=renderToStaticMarkup(React.createElement(Editor,{red:prueba,maximo:7,paquetes:cap.paquetes,cambiar(){return false;}}));
-check(/aria-label="Metanol de QA en Volumen A"[^>]*disabled=""/.test(html),'New disallowed membership disabled');
+check(/aria-label="Metanol de QA in Volumen A"[^>]*disabled=""/.test(html),'New disallowed membership disabled');
 prueba.solicitud.volumenes[0].componenteIds.push(88);
 const existente=renderToStaticMarkup(React.createElement(Editor,{red:prueba,maximo:7,paquetes:cap.paquetes,cambiar(){return false;}}));
-check(!/aria-label="Metanol de QA en Volumen A"[^>]*disabled=""/.test(existente),'Existing incompatible membership can be removed');
+check(!/aria-label="Metanol de QA in Volumen A"[^>]*disabled=""/.test(existente),'Existing incompatible membership can be removed');
 check(prueba.solicitud.volumenes[0].componenteIds.includes(88),'No automatic deletion of existing quantities');
 
 if(process.argv.includes('--servicio')){
