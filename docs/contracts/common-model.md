@@ -327,6 +327,20 @@ Located diagnostics distinguish `nonlinear_invalid_settings`, `nonlinear_invalid
 
 Compilation v1 adds `derivedExecution.nonlinearBlock: {rows,method:"damped_newton",settings,initialization,scope}` for derived versions 3 and 4 (the v4 extension is below). The original selected rows and differential AST remain visible; the strategy names the actual nested Newton method. Results adds strict optional `procedencia.nonlinearDiagnostics` as specified in the results contract, algebraic observables, original SI residual series and `algebraic.scaled_residual`. All settings participate in existing scientific signatures and invalidation. F0 keeps derived structure independently `not_evaluated` before full compilation and distinguishes incompatible nonlinear initialization from physical certification. No routes, v2 execution provenance, thermodynamic package or frozen M1 inputs are changed by this extension.
 
+**Package closures in derived execution (31 October 2026).** A selection whose volume records a package closure compiles with `closureStrategy: "package_closure"` and the optional `derivedExecution.thermodynamicClosures`. The field is present exactly when the strategy is `package_closure`. Each row, one per volume, has exactly these fields:
+- `volumeId`, `package`, `species[]` (non-empty);
+- `mode`: `"single_phase"` or `"equilibrium"`;
+- `specification`: `"PH"` or `"UV"`;
+- `anchor`: `null`, `"gas"` or `"liquid"`;
+- `liquidOnly` (boolean);
+- `candidatePhases`: non-empty, from `V` and `L`;
+- `fingerprint`;
+- `evaluations` (non-negative integer);
+- `inlets`: an object of declared-inlet descriptions;
+- `source`: `"core.termodinamica.derived_bridge"`.
+
+The TypeScript `readCompilationReport` / `readThermodynamicClosures` accept these rows. They reject an unknown field, a mode or phase outside these sets, a duplicate volume, a closure without the package strategy and a package strategy without closures. `frontend/verificar_demo01_models.mjs` checks this against the reports Python publishes for the Demo 0.1 reactor and drum. Results carry the same rows in `procedencia.thermodynamicClosures` (see the results contract).
+
 ### 7a.3. Semi-explicit index-one DAEs (F3, 28 October 2026)
 
 Version 4 extends the version-3 selection with required `dae: {stateBounds: Record<quantityId,{lowerDataId,upperDataId}>, driftTolerance: number}`. Bounds cover exactly the differential states and bind finite ordered SI-compatible data; algebraic bounds and scales remain in `nonlinear`. `0 < driftTolerance <= 1e-9` and the Newton residual tolerance cannot exceed it. Versions 1/2/3 keep their previous meanings. Only the existing SciPy BDF method is admitted. No dependency or residual DAE backend is added.

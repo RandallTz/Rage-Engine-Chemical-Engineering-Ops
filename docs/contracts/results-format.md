@@ -57,6 +57,14 @@ The old `GraficoXY.tsx` of nondimensionalization is archived in `docs/history/ar
 
 Derived-execution version-3 runs add optional `procedencia.nonlinearDiagnostics` with `{version:1, method:"damped_newton", sourceSignature, settings, evaluatedSolves, lastEvaluation, failures, publishedSamples, scope}`. `settings` equals the selected nonlinear settings in the compilation report. `lastEvaluation` and each failure retain the equation/quantity IDs, stage, path, model/source/formulation signatures, time, iterations/evaluations/backtracks, residual/step norms, condition estimate and termination reason; unavailable numerical measures are `null`, never nonfinite JSON. Failures additionally require matching `code`/termination reason and a message. The scope explicitly states that finite deterministic probes are not global uniqueness certification.
 
+Derived runs with a package closure (31 October 2026) add the following results:
+- `procedencia.thermodynamicClosures`, the closure rows of the compilation report;
+- `procedencia.reactionEquilibrium`, the equilibrium-limit details of kinetic volumes;
+- `closure.<volumeId>.<quantityId>` series for the closure outputs (T, P or V, phase amounts, compositions, molar h/u/v/M, presence, liquid volume);
+- the checks `thermodynamics.closure.<volumeId>` and `reactions.equilibrium_limit.<volumeId>`.
+
+Phase-set changes are published as `aparicion_fase` and `desaparicion_fase` events with `propietarioId: "volumen:<id>"`. The client result reader accepts these as ordinary series, checks and provenance. The Results workspace for derived models does not yet list events; that is a pending presentation extension.
+
 Python and TypeScript readers reject unknown envelope/diagnostic fields, invalid counters or nonfinite metrics, mismatched selection/settings/signatures, inconsistent publication sample counts and failures attached to `resuelto`. The common optional F0 result signature still binds all evidence and values. Existing v0 results without this field remain readable. This metadata does not alter revision-2 `executionProvenance` or thermodynamic certification.
 
 Each publishable sample contains freshly solved `observable.<algebraicQuantityId>` values and `algebraic.residual.<equationId>` series in the original row's SI unit. `algebraic.scaled_residual` checks the maximum original residual divided by the declared dimensioned row scale against the requested Newton tolerance. Conservation retains the existing inventory/net-rate verification. Publication failure truncates all aligned series to the verified numerical prefix; zero publishable samples yield `fallido`. A converged algebraic residual supplies no equilibrium, uniqueness or physical certificate.

@@ -6,11 +6,11 @@ import {readSteadyReport,type SteadyReport} from './steadyContract';
 export type CompilationReport = TemporalCompilationReport | SteadyReport;
 export type TemporalCompilationReport = {
   symbolLabels?: Record<string, string>;
-  derivedExecution?:{version:1|2|3|4;dae?:{index:1;determinant:string;determinantBounds:string[];proof:string;method:'scipy_bdf_nested_newton';initialization:'fixed_differential_states';driftTolerance:number;stateBounds:Record<string,string[]>};sourceSignature:string;selection:DerivedExecution;proofConditions:{equationId:string;sourceEquationId:string;kind:'interval_identity'|'eliminated_coordinate_premise';latex:string}[];runtimeConditions:{equationId:string;strict:boolean;latex:string}[];reconstructions:DerivedExecution['reconstructions'];nonlinearBlock?:{rows:NonNullable<DerivedExecution['algebraic']>;method:'damped_newton';settings:NonNullable<DerivedExecution['nonlinear']>;initialization:Record<string,unknown>;scope:string};algebraicBlock?:{rows:NonNullable<DerivedExecution['algebraic']>;matrixSI:number[][];determinantSI:string;equilibratedConditionInfinity:number;conditionTest:string;solve:string}};
+  derivedExecution?:{version:1|2|3|4;dae?:{index:1;determinant:string;determinantBounds:string[];proof:string;method:'scipy_bdf_nested_newton';initialization:'fixed_differential_states';driftTolerance:number;stateBounds:Record<string,string[]>};thermodynamicClosures?:ThermodynamicClosureReport[];sourceSignature:string;selection:DerivedExecution;proofConditions:{equationId:string;sourceEquationId:string;kind:'interval_identity'|'eliminated_coordinate_premise';latex:string}[];runtimeConditions:{equationId:string;strict:boolean;latex:string}[];reconstructions:DerivedExecution['reconstructions'];nonlinearBlock?:{rows:NonNullable<DerivedExecution['algebraic']>;method:'damped_newton';settings:NonNullable<DerivedExecution['nonlinear']>;initialization:Record<string,unknown>;scope:string};algebraicBlock?:{rows:NonNullable<DerivedExecution['algebraic']>;matrixSI:number[][];determinantSI:string;equilibratedConditionInfinity:number;conditionTest:string;solve:string}};
   equationWorkbench?:EquationWorkbenchReport;
   format: 'rage.compilation'; version: 1; formulation: 'physical' | 'scaled';
   sourceModelId: string; sourceRevision: number | null; signature: string;
-  method: string; closureStrategy: 'nested_equilibrium' | 'declared_assumption';
+  method: string; closureStrategy: 'nested_equilibrium' | 'declared_assumption' | 'package_closure';
   variables: { id: string; sourceId: string; role: 'differential'; unit: string; physicalUnit: string; scaleSI: number; absoluteTolerance: number }[];
   equations: Igualdad[]; domains: unknown[]; conditions: unknown[]; direct: { simboloId: string; expresion: import('../../app/adimensionalizacion/contrato').Expresion }[]; inverse: TemporalCompilationReport['direct'];
   eliminatedVariables: string[]; auxiliaryStates: number; auxiliaryPurpose?: string;
@@ -28,6 +28,24 @@ export type TemporalCompilationReport = {
   materialDerivation?: { volumeId: string; origin: 'recorded' | 'reviewed_rebuild'; operationIds: string[]; signature: string; relationIds: string[] }[];
 };
 
+/** Package closure evaluated by derived execution (core/compilador/derived_closure.py describe()). */
+export type ThermodynamicClosureReport = {volumeId:string;package:string;species:string[];mode:'single_phase'|'equilibrium';specification:'PH'|'UV'|'TP'|null;
+  anchor:'gas'|'liquid'|null;liquidOnly:boolean;candidatePhases:string[];fingerprint:string;evaluations:number;inlets:Record<string,Record<string,unknown>>;source:'core.termodinamica.derived_bridge'};
+const CLOSURE_KEYS=['volumeId','package','species','mode','specification','anchor','liquidOnly','candidatePhases','fingerprint','evaluations','inlets','source'];
+export function readThermodynamicClosures(value: unknown): ThermodynamicClosureReport[] {
+  const isText=(v:unknown)=>typeof v==='string'&&v.length>0;
+  if(!Array.isArray(value)||!value.length||value.some(row=>!row||typeof row!=='object'||Array.isArray(row)
+    ||Object.keys(row).length!==CLOSURE_KEYS.length||Object.keys(row).some(key=>!CLOSURE_KEYS.includes(key))
+    ||!isText(row.volumeId)||!isText(row.package)||!Array.isArray(row.species)||!row.species.length||!row.species.every(isText)
+    ||!['single_phase','equilibrium'].includes(row.mode)||![null,'PH','UV','TP'].includes(row.specification)||![null,'gas','liquid'].includes(row.anchor)
+    ||typeof row.liquidOnly!=='boolean'||!Array.isArray(row.candidatePhases)||!row.candidatePhases.length||!row.candidatePhases.every((p:unknown)=>p==='V'||p==='L')
+    ||!isText(row.fingerprint)||!Number.isSafeInteger(row.evaluations)||row.evaluations<0
+    ||!row.inlets||typeof row.inlets!=='object'||Array.isArray(row.inlets)||Object.values(row.inlets).some(v=>!v||typeof v!=='object'||Array.isArray(v))
+    ||row.source!=='core.termodinamica.derived_bridge'))throw new Error('Invalid thermodynamic closure report.');
+  if(new Set(value.map(row=>row.volumeId)).size!==value.length)throw new Error('Duplicate thermodynamic closure volume.');
+  return value as ThermodynamicClosureReport[];
+}
+
 export function readCompilationReport(value: unknown): CompilationReport {
   if (!value || typeof value !== 'object') throw new Error('The compiler returned an invalid report.');
   if('version' in value&&value.version===2)return readSteadyReport(value);
@@ -38,10 +56,11 @@ export function readCompilationReport(value: unknown): CompilationReport {
   if(report.derivedExecution!==undefined){
     const derived=report.derivedExecution;
     if(!derived||![1,2,3,4].includes(derived.version)||!/^[a-f0-9]{64}$/.test(derived.sourceSignature)||!Array.isArray(derived.proofConditions)||!Array.isArray(derived.runtimeConditions)||!Array.isArray(derived.reconstructions)
-      ||Object.keys(derived).some(key=>!['version','sourceSignature','selection','proofConditions','runtimeConditions','reconstructions','algebraicBlock','nonlinearBlock','dae'].includes(key))
+      ||Object.keys(derived).some(key=>!['version','sourceSignature','selection','proofConditions','runtimeConditions','reconstructions','algebraicBlock','nonlinearBlock','dae','thermodynamicClosures'].includes(key))
       ||derived.proofConditions.some(row=>!row||typeof row.equationId!=='string'||typeof row.sourceEquationId!=='string'||!['interval_identity','eliminated_coordinate_premise'].includes(row.kind)||typeof row.latex!=='string')
       ||derived.runtimeConditions.some(row=>!row||typeof row.equationId!=='string'||typeof row.strict!=='boolean'||typeof row.latex!=='string'))throw new Error('Invalid derived execution report.');
     readDerivedExecution(derived.selection);
+    if(derived.thermodynamicClosures!==undefined)readThermodynamicClosures(derived.thermodynamicClosures);
     if(derived.version!==derived.selection.version||derived.version===1&&derived.algebraicBlock!==undefined||derived.version===2&&!derived.algebraicBlock)throw new Error('Algebraic block version mismatch.');
     if(derived.version===3||derived.version===4){
       const block=derived.nonlinearBlock;
@@ -69,7 +88,8 @@ export function readCompilationReport(value: unknown): CompilationReport {
   if(report.equationWorkbench!==undefined)readEquationWorkbenchReport(report.equationWorkbench);
   if (required.some(key => !Object.hasOwn(report, key)) || Object.keys(report).some(key => !required.includes(key) && !optional.includes(key))) throw new Error('Unknown or missing compilation report fields.');
   if (report.format !== 'rage.compilation' || report.version !== 1 || !['physical', 'scaled'].includes(report.formulation)
-    || !['nested_equilibrium', 'declared_assumption'].includes(report.closureStrategy)
+    || !['nested_equilibrium', 'declared_assumption', 'package_closure'].includes(report.closureStrategy)
+    || (report.closureStrategy === 'package_closure') !== Boolean(report.derivedExecution?.thermodynamicClosures)
     || typeof report.signature !== 'string' || !report.signature || typeof report.sourceModelId !== 'string'
     || typeof report.method !== 'string' || !Array.isArray(report.variables) || !report.variables.length&&!(report.auxiliaryStates>0)
     || !Array.isArray(report.equations) || !Array.isArray(report.eliminatedVariables) || !Array.isArray(report.direct)

@@ -24,6 +24,7 @@ Rules that apply to every prompt:
 | 1 | Clear the four non-blocking Spanish remnants of the interface | Light | `demo-01-release` (polish) | Done by Claude 31 October 2026 and committed (577f3a6) except two deferred items (see below) |
 | 2 | F3 slice 5 inverse specifications over HTTP, contracts, strict readers and Solve/Results | Light | F3 | Waiting for Codex; the backend is committed in 51c2b9b |
 | 3 | F5-C1 equilibrium-reaction constraint in Model/compiler | Strong (Astra) | F5 (simultaneous chemical and phase equilibrium) | Waiting for Codex |
+| 4 | Results: list phase events of derived models; describe `package_closure` in the compilation summary | Light | `demo-01-release` (polish, not blocking) | Waiting for Codex |
 
 ## Prompts
 
@@ -47,4 +48,10 @@ Expose the committed F3 slice-5 inverse specifications (core/solvers/inverse_spe
 
 ```
 Implement F5-C1 from the F5 section of docs/engine/multiphysics-roadmap.md: an equilibrium-reaction constraint g_j = nu_j^T mu/RT = 0 that calls core.reactions.chemical_equilibrium.evaluate_reactions (accepted, 355ac28), with the anchor/standard-state choice exposed as a recorded assumption and the extents admitted as unknowns. First confirm the API differences recorded there. Tests against minimise_gibbs and solve_extents. Follow the common rules in docs/engine/codex-queue.md.
+```
+
+### 4. Derived-model phase events and package-closure summary (light model)
+
+```
+Two presentation gaps found while running the Demo 0.1 models in the app (docs/engine/multiphysics-roadmap.md, "Demo 0.1 release"). (1) The Results workspace for derived models does not list result events: show the published aparicion_fase / desaparicion_fase events (time, description, propietarioId "volumen:<id>") in the existing Results view, for example as a list in Numerical diagnostics and as markers on the time charts; reuse the existing event presentation of the assembly views, no new page. (2) frontend/app/models/CompilationSummary.tsx describes closureStrategy "package_closure" with the generic "declared thermodynamic assumptions" sentence; describe it as the selected package closing each volume's UV/PH state at every RHS evaluation through the derived-execution bridge, using report.derivedExecution.thermodynamicClosures (contract: docs/contracts/common-model.md "Package closures in derived execution"). Display only; no protocol change. Check with node frontend/verificar_demo01_models.mjs, verificar_physical_journals.mjs and the repository TypeScript check. Follow the common rules in docs/engine/codex-queue.md.
 ```
