@@ -29,16 +29,20 @@ It runs the model's relations **without branches by equipment, operation or subs
 | Verification | Auxiliary integrals of the matter and energy exchanged with the surroundings; global conservation residual |
 
 - The data (a number or an expression in `t`) are converted to SI with the single units service. `core/expresiones_motor` parses the expressions, including the derivative dP/dt.
-- Internal evaluations use the fast closure (`core/termodinamica/volumen.py`, seeded and without the full stability test).
+- RHS evaluations use the fast closure (`core/termodinamica/volumen.py`, seeded and without the full stability test). Event probes prefer the certified closure. If it raises `FueraDeAlcance`, they restore the original RHS seeds and retry that probe with the seeded closure; the failure itself is neither a physical stop nor a phase event. Seeds are restored after either path, including failures. Published samples still require their own certification.
 - Each published sample is certified with `capa.cierre`: every candidate with its `tm`.
 
 ## 2. Solver (`core/solvers/integrador.py`)
 
-Dormand-Prince 5(4) with per-component tolerances. The system offers it `rhs(t, y)` and `firma(t, y)`, an arbitrary discrete value; here it is the set of phases of each volume, but the solver does not know that.
+Dormand-Prince 5(4) or variable-order implicit BDF with per-component tolerances. The structural compiler honors `estudio.metodoSolicitado` (`rk45`, `bdf`, or the existing RK45 default); `euler_implicito` is rejected with `unsupported_method` because variable-order BDF is not implicit Euler, and other unsupported choices also fail explicitly and provenance names the method actually run. The system offers `rhs(t, y)` and `firma(t, y)`, an arbitrary discrete value; here it is the set of phases of each volume, but the solver does not know that.
 
-- **If the signature changes within a step:** it bisects on the dense output, reintegrates to the instant of the change and restarts there, so as not to average across the kink in the properties.
+The optional `event_state(t, y) -> (signature, margins)` hook supplies fixed positional margin identities, with finite nonnegative values or `None` when inactive. The compiler supplies the appearance stability margin (`tm_nueva`) and the smallest present phase fraction per volume. Probes preserve the RHS seed context. Systems without this hook retain their existing endpoint protocol.
+
+- **Approaching a regime boundary:** four interior/end checks inspect margins. A fall below half the preceding positive margin above 1e-8 retries the step at a quarter of its length, down to max(h_min, 1e-8 tf). The accepted trend also caps the next step. This finite resolution heuristic can miss arbitrary closed windows or dips below the declared margin resolution; it is not a completeness proof.
+
+- **If the signature changes within a step:** it brackets the first changed interior check against the preceding unchanged check, bisects on the dense output, reintegrates to the instant of the change and restarts there. If reintegration moves the crossing, it retries rather than publishing an event with identical before/after signatures.
 - **If a stage fails:** it retries with a smaller step.
-- **If the system raises `Detencion`** (depletion, an extracted phase that is absent…): the trajectory stops with its code.
+- **If an RK/BDF trial stage raises `Detencion`** (depletion, an extracted phase that is absent…): shorten the step and retry with `first_step` so the initial-step probe cannot jump past the same stop. When no further step above `h_min` is possible, stop with its code at the last accepted point.
 - **If the system does not accept the new regime** (`admite(firma)` returns a reason, for example a single-phase policy when another phase appears): it stops at the instant of the change with code `politica_incumplida`.
 
 ## 3. Evidence
@@ -61,6 +65,12 @@ In all six cases, in addition:
 - every candidate phase published at every sample, with β = 0 before it appears.
 
 A static check verifies that the compiler, the solver, the layer, the relations, the results and the units do not mention equipment, operations or substances.
+
+**F9-R5 common-path repair, 23 October 2026.** The unchanged Dortmund water–1-butanol heating reproducer at z_butanol = 0.027865 previously published only vapor appearance at 50.4192248 s with two output samples, missing the closed L–L window. An independent PH scan along H0 + Q t brackets that window at [22.7549316, 23.3936035] s. With the optional margin hook, RK45 and BDF each publish L–L appearance, disappearance and the later vapor appearance with either 2 or 11 output samples. All window boundaries agree with the reference within 4.7e-5 s; matter residual is zero, energy residual is at most 1.30e-15 and complementarity at most 1.73e-11. The four solves take 41.620/37.324 s (RK45) and 52.340/65.136 s (BDF); the two-test suite including the independent reference and seed-context check takes 224.226 s. Evidence: ignored `.tmp/f9-r5-evidence.json`.
+
+`python tests/test_solver_stability_margins.py -v` passes four generic regressions in 0.026 s: a forced full step over a narrow closed window with both methods, interior bracketing, unchanged legacy hook-free behavior and explicit invalid-margin rejection. The common-window test also verifies the actual method in result provenance; it exposed and repaired the structural compiler's previous silent RK45 execution for a BDF request. The 71 vertical-slice and 27 explicit-compiler checks pass. The post-repair M1 U1 reference/refinement suite passes in 150.039 s with identical metrics and unchanged frozen inputs and kernel-backlog hashes.
+
+The legacy revision-1 assembly was retired on 24 October and its nine cases now run through the common compiler. The R5 follow-up adds the cold-probe fallback and exact four-component Dortmund bubble-edge regression, preserves the stage-stop retry, and verifies all requested R5 paths; it awaits independent review. The regenerated benzene-toluene result has 28 samples (26 requested grid points plus two genuine phase events): the previous 29th point came from an unchanged-signature attempt next to liquid disappearance, which R5 now retries without publishing. See the [F9 retirement and follow-up evidence](multiphysics-roadmap.md#f9-cross-cutting-quality-and-reliable-use). No universal event-completeness guarantee is made.
 
 `node verificar_corte_vertical.mjs` (14 checks): the HTTP route returns the same set, and the charting engine draws it, including the β of every candidate against time.
 
