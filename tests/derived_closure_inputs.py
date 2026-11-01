@@ -214,7 +214,9 @@ def reference_drum(times, data=DRUM):
 
     n0 = np.asarray(data['m0']) / M
     H0 = s.equilibrio_TP(data['T0'], data['P'], n0).H
-    sol = solve_ivp(rhs, (0, times[-1]), [*data['m0'], H0], method='DOP853', rtol=1e-10, atol=[1e-10, 1e-10, 1e-4], t_eval=times)
+    # max_step keeps the trial stages inside the package domain on long horizons (the demo drum's 3000 s)
+    sol = solve_ivp(rhs, (0, times[-1]), [*data['m0'], H0], method='DOP853', rtol=1e-10, atol=[1e-10, 1e-10, 1e-4], t_eval=times,
+                    max_step=5.0)
     temperatures = [closure(y)[1].T for y in sol.y.T]
     return sol, np.asarray(temperatures)
 

@@ -64,8 +64,11 @@ def reactor_model(data=REACTOR, journal_extra=('liquid_only', 'liquid_formation_
                             {'id': 'hydrolysis', 'stoichiometry': {'1': '1', '2': '1', '3': '-1', '4': '-1'}, 'orders': {'3': 1, '4': 1},
                              'rateConstantDataId': datum('reverseRate', data['kr'], 'm3/(mol*s)')}]}
     if data['E']:
-        for reaction in config['reactions']:
-            reaction['arrhenius'] = {'energyDataId': datum('activation', data['E'], 'J/mol'), 'temperatureDataId': datum('rateTemperature', data['Tref'], 'K')}
+        reference = datum('rateTemperature', data['Tref'], 'K')
+        energies = [datum('activation', data['E'], 'J/mol')]
+        energies.append(datum('reverseActivation', data['Er'], 'J/mol') if 'Er' in data else energies[0])
+        for reaction, energy_id in zip(config['reactions'], energies):
+            reaction['arrhenius'] = {'energyDataId': energy_id, 'temperatureDataId': reference}
     model['motores']['kineticReactions'] = {'format': 'rage.kinetic-reactions', 'version': 1, 'volumes': {owner: config}}
     volume['frontera'] = {'tipo': 'rigida', 'datoId': config['volumeDataId']}
     datum(owner + '.pressure', data['P'], 'Pa', 'frontera')
@@ -152,13 +155,15 @@ def reference_reactor(times, data=REACTOR):
         return float(n[present] @ h[present]) - P * float(n @ vL)
 
     def temperature(U, n):
-        return brentq(lambda T: internal_energy(T, n) - U, 300., 400., xtol=1e-11, rtol=1e-15)
+        lo, hi = phase.sistema.T_rango   # the central difference needs T +- 1e-3 K inside the domain
+        return brentq(lambda T: internal_energy(T, n) - U, lo + 2e-3, hi - 2e-3, xtol=1e-11, rtol=1e-15)
 
     def rhs(t, y):
         n, U = np.asarray(y[:4]), y[4]
         T = temperature(U, n)
         c = n / data['V']
-        r = data['kf'] * c[0] * c[1] - data['kr'] * c[2] * c[3]
+        arrhenius = lambda E: np.exp(-E / 8.314462618 * (1 / T - 1 / data['Tref'])) if data['E'] else 1.0
+        r = data['kf'] * arrhenius(data['E']) * c[0] * c[1] - data['kr'] * arrhenius(data.get('Er', data['E'])) * c[2] * c[3]
         return [*(np.array([-1, -1, 1, 1]) * r * data['V']), data['UA'] * (data['Tj'] - T)]
 
     n0 = np.asarray(data['n0'], dtype=float)

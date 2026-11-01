@@ -59,7 +59,8 @@ class PackageReactor(unittest.TestCase):
         peak = int(np.argmax(T))
         self.assertEqual(peak, int(np.argmax(reference_T)))
         self.assertTrue(6.0 <= times[peak] <= 10.0, times[peak])
-        self.assertAlmostEqual(T[peak], 337.1757, delta=0.05)
+        # 337.1757 K before R3 (31 October 2026): the tabulated acetic acid cp_L moves the peak to 337.5072 K.
+        self.assertAlmostEqual(T[peak], 337.5072, delta=0.05)
         self.assertLess(T[-1], T[peak])
 
     def test_equilibrium_limit_row_against_gibbs_minimisation(self):

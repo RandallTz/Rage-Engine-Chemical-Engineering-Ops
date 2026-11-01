@@ -158,6 +158,35 @@ class LiquidOnlySystem(unittest.TestCase):
         self.assertEqual(gas.provenance["formation"][ETOH]["state"], "ideal gas, 298.15 K, 1 bar")
 
 
+class LiquidHeatCapacity(unittest.TestCase):
+    """R3: away from T0 the acetic acid liquid follows the tabulated Perry 2-153 cp_L, not the monomer gas + Psat."""
+
+    def test_cp_against_independent_sources(self):
+        e = md.especie(ACOH)
+        self.assertEqual(e.T_rango, (289.81, 391.05))
+        # CRC standard-state liquid cp (thermo CRCSTD) at 298.15 K and the VDI table's first point at 391.15 K.
+        # Perry 2-153 runs 4.3 % above VDI there (review RD-4): the 5 % bound is a source-spread bound, not
+        # a precision claim; tighten it only against a second independent table.
+        self.assertAlmostEqual(e.cp_liquido(298.15), 123.3, delta=0.01 * 123.3)
+        self.assertAlmostEqual(e.cp_liquido(391.05), 145.33, delta=0.05 * 145.33)
+        self.assertGreater(e.cp_liquido(350.0), e.cp_liquido(330.0))
+        self.assertIsNone(md.especie(ETOH).cp_L)
+
+    def test_one_gibbs_function_anchored_at_T0(self):
+        import dataclasses
+        e = md.especie(ACOH)
+        psat_route = dataclasses.replace(e, cp_L=None, T_cp_L=None, fuente_cp_L=None)
+        for f in ("g_L", "h_L", "s_L"):
+            self.assertAlmostEqual(getattr(e, f)(md.T0, md.P0), getattr(psat_route, f)(md.T0, md.P0), delta=1e-9)
+        d = 1e-3
+        for T in (300.0, 330.0, 370.0):
+            cp = (e.h_L(T + d, md.P0) - e.h_L(T - d, md.P0)) / (2 * d)
+            self.assertAlmostEqual(cp, e.cp_liquido(T), delta=1e-4)
+            gibbs_helmholtz = -T * T * (e.g_L(T + d, md.P0) / (T + d) - e.g_L(T - d, md.P0) / (T - d)) / (2 * d)
+            self.assertAlmostEqual(gibbs_helmholtz, e.h_L(T, md.P0), delta=1e-3)
+            self.assertAlmostEqual((e.g_L(T, 3e5 + 1) - e.g_L(T, 3e5 - 1)) / 2, e.vL, delta=1e-12)
+
+
 class Esterification(unittest.TestCase):
     """EtOH + AcOH = EtOAc + H2O in the liquid with the registered acetic acid, no in-process patching."""
 

@@ -20,6 +20,17 @@ fuentes independientes sin esa construccion.
     de modo que h_ig - h_L en Psat es T (R T/Psat - v_L) Psat': la ecuacion de
     Clapeyron con vapor ideal. El calor de vaporizacion no es un dato aparte.
 
+    Liquid-only species (core/catalogo.REGISTRO_SOLO_LIQUIDO, e.g. acetic acid, whose real vapour is
+    associated): the route above is kept only at the anchor (T0, P0); away from it the pure liquid follows
+    a tabulated liquid heat capacity cp_L(T), because the monomer ideal gas through Psat gives a cp_L that
+    is 13-20 % low and falls with T (review R3, 30 October 2026):
+        h_L(T,P)   = h_L*(T0,P0) + int_T0^T cp_L dT + v_L (P - P0)
+        s_L(T)     = s_L*(T0,P0) + int_T0^T cp_L/T dT
+        g_L        = h_L - T s_L
+    with * the Psat route. It is still one Gibbs function (incompressible: ds/dP = 0, dh/dP = v_L), and at
+    (T0, P0) it equals the Psat route, so formation anchors and 298.15 K equilibria are unchanged. Its
+    temperature range is that of the cp_L correlation. These species never coexist with a vapour.
+
 Limitaciones declaradas: vapor ideal (la capacidad publica P <= 5e5 Pa),
 liquido incompresible con v_L de 298.15 K, Psat solo dentro del rango de su
 correlacion y por debajo de 0.9 T_c.
@@ -31,6 +42,12 @@ core/agua_iapws95.VERSION_CHEMICALS_AUDITADA):
   cp_ig polinomio de Poling 5a ed., apendice A (50-1000 K)
   v_L   thermo VolumeLiquid a 298.15 K (metodo indicado por especie)
   M     masas molares de thermo (IUPAC)
+  cp_L  liquid-only species: DIPPR equation 100 of Perry's Chemical Engineers' Handbook 8th ed.,
+        table 2-153 (chemicals Cp_data_Perry_Table_153_100), within its own temperature range.
+        Acetic acid: 123.9 J/(mol K) at 298.15 K (CRC 123.3, Poling 123.1). Near the top of the range it runs
+        2.4-4.3 % above the VDI table (151.5 against 145.3 J/(mol K) at 391 K; review RD-4). The range
+        289.81-391.05 K (melting point to about the normal boiling point) bounds every liquid-only acetic acid
+        system, so a pressurised liquid above 391 K is outside the package (review RD-5).
 """
 
 import math
@@ -71,6 +88,10 @@ class Especie:
     T_psat: tuple           # (Tmin, Tmax) de la correlacion
     cp: tuple               # (a0..a4) con cp/R = sum a_k T^k
     T_cp: tuple
+    # Liquid-only species only (None otherwise, and then absent from the fingerprint):
+    cp_L: tuple = None      # (c0..c4) with cp_L [J/(mol K)] = sum c_k T^k
+    T_cp_L: tuple = None
+    fuente_cp_L: str = None
 
     @property
     def Tc(self):
@@ -79,7 +100,10 @@ class Especie:
     @property
     def T_rango(self):
         """Rango donde el liquido puro esta definido en este paquete."""
-        return (max(self.T_psat[0], self.T_cp[0]), min(self.T_psat[1], self.T_cp[1], 0.9 * self.Tc))
+        lo, hi = max(self.T_psat[0], self.T_cp[0]), min(self.T_psat[1], self.T_cp[1], 0.9 * self.Tc)
+        if self.cp_L is not None:
+            lo, hi = max(lo, self.T_cp_L[0]), min(hi, self.T_cp_L[1])
+        return lo, hi
 
     # --- presion de vapor ---------------------------------------------------
     def _lnPr(self, T):
@@ -117,14 +141,32 @@ class Especie:
 
     # --- liquido puro --------------------------------------------------------
     def g_L(self, T, P):
+        if self.cp_L is not None:
+            return self.h_L(T, P) - T * self.s_L(T, P)
         Ps = self.Psat(T)
         return self.g_ig0(T) + R * T * math.log(Ps / P0) + self.vL * (P - Ps)
 
     def s_L(self, T, P):
+        if self.cp_L is not None:
+            c = self.cp_L
+            return self._s_L_psat(T0, P0) + c[0] * math.log(T / T0) + sum(c[k] * (T ** k - T0 ** k) / k for k in range(1, len(c)))
+        return self._s_L_psat(T, P)
+
+    def h_L(self, T, P):
+        if self.cp_L is not None:
+            c = self.cp_L
+            return self._h_L_psat(T0, P0) + sum(c[k] * (T ** (k + 1) - T0 ** (k + 1)) / (k + 1) for k in range(len(c))) + self.vL * (P - P0)
+        return self._h_L_psat(T, P)
+
+    def cp_liquido(self, T):
+        """Tabulated liquid cp [J/(mol K)] of a liquid-only species; None for the Psat route."""
+        return None if self.cp_L is None else sum(c * T ** k for k, c in enumerate(self.cp_L))
+
+    def _s_L_psat(self, T, P):
         Ps, dl = self.Psat(T), self.dlnPsat_dT(T)
         return self.s_ig0(T) - R * math.log(Ps / P0) - R * T * dl + self.vL * Ps * dl
 
-    def h_L(self, T, P):
+    def _h_L_psat(self, T, P):
         Ps, dl = self.Psat(T), self.dlnPsat_dT(T)
         return self.h_ig(T) - R * T * T * dl + self.vL * (P - Ps) + T * self.vL * Ps * dl
 
@@ -155,10 +197,15 @@ def _especie(cas):
         r = _vp.Psat_data_WagnerMcGarry.loc[cas]
         T_psat = (float(r.Tmin), float(r.Tc))
     c = _hc.Cp_data_Poling.loc[cas]
+    liquido = {}
+    if cas in _ESPECIES_SOLO_LIQUIDO:
+        p = _hc.Cp_data_Perry_Table_153_100.loc[cas]       # DIPPR 100, J/(kmol K)
+        liquido = dict(cp_L=tuple(float(p[k]) * 1e-3 for k in ("A", "B", "C", "D", "E")), T_cp_L=(float(p.Tmin), float(p.Tmax)),
+                       fuente_cp_L="Perry 8th ed. table 2-153, DIPPR equation 100 (chemicals Cp_data_Perry_Table_153_100)")
     return Especie(cas=cas, nombre=nombre, M=M, vL=vL, fuente_vL=f"thermo VolumeLiquid {metodo} a 298.15 K",
                    psat_forma=tabla, psat=(float(r.A), float(r.B), float(r.C), float(r.D), float(r.Tc), float(r.Pc)),
                    T_psat=T_psat, cp=tuple(float(c[k]) for k in ("a0", "a1", "a2", "a3", "a4")),
-                   T_cp=(float(c.Tmin), float(c.Tmax)))
+                   T_cp=(float(c.Tmin), float(c.Tmax)), **liquido)
 
 
 def especies_disponibles():

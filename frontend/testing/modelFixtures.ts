@@ -8,6 +8,18 @@ import { crearHojasDemostracion } from '../app/motor/hojasDemostracion';
 import { crearHojasPruebaUNIFAC } from '../app/motor/hojasPruebaUNIFAC';
 import { crearHojasPruebaNComponentes } from '../app/motor/hojasPruebaNComponentes';
 import { crearHojasPruebaMultifasico } from '../app/motor/hojasPruebaMultifasico';
+import { nuevaHoja, type HojaMotor } from '../app/motor/hojasMotor';
+import { leerModeloComun } from '../motores/modelo/lector';
+import { DEMO01_BATCH_REACTOR } from './demo01/batchReactor';
+import { DEMO01_FLASH_DRUM } from './demo01/flashDrum';
+
+/** Demo 0.1 models: Python-authored with the shared fundamental-law tools (tests/demo01_*.py), frozen here. */
+function createDemo01Models(): HojaMotor[] {
+  return [DEMO01_BATCH_REACTOR, DEMO01_FLASH_DRUM].map(source => {
+    const model = leerModeloComun(structuredClone(source));
+    return { ...nuevaHoja(model.nombre), id: model.id, commonModel: model };
+  });
+}
 
 export const REGRESSION_MODELS = [
   { name: 'Matter transport', create: crearHojasPruebaMateria },
@@ -17,4 +29,5 @@ export const REGRESSION_MODELS = [
   { name: 'Multiphase & UNIFAC', create: () => [...crearHojasPruebaMultifasico(), ...crearHojasPruebaNComponentes(), ...crearHojasPruebaUNIFAC()] },
   { name: 'Phase discovery · rigid vessel', create: createPhaseDiscoveryExamples },
   { name: 'Process demonstrations', create: crearHojasDemostracion },
+  { name: 'Demo 0.1', create: createDemo01Models },
 ];

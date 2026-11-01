@@ -1776,7 +1776,8 @@ def _huella(self):
     datos = {
         "paquete": [self.paquete.id, self.paquete.version, self.paquete.liquido],
         "cas": [self.cas[k] for k in orden],
-        "especies": [dataclasses.asdict(self.esp[k]) for k in orden],
+        # the optional liquid cp fields are left out while None, so vapour-liquid fingerprints are unchanged
+        "especies": [{c: v for c, v in dataclasses.asdict(self.esp[k]).items() if v is not None} for k in orden],
         "liquido": liq,
         "procedencia": self.procedencia,
         "referencia": REFERENCIA,
