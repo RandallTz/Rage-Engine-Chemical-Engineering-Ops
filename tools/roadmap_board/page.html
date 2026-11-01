@@ -83,39 +83,138 @@
   .rm .failed::before { content: ""; width: 0.375rem; height: 0.375rem; border-radius: 50%; background: var(--color-bad); }
   .rm [data-dash-source-state=empty] { color: transparent; }
   .rm [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+  /* demo version */
+  .rm .eyebrow { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .rm .hero { border-color: var(--rm-accent); display: grid; gap: var(--cds-gap-lg); }
+  .rm .hero-head { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm) var(--cds-gap-md); align-items: baseline; }
+  .rm .hero-title { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); margin: 0; }
+  .rm .hero-sub { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); font-variant-numeric: tabular-nums; }
+  .rm .cols { display: grid; gap: var(--cds-gap-lg); grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); }
+  .rm .hero h3, .rm .now h3 { margin: 0 0 var(--cds-gap-xs); }
+  .rm .versions { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--cds-gap-xs); }
+  .rm .versions li { display: flex; flex-wrap: wrap; gap: 0.2rem var(--cds-gap-sm); align-items: baseline; }
+  .rm .versions .v { font-weight: var(--cds-font-weight-medium); white-space: nowrap; }
+  .rm .versions .nm { min-width: 0; flex: 1 1 12rem; }
+  .rm .versions .o { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); white-space: nowrap; }
+  .rm .tech { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 400; overflow-wrap: anywhere; }
+  .rm .progress { display: flex; flex-wrap: wrap; align-items: center; gap: var(--cds-gap-xs) var(--cds-gap-md); margin-top: var(--cds-gap-sm); }
+  .rm .pbar { flex: 1 1 12rem; max-width: 28rem; height: 0.7rem; border-radius: 0.35rem; background: var(--cds-chart-grid); overflow: hidden; }
+  .rm .pbar i { display: block; height: 100%; width: 0; background: var(--color-ok); border-radius: inherit; }
+  .rm .checklist { list-style: none; margin: 0; padding: 0; display: grid; }
+  .rm .checklist > li { display: grid; grid-template-columns: 1.6rem 1fr; gap: 0.15rem var(--cds-gap-sm); padding: var(--cds-pad-sm) 0; border-top: 1px solid var(--color-border-line); }
+  .rm .checklist > li:first-child { border-top: 0; }
+  .rm .checklist .mark { grid-row: span 4; font-size: 1.05rem; line-height: 1.3; text-align: center; color: var(--color-fg-muted); }
+  .rm .checklist li[data-state="listo"] .mark { color: var(--color-ok); }
+  .rm .checklist li[data-state="bloqueado"] .mark { color: var(--color-warn); }
+  .rm .checklist li[data-state="en-curso"] .mark { color: var(--rm-accent); }
+  .rm .checklist .head { display: flex; flex-wrap: wrap; gap: 0.2rem var(--cds-gap-sm); align-items: baseline; }
+  .rm .checklist .nm { font-weight: var(--cds-font-weight-medium); }
+  .rm .checklist .state { font-size: var(--cds-font-size-caption); font-weight: var(--cds-font-weight-medium); }
+  .rm .checklist li[data-state="listo"] .state { color: var(--color-ok); }
+  .rm .checklist li[data-state="bloqueado"] .state { color: var(--color-warn); }
+  .rm .checklist .left { line-height: 1.45; }
+  .rm .checklist .who { display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .rm .chip[data-tone="who"] { color: var(--color-fg); border-color: var(--color-warn); } .rm .chip[data-tone="who"]::before { background: var(--color-warn); }
+  .rm .codex-note { margin: 0; padding: var(--cds-pad-sm) var(--cds-pad-md); border-left: 3px solid var(--color-warn); background: var(--color-bg); border-radius: 0 var(--cds-radius) var(--cds-radius) 0; line-height: 1.5; }
+  .rm .codex-note[hidden] { display: none; }
+  .rm details.fold > summary .tech { margin-left: auto; padding-left: var(--cds-gap-sm); }
+  /* working now */
+  .rm .now-grid { display: grid; gap: var(--cds-gap-md); grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); margin-top: var(--cds-gap-md); min-height: 8rem; }
+  .rm .now-card { display: grid; gap: var(--cds-gap-xs); align-content: start; }
+  .rm .now-card .row1 { display: flex; justify-content: space-between; gap: var(--cds-gap-sm); align-items: baseline; flex-wrap: wrap; }
+  .rm .now-card .nm { font-weight: var(--cds-font-weight-medium); line-height: 1.3; }
+  .rm .now-card .left { line-height: 1.45; }
+  .rm .now-card .o { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  /* collapsed details */
+  .rm details.fold { border-top: 1px solid var(--color-border-line); padding: var(--cds-pad-sm) 0; min-width: 0; }
+  .rm details.fold > summary { cursor: pointer; list-style: none; display: flex; gap: var(--cds-gap-sm); align-items: baseline; font-weight: var(--cds-font-weight-medium); padding: var(--cds-pad-xs) 0; }
+  .rm details.fold > summary::-webkit-details-marker { display: none; }
+  .rm details.fold > summary::before { content: "▸"; color: var(--color-fg-muted); transition: transform var(--cds-dur-slow); display: inline-block; }
+  .rm details.fold[open] > summary::before { transform: rotate(90deg); }
+  .rm details.fold > summary:focus-visible { outline: 2px solid var(--rm-accent); outline-offset: 2px; }
+  .rm details.fold > .body { display: grid; gap: var(--cds-gap-lg); margin-top: var(--cds-gap-sm); min-width: 0; }
+  .rm details.fold > .body > .note:first-child { margin-top: 0; }
   @media (max-width: 40rem) { .rm .bar-row { grid-template-columns: 1fr auto; } .rm .bar-row .track { grid-column: 1 / -1; grid-row: 2; } .rm td.area { white-space: normal; } .rm .ws { display: none; } .rm .controls select { flex: 1 1 100%; } }
 </style>
 
 <div class="rm">
   <header id="resumen">
     <h1>Hoja de ruta del motor</h1>
-    <p class="lede" id="takeaway">
-      Ahora: <b class="dash-skeleton" id="now-step">—</b>.
-      Hay <b data-source="capability_counts" data-field="n" data-where="status=Entregado">—</b> capacidades entregadas,
-      <b data-source="capability_counts" data-field="n" data-where="status=Pendiente">—</b> pendientes y
-      <b data-source="capability_counts" data-field="n" data-where="status=Aplazado">—</b> aplazadas a propósito.
-    </p>
     <p class="note" id="stamp">Registros revisados: hitos, gates, decisiones y riesgos el <span data-source="reviews" data-field="date" data-where="id=registry">—</span>; inventario de capacidades el <span data-source="reviews" data-field="date" data-where="id=checklist">—</span>.</p>
   </header>
 
-  <section class="card" id="ruta-m1">
-    <h2>Ruta M1: el motor usable de punta a punta</h2>
-    <p class="note">El objetivo actual. D1 cierra el pulido de la deducción; U1 entrega Transform → Solve → Results para tres casos fijos.</p>
+  <section class="card hero dash-skeleton" id="demo" data-source="milestones" aria-labelledby="demo-title">
+    <div>
+      <div class="eyebrow">Versión demostrable</div>
+      <h2 class="hero-title" id="demo-title">¿Qué falta para la siguiente demo?</h2>
+      <div class="progress">
+        <div class="pbar" role="img" id="demo-bar-label" aria-label="Piezas listas"><i id="demo-bar"></i></div>
+        <span class="hero-sub"><b data-source="demo_progress" data-field="done" data-row="0">—</b> de <b data-source="demo_progress" data-field="total" data-row="0">—</b> piezas listas</span>
+      </div>
+      <p class="note" id="demo-released"></p>
+    </div>
+    <ul class="checklist" id="demo-list" aria-label="Piezas de la versión"></ul>
+    <p class="codex-note" id="codex-note" hidden>
+      <b>Codex no está disponible por ahora.</b> Lo que espera a Codex está en cola, con sus instrucciones listas, en
+      <span class="tech">docs/engine/codex-queue.md</span>: <b data-source="queue_count" data-field="n" data-row="0">—</b> tareas en total.
+      Se le entregan en orden cuando vuelva.
+    </p>
+    <div>
+      <h3>Después de esta versión</h3>
+      <ul class="versions" id="demo-later"></ul>
+    </div>
+  </section>
+
+  <section class="now" id="ahora">
+    <h2>En qué se trabaja ahora</h2>
+    <p class="note" id="now-note">Hitos en curso y en revisión de todas las pistas, con su responsable y su siguiente acción.</p>
+    <div class="now-grid dash-skeleton" id="now-cards" data-source="milestones"></div>
+  </section>
+
+  <section id="detalles">
+    <h2>Detalles</h2>
+    <p class="note">Todo el registro, plegado. Ábrelo cuando necesites el detalle.</p>
+
+  <details class="fold" id="ruta-m1">
+    <summary>El primer motor usable de punta a punta <span class="tech">Ruta M1</span></summary>
+    <div class="body">
+    <p class="note">D1 cierra el pulido de la deducción; U1 entrega Transform → Solve → Results para tres casos fijos.</p>
     <ol class="steps dash-skeleton" id="m1-steps" data-source="milestones" aria-label="Pasos de la ruta M1"></ol>
-  </section>
+    </div>
+  </details>
 
-  <section id="que-sigue">
-    <h2>Qué sigue y qué está bloqueado</h2>
+  <details class="fold" id="que-sigue">
+    <summary>Qué sigue y qué está bloqueado</summary>
+    <div class="body">
     <p class="note">Todas las pistas juntas: lo que está en marcha, lo que espera a otro hito y lo que espera una decisión tuya.</p>
-    <div class="grid dash-skeleton" id="next-cards" data-source="milestones decisions" style="margin-top: var(--cds-gap-md); min-height: 14rem"></div>
-  </section>
+    <div class="grid dash-skeleton" id="next-cards" data-source="milestones decisions" style="min-height: 14rem"></div>
+    </div>
+  </details>
 
-  <section id="agentes">
-    <h2>Quién trabaja en qué</h2>
+  <details class="fold" id="agentes">
+    <summary>Quién trabaja en qué <span class="tech">Tomas y archivos</span></summary>
+    <div class="body">
     <p class="note">Hitos tomados por cada agente, hitos en curso que nadie ha tomado y archivos de cada uno. Ningún agente edita lo que el otro tiene tomado o en propiedad; los archivos compartidos se editan por reemplazo exacto.</p>
-    <div class="grid dash-skeleton" id="agent-cards" data-source="milestones ownership" style="margin-top: var(--cds-gap-md); min-height: 14rem"></div>
-  </section>
+    <div class="grid dash-skeleton" id="agent-cards" data-source="milestones ownership" style="min-height: 14rem"></div>
+    </div>
+  </details>
 
+  <details class="fold" id="cola-codex">
+    <summary>Trabajo en espera de Codex <span class="tech">codex-queue.md</span></summary>
+    <div class="body">
+    <p class="note">Tareas que Codex hará cuando vuelva, en orden. Cada una dice qué desbloquea.</p>
+    <div class="tablebox">
+      <table id="queue-table" data-source="queue" data-row-key="id">
+        <thead><tr><th data-field="number">#</th><th data-field="item">Tarea</th><th data-field="unblocks">Desbloquea</th><th class="ws" data-field="model">Modelo</th><th data-field="state">Estado</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    </div>
+  </details>
+
+  <details class="fold" id="capacidades">
+    <summary>Qué sabe hacer el simulador <span class="tech">Checklist</span></summary>
+    <div class="body">
   <section class="tiles" id="capacidades-totales">
     <div class="card tile"><div class="k">Entregado</div><div class="v" data-source="capability_counts" data-field="n" data-where="status=Entregado">—</div><div class="s">Capacidades verificadas dentro de su alcance</div></div>
     <div class="card tile"><div class="k">Pendiente</div><div class="v" data-source="capability_counts" data-field="n" data-where="status=Pendiente">—</div><div class="s">Extensiones por construir</div></div>
@@ -128,37 +227,6 @@
     <p class="note">Haz clic en un área para ver solo sus pendientes en la tabla de abajo.</p>
     <div class="legend"><span><i style="background: var(--color-ok)"></i>Entregado</span><span><i style="background: var(--rm-accent)"></i>Pendiente</span><span><i style="background: var(--cds-chart-muted)"></i>Aplazado</span></div>
     <div class="bars dash-skeleton" id="area-bars" data-source="area_counts"></div>
-  </section>
-
-  <section id="gates">
-    <h2>Criterios de los gates D1 y U1</h2>
-    <p class="note">D1 decide si la deducción ya basta para M1; U1 si el motor se usa de punta a punta. Ninguno se marca cumplido sin la evidencia que pide el roadmap.</p>
-    <div class="grid dash-skeleton" id="gate-cards" data-source="gates" style="margin-top: var(--cds-gap-md); min-height: 14rem"></div>
-  </section>
-
-  <section class="grid" id="decisiones-riesgos">
-    <div class="card" id="decisiones">
-      <h2>Decisiones</h2>
-      <p class="note">Las abiertas esperan tu respuesta; las tomadas fijan el rumbo.</p>
-      <ul class="track-list dash-skeleton" id="decision-list" data-source="decisions" style="min-height: 10rem"></ul>
-    </div>
-    <div class="card" id="riesgos">
-      <h2>Riesgos y bloqueos</h2>
-      <p class="note">Lo que puede romper el proyecto si no se atiende, con su mitigación.</p>
-      <ul class="track-list dash-skeleton" id="risk-list" data-source="risks" style="min-height: 10rem"></ul>
-    </div>
-  </section>
-
-  <section id="pistas">
-    <h2>Hitos por pista</h2>
-    <p class="note">Fases del roadmap, deducción por familia física, incidencias de fiabilidad y limpieza del proyecto.</p>
-    <div class="controls">
-      <select id="ms-owner" aria-label="Responsable"><option value="">Todos los responsables</option></select>
-      <select id="ms-status" aria-label="Estado del hito"><option value="">Todos los estados</option><option value="open">Sin terminar</option></select>
-      <button id="ms-reset" type="button">Quitar filtros</button>
-      <span class="count" id="ms-count"></span>
-    </div>
-    <div class="grid tracks dash-skeleton" id="track-cards" data-source="milestones" style="margin-top: var(--cds-gap-md)"></div>
   </section>
 
   <section class="card" id="que-falta">
@@ -183,6 +251,47 @@
         <tbody></tbody>
       </table>
     </div>
+  </section>
+    </div>
+  </details>
+
+  <details class="fold" id="gates">
+    <summary>Condiciones para dar por cumplida cada etapa <span class="tech">Gates D1 y U1</span></summary>
+    <div class="body">
+    <p class="note">D1 decide si la deducción ya basta para M1; U1 si el motor se usa de punta a punta. Ninguno se marca cumplido sin la evidencia que pide el roadmap.</p>
+    <div class="grid dash-skeleton" id="gate-cards" data-source="gates" style="min-height: 14rem"></div>
+    </div>
+  </details>
+
+  <details class="fold" id="decisiones-riesgos">
+    <summary>Decisiones y riesgos</summary>
+    <div class="body grid">
+    <div class="card" id="decisiones">
+      <h2>Decisiones</h2>
+      <p class="note">Las abiertas esperan tu respuesta; las tomadas fijan el rumbo.</p>
+      <ul class="track-list dash-skeleton" id="decision-list" data-source="decisions" style="min-height: 10rem"></ul>
+    </div>
+    <div class="card" id="riesgos">
+      <h2>Riesgos y bloqueos</h2>
+      <p class="note">Lo que puede romper el proyecto si no se atiende, con su mitigación.</p>
+      <ul class="track-list dash-skeleton" id="risk-list" data-source="risks" style="min-height: 10rem"></ul>
+    </div>
+    </div>
+  </details>
+
+  <details class="fold" id="pistas">
+    <summary>Todas las tareas, por línea de trabajo <span class="tech">Hitos por pista</span></summary>
+    <div class="body">
+    <p class="note">Versiones demostrables, fases del roadmap, deducción por familia física, incidencias de fiabilidad y limpieza del proyecto.</p>
+    <div class="controls">
+      <select id="ms-owner" aria-label="Responsable"><option value="">Todos los responsables</option></select>
+      <select id="ms-status" aria-label="Estado del hito"><option value="">Todos los estados</option><option value="open">Sin terminar</option></select>
+      <button id="ms-reset" type="button">Quitar filtros</button>
+      <span class="count" id="ms-count"></span>
+    </div>
+    <div class="grid tracks dash-skeleton" id="track-cards" data-source="milestones"></div>
+    </div>
+  </details>
   </section>
 </div>
 
@@ -277,14 +386,11 @@
 
   function drawRoute() {
     const steps = document.getElementById('m1-steps');
-    const now = document.getElementById('now-step');
     const rows = milestoneRows();
-    if (!rows) { if (dash.data('milestones').status === 'error') { failed(steps); now.classList.remove('dash-skeleton'); } return; }
+    if (!rows) { if (dash.data('milestones').status === 'error') failed(steps); return; }
     const byId = new Map(rows.map((r) => [r.id, r]));
     const route = rows.filter((r) => r.track_code === 'm1').sort((a, b) => a.order - b.order);
     const current = route.find((r) => r.status_code !== 'done');
-    now.classList.remove('dash-skeleton');
-    now.textContent = current ? `${current.name} (${current.owner})` : 'la ruta M1 está completa';
     steps.classList.remove('dash-skeleton');
     steps.replaceChildren(...route.map((r, i) => {
       const li = el('li', 'step'); li.dataset.tone = TONE[r.status] || 'planned';
@@ -296,6 +402,151 @@
       li.append(el('span', 'src', r.source));
       return li;
     }));
+  }
+
+  // Demo track: a milestone titled "Demo 0.N ..." belongs to version 0.N; its piece name is the rest of the title.
+  // The version in preparation is the first with an unfinished piece; a version is released when every piece is done.
+  const VERSION = /^Demo (\d+(?:\.\d+)+)\b[\s:]*/;
+  const pieceName = (r) => { const s = r.name.replace(VERSION, ''); return s ? s[0].toUpperCase() + s.slice(1) : r.name; };
+  function demoVersions(rows) {
+    const demo = rows.filter((r) => r.track_code === 'demo' && VERSION.test(r.name)).sort((a, b) => Number(a.order) - Number(b.order));
+    return d3.groups(demo, (r) => r.name.match(VERSION)[1]);
+  }
+  dash.calc('demo_progress', {
+    inputs: ['milestones'], title: 'Avance de la demo en preparación',
+    description: 'Cuenta las piezas hechas de la primera versión demostrable que aún tiene piezas sin terminar.',
+    fn: (milestones) => {
+      const version = /^Demo (\d+(?:\.\d+)+)\b/;
+      const groups = new Map();
+      for (const r of milestones) if (r.track_code === 'demo' && version.test(r.name)) {
+        const v = r.name.match(version)[1];
+        if (!groups.has(v)) groups.set(v, []);
+        groups.get(v).push(r);
+      }
+      const all = [...groups.entries()];
+      const current = all.find(([, items]) => items.some((r) => r.status_code !== 'done')) || all[all.length - 1];
+      if (!current) return [];
+      const [v, items] = current;
+      const done = items.filter((r) => r.status_code === 'done').length;
+      return [{version: v, done, total: items.length, share: items.length ? done / items.length : 0}];
+    },
+  });
+  dash.calc('queue_count', {
+    inputs: ['queue'], title: 'Tareas en cola de Codex',
+    description: 'Cuenta las tareas de la cola de Codex (docs/engine/codex-queue.md).',
+    fn: (queue) => [{n: queue.length}],
+  });
+  function versionStatus(items) {
+    if (items.length === 1) return items[0].status;
+    if (items.every((r) => r.status_code === 'done')) return 'Hecho';
+    if (items.some((r) => ['active', 'review', 'done'].includes(r.status_code))) return 'En curso';
+    if (items.some((r) => r.status_code === 'next')) return 'Siguiente';
+    return 'Pendiente';
+  }
+  // Plain state of a demo piece: ready, waiting on someone or on an unfinished piece, in progress, or not started.
+  const WHO = {codex: 'Codex', claude: 'Claude', user: 'Tú'};
+  const PIECE_STATE = {listo: ['✓', 'Listo'], bloqueado: ['⏸', 'Bloqueado'], 'en-curso': ['◐', 'En curso'], pendiente: ['○', 'Sin empezar']};
+  function pieceState(r) {
+    if (r.status_code === 'done') return 'listo';
+    if (r.waiting_on || r.blocked_by) return 'bloqueado';
+    if (['active', 'review'].includes(r.status_code)) return 'en-curso';
+    return 'pendiente';
+  }
+  function drawDemo() {
+    const box = document.getElementById('demo');
+    const list = document.getElementById('demo-list');
+    const rows = milestoneRows();
+    if (!rows) { if (dash.data('milestones').status === 'error') { box.classList.remove('dash-skeleton'); failed(list); } return; }
+    box.classList.remove('dash-skeleton');
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    const versions = demoVersions(rows);
+    const released = versions.filter(([, items]) => items.every((r) => r.status_code === 'done'));
+    const currentIdx = versions.findIndex(([, items]) => items.some((r) => r.status_code !== 'done'));
+    const [version, items] = currentIdx >= 0 ? versions[currentIdx] : versions[versions.length - 1] || ['', []];
+    const done = items.filter((r) => r.status_code === 'done').length;
+    document.getElementById('demo-title').textContent = version ? `¿Qué falta para la Demo ${version}?` : 'Sin versiones demostrables registradas';
+    document.getElementById('demo-bar').style.width = (items.length ? 100 * done / items.length : 0) + '%';
+    document.getElementById('demo-bar-label').setAttribute('aria-label', `${done} de ${items.length} piezas listas`);
+    for (const node of box.querySelectorAll('[data-source="demo_progress"]')) {
+      const p = dash.data('demo_progress');
+      node.textContent = p.status === 'ok' && p.data[0] ? String(p.data[0][node.dataset.field]) : '—';
+    }
+    document.getElementById('demo-released').textContent = released.length
+      ? `Última versión publicada: Demo ${released[released.length - 1][0]}.`
+      : 'Todavía no hay ninguna versión publicada; esta es la primera.';
+    list.replaceChildren(...(items.length ? items.map((r) => {
+      const state = pieceState(r);
+      const [icon, label] = PIECE_STATE[state];
+      const li = el('li'); li.dataset.state = state; li.id = 'pieza-' + r.id;
+      const head = el('div', 'head');
+      head.append(el('span', 'nm', pieceName(r)), el('span', 'state', label));
+      li.append(el('span', 'mark', icon), head);
+      li.append(el('span', 'left', r.remaining || r.note));
+      const who = el('div', 'who');
+      const codes = r.waiting_on ? r.waiting_on.split(', ') : [];
+      if (codes.length) {
+        who.append('Espera a');
+        for (const code of codes) {
+          const c = el('span', 'chip'); c.dataset.tone = 'who';
+          c.textContent = code === 'codex' && r.codex_queue ? `${WHO[code]} · cola ${r.codex_queue}` : (WHO[code] || code);
+          who.append(c);
+        }
+      } else if (r.blocked_by) {
+        const names = r.blocked_by.split(', ').map((id) => { const d = byId.get(id); return d && d.track_code === 'demo' ? pieceName(d).split(':')[0] : (d ? d.name : id); });
+        who.append(`Espera a: ${names.join(', ')}`);
+      } else if (state !== 'listo') {
+        who.append(`Responsable: ${r.owner}`);
+      }
+      if (who.childNodes.length) li.append(who);
+      li.append(el('span', 'tech', r.id));
+      return li;
+    }) : [el('li', 'empty', 'No hay piezas registradas.')]));
+    // The Codex note appears only while an unfinished piece of this version waits on Codex.
+    const note = document.getElementById('codex-note');
+    note.hidden = !items.some((r) => r.status_code !== 'done' && (r.waiting_on || '').split(', ').includes('codex'));
+    const q = dash.data('queue_count');
+    for (const node of note.querySelectorAll('[data-source="queue_count"]')) node.textContent = q.status === 'ok' && q.data[0] ? String(q.data[0].n) : '—';
+    const later = versions.slice(currentIdx >= 0 ? currentIdx + 1 : versions.length);
+    document.getElementById('demo-later').replaceChildren(...(later.length ? later.map(([v, its]) => {
+      const li = el('li');
+      li.append(el('span', 'v', `Demo ${v}`), el('span', 'nm', its.map(pieceName).join('; ')), chip(versionStatus(its)), el('span', 'o', [...new Set(its.map((r) => r.owner))].join(', ')));
+      return li;
+    }) : [el('li', 'empty', 'No hay más versiones registradas.')]));
+  }
+
+  function drawQueue() {
+    const q = dash.data('queue');
+    const body = document.querySelector('#queue-table tbody');
+    if (q.status !== 'ok') { body.replaceChildren(); return; }
+    body.replaceChildren(...[...q.data].sort((a, b) => Number(a.number) - Number(b.number)).map((r) => {
+      const tr = document.createElement('tr'); tr.dataset.key = r.id;
+      tr.append(el('td', 'st', r.number), el('td', null, r.item), el('td', null, r.unblocks), el('td', 'ws', r.model), el('td', null, r.state));
+      return tr;
+    }));
+  }
+
+  // At most five cards: active and in-review milestones, the demo track first.
+  const NOW_MAX = 5;
+  function drawNow() {
+    const box = document.getElementById('now-cards');
+    const note = document.getElementById('now-note');
+    const rows = milestoneRows();
+    if (!rows) { if (dash.data('milestones').status === 'error') failed(box); return; }
+    const rank = {active: 0, review: 1};
+    const working = rows.filter((r) => r.status_code in rank)
+      .sort((a, b) => (a.track_code === 'demo' ? 0 : 1) - (b.track_code === 'demo' ? 0 : 1) || rank[a.status_code] - rank[b.status_code] || a.track.localeCompare(b.track) || a.order - b.order);
+    const cards = working.slice(0, NOW_MAX).map((r) => {
+      const c = el('div', 'card now-card'); c.id = 'ahora-' + r.id;
+      const row1 = el('div', 'row1'); row1.append(el('span', 'eyebrow', r.track), chip(r.status));
+      c.append(row1, el('span', 'nm', r.track_code === 'demo' ? pieceName(r) : r.name), el('span', 'o', r.claimed_by ? `${r.owner} · tomado por ${r.claimed_by}` : r.owner));
+      if (r.remaining) c.append(el('span', 'left', r.remaining));
+      c.append(r.next_action ? el('span', 'next', r.next_action) : el('span', 'empty', 'Sin siguiente acción registrada.'));
+      c.append(el('span', 'tech', r.id));
+      return c;
+    });
+    const rest = working.length - cards.length;
+    note.textContent = `${working.length} tareas en curso o en revisión` + (rest > 0 ? `; aquí las ${cards.length} primeras, el resto en Detalles → Todas las tareas.` : '.');
+    listItems(box, cards.length ? cards : [el('p', 'empty', 'Nada en curso ni en revisión.')]);
   }
 
   function drawTracks() {
@@ -522,11 +773,12 @@
     }));
   }
 
-  dash.onData(() => { drawReviews(); drawTiles(); drawRoute(); drawNext(); drawAgents(); drawTracks(); drawGates(); drawDecisions(); drawRisks(); drawBars(); drawTable(); });
+  dash.onData(() => { drawReviews(); drawDemo(); drawNow(); drawQueue(); drawTiles(); drawRoute(); drawNext(); drawAgents(); drawTracks(); drawGates(); drawDecisions(); drawRisks(); drawBars(); drawTable(); });
 
+  // A link to a folded section opens it and every fold around it.
   const named = document.getElementById(location.hash.slice(1));
-  if (named) named.scrollIntoView();
-  for (const id of ['resumen', 'ruta-m1', 'que-sigue', 'agentes', 'gates', 'decisiones-riesgos', 'por-area', 'pistas', 'que-falta']) {
+  if (named) { for (let d = named.closest('details'); d; d = d.parentElement && d.parentElement.closest('details')) d.open = true; named.scrollIntoView(); }
+  for (const id of ['resumen', 'demo', 'ahora', 'ruta-m1', 'que-sigue', 'agentes', 'cola-codex', 'capacidades', 'gates', 'decisiones-riesgos', 'por-area', 'pistas', 'que-falta']) {
     const s = document.getElementById(id);
     new IntersectionObserver((e) => { if (e[0].isIntersecting) dash.setLink(id); }, {threshold: 0.6}).observe(s);
   }

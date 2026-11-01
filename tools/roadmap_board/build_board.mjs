@@ -42,7 +42,7 @@ function checkSource(owner, source) {
 const ENUMS = {
   milestoneStatus: ['done', 'review', 'active', 'next', 'planned', 'deferred', 'later', 'decision'],
   owner: ['codex', 'claude', 'user', 'shared'],
-  track: ['m1', 'phases', 'families', 'reliability', 'cleanup'],
+  track: ['demo', 'm1', 'phases', 'families', 'reliability', 'cleanup'],
   gateStatus: ['passed', 'review', 'open'],
   decisionStatus: ['taken', 'open'],
   severity: ['high', 'medium', 'low'],
@@ -51,7 +51,7 @@ const ENUMS = {
 const LABEL = {
   status: { done: 'Hecho', review: 'En revisión', active: 'En curso', next: 'Siguiente', planned: 'Pendiente', deferred: 'Aplazado', later: 'Al final', decision: 'Decisión pendiente', passed: 'Cumplido', open: 'Abierto', taken: 'Tomada', closed: 'Cerrado' },
   owner: { codex: 'Codex', claude: 'Claude', user: 'Usuario', shared: 'Codex + Claude' },
-  track: { m1: 'Ruta M1', phases: 'Fases físicas', families: 'Deducción por familia', reliability: 'Fiabilidad (F9)', cleanup: 'Limpieza del proyecto' },
+  track: { demo: 'Versión demostrable', m1: 'Ruta M1', phases: 'Fases físicas', families: 'Deducción por familia', reliability: 'Fiabilidad (F9)', cleanup: 'Limpieza del proyecto' },
   severity: { high: 'Alta', medium: 'Media', low: 'Baja' },
   capability: { available: 'Entregado', pending: 'Pendiente', deferred: 'Aplazado' },
   // Display names for the board; an unknown area falls back to the registry's English name.
@@ -68,6 +68,7 @@ function enumField(kind, item, field, values) {
 // Claims: which agent is working on a milestone now and which repository paths it may edit for it.
 // A path is a file or a directory prefix ending in '/'. Two paths overlap when one is a prefix of the other.
 const AGENTS = ['codex', 'claude'];
+const WAITING_WHO = ['codex', 'claude', 'user'];
 const normalizePath = (p) => p.replace(/\\/g, '/').replace(/^\.\//, '');
 const overlaps = (a, b) => {
   const [x, y] = [normalizePath(a), normalizePath(b)];
@@ -85,7 +86,27 @@ function checkPathList(kind, list) {
   return list.map(normalizePath);
 }
 
+// Codex work queue: the numbered rows of the table under "## Queue" in docs/engine/codex-queue.md.
+const QUEUE_FILE = 'docs/engine/codex-queue.md';
+function loadQueue() {
+  const full = path.join(root, QUEUE_FILE);
+  if (!fs.existsSync(full)) return [];
+  const lines = fs.readFileSync(full, 'utf8').split(/\r?\n/);
+  const start = lines.findIndex((line) => /^##\s+Queue\s*$/.test(line));
+  if (start < 0) { problem(`${QUEUE_FILE}: heading "## Queue" not found`); return []; }
+  const rows = [];
+  for (const line of lines.slice(start + 1)) {
+    if (/^##\s/.test(line)) break;
+    const cells = line.split('|').slice(1, -1).map((c) => c.trim());
+    if (cells.length < 5 || !/^\d+$/.test(cells[0])) continue;
+    rows.push({ id: `q${cells[0]}`, number: Number(cells[0]), item: cells[1].replace(/`/g, ''), model: cells[2], unblocks: cells[3].replace(/`/g, ''), state: cells[4].replace(/`/g, '') });
+  }
+  rows.forEach((r, i) => { if (r.number !== i + 1) problem(`${QUEUE_FILE}: queue numbers must run 1..${rows.length} without gaps`); });
+  return rows;
+}
+
 const registry = loadRegistry();
+const queue = loadQueue();
 const board = JSON.parse(fs.readFileSync(path.join(root, 'docs/engine/project-board.json'), 'utf8'));
 if (board.format !== 'rage.project-board' || board.version !== 1) problem('project-board.json: unsupported format or version');
 if (!/^\d{4}-\d{2}-\d{2}$/.test(board.reviewDate || '')) problem('project-board.json: reviewDate must be YYYY-MM-DD');
@@ -120,13 +141,29 @@ const milestones = board.milestones.map((m) => {
     const target = board.milestones.find((x) => x.id === id);
     return target && target.status !== 'done' && m.status !== 'done';
   });
+  // Optional: who the milestone waits on now (codex items name their queue numbers) and one plain line for the board.
+  const waiting = m.waitingOn || [];
+  if (!Array.isArray(waiting)) problem(`milestone ${m.id}: waitingOn must be a list`);
+  for (const w of Array.isArray(waiting) ? waiting : []) {
+    if (!WAITING_WHO.includes(w && w.who)) { problem(`milestone ${m.id}: waitingOn who "${w && w.who}" is not one of ${WAITING_WHO.join(', ')}`); continue; }
+    if (w.queue !== undefined) {
+      if (w.who !== 'codex') problem(`milestone ${m.id}: only a codex waitingOn entry names queue items`);
+      if (!Array.isArray(w.queue) || !w.queue.length || w.queue.some((n) => !queue.some((q) => q.number === n))) problem(`milestone ${m.id}: waitingOn queue must list item numbers of ${QUEUE_FILE} (1..${queue.length})`);
+    }
+  }
+  if (waiting.length && m.status === 'done') problem(`milestone ${m.id}: a done milestone cannot wait on anyone`);
+  if ('remainingEs' in m && (typeof m.remainingEs !== 'string' || !m.remainingEs.trim())) problem(`milestone ${m.id}: remainingEs must be a non-empty string`);
+  const validWaiting = Array.isArray(waiting) ? waiting.filter((w) => WAITING_WHO.includes(w && w.who)) : [];
   const claim = m.claim || null;
   return { id: m.id, track: LABEL.track[m.track], track_code: m.track, order: m.order, name: m.title,
     status: LABEL.status[m.status], status_code: m.status, owner: LABEL.owner[m.owner], owner_code: m.owner,
     depends_on: (m.dependsOn || []).join(', '), blocked_by: blockedBy.join(', '),
     note: m.summary, next_action: m.nextAction, source: m.source,
     claimed_by: claim ? LABEL.owner[claim.agent] || claim.agent : '', claim_since: claim ? claim.since : '',
-    claim_files: claim && Array.isArray(claim.files) ? claim.files.join(', ') : '', claim_note: claim ? claim.note || '' : '' };
+    claim_files: claim && Array.isArray(claim.files) ? claim.files.join(', ') : '', claim_note: claim ? claim.note || '' : '',
+    waiting_on: [...new Set(validWaiting.map((w) => w.who))].join(', '),
+    codex_queue: [...new Set(validWaiting.flatMap((w) => (w.who === 'codex' && Array.isArray(w.queue) ? w.queue : [])))].sort((a, b) => a - b).join(', '),
+    remaining: m.remainingEs || '' };
 });
 
 // Coexistence rules (tools/roadmap_board/README.md, "Working in parallel").
@@ -213,6 +250,7 @@ const summary = [
   `M1 current step: ${current ? `${current.title} [${current.status}, ${current.owner}]` : 'complete'}`,
   `Open decisions: ${board.decisions.filter((d) => d.status === 'open').map((d) => d.title).join('; ') || 'none'}`,
   `Open risks: ${board.risks.filter((r) => r.status === 'open').length}`,
+  `Codex queue: ${queue.length} items (${QUEUE_FILE})`,
   `Claims: ${claims.map((c) => `${c.agent} on ${c.id} [${c.files.join(', ')}]`).join('; ') || 'none'}`,
   ...(unclaimed.length ? [`Unclaimed active items (claim before editing their files): ${unclaimed.join(', ')}`] : []),
 ].join('\n');
@@ -228,7 +266,8 @@ write('decisions', decisions);
 write('risks', risks);
 write('reviews', reviews);
 write('ownership', ownershipRows);
+write('queue', queue);
 fs.writeFileSync(path.join(out, 'summary.txt'), summary + '\n');
 // The dashboard stores its page as a document {text}; page.html is its source.
 fs.writeFileSync(path.join(out, 'page.json'), JSON.stringify({ text: fs.readFileSync(path.join(root, 'tools/roadmap_board/page.html'), 'utf8') }));
-console.log(summary + `\nWrote ${['capabilities', 'milestones', 'gates', 'decisions', 'risks', 'reviews', 'ownership'].map((n) => n + '.json').join(', ')} to tools/roadmap_board/out/`);
+console.log(summary + `\nWrote ${['capabilities', 'milestones', 'gates', 'decisions', 'risks', 'reviews', 'ownership', 'queue'].map((n) => n + '.json').join(', ')} to tools/roadmap_board/out/`);

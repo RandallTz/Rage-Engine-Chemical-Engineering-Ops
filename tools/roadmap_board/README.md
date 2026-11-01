@@ -57,15 +57,15 @@ Claude and Codex work at the same time, and either may continue in a new chat or
 
 ## Refreshing the board (Claude sessions)
 
-1. Run `node tools/roadmap_board/build_board.mjs`. It writes `tools/roadmap_board/out/{capabilities,milestones,gates,decisions,risks,reviews,ownership}.json` (git-ignored).
+1. Run `node tools/roadmap_board/build_board.mjs`. It writes `tools/roadmap_board/out/{capabilities,milestones,gates,decisions,risks,reviews,ownership,queue}.json` (git-ignored).
 2. For each changed file, upload it as an asset of the board (Artifact tool, `url` = the board, `asset: true`, `file_path` = the file), one call per JSON file.
 3. Read `datasets/<id>` with ArtifactData. Then `update` its `source.url` with the new `/_blob/...` url and `source.name`, and set `updated: {at, by}`. Pin each write with `if_version` and use one batch.
 4. Read `data/users/me/check` until it is no longer `checking`. No document means the page passed.
-5. The page source is `tools/roadmap_board/page.html`, which the generator also packs as `out/page.json`. Change it only for layout or new sections. Then write `files/index.html` from `out/page.json`, pinned with `if_version`. The dataset ids are `capabilities`, `milestones`, `gates`, `decisions`, `risks`, `reviews` and `ownership`. Follow the dashboard type's own instructions for marks.
+5. The page source is `tools/roadmap_board/page.html`, which the generator also packs as `out/page.json`. Change it only for layout or new sections. Then write `files/index.html` from `out/page.json`, pinned with `if_version`. The dataset ids are `capabilities`, `milestones`, `gates`, `decisions`, `risks`, `reviews`, `ownership` and `queue`. Follow the dashboard type's own instructions for marks.
 
 ## Schema of `docs/engine/project-board.json`
 
-- `milestones[]`: `id`, `track` (`m1`, `phases`, `families`, `reliability`, `cleanup`), `order` (1..n per track, no gaps), `title`, `status`, `owner` (`codex`, `claude`, `user`, `shared`), `dependsOn` (ids), `summary`, `nextAction` (empty if none), `source` (`path#heading-anchor`).
+- `milestones[]`: `id`, `track` (`demo`, `m1`, `phases`, `families`, `reliability`, `cleanup`), `order` (1..n per track, no gaps), `title`, `status`, `owner` (`codex`, `claude`, `user`, `shared`), `dependsOn` (ids), `summary`, `nextAction` (empty if none), `source` (`path#heading-anchor`).
 - `status` values:
   - `done`: delivered with evidence.
   - `review`: delivered, awaiting independent verification.
@@ -76,12 +76,14 @@ Claude and Codex work at the same time, and either may continue in a new chat or
   - `later`: intentionally at the end.
   - `decision`: waits on the user.
 - `gates[]`: `id`, `gate` (`D1` or `U1`), `title`, `status` (`passed`, `review`, `open`), `evidence`.
+- `waitingOn` (optional on a milestone that is not `done`): who it waits on now, as `[{who, queue?}]`. `who` is `codex`, `claude` or `user`. A `codex` entry may list `queue`, the item numbers of `docs/engine/codex-queue.md` that unblock it; the check validates them against that file's queue table.
+- `remainingEs` (optional): one plain line, in Spanish, on what remains. It is board interface text for the user, the only Spanish field in the registry; keep the evidence in the English `nextAction` and the roadmap.
 - `claim` (optional on a milestone, only while `active`): `agent` (`codex` or `claude`), `since` (YYYY-MM-DD), `files` (repository-relative paths; a directory ends in `/`), `note`. See "Working in parallel".
 - `ownership` (top level): `{claude: [paths], codex: [paths]}`, the standing file ownership decided by the user. A claim may not cover the other agent's paths.
 - `sharedFiles` (top level): paths that both agents edit by exact replacement and that no one claims.
 - `decisions[]`: `id`, `date`, `status` (`taken` or `open`), `owner`, `title`, `detail`, `source`.
 - `risks[]`: `id`, `severity` (`high`, `medium`, `low`), `owner`, `title`, `mitigation`, `status` (`open` or `closed`).
 
-Generated datasets beyond the registry collections: `reviews` (one row per registry with its review date: `reviewDate` here and `capabilityReviewDate` in `datos.ts`) and `ownership` (one row per `ownership` or `sharedFiles` path, with its agent). Milestone rows carry `owner_code`, the registry's owner value.
+Generated datasets beyond the registry collections: `queue` (one row per numbered item of the `docs/engine/codex-queue.md` queue table), `reviews` (one row per registry with its review date: `reviewDate` here and `capabilityReviewDate` in `datos.ts`) and `ownership` (one row per `ownership` or `sharedFiles` path, with its agent). Milestone rows carry `owner_code`, the registry's owner value, and `waiting_on` (codes), `codex_queue` (item numbers) and `remaining` from the optional fields.
 
 A new field or status value needs the generator, the board page and this document updated together. Registry text is English. The board page translates statuses and owners for the user.
