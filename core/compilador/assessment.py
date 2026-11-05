@@ -270,14 +270,36 @@ def certification(result, source):
     return _verdict('certification', status, source, rows, scope=scope)
 
 
-def result_signature(result):
-    return signature({**result, 'procedencia': {k: v for k, v in result['procedencia'].items() if k != 'assessment'}})
+def result_signature(result, version=1):
+    payload = {**result, 'procedencia': {k: v for k, v in result['procedencia'].items() if k != 'assessment'}}
+    if version == 1:
+        return signature(payload)
+    if version != 2:
+        raise ValueError('Unknown assessment result signature version.')
+    # JSON transports collapse integer-valued floats and negative zero. Encode
+    # numbers by value, not by Python/JavaScript decimal spelling. Tagged types
+    # also prevent a user object from impersonating a canonical numeric node.
+    import math
+    import struct
+    def canonical(value):
+        if type(value) in (int, float):
+            number = float(value)
+            if not math.isfinite(number):
+                raise ValueError('Nonfinite assessment signature value.')
+            return ['number', struct.pack('>d', number if number else 0.0).hex()]
+        if isinstance(value, dict):
+            return ['object', [[key, canonical(value[key])] for key in sorted(value)]]
+        if isinstance(value, list):
+            return ['array', [canonical(item) for item in value]]
+        return ['scalar', value]
+    return signature(canonical(payload))
 
 
 def attach_result(assessment, result):
     evidence = copy.deepcopy(assessment)
     evidence['certification'] = certification(result, evidence['sourceSignature'])
-    evidence['resultSignature'] = result_signature(result)
+    evidence['resultSignatureVersion'] = 2
+    evidence['resultSignature'] = result_signature(result, 2)
     read_assessment(evidence, result=result)
     result['procedencia']['assessment'] = evidence
     return result
@@ -287,9 +309,13 @@ def read_assessment(value, *, model=None, result=None):
     """Fail closed on unknown versions, status/code mismatch and stale evidence."""
     required = {'format', 'version', 'modelId', 'sourceSignature', 'structure', 'initialization', 'certification', 'inspection'}
     if (not isinstance(value, dict) or not required <= value.keys() or
-            value.keys() - required - {'compilation', 'resultSignature'} or value['format'] != 'rage.model-assessment' or
+            value.keys() - required - {'compilation', 'resultSignature', 'resultSignatureVersion'} or value['format'] != 'rage.model-assessment' or
             type(value['version']) is not int or value['version'] != 1):
         raise ValueError('Expected rage.model-assessment v1.')
+    signature_version = value.get('resultSignatureVersion', 1)
+    if (type(signature_version) is not int or signature_version not in (1, 2) or
+            'resultSignatureVersion' in value and 'resultSignature' not in value):
+        raise ValueError('Invalid assessment result signature version.')
     source = value['sourceSignature']
     if not isinstance(source, str) or len(source) != 64 or any(c not in '0123456789abcdef' for c in source):
         raise ValueError('A SHA-256 model signature is required.')
@@ -314,7 +340,7 @@ def read_assessment(value, *, model=None, result=None):
             not isinstance(inspection['scope'], str)):
         raise ValueError('Invalid partial structural inspection.')
     if result is not None:
-        if (value['modelId'] != result['modeloId'] or value.get('resultSignature') != result_signature(result) or
+        if (value['modelId'] != result['modeloId'] or value.get('resultSignature') != result_signature(result, signature_version) or
                 value['certification'] != certification(result, source)):
             raise ValueError('Assessment does not match the published result or certification evidence.')
     elif 'resultSignature' not in value and value['certification']['status'] != 'not_evaluated':
