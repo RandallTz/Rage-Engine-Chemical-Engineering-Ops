@@ -70,7 +70,8 @@ class IndexOne:
             self.bounds[q]=tuple(system._datum(config[key],system._dim(q)) for key in ('lowerDataId','upperDataId'))
         self.bounds[system.time]=(sp.S.Zero,system._datum(system.model['estudio']['tiempoId'],{'T':1}))
         residuals=[si_magnitude(e).subs(system.parameter_values) for e in system.algebraic_block.forcing]
-        self.proof=certify_index(residuals,system.algebraic_quantities,self.bounds)
+        provider_proof=getattr(system.algebraic_block,'certify_index',None)
+        self.proof=provider_proof(self.bounds) if provider_proof else certify_index(residuals,system.algebraic_quantities,self.bounds)
         self.proof.update(method='scipy_bdf_nested_newton',initialization='fixed_differential_states',
                           driftTolerance=self.settings['driftTolerance'],
                           stateBounds={row['quantityId']:[str(v) for v in self.bounds[q]] for row,q in zip(system.selection['states'],system.states)})
