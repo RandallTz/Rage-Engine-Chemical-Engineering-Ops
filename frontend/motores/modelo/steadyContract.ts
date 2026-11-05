@@ -1,3 +1,5 @@
+import {readThermodynamicClosures,type ThermodynamicClosureReport} from './thermodynamicClosureContract';
+import {exactObject,readInverseSpecification,inverseDataIds,declaredInverseSI,type InverseEvidence,type SeedRegularity} from './inverseSpecification';
 /** Versioned steady contracts. Validation and fingerprints only; no browser solver. */
 import type {TemporalDerivedExecution} from './derivedExecution';
 import type {ConjuntoResultados} from '../resultados/contrato';
@@ -7,7 +9,10 @@ export type SteadySelection = Omit<TemporalDerivedExecution,'version'|'initialVa
   algebraic:{quantityId:string;equationId:string}[];unknowns:string[];invariants:Record<string,string>;
   nonlinear:NonNullable<TemporalDerivedExecution['nonlinear']>;
 };
+export type SteadyClosure={volumeId:string;package:string;mode:'single_phase'|'equilibrium';specification:'PH'|'UV';anchor:'gas'|'liquid'|null;liquidOnly:boolean;outputs:{id:string;unit:string}[];constants:{id:string;value:number;unit:string}[]};
 export type SteadyReport={
+  kineticDiagnostics?:{version:1;volumeIds:string[]};
+  thermodynamicClosures?:SteadyClosure[];
   format:'rage.compilation';version:2;study:'steady';sourceModelId:string;signature:string;
   sourceSignature:string;formulationSignature:string;dataSignature:string;settingsSignature:string;method:'damped_newton';
   selection:SteadySelection;variables:{id:string;name:string;unit:string;scaleSI:number;seedSI:number;boundsSI:number[]}[];
@@ -15,12 +20,14 @@ export type SteadyReport={
   invariants:{quantityId:string;equationId:string;dataId:string;value:number;unit:string}[];
   parameters:{id:string;dataId:string;value:number;unit:string}[];
   proofConditions:{equationId:string;kind:string;latex:string}[];runtimeConditions:SteadyReport['proofConditions'];scope:string;
+  specificationSignature?:string;inverseSpecification?:InverseEvidence;
   derivedExecution?:never;
 };
-export type SteadyDiagnostics={version:1;verdict:'local_regular_root';globalUniqueness:'not_proved';method:'damped_newton';
+export type SteadyDiagnostics={thermodynamicClosures?:(ThermodynamicClosureReport&{phaseSet:string[]})[];version:1;verdict:'local_regular_root';globalUniqueness:'not_proved';method:'damped_newton';
   sourceSignature:string;formulationSignature:string;dataSignature:string;settingsSignature:string;compilationSignature:string;
   quantityIds:string[];equationIds:string[];variableScales:number[];residualScales:number[];smallestSingularValue:number;
   conditionThreshold:number;inverseThreshold:number;relativeAmplification:number;inverseAmplification:number;initialResidualNorm:number;
+  inverseSpecification?:{specificationSignature:string;freedInputs:string[];specificationRows:string[];seedRegularity:SeedRegularity};
   solver:{iterations:number;evaluations:number;backtracks:number;residualNorm:number;stepNorm:number;conditionInfinity:number;terminationReason:string;completedProbes:number;uniqueness:string};scope:string;resultSignature:string;
 };
 const fail=(message:string):never=>{throw new Error(message);};
@@ -73,22 +80,70 @@ export function steadySignature(value:unknown):string{
   }return h.map(v=>(v>>>0).toString(16).padStart(8,'0')).join('');
 }
 
+export function readSteadyClosures(value:unknown):SteadyClosure[]{
+  const rows=array(value) as SteadyClosure[];
+  if(!rows.length||new Set(rows.map(row=>object(row).volumeId)).size!==rows.length)fail('Missing or duplicate steady closure volumes.');
+  const outputIds=new Set<string>();
+  for(const row of rows){
+    object(row,['volumeId','package','mode','specification','anchor','liquidOnly','outputs','constants']);
+    if(!identity(row.volumeId)||!identity(row.package)||!['single_phase','equilibrium'].includes(row.mode)||!['PH','UV'].includes(row.specification)||![null,'gas','liquid'].includes(row.anchor)||typeof row.liquidOnly!=='boolean')fail('Invalid steady closure identity.');
+    if(!array(row.outputs).length)fail('A steady closure must declare its outputs.');
+    for(const q of row.outputs){object(q,['id','unit']);if(!identity(q.id)||!identity(q.unit)||outputIds.has(q.id))fail('Invalid or duplicate closure output.');outputIds.add(q.id);}
+    const constants=new Set<string>();
+    for(const q of array(row.constants) as SteadyClosure['constants']){object(q,['id','value','unit']);if(!identity(q.id)||!identity(q.unit)||!finite(q.value)||constants.has(q.id))fail('Invalid package constant.');constants.add(q.id);}
+  }
+  return rows;
+}
+
 export function readSteadyReport(value:unknown):SteadyReport{
-  const r=object(value,['format','version','study','sourceModelId','signature','sourceSignature','formulationSignature','dataSignature','settingsSignature','method','selection','variables','rows','residualRows','invariants','parameters','proofConditions','runtimeConditions','scope']) as unknown as SteadyReport;
+  const inverse=!!value&&typeof value==='object'&&'inverseSpecification' in value;
+  const closures=!!value&&typeof value==='object'&&'thermodynamicClosures' in value;
+  const r=object(value,['format','version','study','sourceModelId','signature','sourceSignature','formulationSignature','dataSignature','settingsSignature','method','selection','variables','rows','residualRows','invariants','parameters','proofConditions','runtimeConditions','scope',...(inverse?['specificationSignature','inverseSpecification']:[]),...(closures?['thermodynamicClosures']:[]),...('kineticDiagnostics' in object(value)?['kineticDiagnostics']:[])]) as unknown as SteadyReport;
+  if('kineticDiagnostics' in r){const block=object(r.kineticDiagnostics,['version','volumeIds']),ids=array(block.volumeIds),owners=(r.thermodynamicClosures??[]).filter(c=>c.anchor!==null).map(c=>c.volumeId);if(block.version!==1||!ids.length||new Set(ids).size!==ids.length||ids.some(id=>!identity(id)||!owners.includes(id as string)))fail('Invalid kinetic diagnostic identities.');}
+  if(closures)readSteadyClosures(r.thermodynamicClosures);
   const s=readSteadySelection(r.selection);if(r.format!=='rage.compilation'||r.version!==2||r.study!=='steady'||r.method!=='damped_newton'||!identity(r.sourceModelId)||typeof r.scope!=='string')fail('Invalid steady compilation.');
   for(const k of ['signature','sourceSignature','formulationSignature','dataSignature','settingsSignature'] as const)if(typeof r[k]!=='string'||!/^[a-f0-9]{64}$/.test(r[k]))fail('Invalid steady fingerprint.');
   if(r.sourceSignature!==s.sourceSignature||r.formulationSignature!==steadySignature(s)||r.settingsSignature!==steadySignature(s.nonlinear))fail('Stale steady compilation.');
-  array(r.variables);if(!same(r.variables.map(v=>v.id),s.unknowns))fail('Steady unknown order mismatch.');
+  const augmentation=inverse?readInverseEvidence(r):{unknowns:s.unknowns,parameters:s.parameters,rowIds:[]};
+  array(r.variables);if(!same(r.variables.map(v=>v.id),augmentation.unknowns))fail('Steady unknown order mismatch.');
   for(const v of r.variables){object(v,['id','name','unit','scaleSI','seedSI','boundsSI']);if(typeof v.name!=='string'||typeof v.unit!=='string'||!finite(v.scaleSI)||v.scaleSI<=0||!finite(v.seedSI)||array(v.boundsSI).length!==2||!v.boundsSI.every(finite)||!(v.boundsSI[0]<v.boundsSI[1])||v.seedSI<v.boundsSI[0]||v.seedSI>v.boundsSI[1])fail('Invalid steady variable.');}
   array(r.rows);if(!same(r.rows.map(v=>v.id),[...s.states,...s.algebraic].map(v=>v.equationId)))fail('Steady row order mismatch.');
   for(const v of r.rows){object(v,['id','family','before','after','identity']);if(typeof v.identity!=='boolean'||[v.family,v.before,v.after].some(x=>typeof x!=='string'))fail('Invalid steady row.');}
-  array(r.residualRows);if(r.residualRows.length!==r.variables.length||!same(r.residualRows.map(v=>v.id),r.rows.filter(v=>!v.identity).map(v=>v.id)))fail('Invalid steady square block.');
+  array(r.residualRows);if(r.residualRows.length!==r.variables.length||!same(r.residualRows.map(v=>v.id),[...r.rows.filter(v=>!v.identity).map(v=>v.id),...augmentation.rowIds]))fail('Invalid steady square block.');
   for(const v of r.residualRows){object(v,['id','unit','scaleSI']);if(typeof v.unit!=='string'||!finite(v.scaleSI)||v.scaleSI<=0)fail('Invalid residual scale.');}
   array(r.invariants);if(steadySignature(Object.fromEntries(r.invariants.map(v=>[v.quantityId,v.dataId])))!==steadySignature(s.invariants)||r.invariants.length!==Object.keys(s.invariants).length)fail('Invariant bindings mismatch.');
   for(const v of r.invariants){object(v,['quantityId','equationId','dataId','value','unit']);if(!finite(v.value)||typeof v.unit!=='string'||!r.rows.some(row=>row.id===v.equationId&&row.identity))fail('Invalid invariant evidence.');}
-  array(r.parameters);if(steadySignature(Object.fromEntries(r.parameters.map(v=>[v.id,v.dataId])))!==steadySignature(s.parameters)||r.parameters.length!==Object.keys(s.parameters).length)fail('Parameter bindings mismatch.');
+  array(r.parameters);if(steadySignature(Object.fromEntries(r.parameters.map(v=>[v.id,v.dataId])))!==steadySignature(augmentation.parameters)||r.parameters.length!==Object.keys(augmentation.parameters).length)fail('Parameter bindings mismatch.');
   for(const v of r.parameters){object(v,['id','dataId','value','unit']);if(!finite(v.value)||typeof v.unit!=='string')fail('Invalid steady parameter.');}
   for(const rows of [r.proofConditions,r.runtimeConditions])for(const v of array(rows)){if(Object.values(object(v,['equationId','kind','latex'])).some(x=>typeof x!=='string'))fail('Invalid steady condition.');}return r;
+}
+
+function readInverseEvidence(report:SteadyReport){
+  const block=exactObject(report.inverseSpecification,['format','version','record','data','rows','freedInputs','seedRegularity','invalidates','retains','scope']) as unknown as InverseEvidence;
+  const record=readInverseSpecification(block.record),s=report.selection,freed=record.freedInputs.map(v=>v.quantityId),rowIds=record.specifications.map(v=>'specification.'+v.id);
+  if(block.format!=='rage.inverse-specification'||block.version!==1||!same(Object.keys(object(block.data)).sort(),inverseDataIds(record)))fail('Invalid inverse evidence identity/data.');
+  for(const d of Object.values(block.data))if(Object.values(object(d,['texto','unidad'])).some(v=>typeof v!=='string'))fail('Invalid inverse declaration.');
+  if(report.specificationSignature!==steadySignature([record,block.data]))fail('Stale specification signature.');
+  if(freed.some(id=>!Object.hasOwn(s.parameters,id))||record.specifications.some(v=>![...s.unknowns,...s.reconstructions.map(r=>r.quantityId)].includes(v.quantityId)))fail('Invalid specified or freed quantity.');
+  array(block.rows);array(block.freedInputs);
+  if(!same(block.rows.map(v=>v.id),rowIds)||!same(block.rows.map(v=>v.quantityId),record.specifications.map(v=>v.quantityId))||!same(block.freedInputs.map(v=>v.quantityId),freed))fail('Inverse row or freed-input ordering mismatch.');
+  for(const row of block.rows){object(row,['id','quantityId','targetSI','unit','latex']);if(!finite(row.targetSI)||typeof row.unit!=='string'||typeof row.latex!=='string')fail('Invalid specification row.');}
+  for(const row of block.freedInputs){object(row,['quantityId','unit']);if(typeof row.unit!=='string')fail('Invalid freed input.');}
+  const seed=object(block.seedRegularity,['augmentedSigmaMin','forwardSigmaMin','sensitivitySigmaMin','sensitivity']);
+  if(!finite(seed.augmentedSigmaMin)||seed.augmentedSigmaMin<=0||Number.EPSILON/seed.augmentedSigmaMin>1e-8||!finite(seed.forwardSigmaMin)||seed.forwardSigmaMin<0)fail('Seed regularity gate failed.');
+  if((seed.sensitivity===null)!==(seed.sensitivitySigmaMin===null)||seed.sensitivity!==null&&(!finite(seed.sensitivitySigmaMin)||seed.sensitivitySigmaMin<0||array(seed.sensitivity).length!==freed.length||(seed.sensitivity as unknown[]).some(row=>array(row).length!==freed.length||array(row).some(v=>!finite(v)))))fail('Invalid inverse sensitivity.');
+  if(!same(block.invalidates,['solve','results'])||!same(block.retains,['model','transform'])||typeof block.scope!=='string')fail('Invalid inverse invalidation scope.');
+  const close=(a:number,b:number)=>finite(a)&&Math.abs(a-b)<=1e-12*Math.max(Math.abs(a),Math.abs(b));
+  const declared=(id:string,unit:string)=>declaredInverseSI(block.data[id],unit);
+  for(const [i,row] of block.rows.entries()){
+    const spec=record.specifications[i],residual=report.residualRows.at(-block.rows.length+i),variable=report.variables.find(v=>v.id===row.quantityId);
+    if(!close(row.targetSI,declared(spec.targetDataId,row.unit))||!residual||residual.unit!==row.unit||!close(residual.scaleSI,declared(spec.residualScaleDataId,row.unit))||variable&&variable.unit!==row.unit)fail('Specification target, units or scale differ from declarations.');
+  }
+  for(const [i,row] of block.freedInputs.entries()){
+    const entry=record.freedInputs[i],v=report.variables.at(-freed.length+i);
+    if(!v||v.id!==row.quantityId||v.unit!==row.unit||!Array.isArray(v.boundsSI)||v.boundsSI.length!==2||[v.seedSI,...v.boundsSI,v.scaleSI].some((n,j)=>!close(n,declared([entry.seedDataId,entry.lowerDataId,entry.upperDataId,entry.scaleDataId][j],row.unit))))fail('Freed-input seed, bounds or scale differ from declarations.');
+  }
+  return {unknowns:[...s.unknowns,...freed],parameters:Object.fromEntries(Object.entries(s.parameters).filter(([id])=>!freed.includes(id))),rowIds};
 }
 
 export function steadyResultSignature(result:ConjuntoResultados):string{
@@ -97,7 +152,9 @@ export function steadyResultSignature(result:ConjuntoResultados):string{
   return steadySignature({...result,procedencia:provenance});
 }
 export function readSteadyResult(result:ConjuntoResultados):void{
-  const e=object(result.procedencia.steadyDiagnostics,['version','verdict','globalUniqueness','method','sourceSignature','formulationSignature','dataSignature','settingsSignature','compilationSignature','quantityIds','equationIds','variableScales','residualScales','smallestSingularValue','conditionThreshold','inverseThreshold','relativeAmplification','inverseAmplification','initialResidualNorm','solver','scope','resultSignature']) as unknown as SteadyDiagnostics;
+  const inverse=Boolean(result.procedencia.compilation&&'inverseSpecification' in result.procedencia.compilation);
+  const closures=Boolean(result.procedencia.compilation&&'thermodynamicClosures' in result.procedencia.compilation);
+  const e=object(result.procedencia.steadyDiagnostics,['version','verdict','globalUniqueness','method','sourceSignature','formulationSignature','dataSignature','settingsSignature','compilationSignature','quantityIds','equationIds','variableScales','residualScales','smallestSingularValue','conditionThreshold','inverseThreshold','relativeAmplification','inverseAmplification','initialResidualNorm','solver','scope','resultSignature',...(inverse?['inverseSpecification']:[]),...(closures?['thermodynamicClosures']:[])]) as unknown as SteadyDiagnostics;
   const r=readSteadyReport(result.procedencia.compilation),s=r.selection,c=s.nonlinear;
   if(result.estado!=='resuelto'||result.ejes.length||result.eventos.length||result.modeloId!==r.sourceModelId||result.procedencia.motor!=='rage.compilador.steady'||result.procedencia.metodo!==e.method||e.version!==1||e.verdict!=='local_regular_root'||e.globalUniqueness!=='not_proved'||e.method!=='damped_newton'||typeof e.scope!=='string')fail('Invalid scalar steady verdict.');
   for(const k of ['sourceSignature','formulationSignature','dataSignature','settingsSignature'] as const)if(e[k]!==r[k])fail('Stale steady evidence.');
@@ -105,15 +162,30 @@ export function readSteadyResult(result:ConjuntoResultados):void{
   const n=e.solver;object(n,['iterations','evaluations','backtracks','residualNorm','stepNorm','conditionInfinity','terminationReason','completedProbes','uniqueness']);
   for(const k of ['iterations','evaluations','backtracks','completedProbes'] as const)if(!Number.isSafeInteger(n[k])||n[k]<0)fail('Invalid Newton counter.');
   if([n.residualNorm,n.stepNorm,n.conditionInfinity,e.smallestSingularValue,e.relativeAmplification,e.inverseAmplification,e.initialResidualNorm].some(x=>!finite(x)||x<0)||n.conditionInfinity<1||e.smallestSingularValue<=0||n.terminationReason!=='converged'||n.residualNorm>c.residualTolerance||n.stepNorm>c.stepTolerance||n.iterations>c.maxIterations||e.conditionThreshold!==1e-8||e.inverseThreshold!==1e-8||e.relativeAmplification!==n.conditionInfinity*Number.EPSILON||e.inverseAmplification!==Number.EPSILON/e.smallestSingularValue||Math.max(e.relativeAmplification,e.inverseAmplification)>1e-8||n.uniqueness!=='local_root_only; finite probes do not prove global uniqueness')fail('Steady convergence/regularity gate failed.');
-  const expected=[...s.unknowns,...Object.keys(s.invariants),...s.reconstructions.map(v=>v.quantityId)].map(k=>'steady.'+k).concat(e.equationIds.map(k=>'steady.residual.'+k));
+  if(inverse){const block=r.inverseSpecification!,summary=exactObject(e.inverseSpecification,['specificationSignature','freedInputs','specificationRows','seedRegularity']);
+    if(summary.specificationSignature!==r.specificationSignature||!same(summary.freedInputs,block.freedInputs.map(v=>v.quantityId))||!same(summary.specificationRows,block.rows.map(v=>v.id))||steadySignature(summary.seedRegularity)!==steadySignature(block.seedRegularity))fail('Stale inverse specification diagnostics.');}
+  if(closures){
+    const rows=array(e.thermodynamicClosures) as NonNullable<SteadyDiagnostics['thermodynamicClosures']>;
+    for(const row of rows)if(!array(row.phaseSet).every(identity)||new Set(row.phaseSet).size!==row.phaseSet.length)fail('Invalid closure phase set.');
+    readThermodynamicClosures(rows.map(({phaseSet,...row})=>row));
+    if(!same(rows.map(row=>row.volumeId),r.thermodynamicClosures!.map(row=>row.volumeId)))fail('Closure evidence volume mismatch.');
+    for(const [i,row] of rows.entries())for(const key of ['package','mode','specification','anchor','liquidOnly'] as const)if(row[key]!==r.thermodynamicClosures![i][key])fail('Closure evidence identity mismatch.');
+  }
+  const expected=[...r.variables.map(v=>v.id),...Object.keys(s.invariants),...s.reconstructions.map(v=>v.quantityId)].map(k=>'steady.'+k).concat(e.equationIds.map(k=>'steady.residual.'+k),(r.thermodynamicClosures??[]).flatMap(row=>row.outputs.map(q=>'closure.'+q.id)));
   if(!same(result.series.map(v=>v.id).sort(),expected.sort())||result.series.some(v=>v.ejes.length||!finite(v.valores)))fail('Invalid scalar steady series.');
   const series=new Map(result.series.map(v=>[v.id,v]));
   for(const v of r.variables){const row=series.get('steady.'+v.id)!;if(row.unidadSI!==v.unit||Number(row.valores)<v.boundsSI[0]||Number(row.valores)>v.boundsSI[1])fail('Steady domain/unit mismatch.');}
   for(const v of r.invariants){const row=series.get('steady.'+v.quantityId)!;if(row.valores!==v.value||row.unidadSI!==v.unit)fail('Changed steady invariant.');}
+  for(const row of r.thermodynamicClosures??[])for(const q of row.outputs)if(series.get('closure.'+q.id)?.unidadSI!==q.unit)fail('Closure output unit mismatch.');
   let maximum=0;for(const v of r.residualRows){const row=series.get('steady.residual.'+v.id)!;if(row.unidadSI!==v.unit)fail('Residual unit mismatch.');maximum=Math.max(maximum,Math.abs(Number(row.valores))/v.scaleSI);}
-  const ids=['steady.scaled_residual',...s.checks.map(v=>'conservation.'+v.equationId),...Object.keys(s.invariants).map(k=>'invariant.'+k)];
+  for(const row of r.inverseSpecification?.rows??[]){const output=series.get('steady.'+row.quantityId)!,residual=series.get('steady.residual.'+row.id)!;
+    const value=Number(output.valores),actual=Number(residual.valores);
+    if(output.unidadSI!==row.unit||Math.abs(actual-(value-row.targetSI))>8*Number.EPSILON*Math.max(1,Math.abs(value),Math.abs(row.targetSI)))fail('Specification residual differs from its published output and target.');}
+  const closureTolerances=Object.fromEntries((r.thermodynamicClosures??[]).map(row=>['thermodynamics.closure.'+row.volumeId,row.mode==='equilibrium'?1:1e-9]));
+  const ids=[...Object.keys(closureTolerances),'steady.scaled_residual',...s.checks.map(v=>'conservation.'+v.equationId),...Object.keys(s.invariants).map(k=>'invariant.'+k)];
+  const diagnosticIds=(r.kineticDiagnostics?.volumeIds??[]).map(id=>'reactions.equilibrium_limit.'+id);ids.push(...diagnosticIds);
   if(!same(result.verificaciones.map(v=>v.id).sort(),ids.sort())||maximum>c.residualTolerance||result.verificaciones.find(v=>v.id==='steady.scaled_residual')?.valor!==maximum)fail('Steady verification mismatch.');
-  for(const v of result.verificaciones){const tol=v.id==='steady.scaled_residual'?c.residualTolerance:1e-6;if(!finite(v.valor)||v.valor<0||v.valor>tol||v.tolerancia!==tol)fail('Steady verification failed.');}
+  for(const v of result.verificaciones){if(diagnosticIds.includes(v.id)){if(!finite(v.valor)||v.valor<0||v.tolerancia!==1e-3)fail('Invalid kinetic equilibrium-limit diagnostic.');continue;}const tol=v.id==='steady.scaled_residual'?c.residualTolerance:(closureTolerances[v.id]??1e-6);if(!finite(v.valor)||v.valor<0||v.valor>tol||v.tolerancia!==tol)fail('Steady verification failed.');}
 }
 
 export function steadyCSV(result:ConjuntoResultados):string{
