@@ -13,13 +13,15 @@
 // not in tools/ci/frontend_verifiers_other.txt is reported and fails the run,
 // so a new verifier cannot be silently left out of CI.
 import { spawnSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const frontend = path.resolve(here, '..', '..', 'frontend');
 const group = process.argv[2];
+// Some verifiers write their example to the git-ignored .tmp/ folder; a clean clone has none.
+mkdirSync(path.resolve(here, '..', '..', '.tmp'), { recursive: true });
 
 const read = (name) => {
   const file = path.join(here, `frontend_verifiers_${name}.txt`);
