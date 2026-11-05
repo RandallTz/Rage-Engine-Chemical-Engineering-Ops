@@ -24,6 +24,8 @@ def source_signature(model, replayed=None):
          for key, node in sorted(result.graph.nodes.items())],
         sorted((sp.srepr(q), unit) for q, unit in result.units.items()),
         result.definition]
+    if model.get('motores',{}).get('equilibriumReactions') is not None:
+        payload.append(model['motores']['equilibriumReactions'])
     return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
 
 
