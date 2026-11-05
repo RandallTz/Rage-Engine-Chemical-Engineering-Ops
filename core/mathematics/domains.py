@@ -4,6 +4,7 @@ Physics and equipment do not participate in selecting a mathematical branch.
 Unknown membership is a finding, never an implicit branch choice.
 """
 from dataclasses import dataclass
+from functools import lru_cache
 import re
 import sympy as sp
 from .errors import MathematicsError
@@ -20,6 +21,21 @@ DOMAIN_SETS={
     'zero':sp.FiniteSet(0),
 }
 PREDICATES={name:getattr(sp.Q,name) for name in DOMAIN_SETS}
+
+
+@lru_cache(maxsize=16384)
+def _ask_exact(predicate, assumptions, context):
+    # The complete assumption context is part of the proof key. In particular,
+    # an answer under `assuming(...)` must never leak into a later request.
+    from sympy.assumptions.assume import AssumptionsContext
+    return sp.ask(predicate, assumptions, context=AssumptionsContext(context))
+
+
+def ask_once(predicate, assumptions=True):
+    from .preparation import enabled
+    if not enabled():
+        return sp.ask(predicate, assumptions)
+    return _ask_exact(predicate, assumptions, frozenset(sp.assumptions.global_assumptions))
 
 
 def exact_endpoint(value):
@@ -73,7 +89,7 @@ def validate_domains(premises):
     for premise in premises:
         previous=intersections.get(premise.quantity,sp.S.Reals)
         intersection=sp.Intersection(previous,premise.allowed)
-        if intersection is sp.S.EmptySet or sp.ask(premise.predicate) is False:
+        if intersection is sp.S.EmptySet or ask_once(premise.predicate) is False:
             raise MathematicsError('The declared real domains are contradictory or empty.')
         intersections[premise.quantity]=intersection
     return intersections
