@@ -1,3 +1,5 @@
+import type {ModeloComun} from '../../motores/modelo/contrato';
+import type {InverseSpecification} from '../../motores/modelo/inverseSpecification';
 import {commonSource,selectedDerivedModel} from './derivedSelection';
 /** Shared transport adapter; it selects a protocol, never derives equations. */
 import type { HojaMotor } from '../motor/hojasMotor';
@@ -22,8 +24,8 @@ export function equationSource(model:HojaMotor){
     ...(thermo?{thermodynamicJournal:{format:'rage.thermodynamic-derivation',version:1,volumes:{dominio:thermo}}}:{})}};
 }
 
-export function modelRequest(model: HojaMotor, transformed = false) {
-  if(model.commonModel)return {modelo:transformed?selectedDerivedModel(model):commonSource(model)};
+export function modelRequest(model: HojaMotor, transformed = false):{modelo:ModeloComun;solicitudV2?:never;inverseSpecification?:InverseSpecification}|{solicitudV2:NonNullable<HojaMotor['redTermodinamica']>['solicitud'];modelo?:never;inverseSpecification?:never} {
+  if(model.commonModel)return {modelo:transformed?selectedDerivedModel(model):commonSource(model),...(transformed&&model.derivedSelection?.inverseSolve?{inverseSpecification:model.derivedSelection.inverseSolve.record}:{})};
   if (transformed && model.transformation) return { modelo: selectedTransformedModel(model) };
   if (model.redTermodinamica) return { solicitudV2: model.redTermodinamica.solicitud };
   const common = cabeEnBalances(model) ? modeloBalancesDesdeHoja(model) : modeloDesdeHojaMotor(model);
