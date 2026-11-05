@@ -36,7 +36,7 @@ def datum(model, key, unit):
 
 def read_definition(value, model):
     keys(value, ['format', 'version', 'volumes'])
-    if value['format'] != FORMAT or type(value['version']) is not int or value['version'] != 1:
+    if value['format'] != FORMAT or type(value['version']) is not int or value['version'] not in (1, 2):
         raise ValueError('Unsupported kinetic reaction format/version.')
     volumes = value['volumes']
     if not isinstance(volumes, dict) or len(volumes) > 160:
@@ -48,17 +48,22 @@ def read_definition(value, model):
         volume = owners[owner]
         if not volume['balances']['materia']:
             raise ValueError('Kinetic reactions require active component balances.')
-        keys(entry, ['volumeDataId', 'molarMassDataIds', 'elements', 'reactions'])
+        keys(entry, ['volumeDataId' if value['version'] == 1 else 'volumeSource', 'molarMassDataIds', 'elements', 'reactions'])
         components = {str(c) for c in volume['componenteIds']}
         masses = entry['molarMassDataIds']
         if not isinstance(masses, dict) or set(masses) != components:
             raise ValueError('Declare a molar mass for every component of the kinetic volume.')
-        if datum(model, entry['volumeDataId'], 'm3') <= 0:
-            raise ValueError('The reacting volume must be positive.')
-        if volume['frontera']['tipo'] == 'rigida' and datum(model, volume['frontera']['datoId'], 'm3') != datum(model, entry['volumeDataId'], 'm3'):
-            raise ValueError('The reacting volume must match the declared rigid control volume.')
-        if 'volumenDatoId' in volume and datum(model, volume['volumenDatoId'], 'm3') != datum(model, entry['volumeDataId'], 'm3'):
-            raise ValueError('The reacting volume must match the declared material-volume datum.')
+        if value['version'] == 1:
+            if datum(model, entry['volumeDataId'], 'm3') <= 0:
+                raise ValueError('The reacting volume must be positive.')
+            if volume['frontera']['tipo'] == 'rigida' and datum(model, volume['frontera']['datoId'], 'm3') != datum(model, entry['volumeDataId'], 'm3'):
+                raise ValueError('The reacting volume must match the declared rigid control volume.')
+            if 'volumenDatoId' in volume and datum(model, volume['volumenDatoId'], 'm3') != datum(model, entry['volumeDataId'], 'm3'):
+                raise ValueError('The reacting volume must match the declared material-volume datum.')
+        else:
+            keys(entry['volumeSource'], ['kind'])
+            if entry['volumeSource']['kind'] != 'control_volume':
+                raise ValueError('Version 2 uses the dynamic control-volume quantity V(t).')
         molar_masses = {c: datum(model, d, 'kg/mol') for c, d in masses.items()}
         if any(m <= 0 for m in molar_masses.values()):
             raise ValueError('Molar masses must be positive.')
