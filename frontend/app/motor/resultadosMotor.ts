@@ -1,4 +1,5 @@
 import type {ResultadoMotor} from './modeloNumerico';
+import {validateSavedIndexedResult} from '../models/indexedSelection';
 import {readCompilationReport} from '../../motores/modelo/compilation';
 import {leerResultados} from '../../motores/resultados/lector';
 import {ModelDiagnosticError,readAssessment} from '../../motores/modelo/assessment';
@@ -12,6 +13,7 @@ export function readRejectedAttempt(value:unknown,id:string,signature:string):Re
 }
 function abrir():Promise<IDBDatabase>{return new Promise((resolve,reject)=>{const r=indexedDB.open('rage-motor-resultados',1);r.onupgradeneeded=()=>r.result.createObjectStore('resultados');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(new Error('No se pudo abrir el almacenamiento de resultados.'));});}
 export function validateSavedSteady(result:ResultadoMotor,id:string,signature:string){
+  if(result.version===3||result.motor==='rage.compilador.indexed_network'){validateSavedIndexedResult(result,id,signature);return;}
   if(result.version!==2&&result.modo!=='steady'&&result.motor!=='rage.compilador.steady'&&result.compilation?.version!==2&&result.commonResult?.procedencia.motor!=='rage.compilador.steady')return;
   if(result.version!==2||result.modo!=='steady'||result.motor!=='rage.compilador.steady'||result.estado!=='resuelto'||result.metodo!=='damped_newton'||result.firma!==signature||!result.commonResult||result.commonResult.modeloId!==id||result.compilation?.version!==2||result.tiempos.length||result.x.length||result.valores.length||result.componentes.length||result.seriesEvaluadas||result.ensamblajeV2||result.ensamblajeTermodinamico||JSON.stringify(result.compilation)!==JSON.stringify(result.commonResult.procedencia.compilation)||JSON.stringify(result.verificationChecks)!==JSON.stringify(result.commonResult.verificaciones))throw new Error('Invalid scalar steady saved wrapper.');
   leerResultados(result.commonResult);
