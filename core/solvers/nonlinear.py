@@ -19,7 +19,7 @@ class NonlinearError(Exception):
 
 def solve(residual, jacobian, seed, bounds, variable_scales, residual_scales, *,
           residual_tolerance=1e-10, step_tolerance=1e-12, max_iterations=30,
-          max_backtracks=20, admissible=None):
+          max_backtracks=20, admissible=None, linear_solver='dense'):
     seed = np.asarray(seed, dtype=float)
     bounds = np.asarray(bounds, dtype=float)
     xs = np.asarray(variable_scales, dtype=float)
@@ -66,11 +66,8 @@ def solve(residual, jacobian, seed, bounds, variable_scales, residual_scales, *,
             evidence['iterations'] = iteration
             evidence['residualNorm'] = float(np.linalg.norm(r, ord=np.inf))
             try:
-                with np.errstate(over='raise', invalid='raise', divide='raise'):
-                    j = np.asarray(jacobian(z), dtype=float) * xs[None, :] / rs[:, None]
-                if j.shape != (n, n) or not np.all(np.isfinite(j)):
-                    raise ValueError('Nonfinite Jacobian or incompatible shape.')
-                condition = float(np.linalg.cond(j, p=np.inf))
+                from .sparse_blocks import factor_step
+                correction, condition, smallest = factor_step(jacobian(z), r, xs, rs, linear_solver)
                 evidence['conditionInfinity'] = condition if np.isfinite(condition) else None
                 if not np.isfinite(condition):
                     fail('nonlinear_singular_jacobian', 'The scaled algebraic Jacobian is singular.')
@@ -79,11 +76,9 @@ def solve(residual, jacobian, seed, bounds, variable_scales, residual_scales, *,
                 # Relative conditioning alone cannot detect a uniformly small
                 # Jacobian (in particular cond([j]) == 1 for every j != 0).
                 # Bound absolute inverse amplification in declared scaled units.
-                smallest = float(np.linalg.svd(j, compute_uv=False)[-1])
                 if smallest <= 0 or np.finfo(float).eps / smallest > 1e-8:
                     fail('nonlinear_ill_conditioned',
                          f'Scaled Jacobian epsilon / sigma_min exceeds 1e-8 (sigma_min={smallest:.12g}); review the root regularity and declared scales.')
-                correction = np.linalg.solve(j, -r)
             except np.linalg.LinAlgError:
                 fail('nonlinear_singular_jacobian', 'The algebraic Jacobian cannot be factored.')
             except (ArithmeticError, ValueError) as error:
