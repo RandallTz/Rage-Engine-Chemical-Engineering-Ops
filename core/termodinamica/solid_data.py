@@ -57,15 +57,37 @@ class SolidPure:
         return self.dh_fus(T) - T * self.ds_fus(T) + self.dv * (P - self.P_m)
 
     def melting_T(self, P):
-        """Melting temperature at P: root of dg_fus(T, P) = 0 nearest T_m (T_m itself when dv = 0)."""
+        """Melting temperature at P: root of dg_fus(T, P) = 0 nearest T_m (T_m itself when dv = 0), by Newton
+        from T_m (d(dg_fus)/dT = -ds_fus). Located rejection (F9-R14) when an iterate leaves T > 0 or meets
+        ds_fus <= 0, when Newton does not converge in 50 steps, or when the root lies below the record's T_min
+        (the record does not apply there). The record declares no pressure range for constant dv."""
         if self.dv == 0.0 or P == self.P_m:
             return self.T_m
+
+        def reject(why):
+            from core.mezclas import FueraDeAlcance
+            raise FueraDeAlcance("fuera_de_dominio", f"No melting temperature of {self.name} ({self.cas}, "
+                                 f"{self.polymorph}) at P = {P:.6g} Pa from its record: {why}.", T_fuera=True,
+                                 cause="melting_T_undefined", solid=self.cas, P=P)
+
+        if not (math.isfinite(P) and P > 0.0):
+            reject("P is not a positive pressure")
         T = self.T_m
-        for _ in range(50):                       # Newton on dg_fus; d(dg_fus)/dT = -ds_fus
-            step = self.dg_fus(T, P) / self.ds_fus(T)
+        for _ in range(50):
+            ds = self.ds_fus(T)
+            if not ds > 0.0:
+                reject(f"ds_fus = {ds:.6g} J/(mol K) <= 0 at T = {T:.6g} K")
+            step = self.dg_fus(T, P) / ds
             T += step
+            if not (math.isfinite(T) and T > 0.0):
+                reject(f"the Newton iterate left T > 0 (dg_fus = dv (P - P_m) = {self.dv * (P - self.P_m):.6g} "
+                       "J/mol cannot be balanced)")
             if abs(step) < 1e-12 * T:
                 break
+        else:
+            reject("Newton on dg_fus did not converge in 50 steps")
+        if T < self.T_min:
+            reject(f"the root {T:.6g} K lies below the record's T_min = {self.T_min:.6g} K")
         return T
 
     def pure_properties(self, T, P, g_L, h_L, s_L, cp_L=None):
