@@ -11,6 +11,7 @@ export type Serie = {
 };
 export type Evento = { codigo: string; ejeId: string; valor: number; descripcion: string; propietarioId?: string };
 export type ConjuntoResultados = {
+  indexedNetwork?: import('./indexedNetwork').IndexedNetworkPublication;
   formato: "rage.resultados"; version: 0; id: string; nombre: string; modeloId: string | null;
   estado: "resuelto" | "parcial" | "fallido";
   procedencia: { motor: string; metodo: string | null; firma: string | null; mensaje?: string; pasos?: number; rechazos?: number; compilation?: import('../modelo/compilation').CompilationReport;
