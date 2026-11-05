@@ -72,6 +72,8 @@ export type Restriccion = { simboloId: string; tipo: "no_negativo" }
   /** Una expresión de las variables que debe mantenerse >= 0 (dominio de validez de un supuesto). */
   | { expresion: Expresion; tipo: "no_negativo"; descripcion: string };
 export type ModeloComun = {
+  template?: ModelTemplate;
+  indexSet?: import('./indexSetContract').IndexSet;
   formato: "rage.modelo"; version: typeof VERSION_MODELO;
   id: string; nombre: string;
   componentes: Componente[];
@@ -89,6 +91,20 @@ export type ModeloComun = {
   /** Expresiones que deben ser ~0 en cada muestra (cierres de presupuesto): max|expresion| / max|escala|. */
   verificaciones?: { id: string; descripcion: string; expresion: Expresion; escala: Expresion; tolerancia?: number }[];
   estudio: Estudio | null;
-  motores: { kineticReactions?: import('../../app/models/kineticReactions').KineticReactions; derivedExecution?: import('./derivedExecution').DerivedExecution; equationWorkbench?: import("../../app/models/equationWorkbench").EquationWorkbench; hydraulicNetwork?: import('../../app/models/hydraulicDefinition').HydraulicNetwork; momentumDerivation?: import('../../app/models/momentumDerivation').MomentumJournal; dynamicDefinition?: import('../../app/models/dynamicDefinition').DynamicDefinition; adimensionalizacion?: ConfigAdimensionalizacion; materialDerivation?: import('../../app/motor/materialDerivation').MaterialJournal; energyDerivation?: import('../../app/motor/physicalDerivation').EnergyJournal; thermodynamicDerivation?: import('../../app/motor/physicalDerivation').ThermodynamicJournal };
+  motores: { equilibriumReactions?: import('./equilibriumReactions').EquilibriumReactions; kineticReactions?: import('../../app/models/kineticReactions').KineticReactions; derivedExecution?: import('./derivedExecution').DerivedExecution; equationWorkbench?: import("../../app/models/equationWorkbench").EquationWorkbench; hydraulicNetwork?: import('../../app/models/hydraulicDefinition').HydraulicNetwork; momentumDerivation?: import('../../app/models/momentumDerivation').MomentumJournal; dynamicDefinition?: import('../../app/models/dynamicDefinition').DynamicDefinition; adimensionalizacion?: ConfigAdimensionalizacion; materialDerivation?: import('../../app/motor/materialDerivation').MaterialJournal; energyDerivation?: import('../../app/motor/physicalDerivation').EnergyJournal; thermodynamicDerivation?: import('../../app/motor/physicalDerivation').ThermodynamicJournal };
   procedencia: Procedencia;
+};
+
+/** Optional metadata: references existing recorded deductions and open boundaries. */
+export type TemplateJournal = 'materialDerivation'|'energyDerivation'|'momentumDerivation'|'thermodynamicDerivation'|'equationWorkbench';
+export type TemplatePort = {
+  id:string; volumeId:string; direction:'inlet'|'outlet';
+  boundary:{type:'stream'|'exchange'|'term';id:string};
+} & ({kind:'material';donorPhase?:string|null;exteriorState?:'estadoExterior';variables:{
+  flow:{unitSI:'kg/s'|'mol/s'|'m^3/s'};composition:{unitSI:'1'};temperature:{unitSI:'K'};
+  pressure:{unitSI:'Pa'};specificEnthalpy:{unitSI:'J/kg'|'J/mol'};
+}}|{kind:'heat'|'work';variables:{power:{unitSI:'W'}}});
+export type ModelTemplate = {
+  format:'rage.model-template';version:1;id:string;templateVersion:string;equipment:boolean;
+  recipe:{journals:TemplateJournal[]};ports:TemplatePort[];
 };
