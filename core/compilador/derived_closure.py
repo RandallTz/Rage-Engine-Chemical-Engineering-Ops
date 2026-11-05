@@ -435,6 +435,13 @@ def reaction_limit(system, closure, times, values):
                    for reaction in config['reactions']])
     n0, _, _ = closure._inputs(times[0], values[0])
     n, _, mechanical = closure._inputs(times[-1], values[-1])
+    open_material = any(closure.owner in (stream['desde'],stream['hasta'])
+                        for stream in system.model['corrientes'])
+    if open_material:
+        # Boundary transport changes the element inventory. The equilibrium
+        # limit is a diagnostic at the current inventory, not a claim that a
+        # continuously driven operating point must be chemical equilibrium.
+        n0 = np.asarray(n).copy()
     _, final = closure.evaluate(times[-1], values[-1], 'publication')
     temperature = float(final['T'])
     pressure = float(mechanical if closure.single or closure.spec == 'PH' else final['P'])
@@ -461,4 +468,114 @@ def reaction_limit(system, closure, times, values):
            'descripcion': ('Largest |n_i(final) - n_i(equilibrium)| / sum n_i(0), with the equilibrium certified by the package at the final T and P '
                            'and the initial element inventory. Above tolerance, the kinetic state has not reached the chemical-equilibrium limit '
                            '(too short a horizon, or rate laws inconsistent with K(T)); it is a diagnostic, not a solver failure.')}
+    if open_material:
+        row['descripcion'] = ('Largest composition distance to certified chemical equilibrium at the final T, P and current element inventory. '
+            'A continuously driven kinetic operating point need not reach this limit; this is a diagnostic, not a solver failure.')
     return row, detail
+
+
+class SteadyClosures:
+    """Package closures inside the version-5 steady residual (demo-02-steady).
+
+    The closure outputs are algebraic unknowns of the steady residual that the package eliminates:
+    at every residual and finite-difference Jacobian evaluation the closure inputs (amounts, energy
+    inventory, mechanical datum) are formed from the steady unknowns and passed to the same
+    `derived_bridge` calls as dynamic execution. Phase presence is the certified flash at that
+    point, never assumed.
+    """
+
+    def __init__(self, system, volumes):
+        self.system = system
+        self.closures = [PackageClosure(system, volume) for volume in volumes]
+        self.outputs = [q for closure in self.closures for q in closure.outputs]
+        self.symbols = [sp.Dummy('closure' + str(i), real=True) for i in range(len(self.outputs))]
+        self.symbol_map = dict(zip(self.outputs, self.symbols))
+        self.dependencies = []
+
+    def constants(self):
+        values = {}
+        for closure in self.closures:
+            values.update(closure.constants)
+            for inlet in closure.inlets.values():
+                values.update(inlet['values'])
+        return values
+
+    def bind(self, unknowns, symbols, expand):
+        """Express each closure input in steady unknowns; outputs must not feed back."""
+        mapping = dict(zip(unknowns, symbols))
+        for closure in self.closures:
+            functions, used = [], set()
+            for quantity in [*closure.amounts, closure.energy, closure.mechanical]:
+                value = si_magnitude(expand(quantity)).xreplace(mapping)
+                free = value.atoms(sp.core.function.AppliedUndef)
+                if value.has(*self.outputs) or free or value.free_symbols - set(symbols):
+                    raise LoweringError('closure_input_unresolved', 'Express the closure input ' + str(quantity) +
+                                        ' of ' + closure.owner + ' in steady unknowns and data (select its reconstruction).')
+                used |= value.free_symbols
+                functions.append(sp.lambdify([symbols], value, modules='numpy'))
+            closure.inputs = [lambda t, y, fn=fn: float(fn(y)) for fn in functions]
+            self.dependencies.append(used)
+
+    def evaluate_block(self, closure, time, values):
+        """One volume for block Jacobian probes, with the existing trial rejection semantics."""
+        try:
+            return closure.evaluate(time, values, 'steady')[0]
+        except (LoweringError, Detencion) as error:
+            raise ValueError('Package closure: '+str(error)) from error
+
+    def vector(self, values):
+        # A package failure at a trial point is an inadmissible evaluation for the damped Newton,
+        # reported through its own structured failure; it is never clipped or replaced.
+        values = np.asarray(values, dtype=float)
+        try:
+            return np.concatenate([closure.evaluate(0., values, 'steady')[0] for closure in self.closures])
+        except (LoweringError, Detencion) as error:
+            raise ValueError('Package closure: ' + str(error)) from error
+
+    def evaluate(self, values):
+        values = np.asarray(values, dtype=float)
+        return [closure.evaluate(0., values, 'publication') for closure in self.closures]
+
+    def depends(self, expression, symbols):
+        """Unknown columns an expression reaches directly or through a closure output."""
+        columns = {i for i, q in enumerate(symbols) if expression.has(q)}
+        offset = 0
+        for closure, used in zip(self.closures, self.dependencies):
+            if any(expression.has(s) for s in self.symbols[offset:offset + len(closure.outputs)]):
+                columns |= {i for i, q in enumerate(symbols) if q in used}
+            offset += len(closure.outputs)
+        return columns
+
+    def report(self, unit, ids):
+        """Compilation identity of each closure: package, specification, outputs and package constants."""
+        rows = []
+        for closure in self.closures:
+            constants = dict(closure.constants)
+            for inlet in closure.inlets.values():
+                constants.update(inlet['values'])
+            rows.append({'volumeId': closure.owner, 'package': closure.package, 'mode': 'single_phase' if closure.single else 'equilibrium',
+                         'specification': closure.spec, 'anchor': closure.anchor, 'liquidOnly': closure.liquid_only,
+                         'outputs': [{'id': ids.get(q, str(q)), 'unit': unit(q)} for q in closure.outputs],
+                         'constants': [{'id': ids.get(q, str(q)), 'value': float(v), 'unit': unit(q)} for q, v in constants.items()]})
+        return rows
+
+    def publication(self, root, unit, ids):
+        """Closure outputs, phase set and fresh certificates at the steady root."""
+        output, checks, details = [], [], []
+        for closure, (row, values) in zip(self.closures, self.evaluate(root)):
+            for q, value in zip(closure.outputs, row):
+                output.append((ids.get(q, str(q)), str(q), unit(q), float(value)))
+            certificate = values['certificate']
+            if closure.single:
+                ratio = certificate['residual'] / certificate['scale']
+                checks.append({'id': 'thermodynamics.closure.' + closure.owner, 'valor': ratio, 'tolerancia': 1e-9,
+                               'descripcion': 'Single-phase package temperature reconstruction at the steady root; stability of the declared phase tested.'})
+            else:
+                value = certificate['ratio'] if certificate['certified'] else max(certificate['ratio'], 2.)
+                checks.append({'id': 'thermodynamics.closure.' + closure.owner, 'valor': value, 'tolerancia': 1.,
+                               'descripcion': 'Largest package-certificate residual divided by its tolerance at the steady root (fresh equilibrium, balance and stability checks).'})
+            reason = closure.admits(values['phase_set'])
+            if reason:
+                raise LoweringError('politica_incumplida', 'At the steady root: ' + reason)
+            details.append({**closure.describe(), 'phaseSet': list(values['phase_set'])})
+        return output, checks, details
