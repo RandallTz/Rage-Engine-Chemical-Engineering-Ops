@@ -213,6 +213,13 @@ class SistemaExplicito:
 
     # --- tree -> function ---------------------------------------------------------------
     def _compilar(self, e, donde):
+        from core.modelo.preparation_cache import enabled
+        if enabled():
+            from .lowering_cache import compile_ast
+            return compile_ast(self,e,donde)
+        return self._compilar_uncached(e,donde)
+
+    def _compilar_uncached(self, e, donde):
         t = e["tipo"]
         if t == "numero":
             v = float(e["valor"])
