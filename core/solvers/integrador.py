@@ -117,8 +117,27 @@ def _rk(sistema, t0, y0, tf, rtol, atol, max_step, metodo="RK45", first_step=Non
     # first_step skips scipy's initial-step probe, which evaluates the right-hand side one guessed step ahead: after
     # a stop raised beyond the current point that probe could land past the same stop.
     extra = {"first_step": min(first_step, tf - t0)} if first_step is not None and tf - t0 > 0 else {}
-    return METODOS[metodo](sistema.rhs, t0, np.array(y0, dtype=float), tf, rtol=rtol, atol=atol, max_step=max_step,
-                           **extra)
+    if metodo == 'BDF' and callable(getattr(sistema, 'jacobian', None)):
+        extra['jac'] = sistema.jacobian
+    try:
+        return METODOS[metodo](sistema.rhs, t0, np.array(y0, dtype=float), tf, rtol=rtol, atol=atol, max_step=max_step,
+                               **extra)
+    except Detencion:
+        if first_step is not None:
+            raise
+        # SciPy's guessed initial Euler probe can leave a physical domain even
+        # when the initial state and the actual trajectory are admissible.
+        # Revalidate the real initial RHS, then use a tolerance-scaled first
+        # step. Ordinary stage rejection/location still governs that step.
+        initial = np.asarray(y0,dtype=float)
+        rate = np.asarray(sistema.rhs(t0,initial),dtype=float)
+        moving = np.abs(rate)>0
+        scale = np.abs(initial)+np.asarray(atol,dtype=float)/rtol
+        times = np.broadcast_to(scale,rate.shape)[moving]/np.abs(rate[moving])
+        step = min(max_step,tf-t0,.01*float(np.min(times)) if times.size else tf-t0)
+        if not np.isfinite(step) or step<=0 or t0+step==t0:
+            raise
+        return _rk(sistema,t0,initial,tf,rtol,atol,max_step,metodo,first_step=step)
 
 
 def _fuera(sistema, t, y):
