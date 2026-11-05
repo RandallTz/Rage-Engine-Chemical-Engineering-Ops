@@ -1,3 +1,4 @@
+import {requiredEquipmentJournals} from '../../motores/modelo/lector';
 import { energyJournalInRequest, energyJournalMatches, energyJournalFromHistory, thermodynamicJournalInRequest, thermodynamicJournalMatches, thermodynamicJournalFromHistory, configuredClosure } from '../motor/physicalDerivation';
 /** Read-only provenance audit. This checks stored evidence, never reconstructs a
  * supposed historical deduction from the final flags or certifies its physics. */
@@ -22,7 +23,17 @@ function equal(left: unknown, right: unknown): boolean {
 }
 
 export function auditModelDerivation(model: HojaMotor): ModelDerivationAudit {
-  if(model.commonModel){const journals=model.commonModel.motores;const counts=[journals.materialDerivation,journals.energyDerivation,journals.thermodynamicDerivation,journals.momentumDerivation].flatMap(journal=>Object.values(journal?.volumes??{})).reduce((sum,entry)=>sum+entry.operations.length,0);return {status:counts?'recorded':'needs_review',recordedSteps:counts,findings:[]};}
+  if(model.commonModel){
+    const common=model.commonModel,journals=common.motores;
+    const counts=[journals.materialDerivation,journals.energyDerivation,journals.thermodynamicDerivation,journals.momentumDerivation]
+      .flatMap(journal=>Object.values(journal?.volumes??{})).reduce((sum,entry)=>sum+entry.operations.length,0);
+    const findings:DerivationFinding[]=common.template?.equipment?requiredEquipmentJournals(common)
+      .filter(key=>!common.template!.recipe.journals.includes(key)||!journals[key]||typeof journals[key]!=='object'||Array.isArray(journals[key]))
+      .map(key=>({code:'equipment_recipe',severity:'gap',ownerId:'model',
+        family:key==='materialDerivation'?'matter':key==='energyDerivation'?'energy':key==='momentumDerivation'?'momentum':'thermodynamics',
+        message:`Equipment requires ${key} in its recorded recipe.`})):[];
+    return {status:findings.length||!counts?'needs_review':'recorded',recordedSteps:counts,findings};
+  }
   const findings: DerivationFinding[] = [];
   let recordedSteps = 0;
   const add = (ownerId: string, family: DerivationFinding['family'], code: string, message: string) => findings.push({ code, severity: code === 'snapshot_history' ? 'limitation' : 'gap', ownerId, family, message });
