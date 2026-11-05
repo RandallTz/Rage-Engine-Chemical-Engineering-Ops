@@ -9,7 +9,7 @@ def keys(value,required,optional=()):
 
 
 FORMAT='rage.equation-workbench'
-RULES=('combine','substitute','isolate','expand','factor','differentiate','integrate','volume_integrate','gauss','reynolds','zero','apply_zero','declare_symbol','declare_function','change_dependencies','declare_relation','multiply','divide','declare_domain')
+RULES=('combine','substitute','isolate','expand','factor','differentiate','integrate','volume_integrate','gauss','reynolds','zero','apply_zero','declare_symbol','declare_function','change_dependencies','declare_relation','multiply','divide','state_variation','declare_domain')
 
 
 def read_definition(value):
@@ -32,7 +32,7 @@ def read_definition(value):
         elif any(field in op for field in bounds):raise JournalError('Endpoint fields belong only to interval domain declarations.')
         if 'endpointUnit' in op and op.get('domain')!='interval':raise JournalError('Endpoint units belong only to interval declarations.')
         if 'domains' in op and (op['kind'] not in ('isolate','substitute') or not isinstance(op['domains'],list) or not op['domains'] or len(op['domains'])>24 or any(not isinstance(s,str) or not s.strip() for s in op['domains']) or len(set(op['domains']))!=len(op['domains'])):raise JournalError('Select distinct recorded domain conditions (at most twenty-four).')
-        required={'declare_domain':['sources','symbol','domain','reason'],'combine':['sources'],'substitute':['sources','relation','symbol'],'isolate':['sources','symbol'],'expand':['sources'],'factor':['sources'],'differentiate':['sources','symbol'],'integrate':['sources','symbol','name'],'volume_integrate':['sources'],'gauss':['sources'],'reynolds':['sources'],'zero':['sources','symbol','reason'],'apply_zero':['sources','symbol','reason'],'declare_symbol':['name','unit'],'declare_function':['name','unit','dependencies'],'change_dependencies':['sources','symbol','dependencies','reason'],'declare_relation':['left','right','reason'],'multiply':['sources','right'],'divide':['sources','right']}[op['kind']]
+        required={'state_variation':['sources','symbol','right','reason'],'declare_domain':['sources','symbol','domain','reason'],'combine':['sources'],'substitute':['sources','relation','symbol'],'isolate':['sources','symbol'],'expand':['sources'],'factor':['sources'],'differentiate':['sources','symbol'],'integrate':['sources','symbol','name'],'volume_integrate':['sources'],'gauss':['sources'],'reynolds':['sources'],'zero':['sources','symbol','reason'],'apply_zero':['sources','symbol','reason'],'declare_symbol':['name','unit'],'declare_function':['name','unit','dependencies'],'change_dependencies':['sources','symbol','dependencies','reason'],'declare_relation':['left','right','reason'],'multiply':['sources','right'],'divide':['sources','right']}[op['kind']]
         if any(k not in op for k in required):raise JournalError('The equation operation is missing its inputs.')
         if op['kind']!='combine' and 'sources' in op and len(op['sources'])!=1:raise JournalError('This operation acts on one selected equation.')
         if 'sourceSignatures' in op:
