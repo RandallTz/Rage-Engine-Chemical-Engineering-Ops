@@ -471,3 +471,10 @@ def certify_reactions(state, *, tolerances=None, n0=None, A=None):
                         and out.get("element_residual", 0.0) < tol["conservation"])
     out["conservation_checked"] = n0 is not None
     return out
+
+
+def reaction_jacobian_bounds(provider, nu, box, *, phase_id, standard_state):
+    """Certified enclosures of g, dg/dn, dg/dT and dg/dP over a state box (F5, 5 November 2026). Defined in
+    core/reactions/jacobian_bounds.py (imported here lazily: that module uses the phase classes above)."""
+    from core.reactions.jacobian_bounds import reaction_jacobian_bounds as bounds
+    return bounds(provider, nu, box, phase_id=phase_id, standard_state=standard_state)
