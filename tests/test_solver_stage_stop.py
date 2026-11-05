@@ -32,6 +32,18 @@ class Drained:
 
 
 class StageStopTests(unittest.TestCase):
+    def test_initial_euler_probe_is_not_an_accepted_physical_stop(self):
+        class Relaxing:
+            def rhs(self,t,y):
+                if y[0]<=0:
+                    raise Detencion('positive_inventory','The trial inventory is nonpositive.')
+                return np.array([-1000*(y[0]-.001),100.])
+            def firma(self,t,y):return None
+        for method in ('RK45','BDF'):
+            trajectory=integrar(Relaxing(),[1.,-1e12],.02,rtol=1e-8,atol=[1e-9,1e-3],metodo=method)
+            self.assertIsNone(trajectory.detenida)
+            self.assertAlmostEqual(trajectory.y_fin[0],.001+.999*np.exp(-20),delta=2e-8)
+
     def test_expected_probe_failure_retains_the_accepted_prefix(self):
         class ProbeFailure(Drained):
             def firma(self, t, y):
