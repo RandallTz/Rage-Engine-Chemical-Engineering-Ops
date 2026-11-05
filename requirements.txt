@@ -60,3 +60,18 @@ pydantic==2.13.4
 # httpx 0.28 quito ese argumento. Por eso la suite de API monta el cliente
 # a mano sobre httpx.ASGITransport en vez de usar TestClient.
 httpx==0.28.1
+
+# --- Symbolic algebra: core/balances/*.py (balance and equation generation)
+# import sympy at module level; a clean clone could not import them (CI found it).
+sympy==1.14.0
+
+# --- Imported directly by backend/api_adimensionalizacion.py (fastapi pulls it in;
+# 0.27.0 is the version fastapi 0.104.1 resolves to here).
+starlette==0.27.0
+
+# --- Interval arithmetic with outward rounding: core/reactions/jacobian_bounds.py and
+# core/termodinamica/interval_ad.py, unifac_intervals.py import mpmath directly (sympy also needs it).
+mpmath==1.3.0
+
+# --- Test runner for tests/test_*.py.
+pytest==7.4.3
