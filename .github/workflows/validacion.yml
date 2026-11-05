@@ -1,28 +1,56 @@
-# Validación automática en cada push y cada pull request.
+# Automatic validation.
 #
-# Por qué: hasta ahora nada impedía subir un commit que rompiera la
-# física. Las suites eran buenas pero había que acordarse de correrlas, y
-# el fallo más caro de este proyecto es justo el que no revienta — el que
-# devuelve un número plausible construido sobre algo imposible.
+# Why: nothing used to stop a commit from breaking the physics. The suites were
+# good but someone had to remember to run them, and this project's most
+# expensive failure is the one that does not crash: a plausible number built
+# on something impossible.
 #
-# Las versiones van FIJAS en requirements.txt a propósito: varias
-# comprobaciones comparan contra valores exactos ("benceno/tolueno 50/50
-# = 365.515693 K, idéntico bit a bit"), y eso solo significa algo contra
-# una versión fija de 'thermo'. Si este workflow empieza a fallar sin que
-# nadie haya tocado el núcleo, lo primero que hay que mirar es si alguna
-# dependencia se movió.
+# Two tiers, so that the gate on every push is quick and nothing is dropped:
+#
+#   fast  (every push, and PRs)  tests/validar_*.py suites not listed under
+#                                "slow" in tools/ci/test_tiers.json, pinned-
+#                                dependency check, tsc, pure frontend
+#                                verifiers, next build.  A few minutes.
+#   slow  (PRs to main, nightly, manual)  the long suites (UNIFAC validators,
+#                                multi-minute acceptance suites), one job per
+#                                suite, plus the Python-backed frontend
+#                                verifiers and the browser check.
+#
+# Every tests/validar_*.py suite is in exactly one tier: "slow" is an explicit
+# list, everything else is fast, and tools/ci/check_tiers.py fails the fast job
+# if the slow matrix below and the list disagree.
+#
+# Versions are PINNED in requirements.txt on purpose: several checks compare
+# against exact values ("benzene/toluene 50/50 = 365.515693 K, bit for bit"),
+# which only means something against a fixed 'thermo'. If this workflow starts
+# failing without anyone touching the core, first check whether a dependency
+# moved.
 
-name: Validación
+name: Validation
 
 on:
   push:
     branches: ["**"]
   pull_request:
+    branches: [main]
   workflow_dispatch:
+  schedule:
+    # Nightly slow tier (03:17 UTC; off the hour on purpose).
+    - cron: "17 3 * * *"
+
+concurrency:
+  group: validation-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name != 'schedule' }}
+
+env:
+  # core/mccabe_thiele.py imports matplotlib at module load. A headless runner
+  # must be told not to look for a display.
+  MPLBACKEND: Agg
+  PYTHONUTF8: "1"
 
 jobs:
-  nucleo:
-    name: Núcleo (física y balances)
+  core-fast:
+    name: Core, fast tier (physics and balances)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -33,23 +61,56 @@ jobs:
           python-version: "3.12"
           cache: pip
 
-      - name: Instalar dependencias
+      - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Correr las suites de validación del núcleo
-        # run_tests.py devuelve 0 o 1 de verdad: si una sola comprobación
-        # falla, el trabajo falla. No se lee la salida con los ojos.
-        env:
-          # core/mccabe_thiele.py importa matplotlib al cargar el módulo.
-          # En un runner sin pantalla hay que decirle que no busque una:
-          # es el mismo ajuste que hizo falta para desplegar en Render.
-          MPLBACKEND: Agg
-        run: python run_tests.py
+      - name: Every third-party import is pinned
+        run: python tools/ci/check_requirements.py
+
+      - name: Every suite is in exactly one tier
+        run: python tools/ci/check_tiers.py
+
+      - name: Fast-tier validation suites
+        # run_tests.py exits 0 or 1 for real: one failing check fails the job.
+        # Suites under "known_failing" in tools/ci/test_tiers.json are printed
+        # but do not fail it (each one has a written reason).
+        run: python run_tests.py --tier fast
+
+  core-slow:
+    name: Core, slow tier (${{ matrix.suite }})
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        # Keep in sync with "slow" in tools/ci/test_tiers.json
+        # (tools/ci/check_tiers.py enforces it).
+        suite:
+          - capa_unifac
+          - corte_vertical
+          - motor_consolidacion_v2
+          - motor_ensamblaje_v2
+          - motor_n_componentes
+          - motor_unifac
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Slow-tier suite
+        run: python run_tests.py --tier slow ${{ matrix.suite }}
 
   frontend:
-    name: Frontend (compila y el enlace sobrevive)
+    name: Frontend (types, pure verifiers, build)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: frontend
@@ -62,36 +123,34 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Instalar dependencias
+      - name: Install dependencies
         run: npm ci
 
-      - name: Compilar
-        # Una URL cualquiera: aquí solo se comprueba que compile y que
-        # TypeScript esté limpio, no que hable con el backend.
+      - name: Generate Next route types
+        # tsc needs the global LayoutProps/PageProps types that Next generates.
+        run: npx next typegen
+
+      - name: TypeScript
+        run: npx tsc --noEmit
+
+      - name: Pure verifiers (no server, no browser, no Python)
+        # Every verificar_*.mjs must be in one of the lists under tools/ci/
+        # or this step fails, so a new verifier cannot be left out silently.
+        working-directory: .
+        run: node tools/ci/run_frontend_verifiers.mjs pure
+
+      - name: Build
+        # Any URL: this only checks that it compiles, not that it talks to a
+        # backend.
         env:
-          NEXT_PUBLIC_API_URL: https://ejemplo.invalid
+          NEXT_PUBLIC_API_URL: https://example.invalid
         run: npm run build
 
-      - name: Ida y vuelta del enlace compartible
-        # No necesita navegador: es lógica pura. Comprueba que lo que sale
-        # del enlace sea exactamente lo que entró.
-        run: node verificar_enlace.mjs
-
-  interfaz:
-    # El trabajo que faltaba. Trece de las catorce suites de verificación
-    # necesitan un navegador y los dos servidores vivos, así que no se
-    # ejecutaban NUNCA en CI: el trabajo de arriba corría la única que no
-    # los necesita. Y son precisamente las que comprueban lo que ninguna
-    # suite de Python puede ver — que el número correcto llegue a la
-    # pantalla. Tenerlas sin ejecutar automáticamente es tanto como no
-    # tenerlas.
-    #
-    # Lo que lo impedía era una línea: la ruta de Edge escrita a mano en
-    # cada suite. Ahora se resuelve en frontend/navegador.mjs, y aquí basta
-    # con decir dónde está el Chromium del runner.
-    name: Interfaz (el número llega a la pantalla)
+  interface:
+    name: Interface (Python-backed verifiers and browser)
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
 
@@ -106,54 +165,61 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Instalar dependencias del núcleo
+      - name: Install core dependencies
         run: pip install -r requirements.txt
 
-      - name: Instalar dependencias del frontend
+      - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
 
-      - name: Instalar Chromium
-        # puppeteer-core no trae navegador a propósito (de ahí el "-core").
+      - name: Python-backed frontend verifiers
+        # These spawn the Python core themselves; no server needed.
+        run: node tools/ci/run_frontend_verifiers.mjs python
+
+      - name: Known-failing verifiers (non-blocking, kept visible)
+        continue-on-error: true
+        run: node tools/ci/run_frontend_verifiers.mjs quarantine
+
+      - name: Install Chromium
+        # puppeteer-core deliberately ships no browser.
         run: |
           sudo apt-get update
           sudo apt-get install -y chromium-browser || sudo apt-get install -y chromium
           which chromium-browser || which chromium
 
-      - name: Levantar la API
-        env:
-          MPLBACKEND: Agg
+      - name: Start the API
         run: |
           python -m uvicorn backend.main:app --host 127.0.0.1 --port 8001 &
-          # Esperar a que responda, en vez de dormir un número inventado de
-          # segundos: la primera carga importa 'thermo', que no es rápida.
+          # Wait for it to answer instead of sleeping an invented number of
+          # seconds: the first load imports 'thermo', which is not fast.
           for i in $(seq 1 60); do
             curl -sf http://127.0.0.1:8001/salud && break
             sleep 2
           done
           curl -sf http://127.0.0.1:8001/salud
 
-      - name: Compilar y servir el frontend
+      - name: Build and serve the frontend
         working-directory: frontend
         env:
-          # La URL se hornea en tiempo de compilación, así que tiene que
-          # ser la de la API que acabamos de levantar y no un valor de
-          # relleno.
+          # The URL is baked in at build time, so it must be the API we just
+          # started and not a placeholder.
           NEXT_PUBLIC_API_URL: http://127.0.0.1:8001
         run: |
           npm run build
           npm run start -- -p 3000 &
           for i in $(seq 1 30); do
-            curl -sf http://127.0.0.1:3000/ && break
+            curl -sf http://127.0.0.1:3000/ >/dev/null && break
             sleep 2
           done
           curl -sf http://127.0.0.1:3000/ >/dev/null
 
-      - name: Correr las 14 suites de interfaz
+      - name: Browser check (redesign)
+        # verificar_redesign.mjs is the only verifier that drives a browser.
+        # It targets localhost:3000 and pages that may predate the current
+        # navigation, and it has never run in CI: non-blocking until it has a
+        # first green run, then remove continue-on-error.
+        continue-on-error: true
         working-directory: frontend
-        env:
-          URL_PRUEBAS: http://127.0.0.1:3000
-          NEXT_PUBLIC_API_URL: http://127.0.0.1:8001
         run: |
           export NAVEGADOR_PRUEBAS="$(which chromium-browser || which chromium)"
-          node verificar_todo.mjs
+          node verificar_redesign.mjs
