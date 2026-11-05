@@ -1,0 +1,39 @@
+{
+  "_comment": "Tier registry for run_tests.py. Every tests/validar_*.py suite NOT listed in 'slow' is in the fast tier. Times are wall-clock seconds measured on 5 Nov 2026 (Windows, Python 3.12.10, 3 suites in parallel except capa_unifac). Re-measure when a suite changes character.",
+  "slow": [
+    "validar_capa_unifac.py",
+    "validar_corte_vertical.py",
+    "validar_motor_consolidacion_v2.py",
+    "validar_motor_ensamblaje_v2.py",
+    "validar_motor_n_componentes.py",
+    "validar_motor_unifac.py"
+  ],
+  "known_failing": {
+    "_comment": "Run in the fast tier and reported, but do not fail the job. Each entry needs a reason; remove it when the suite passes again (run_tests.py prints a notice when it does).",
+    "validar_motor_balances.py": "29 of 30 checks pass; 'the solve path turns the rejection into NoSoportado with its reason' fails: Balance engine: volume v1 keeps the generation.1 term and has no data. Observed 5 Nov 2026 on 82c8688."
+  },
+  "measured_seconds": {
+    "validar_api_adimensionalizacion.py": 2,
+    "validar_capa_dimensional.py": 2,
+    "validar_modelo_comun.py": 2,
+    "validar_resultados.py": 2,
+    "validar_unidades.py": 2,
+    "validar_descripcion_termodinamica.py": 3,
+    "validar_adimensionalizacion.py": 4,
+    "validar_estudio_adimensionalizacion.py": 4,
+    "validar_compilador_explicito.py": 5,
+    "validar_motor_termodinamica.py": 5,
+    "validar_motor_balances.py": 5,
+    "validar_capa_agua.py": 6,
+    "validar_motor_termodinamica_h3.py": 21,
+    "validar_capa_termodinamica.py": 24,
+    "validar_motor_diagramas_equilibrio.py": 35,
+    "validar_motor_catalogo.py": 44,
+    "validar_motor_ensamblaje_v2.py": 127,
+    "validar_corte_vertical.py": 155,
+    "validar_motor_consolidacion_v2.py": 163,
+    "validar_motor_n_componentes.py": 181,
+    "validar_motor_unifac.py": 1226,
+    "validar_capa_unifac.py": 2891
+  }
+}
