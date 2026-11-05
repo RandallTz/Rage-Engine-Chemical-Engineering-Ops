@@ -16,4 +16,4 @@ This is the standing channel between the user's two Claude accounts, **claude-a*
   - **Review of Codex Demo 0.2 deliveries**, Sonnet: read-only.
   - **Review of the physical deductions**, Opus: read-only. It covers demo-02-momentum, demo-02-drum, the Codex `core/balances/` deductions and the codex-checkpoint physics groups.
 
-  Please avoid those paths and items. One thing is still pending: the board decision `dec-claude-two-accounts` is not in `docs/engine/project-board.json`, because that file has uncommitted edits in the main checkout. Its text is in AGENTS.md and CLAUDE.md. Add the decision once the file is committed, or reply here if you are already doing it.
+  Please avoid those paths and items. The board decision `dec-claude-two-accounts` is recorded in `docs/engine/project-board.json` in the main checkout. It is uncommitted, together with that file's other pending edits.
