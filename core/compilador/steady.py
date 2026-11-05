@@ -77,6 +77,11 @@ def locate(model, error, stage='admission'):
 class SteadySystem(DerivedGraph):
     def __init__(self, model):
         try:
+            if 'indexSet' in model:
+                error = LoweringError('index_set_not_lowered',
+                    'Indexed stage networks require network lowering; the generic stage cannot execute in their place.')
+                error.diagnostics[0]['path'] = 'indexSet'
+                raise error
             self._initialize(model)
         except LoweringError as error:
             locate(model, error)
@@ -116,11 +121,13 @@ class SteadySystem(DerivedGraph):
             self.fail('steady_invalid_selection', 'Explicit version-1 steady study and damped_newton are required.')
         if model.get('matematico') is not None or model['motores'].get('adimensionalizacion') is not None:
             self.fail('steady_invalid_selection', 'Steady execution requires the identity derived formulation alone.')
-        if model['motores'].get('hydraulicNetwork') is not None or any(v['balances']['momento'] for v in model['volumenes']):
-            self.fail('steady_unsupported_structure', 'This slice does not lower a separate hydraulic or momentum execution configuration.')
+        if model['motores'].get('hydraulicNetwork') is not None:
+            self.fail('steady_unsupported_structure', 'This slice does not lower a separate hydraulic-network configuration.')
+        # Package-closure volumes enter through SteadyClosures (demo-02-steady); spatial systems stay outside.
+        equilibrium = [v for v in model['volumenes'] if v['termodinamica']['tipo'] != 'supuesto']
         for volume in model['volumenes']:
-            if volume['termodinamica']['tipo'] != 'supuesto' or volume['frontera']['tipo'] == 'malla_1d':
-                self.fail('steady_unsupported_structure', 'Package closure calls, phase switching and spatial systems are outside this slice.')
+            if volume['frontera']['tipo'] == 'malla_1d':
+                self.fail('steady_unsupported_structure', 'Spatial systems are outside this slice.')
             for balance, journal in [('materia', 'materialDerivation'), ('energia', 'energyDerivation')]:
                 if volume['balances'][balance] and volume['id'] not in model['motores'].get(journal, {}).get('volumes', {}):
                     self.fail('steady_invalid_selection', 'Every active physical balance requires its recorded journal.')
@@ -150,6 +157,23 @@ class SteadySystem(DerivedGraph):
             value = self._datum(data, self._dim(q))
             self.replacements[q] = value
             self.parameter_records.append({'id': qid, 'dataId': data, 'value': float(value), 'unit': self._unit(q)})
+        self.closures = None
+        self.parameter_symbols = {self._quantity(qid): None for qid in self.selection['parameters']}
+        if equilibrium:
+            from .derived_closure import SteadyClosures
+            self.parameter_symbols = {self._quantity(qid): None for qid in self.selection['parameters']}
+            self.closures = SteadyClosures(self, equilibrium)
+            kinetic = (model['motores'].get('kineticReactions') or {}).get('volumes', {})
+            if any(c.owner in kinetic and c.anchor is None for c in self.closures.closures):
+                self.fail('formation_reference_required', 'Reacting package volumes require the recorded formation reference used by dynamic execution.')
+            for q, value in self.closures.constants().items():
+                if q in self.replacements and not math.isclose(float(self.replacements[q]), value, rel_tol=1e-9):
+                    self.fail('inconsistent_molar_mass', 'A datum contradicts a value supplied by the selected package: '+str(q))
+                self.replacements[q] = sp.Float(value, 17)
+        if any(v['balances']['momento'] for v in self.model['volumenes']):
+            # The same reduced-journal admission as dynamic execution (path flow row, hydrostatic storage).
+            from .derived import DerivedSystem
+            DerivedSystem._reduced_momentum_admission(self)
         self.guards = []
         for row in self.selection['reconstructions']:
             q = self._quantity(row['quantityId']); node = self._equation(row['equationId'])
@@ -158,7 +182,10 @@ class SteadySystem(DerivedGraph):
                 self.fail('steady_unsupported_structure', 'Reconstructions must be explicit and acyclic.', row['equationId'])
             self.replacements[q] = value
             self.guards += [(guard, row['equationId']) for guard in guards]
-        protected = set(self.states+self.unknowns)
+        protected = set(self.states+self.unknowns+(self.closures.outputs if self.closures else []))
+        for row in self.selection['reconstructions']:
+            if self.closures and self._quantity(row['quantityId']) in self.closures.outputs:
+                self.fail('competing_closure', 'A package closure output cannot also be an authored reconstruction.', row['equationId'])
         for key, node in self.graph.nodes.items():
             if key.startswith('operation.') and isinstance(node.equation, sp.Equality) and node.rule == 'constitutive_relation':
                 target = node.equation.lhs
@@ -171,6 +198,9 @@ class SteadySystem(DerivedGraph):
                 target = equation.lhs
                 if isinstance(target, (sp.Symbol, sp.core.function.AppliedUndef)) and target not in protected and target not in self.replacements:
                     self.replacements[target] = equation.rhs
+        from .derived import DerivedSystem
+        self.algebraic_quantities = [self._quantity(row['quantityId']) for row in self.selection['algebraic']]
+        DerivedSystem._kinetic_declarations(self)
         self.zero_rates = {sp.diff(q, self.time): sp.S.Zero for q in self.states if isinstance(q, sp.core.function.AppliedUndef)}
         self.invariant_records = []
         for row in self.selection['states']:
@@ -220,13 +250,21 @@ class SteadySystem(DerivedGraph):
             self.fail('nonlinear_invalid_settings', 'Scales must be positive and bounds strictly ordered.')
         self.symbols = [sp.Dummy('steady'+str(i), real=True) for i in range(len(self.unknowns))]
         self.symbol_map = dict(zip(self.unknowns, self.symbols))
+        if self.closures:
+            # Closure outputs are package-eliminated algebraic unknowns: no symbolic basis exists over them.
+            self.symbol_map.update(self.closures.symbol_map)
+            self.closures.bind(self.unknowns, self.symbols, lambda q: self._expand(q).doit())
         expressions = [value.xreplace(self.symbol_map) for _, value, _ in self.rows]
         for expression in expressions: self.arithmetic(expression)
-        polynomials = [sp.fraction(sp.cancel(value))[0] for value in expressions]
-        self.basis = sp.groebner(polynomials, *self.symbols, domain='QQ')
-        if list(self.basis) == [1]:
-            self.fail('steady_constraint_conflict', 'The retained specialized rows are algebraically inconsistent.')
-        edges = [[i for i, q in enumerate(self.symbols) if expression.has(q)] for expression in expressions]
+        if self.closures:
+            self.basis = None
+            edges = [sorted(self.closures.depends(expression, self.symbols)) for expression in expressions]
+        else:
+            polynomials = [sp.fraction(sp.cancel(value))[0] for value in expressions]
+            self.basis = sp.groebner(polynomials, *self.symbols, domain='QQ')
+            if list(self.basis) == [1]:
+                self.fail('steady_constraint_conflict', 'The retained specialized rows are algebraically inconsistent.')
+            edges = [[i for i, q in enumerate(self.symbols) if expression.has(q)] for expression in expressions]
         matched = {}
         def match(row, seen):
             for column in edges[row]:
@@ -238,9 +276,24 @@ class SteadySystem(DerivedGraph):
             return False
         if not all(match(i, set()) for i in range(len(edges))):
             self.fail('steady_structure_mismatch', 'No complete equation/unknown structural matching exists.')
-        self.jacobian_expression = sp.Matrix(expressions).jacobian(self.symbols)
-        self.residual = sp.lambdify([self.symbols], expressions, modules='numpy', cse=True)
-        self.jacobian = sp.lambdify([self.symbols], self.jacobian_expression, modules='numpy', cse=True)
+        if self.closures:
+            self.residual, self.jacobian = self._closure_residual(expressions)
+        else:
+            self.jacobian_expression = sp.Matrix(expressions).jacobian(self.symbols)
+            self.residual = sp.lambdify([self.symbols], expressions, modules='numpy', cse=True)
+            self.jacobian = sp.lambdify([self.symbols], self.jacobian_expression, modules='numpy', cse=True)
+        from core.solvers.sparse_blocks import ExpressionJacobian
+        blocks = []
+        if self.closures:
+            offset = 0
+            for closure, dependencies in zip(self.closures.closures, self.closures.dependencies):
+                outputs = self.closures.symbols[offset:offset+len(closure.outputs)]
+                columns = {i for i, symbol in enumerate(self.symbols) if symbol in dependencies}
+                blocks.append((outputs, columns, lambda t, y, closure=closure: self.closures.evaluate_block(closure, t, y)))
+                offset += len(outputs)
+        self.block_jacobian = ExpressionJacobian(expressions, self.symbols, self.time, self.scales, blocks)
+        self.linear_policy = dict(self.block_jacobian.policy)
+        self.dense_jacobian = self.jacobian
         self.extra_checks = []; self.conditions = []; self.proof_conditions = []
         self.audit_graph()
         self.checks = []
@@ -255,19 +308,59 @@ class SteadySystem(DerivedGraph):
             self.fail('nonlinear_invalid_seed', 'The declared seed violates its bounds or a retained guard.')
         self.report = self.compilation_report()
 
+    def _closure_residual(self, expressions):
+        """Package residual with centered or second-order inward differences."""
+        closures = self.closures
+        function = sp.lambdify([self.symbols, closures.symbols], expressions, modules='numpy', cse=True)
+        def residual(values):
+            return np.asarray(function(np.asarray(values, dtype=float), closures.vector(values)), dtype=float)
+        def jacobian(values):
+            values = np.asarray(values, dtype=float); columns = []
+            base = None
+            for j, scale in enumerate(self.scales):
+                step = 1e-6*max(abs(values[j]), scale)
+                up, down = values.copy(), values.copy()
+                lower, upper = self.bounds[j]
+                if values[j]-step >= lower and values[j]+step <= upper:
+                    up[j] += step; down[j] -= step
+                    column = (residual(up)-residual(down))/(2*step)
+                else:
+                    direction = 1 if upper-values[j] >= values[j]-lower else -1
+                    room = upper-values[j] if direction == 1 else values[j]-lower
+                    step = min(step,room/2)
+                    if step<=0 or values[j]+direction*step==values[j]:
+                        raise ValueError('No representable Jacobian perturbation inside the declared bounds.')
+                    if base is None:base=residual(values)
+                    up[j] += direction*step;down[j] += direction*2*step
+                    column = direction*(-3*base+4*residual(up)-residual(down))/(2*step)
+                columns.append(column)
+            return np.column_stack(columns)
+        return residual, jacobian
+
+    def _numeric(self, expression):
+        """A function of the steady unknowns that also reads the package closure outputs."""
+        if not self.closures or not expression.has(*self.closures.symbols):
+            return sp.lambdify([self.symbols], expression, modules='numpy')
+        function = sp.lambdify([self.symbols, self.closures.symbols], expression, modules='numpy')
+        return lambda values: function(np.asarray(values, dtype=float), self.closures.vector(values))
+
     def specialize(self, expression):
         expanded = self._expand(expression).doit()
         value = expanded.xreplace(self.zero_rates).doit()
+        if self.closures:
+            # Closure outputs are functions of the stationary unknowns: their rates vanish too.
+            outputs = set(self.closures.outputs)
+            value = value.replace(lambda e: isinstance(e, sp.Derivative) and e.expr in outputs, lambda e: sp.S.Zero).doit()
         if value.has(sp.Derivative, sp.Integral, sp.Sum):
             self.fail('steady_unsupported_structure', 'An unsupported derivative, integral or sum remains after specialization.')
         # Replace time-only unknown functions before inspecting free time.
-        reduced = value.xreplace({q: sp.Dummy() for q in self.unknowns})
+        reduced = value.xreplace({q: sp.Dummy() for q in self.unknowns+(self.closures.outputs if self.closures else [])})
         if self.time in reduced.free_symbols:
             self.fail('steady_time_dependent', 'Residuals and guards must be autonomous after constant binding.')
         return si_magnitude(value)
 
     def arithmetic(self, expression):
-        if expression in self.symbols or expression.is_Number and expression.is_finite:
+        if expression in self.symbols or self.closures and expression in self.closures.symbols or expression.is_Number and expression.is_finite:
             return
         if expression.is_Add or expression.is_Mul:
             for arg in expression.args: self.arithmetic(arg)
@@ -275,11 +368,32 @@ class SteadySystem(DerivedGraph):
         if expression.is_Pow and expression.exp.is_Integer:
             self.arithmetic(expression.base)
             return
+        if self.closures:
+            # No symbolic basis is built over package outputs, so the rational-only restriction of
+            # the proof does not apply; recorded even-root guards stay runtime conditions.
+            if expression.is_number and expression.is_finite:
+                return
+            if expression.is_Pow and expression.exp.is_Rational:
+                self.arithmetic(expression.base)
+                return
+            if isinstance(expression, sp.Abs):
+                self.arithmetic(expression.args[0])
+                return
+            if expression.func == sp.exp and self.model['motores'].get('kineticReactions'):
+                # The same recorded Arrhenius roots as dynamic execution. The
+                # package path checks consequences numerically, not by a
+                # rational-polynomial proof. Temperature guards remain active.
+                self.arithmetic(expression.args[0])
+                return
         self.fail('steady_unsupported_structure', 'Only finite rational arithmetic with integer powers and guarded division is admitted: '+str(expression))
 
     def require_consequence(self, value, key):
         expression = value.xreplace(self.symbol_map)
         self.arithmetic(expression)
+        if self.basis is None:
+            # With package closures a consequence is verified at the root, not proved symbolically.
+            self.extra_checks.append((key, value))
+            return
         try:
             numerator = sp.fraction(sp.cancel(expression))[0]
             if self.basis.reduce(numerator)[1] != 0:
@@ -358,7 +472,7 @@ class SteadySystem(DerivedGraph):
         if isinstance(value, (sp.GreaterThan, sp.StrictGreaterThan, sp.LessThan, sp.StrictLessThan, sp.Unequality)):
             expression = self.specialize(value.lhs-value.rhs).xreplace(self.symbol_map)
             self.arithmetic(expression)
-            function = sp.lambdify([self.symbols], expression, modules='numpy')
+            function = self._numeric(expression)
             kind = 'nonzero' if isinstance(value, sp.Unequality) else 'positive' if isinstance(value, (sp.StrictGreaterThan, sp.StrictLessThan)) else 'nonnegative'
             sign = -1 if isinstance(value, (sp.LessThan, sp.StrictLessThan)) else 1
             self.conditions.append((function, kind, sign, key, math_latex(value, self.graph.names)))
@@ -396,12 +510,18 @@ class SteadySystem(DerivedGraph):
                 'rows': rows, 'residualRows': [{'id': key, 'unit': unit, 'scaleSI': scale} for (key, _, unit), scale in zip(self.rows, self.residual_scales)],
                 'invariants': self.invariant_records, 'parameters': self.parameter_records,
                 'proofConditions': self.proof_conditions, 'runtimeConditions': [{'equationId': key, 'kind': kind, 'latex': label} for _, kind, _, key, label in self.conditions],
-                'scope': 'Autonomous rational steady specialization; structural matching is not a rank or uniqueness proof; finite root probes do not prove global uniqueness.'}
+                'scope': 'Autonomous rational steady specialization; structural matching is not a rank or uniqueness proof; finite root probes do not prove global uniqueness. Linear algebra policy: '+json.dumps(self.linear_policy, sort_keys=True),
+                **({'thermodynamicClosures': self.closures.report(self._unit, {value: key for key, value in self.quantities.items()})} if self.closures else {}),
+                **({'kineticDiagnostics':{'version':1,'volumeIds':[c.owner for c in self.closures.closures
+                    if c.owner in self.model['motores']['kineticReactions']['volumes']]}}
+                   if self.closures and self.model['motores'].get('kineticReactions',{}).get('volumes') else {})}
 
     def final_check(self, root):
         if not self.admissible(root):
             self.fail('steady_domain', 'Final candidate violates an original domain guard.')
         substitutions = dict(zip(self.unknowns, map(sp.Float, root)))
+        if self.closures:
+            substitutions.update(zip(self.closures.outputs, map(sp.Float, self.closures.vector(root))))
         residuals = []
         for (key, _, _), scale in zip(self.rows, self.residual_scales):
             equation = self._equation(key).equation
@@ -413,7 +533,14 @@ class SteadySystem(DerivedGraph):
             value = float(expression.subs(substitutions))
             # Consequences are independently checked with a dimension-compatible
             # original-row scale where available; no residual is dropped.
-            scale = next((s for (rid, _, _), s in zip(self.rows, self.residual_scales) if rid == key), 1.)
+            scale = next((s for (rid, _, _), s in zip(self.rows, self.residual_scales) if rid == key), None)
+            if scale is None and self.closures and key in self.graph.nodes and isinstance(self.graph.nodes[key].equation, sp.Equality):
+                # Without a symbolic proof, an intermediate stage of a selected law is checked with
+                # the residual scale of a selected row of the same unit.
+                equation = self.graph.nodes[key].equation
+                unit = self._unit(equation.lhs-equation.rhs)
+                scale = next((s for (_, _, u), s in zip(self.rows, self.residual_scales) if u == unit), None)
+            scale = 1. if scale is None else scale
             if not math.isfinite(value) or abs(value)/scale > self.config['residualTolerance']:
                 self.fail('steady_original_residual', 'A retained active constraint failed final evaluation.', key)
         checks = []
@@ -424,14 +551,22 @@ class SteadySystem(DerivedGraph):
             checks.append({'id': 'conservation.'+key, 'valor': residual, 'tolerancia': 1e-6, 'descripcion': 'Original specialized balance residual'})
         return residuals, checks, substitutions
 
-    def solve(self):
+    def solve(self, *, linear_solver=None):
         try:
-            root, detail = nonlinear.solve(self.residual, self.jacobian, self.seed, self.bounds, self.scales,
+            selected_solver = linear_solver or self.linear_policy['selected']
+            if selected_solver not in ('dense', 'sparse'): raise ValueError('Unknown linear solver.')
+            import copy
+            run_report = copy.deepcopy(self.report)
+            if linear_solver:
+                run_report['scope'] += ' Explicit verification override: '+linear_solver+'.'
+            jacobian = (self.jacobian if linear_solver is None else self.dense_jacobian) if selected_solver == 'dense' else lambda values: self.block_jacobian(0., values)
+            self.block_jacobian.policy['selected'] = selected_solver
+            root, detail = nonlinear.solve(self.residual, jacobian, self.seed, self.bounds, self.scales,
                 self.residual_scales, residual_tolerance=self.config['residualTolerance'], step_tolerance=self.config['stepTolerance'],
-                max_iterations=self.config['maxIterations'], max_backtracks=self.config['maxBacktracks'], admissible=self.admissible)
+                max_iterations=self.config['maxIterations'], max_backtracks=self.config['maxBacktracks'], admissible=self.admissible, linear_solver=selected_solver)
             residuals, checks, substitutions = self.final_check(root)
-            jacobian = np.asarray(self.jacobian(root), dtype=float)*np.array(self.scales)[None, :]/np.array(self.residual_scales)[:, None]
-            smallest = float(np.linalg.svd(jacobian, compute_uv=False)[-1])
+            from core.solvers.sparse_blocks import factor_step
+            _, _, smallest = factor_step(jacobian(root), np.zeros(len(root)), np.asarray(self.scales), np.asarray(self.residual_scales), selected_solver)
             evidence = {'version': 1, 'verdict': 'local_regular_root', 'globalUniqueness': 'not_proved',
                 'method': 'damped_newton', 'sourceSignature': self.report['sourceSignature'],
                 'formulationSignature': self.report['formulationSignature'], 'dataSignature': self.report['dataSignature'],
@@ -452,11 +587,26 @@ class SteadySystem(DerivedGraph):
                 if not math.isfinite(value): self.fail('steady_original_residual', 'A reconstructed quantity is nonfinite.')
                 output.append(serie('steady.'+row['quantityId'], str(q), self._unit(q), [], value))
             output += [serie('steady.residual.'+key, 'Original residual: '+key, unit, [], value) for (key, _, unit), value in zip(self.rows, residuals)]
+            closure_details = []
+            if self.closures:
+                ids = {value: key for key, value in self.quantities.items()}
+                rows, closure_checks, closure_details = self.closures.publication(root, self._unit, ids)
+                output += [serie('closure.'+qid, name, unit, [], value) for qid, name, unit, value in rows]
+                checks += closure_checks
+                evidence['thermodynamicClosures'] = closure_details
+                from .derived_closure import reaction_limit
+                kinetic = (self.model['motores'].get('kineticReactions') or {}).get('volumes', {})
+                self.reaction_limits = []
+                for closure in self.closures.closures:
+                    if closure.owner in kinetic:
+                        diagnostic, detail = reaction_limit(self, closure, [0.], [root])
+                        checks.append(diagnostic)
+                        self.reaction_limits.append(detail)
             checks.append({'id': 'steady.scaled_residual', 'valor': max(abs(v)/s for v, s in zip(residuals, self.residual_scales)),
                            'tolerancia': self.config['residualTolerance'], 'descripcion': 'Maximum original scaled residual'})
             result = conjunto(self.model['id'], self.model['nombre'], 'resuelto',
                 {'motor': 'rage.compilador.steady', 'metodo': 'damped_newton', 'firma': None,
-                 'compilation': self.report, 'steadyDiagnostics': evidence}, [], output, verificaciones=checks, modeloId=self.model['id'])
+                 'compilation': run_report, 'steadyDiagnostics': evidence}, [], output, verificaciones=checks, modeloId=self.model['id'])
             result['procedencia']['steadyDiagnostics']['resultSignature'] = steady_result_signature(result)
             return result
         except nonlinear.NonlinearError as error:
@@ -482,13 +632,149 @@ def resolve(model):
     return SteadySystem(model).solve()
 
 
-def read_report(report):
-    """Strict steady compilation contract; no numerical solve during reading."""
+INVERSE_FIELDS = ['specificationSignature', 'inverseSpecification']
+
+
+def _read_inverse(report, selection):
+    """Strict slice-5 augmentation evidence over the pinned forward selection.
+
+    Returns the augmented unknown order (forward unknowns, then freed inputs), the remaining
+    parameter bindings and the appended specification row identities.
+    """
+    from core.mathematics.contract import keys
+    from core.solvers import inverse_spec
+    import re
+    block = report['inverseSpecification']
+    keys(block, ['format', 'version', 'record', 'data', 'rows', 'freedInputs', 'seedRegularity', 'invalidates', 'retains', 'scope'])
+    if block['format'] != inverse_spec.FORMAT or type(block['version']) is not int or block['version'] != 1:
+        raise ValueError('Expected inverse specification evidence version 1.')
+    try:
+        record = inverse_spec.read_specification(block['record'])
+    except inverse_spec.InverseError as error:
+        raise ValueError(error.code+': '+str(error)) from error
+    specs, freed = record['specifications'], record['freedInputs']
+    referenced = sorted({v for row in specs+freed for k, v in row.items() if k.endswith('DataId')})
+    if not isinstance(block['data'], dict) or sorted(block['data']) != referenced:
+        raise ValueError('Inverse evidence must carry exactly the referenced data declarations.')
+    for value in block['data'].values():
+        keys(value, ['texto', 'unidad'])
+        if not all(isinstance(v, str) for v in value.values()): raise ValueError('Invalid inverse data declaration.')
+    if not isinstance(report['specificationSignature'], str) or not re.fullmatch('[a-f0-9]{64}', report['specificationSignature']) or report['specificationSignature'] != signature([record, block['data']]):
+        raise ValueError('Stale inverse specification signature.')
+    freed_ids = [row['quantityId'] for row in freed]
+    outputs = set(selection['unknowns']) | {row['quantityId'] for row in selection['reconstructions']}
+    if not all(qid in selection['parameters'] for qid in freed_ids):
+        raise ValueError('Only constant parameters of the pinned selection can be freed.')
+    if not all(row['quantityId'] in outputs for row in specs):
+        raise ValueError('Only solved or reconstructed quantities can be specified.')
+    row_ids = ['specification.'+row['id'] for row in specs]
+    if not isinstance(block['rows'], list) or [r.get('id') for r in block['rows']] != row_ids or [r.get('quantityId') for r in block['rows']] != [r['quantityId'] for r in specs]:
+        raise ValueError('Specification rows differ from the record.')
+    for row in block['rows']:
+        keys(row, ['id', 'quantityId', 'targetSI', 'unit', 'latex']); units.interpretar(row['unit'])
+        if type(row['targetSI']) not in (int, float) or not math.isfinite(row['targetSI']) or not isinstance(row['latex'], str):
+            raise ValueError('Invalid specification target.')
+    if not isinstance(block['freedInputs'], list) or [r.get('quantityId') for r in block['freedInputs']] != freed_ids:
+        raise ValueError('Freed-input evidence differs from the record.')
+    for row in block['freedInputs']:
+        keys(row, ['quantityId', 'unit']); units.interpretar(row['unit'])
+    seed = block['seedRegularity']
+    keys(seed, ['augmentedSigmaMin', 'forwardSigmaMin', 'sensitivitySigmaMin', 'sensitivity'])
+    def nonnegative(value):
+        return type(value) in (int, float) and math.isfinite(value) and value >= 0
+    if not nonnegative(seed['augmentedSigmaMin']) or not nonnegative(seed['forwardSigmaMin']) or seed['augmentedSigmaMin'] <= 0 or np.finfo(float).eps/seed['augmentedSigmaMin'] > 1e-8:
+        raise ValueError('Seed regularity does not meet the admission gate.')
+    if (seed['sensitivity'] is None) != (seed['sensitivitySigmaMin'] is None) or seed['sensitivity'] is not None and (
+            not nonnegative(seed['sensitivitySigmaMin']) or not isinstance(seed['sensitivity'], list) or len(seed['sensitivity']) != len(specs) or
+            not all(isinstance(r, list) and len(r) == len(freed) and all(type(v) in (int, float) and math.isfinite(v) for v in r) for r in seed['sensitivity'])):
+        raise ValueError('Invalid specification sensitivity evidence.')
+    if block['invalidates'] != ['solve', 'results'] or block['retains'] != ['model', 'transform'] or not isinstance(block['scope'], str):
+        raise ValueError('Inverse specifications invalidate Solve and Results only.')
+    return ([*selection['unknowns'], *freed_ids], {k: v for k, v in selection['parameters'].items() if k not in freed_ids}, row_ids)
+
+
+def _check_inverse_numbers(report):
+    """Review RF-1: the published SI numbers must reproduce the carried declarations."""
+    block = report['inverseSpecification']
+    specs, freed = block['record']['specifications'], block['record']['freedInputs']
+    # The SI numbers published beside the record must be those of its carried declarations (review RF-1):
+    # each declaration needs only its own text and unit, and the row or variable unit gives the dimension.
+    # seedRegularity is compared between report and diagnostics only; it cannot be recomputed without
+    # the model (review RF-2), like the other unkeyed numerical evidence.
+    data = block['data']
+    def declared(identity, unit):
+        declaration = data[identity]
+        try:
+            conversion = units.exact_conversion(declaration['unidad'])
+            value = parse_expression(declaration['texto'], {})
+        except (ValueError, units.ErrorUnidad) as error:
+            raise ValueError('Invalid inverse data declaration '+identity+': '+str(error)) from error
+        if conversion['afin'] or conversion['dimension'] != units.interpretar(unit)['dimension']:
+            raise ValueError('Inverse data declaration '+identity+' has an incompatible unit.')
+        value = value*sp.Rational(conversion['factor'])+sp.Rational(conversion['desplazamiento'])
+        if value.is_number is not True or value.is_finite is not True:
+            raise ValueError('Inverse data declaration '+identity+' is not a finite constant.')
+        return float(value)
+    def same(a, b):
+        return type(a) in (int, float) and math.isclose(a, b, rel_tol=1e-12, abs_tol=0.)
+    if any(not same(row['targetSI'], declared(spec['targetDataId'], row['unit'])) for row, spec in zip(block['rows'], specs)):
+        raise ValueError('A specification target differs from its carried declaration.')
+    residual_rows, variables = report.get('residualRows'), report.get('variables')
+    if not isinstance(residual_rows, list) or not isinstance(variables, list) or len(residual_rows) < len(specs) or len(variables) < len(freed):
+        raise ValueError('Inverse evidence needs the augmented residual rows and variables.')
+    for row, spec in zip(residual_rows[len(residual_rows)-len(specs):], specs):
+        if not isinstance(row, dict) or not same(row.get('scaleSI'), declared(spec['residualScaleDataId'], row.get('unit', ''))):
+            raise ValueError('A specification residual scale differs from its carried declaration.')
+    for variable, entry, row in zip(variables[len(variables)-len(freed):], freed, block['freedInputs']):
+        if not isinstance(variable, dict) or not isinstance(variable.get('boundsSI'), list) or len(variable['boundsSI']) != 2:
+            raise ValueError('Invalid freed-input variable evidence.')
+        expected = [declared(entry[key], row['unit']) for key in ('seedDataId', 'lowerDataId', 'upperDataId', 'scaleDataId')]
+        if not all(same(a, b) for a, b in zip([variable.get('seedSI'), *variable['boundsSI'], variable.get('scaleSI')], expected)):
+            raise ValueError('A freed-input seed, bound or scale differs from its carried declaration.')
+
+
+def _read_closures(rows):
+    """Additive closure block (demo-02-steady): package volumes whose outputs the package eliminates."""
+    from core.mathematics.contract import keys
+    if not isinstance(rows, list) or not rows:
+        raise ValueError('Package-closure evidence must list each closure volume.')
+    for row in rows:
+        keys(row, ['volumeId', 'package', 'mode', 'specification', 'anchor', 'liquidOnly', 'outputs', 'constants'])
+        if not isinstance(row['volumeId'], str) or not isinstance(row['package'], str) or row['mode'] not in ('equilibrium', 'single_phase') or \
+                row['specification'] not in ('PH', 'UV') or row['anchor'] not in (None, 'gas', 'liquid') or type(row['liquidOnly']) is not bool:
+            raise ValueError('Invalid package-closure identity.')
+        for item in row['outputs']:
+            keys(item, ['id', 'unit']); units.interpretar(item['unit'])
+        for item in row['constants']:
+            keys(item, ['id', 'value', 'unit']); units.interpretar(item['unit'])
+            if type(item['value']) not in (int, float) or not math.isfinite(item['value']):
+                raise ValueError('Invalid package constant.')
+    return rows
+
+
+def read_report(report, *, numbers=True):
+    """Strict steady compilation contract; no numerical solve during reading.
+
+    An inverse publication (F3 slice 5) pins the unchanged forward selection and adds the
+    augmentation evidence: freed inputs follow the forward unknowns and leave the parameters,
+    and one specification row per freed input follows the forward residual rows.
+    """
     from core.mathematics.contract import keys
     import re
+    inverse = isinstance(report, dict) and 'inverseSpecification' in report
+    closures = isinstance(report, dict) and 'thermodynamicClosures' in report
     keys(report, ['format', 'version', 'study', 'sourceModelId', 'signature', 'sourceSignature',
         'formulationSignature', 'dataSignature', 'settingsSignature', 'method', 'selection', 'variables',
-        'rows', 'residualRows', 'invariants', 'parameters', 'proofConditions', 'runtimeConditions', 'scope'])
+        'rows', 'residualRows', 'invariants', 'parameters', 'proofConditions', 'runtimeConditions', 'scope']+(INVERSE_FIELDS if inverse else [])
+        +(['thermodynamicClosures'] if closures else [])+(['kineticDiagnostics'] if isinstance(report,dict) and 'kineticDiagnostics' in report else []))
+    if closures:
+        _read_closures(report['thermodynamicClosures'])
+    if 'kineticDiagnostics' in report:
+        block=report['kineticDiagnostics'];keys(block,['version','volumeIds'])
+        owners=block['volumeIds'];available={r['volumeId'] for r in report.get('thermodynamicClosures',[]) if r['anchor'] is not None}
+        if (type(block['version']) is not int or block['version']!=1 or not isinstance(owners,list) or not owners
+                or any(not isinstance(v,str) or v not in available for v in owners) or len(set(owners))!=len(owners)):
+            raise ValueError('Invalid kinetic equilibrium-limit diagnostic identities.')
     if report['format'] != 'rage.compilation' or type(report['version']) is not int or report['version'] != 2 or report['study'] != 'steady' or report['method'] != 'damped_newton':
         raise ValueError('Expected steady compilation version 2.')
     selection = read_steady_definition(report['selection'])
@@ -497,9 +783,10 @@ def read_report(report):
             raise ValueError('Invalid steady compilation signature.')
     if report['sourceSignature'] != selection['sourceSignature'] or report['formulationSignature'] != signature(selection) or report['settingsSignature'] != signature(selection['nonlinear']):
         raise ValueError('Steady compilation does not match its pinned selection.')
+    unknown_ids, parameters, specification_rows = _read_inverse(report, selection) if inverse else (selection['unknowns'], selection['parameters'], [])
     def finite(value):
         return type(value) in (int, float) and math.isfinite(value)
-    if [v['id'] for v in report['variables']] != selection['unknowns']:
+    if [v['id'] for v in report['variables']] != unknown_ids:
         raise ValueError('Steady unknown ordering differs from its selection.')
     for row in report['variables']:
         keys(row, ['id', 'name', 'unit', 'scaleSI', 'seedSI', 'boundsSI'])
@@ -513,7 +800,7 @@ def read_report(report):
         keys(row, ['id', 'family', 'before', 'after', 'identity'])
         if type(row['identity']) is not bool or not all(isinstance(row[k], str) for k in ('family', 'before', 'after')):
             raise ValueError('Invalid steady specialization row.')
-    if [r['id'] for r in report['residualRows']] != [r['id'] for r in report['rows'] if not r['identity']] or len(report['residualRows']) != len(report['variables']):
+    if [r['id'] for r in report['residualRows']] != [r['id'] for r in report['rows'] if not r['identity']]+specification_rows or len(report['residualRows']) != len(report['variables']):
         raise ValueError('Invalid square residual block.')
     for row in report['residualRows']:
         keys(row, ['id', 'unit', 'scaleSI']); units.interpretar(row['unit'])
@@ -526,7 +813,7 @@ def read_report(report):
         if not finite(row['value']) or row['equationId'] not in [r['id'] for r in report['rows'] if r['identity']]:
             raise ValueError('Invalid individually invariant state evidence.')
         units.interpretar(row['unit'])
-    if {row['id']: row['dataId'] for row in report['parameters']} != selection['parameters']:
+    if {row['id']: row['dataId'] for row in report['parameters']} != parameters:
         raise ValueError('Parameter evidence disagrees with its bindings.')
     for row in report['parameters']:
         keys(row, ['id', 'dataId', 'value', 'unit']); units.interpretar(row['unit'])
@@ -537,17 +824,28 @@ def read_report(report):
             if not all(isinstance(v, str) for v in row.values()): raise ValueError('Invalid steady condition.')
     if not isinstance(report['scope'], str) or not isinstance(report['sourceModelId'], str):
         raise ValueError('Invalid steady report identity/scope.')
+    if inverse:
+        variable_units = {v['id']: v['unit'] for v in report['variables']}
+        residual_units = {r['id']: r['unit'] for r in report['residualRows']}
+        block = report['inverseSpecification']
+        if any(variable_units[r['quantityId']] != r['unit'] for r in block['freedInputs']) or any(
+                residual_units[r['id']] != r['unit'] or r['quantityId'] in variable_units and variable_units[r['quantityId']] != r['unit'] for r in block['rows']):
+            raise ValueError('Inverse specification units differ from the augmented block.')
+        if numbers:
+            _check_inverse_numbers(report)
     return report
 
 
 def read_result(result):
     from core.mathematics.contract import keys
     evidence = result['procedencia']['steadyDiagnostics']
+    report = read_report(result['procedencia']['compilation'], numbers=False)
+    inverse = 'inverseSpecification' in report
     keys(evidence, ['version', 'verdict', 'globalUniqueness', 'method', 'sourceSignature', 'formulationSignature',
         'dataSignature', 'settingsSignature', 'compilationSignature', 'quantityIds', 'equationIds', 'variableScales',
         'residualScales', 'smallestSingularValue', 'conditionThreshold', 'inverseThreshold', 'relativeAmplification',
-        'inverseAmplification', 'initialResidualNorm', 'solver', 'scope', 'resultSignature'])
-    report = read_report(result['procedencia']['compilation'])
+        'inverseAmplification', 'initialResidualNorm', 'solver', 'scope', 'resultSignature']+(['inverseSpecification'] if inverse else [])
+        +(['thermodynamicClosures'] if 'thermodynamicClosures' in report else []))
     if result['estado'] != 'resuelto' or result['ejes'] or result['eventos'] or result['modeloId'] != report['sourceModelId'] or result['procedencia']['motor'] != 'rage.compilador.steady':
         raise ValueError('A steady accepted result is one scalar state, never a trajectory or partial iterate.')
     if type(evidence['version']) is not int or evidence['version'] != 1 or evidence['verdict'] != 'local_regular_root' or evidence['globalUniqueness'] != 'not_proved' or evidence['method'] != 'damped_newton' or result['procedencia']['metodo'] != evidence['method']:
@@ -571,8 +869,22 @@ def read_result(result):
         max(evidence['relativeAmplification'], evidence['inverseAmplification']) > 1e-8 or solver['uniqueness'] != 'local_root_only; finite probes do not prove global uniqueness'):
         raise ValueError('Steady root does not meet the requested convergence/regularity gates.')
     selection = report['selection']
-    expected = {'steady.'+key for key in [*selection['unknowns'], *selection['invariants'], *[r['quantityId'] for r in selection['reconstructions']]]}
+    if inverse:
+        block = report['inverseSpecification']
+        summary = evidence['inverseSpecification']
+        keys(summary, ['specificationSignature', 'freedInputs', 'specificationRows', 'seedRegularity'])
+        if (summary['specificationSignature'] != report['specificationSignature'] or summary['freedInputs'] != [r['quantityId'] for r in block['freedInputs']] or
+                summary['specificationRows'] != [r['id'] for r in block['rows']] or summary['seedRegularity'] != block['seedRegularity']):
+            raise ValueError('Stale inverse specification diagnostics.')
+    expected = {'steady.'+key for key in [*[v['id'] for v in report['variables']], *selection['invariants'], *[r['quantityId'] for r in selection['reconstructions']]]}
     expected |= {'steady.residual.'+key for key in evidence['equationIds']}
+    closure_rows = report.get('thermodynamicClosures', [])
+    expected |= {'closure.'+item['id'] for row in closure_rows for item in row['outputs']}
+    if closure_rows:
+        published = evidence['thermodynamicClosures']
+        if not isinstance(published, list) or [p.get('volumeId') for p in published] != [r['volumeId'] for r in closure_rows] or any(
+                not isinstance(p.get('phaseSet'), list) or not isinstance(p.get('fingerprint'), str) for p in published):
+            raise ValueError('Package-closure evidence differs from its compilation.')
     if len(result['series']) != len(expected) or {r['id'] for r in result['series']} != expected:
         raise ValueError('Missing or duplicate scalar steady output.')
     for row in result['series']:
@@ -589,12 +901,28 @@ def read_result(result):
         item = series['steady.residual.'+row['id']]
         if item['unidadSI'] != row['unit']: raise ValueError('Original residual unit mismatch.')
         maximum = max(maximum, abs(item['valores'])/row['scaleSI'])
+    for row in report['inverseSpecification']['rows'] if inverse else []:
+        # The appended row is exactly quantity - target, re-evaluated from the published scalar state.
+        output, residual = series['steady.'+row['quantityId']], series['steady.residual.'+row['id']]['valores']
+        value, target = output['valores'], row['targetSI']
+        if output['unidadSI'] != row['unit'] or abs(residual-(value-target)) > 8*np.finfo(float).eps*max(1., abs(value), abs(target)):
+            raise ValueError('Specification residual differs from its published output and target.')
     checks = {row['id']: row for row in result['verificaciones']}
     required = {'steady.scaled_residual'} | {'conservation.'+r['equationId'] for r in selection['checks']} | {'invariant.'+key for key in selection['invariants']}
+    closure_tolerance = {'thermodynamics.closure.'+row['volumeId']: 1. if row['mode'] == 'equilibrium' else 1e-9 for row in closure_rows}
+    required |= set(closure_tolerance)
+    diagnostic_ids={'reactions.equilibrium_limit.'+owner for owner in report.get('kineticDiagnostics',{}).get('volumeIds',[])}
+    required |= diagnostic_ids
     if len(checks) != len(result['verificaciones']) or set(checks) != required or maximum > config['residualTolerance'] or checks['steady.scaled_residual']['valor'] != maximum:
         raise ValueError('Steady verification disagrees with original residuals.')
     for key, row in checks.items():
-        tolerance = config['residualTolerance'] if key == 'steady.scaled_residual' else 1e-6
+        if key in diagnostic_ids:
+            if type(row['valor']) not in (int,float) or not math.isfinite(row['valor']) or row['valor']<0 or row['tolerancia']!=1e-3:
+                raise ValueError('Invalid kinetic equilibrium-limit diagnostic.')
+            continue
+        tolerance = config['residualTolerance'] if key == 'steady.scaled_residual' else closure_tolerance.get(key, 1e-6)
         if type(row['valor']) not in (int, float) or not math.isfinite(row['valor']) or not 0 <= row['valor'] <= tolerance or row['tolerancia'] != tolerance:
             raise ValueError('Failed steady verification cannot certify an accepted state.')
+    if inverse:
+        _check_inverse_numbers(report)
     return result
