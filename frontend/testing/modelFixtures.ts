@@ -12,10 +12,20 @@ import { nuevaHoja, type HojaMotor } from '../app/motor/hojasMotor';
 import { leerModeloComun } from '../motores/modelo/lector';
 import { DEMO01_BATCH_REACTOR } from './demo01/batchReactor';
 import { DEMO01_FLASH_DRUM } from './demo01/flashDrum';
+import { DEMO02_FLASH_DRUM } from './demo02/flashDrum';
+import { DEMO02_CSTR } from './demo02/continuousReactor';
 
 /** Demo 0.1 models: Python-authored with the shared fundamental-law tools (tests/demo01_*.py), frozen here. */
 function createDemo01Models(): HojaMotor[] {
   return [DEMO01_BATCH_REACTOR, DEMO01_FLASH_DRUM].map(source => {
+    const model = leerModeloComun(structuredClone(source));
+    return { ...nuevaHoja(model.nombre), id: model.id, commonModel: model };
+  });
+}
+
+/** Demo 0.2 equipment templates: deduced dynamic with matter, energy and momentum (tests/demo02_*.py), frozen here. */
+function createDemo02Models(): HojaMotor[] {
+  return [DEMO02_FLASH_DRUM, DEMO02_CSTR].map(source => {
     const model = leerModeloComun(structuredClone(source));
     return { ...nuevaHoja(model.nombre), id: model.id, commonModel: model };
   });
@@ -30,4 +40,5 @@ export const REGRESSION_MODELS = [
   { name: 'Phase discovery · rigid vessel', create: createPhaseDiscoveryExamples },
   { name: 'Process demonstrations', create: crearHojasDemostracion },
   { name: 'Demo 0.1', create: createDemo01Models },
+  { name: 'Demo 0.2', create: createDemo02Models },
 ];
