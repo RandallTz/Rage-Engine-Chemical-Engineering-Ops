@@ -209,7 +209,17 @@ def replay_operations(source,selected,owners,declared_units,definition,*,require
                 source=op['relation'] if kind=='substitute' else sources[0]
                 case_source=graph.specialize_domains(key+'.case',source,symbol,op['domains'])
                 if case_source!=source:locations[case_source]=locations.get(source,'system')
-            if kind=='isolate':
+            if kind=='state_variation':
+                from .operators import StateDifferential
+                target=StateDifferential(symbol)
+                if not graph.nodes[sources[0]].equation.has(target):raise JournalError('Select a state differential present in this equation.')
+                conditions=[op['reason']]
+                value=_parse(op['right'],quantities,conditions,units)
+                a,b=_dimension(symbol,units),_dimension(value,units)
+                if a is not None and b is not None and a!=b:raise JournalError('The imposed variation has incompatible units.')
+                graph.substitute(key,sources[0],{target:value},'Apply the declared virtual state variation',assumptions=tuple(conditions))
+                blocking=True
+            elif kind=='isolate':
                 if op.get('domains'):
                     solution,conditions,branches=graph.solve_in_domains(graph.nodes[case_source].equation,symbol,op['domains'])
                     graph.add(key,symbol,solution,'Isolate using recorded domain conditions','domain_isolation',(case_source,*op['domains']),conditions,op['family'])
