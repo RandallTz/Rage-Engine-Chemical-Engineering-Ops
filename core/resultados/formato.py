@@ -93,7 +93,7 @@ def leer_resultados(dato):
     if not isinstance(dato, dict):
         _fallo("resultados", "se esperaba un objeto")
     faltan = [k for k in claves if k not in dato]
-    sobran = [k for k in dato if k not in claves]
+    sobran = [k for k in dato if k not in claves and k != 'indexedNetwork']
     if faltan or sobran:
         _fallo("resultados", ("faltan " + ", ".join(faltan) if faltan else "") + ("campos desconocidos: " + ", ".join(sobran) if sobran else ""))
     if dato["formato"] != "rage.resultados" or dato["version"] != VERSION:
@@ -130,6 +130,9 @@ def leer_resultados(dato):
     for i, e in enumerate(dato["eventos"]):
         if e.get("ejeId") not in largo:
             _fallo(f"eventos[{i}].ejeId", "eje inexistente")
+    if 'indexedNetwork' in dato:
+        from .indexed_network import read_indexed_network
+        read_indexed_network(dato)
     _physical_evidence(dato)
     if 'steadyDiagnostics' in proc or proc.get('motor') == 'rage.compilador.steady' or proc.get('compilation', {}).get('version') == 2:
         from core.compilador.steady import read_result
