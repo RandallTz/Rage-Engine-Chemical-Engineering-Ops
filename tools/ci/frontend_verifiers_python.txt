@@ -1,0 +1,21 @@
+# Verifiers that spawn Python (Python core must be installed: requirements.txt).
+# Measured 5 Nov 2026 (seconds, local).  `file :: script` runs the script first.
+verificar_affine_algebraic.mjs        # 216
+verificar_common_certification.mjs    # 7
+verificar_corte_vertical.mjs          # 37
+verificar_demo01_models.mjs           # 9
+verificar_hydraulics.mjs              # 24
+verificar_importacion_motor.mjs       # 24
+verificar_integracion_unifac.mjs      # 3
+verificar_kinetic_reactions.mjs       # 9
+verificar_liquido_liquido.mjs         # 8
+verificar_material_journals.mjs       # 7
+verificar_model_assessment.mjs        # 11
+verificar_modelo_comun.mjs            # 6
+verificar_resolver_engine.mjs         # 109
+verificar_resultados_graficas.mjs     # 9
+verificar_transform_execution.mjs     # 39
+verificar_unidades_motor.mjs          # 1
+verificar_workspace_handoffs.mjs      # 10
+verificar_equation_workbench.mjs :: ../tests/test_equation_workbench.py   # 620 together
+verificar_steady_state.mjs :: ../tests/test_f3_steady_state.py            # 204 together
