@@ -25,8 +25,11 @@ def declarations(model, owner):
         units[q] = unit
         if data is not None: bindings[q] = data
         return q
-    V = sp.Symbol('V__'+owner, positive=True)
-    units[V] = 'm3'; bindings[V] = entry['volumeDataId']
+    V = (sp.Symbol('V__'+owner, positive=True) if config['version'] == 1
+         else sp.Function('V__'+owner)(t))
+    units[V] = 'm3'
+    if config['version'] == 1:
+        bindings[V] = entry['volumeDataId']
     T = sp.Function('T__'+owner)(t); units[T] = 'K'
     masses = {}; amounts = {}; concentrations = {}; rates = {}
     for c, data in entry['molarMassDataIds'].items():
