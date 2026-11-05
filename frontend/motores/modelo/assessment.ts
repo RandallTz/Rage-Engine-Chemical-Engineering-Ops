@@ -16,7 +16,7 @@ export type ModelAssessment = {
   format:'rage.model-assessment'; version:1; modelId:string|null; sourceSignature:string;
   structure:Verdict<'structure'>; initialization:Verdict<'initialization'>; certification:Verdict<'certification'>;
   inspection:{variables:Record<string,unknown>[]; equations:Record<string,unknown>[]; scope:string};
-  compilation?:CompilationReport; resultSignature?:string;
+  compilation?:CompilationReport; resultSignature?:string; resultSignatureVersion?:1|2;
 };
 const object=(v:unknown):v is Record<string,unknown>=>!!v&&typeof v==='object'&&!Array.isArray(v);
 const digest=(v:unknown)=>typeof v==='string'&&/^[a-f0-9]{64}$/.test(v);
@@ -31,12 +31,13 @@ function finiteJSON(value:unknown):boolean {
 
 export function readAssessment(value:unknown, result?:ConjuntoResultados):ModelAssessment {
   const required=['format','version','modelId','sourceSignature','structure','initialization','certification','inspection'];
-  if(!object(value)||required.some(k=>!Object.hasOwn(value,k))||Object.keys(value).some(k=>![...required,'compilation','resultSignature'].includes(k))||value.format!=='rage.model-assessment'||value.version!==1||!digest(value.sourceSignature)||!finiteJSON(value))return reject('expected version 1 with a finite source identity.');
+  if(!object(value)||required.some(k=>!Object.hasOwn(value,k))||Object.keys(value).some(k=>![...required,'compilation','resultSignature','resultSignatureVersion'].includes(k))||value.format!=='rage.model-assessment'||value.version!==1||!digest(value.sourceSignature)||!finiteJSON(value))return reject('expected version 1 with a finite source identity.');
   for(const kind of Object.keys(codes) as Kind[]){
     const v=value[kind], pairs:Record<string,readonly string[]>=codes[kind];
     if(!object(v)||Object.keys(v).length!==6||v.kind!==kind||typeof v.status!=='string'||!Object.hasOwn(pairs,v.status)||typeof v.code!=='string'||!pairs[v.status].includes(v.code)||v.sourceSignature!==value.sourceSignature||!object(v.scope)||!Array.isArray(v.diagnostics))return reject(kind+' status/code or source mismatch.');
     for(const d of v.diagnostics)if(!object(d)||!text(d.code)||!text(d.message)||!text(d.path))return reject('located typed diagnostics required.');
   }
+  if(value.resultSignatureVersion!==undefined&&(![1,2].includes(value.resultSignatureVersion as number)||value.resultSignature===undefined))return reject('unknown result signature version or missing result digest.');
   const a=value as unknown as ModelAssessment;
   if(!text(a.modelId)&&!(a.modelId===null&&a.structure.status==='invalid'))return reject('model identity required.');
   const inspection=a.inspection;
