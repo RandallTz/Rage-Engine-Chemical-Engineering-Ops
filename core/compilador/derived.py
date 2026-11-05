@@ -68,6 +68,11 @@ def _symbol(identity, role, dim):
 class DerivedSystem(DerivedGraph):
     def __init__(self, model):
         try:
+            if 'indexSet' in model:
+                error = LoweringError('index_set_not_lowered',
+                    'Indexed stage networks require network lowering; the generic stage cannot execute in their place.')
+                error.diagnostics[0]['path'] = 'indexSet'
+                raise error
             self._initialize(model)
         except LoweringError as error:
             self._locate_failure(model, error)
@@ -110,6 +115,9 @@ class DerivedSystem(DerivedGraph):
         self.nonlinear = self.selection['version'] in (3, 4)
         self.dae = None
         self.is_dae = self.selection['version'] == 4
+        if model['motores'].get('equilibriumReactions') and not self.is_dae:
+            from .reaction_extent import reject
+            reject('reaction_formulation_unsupported','Equilibrium extents require the recorded index-one selection (version 4).','motores.derivedExecution')
         if self.is_dae and model['estudio']['metodoSolicitado'].lower() != 'bdf':
             raise LoweringError('dae_method_unsupported', 'Semi-explicit index-1 execution requires BDF; no method substitution is allowed.')
         if model.get('matematico') is not None or model['motores'].get('adimensionalizacion') is not None:
@@ -188,7 +196,9 @@ class DerivedSystem(DerivedGraph):
                     raise LoweringError('dae_implicit_unsupported' if self.is_dae else 'unsupported_algebraic_derivative', 'An algebraic block cannot contain derivatives. IDA is a future option for fully implicit systems.', row['equationId'])
             residuals = [self._expand(e.lhs-e.rhs, self.runtime_replacements) for e in equations]
             try:
-                self.algebraic_block = (NonlinearBlock(self, residuals) if self.nonlinear else
+                from .reaction_block import ReactionBlock
+                block_type = ReactionBlock if self.model['motores'].get('equilibriumReactions') else NonlinearBlock
+                self.algebraic_block = (block_type(self, residuals) if self.nonlinear else
                                         ConstantAffineBlock(residuals, self.algebraic_quantities, self.parameter_values))
             except (AffineBlockError, NonlinearError) as error:
                 diagnostic = LoweringError(error.code, str(error), self.algebraic_rows[0]['equationId'])
@@ -287,9 +297,28 @@ class DerivedSystem(DerivedGraph):
         self._physical_admission()
         self._validate_initial()
         self._closure_admission()
+        self.configure_jacobian()
         self.report = self._report()
         if self.dae:
             self.validate_accepted = self._validate_dae_accepted
+
+    def configure_jacobian(self, requested='auto'):
+        """Assemble the lowered explicit RHS incidence, including budget rows."""
+        if self.nonlinear or self.scaled is not None:
+            return  # Nested algebraic/scaled adapters retain their existing Jacobian path.
+        from core.solvers.sparse_blocks import ExpressionJacobian
+        variables = [*self.states, *[sp.Dummy('budget_'+str(i)) for i in range(len(self.checks))]]
+        expressions = [si_magnitude(e).subs(self.parameter_values) for e in
+                       [*self.rates.values(), *(rate for _, _, rate, _ in self.checks)]]
+        blocks = []
+        for closure in self.closures:
+            columns = {i for i, q in enumerate(self.states) if any(e.has(q) for e in closure.input_expressions)}
+            blocks.append((closure.outputs, columns, lambda t, y, closure=closure: closure.evaluate(t, y)[0]))
+        scales = np.maximum(np.abs(self.initial_state), np.asarray(self.numeric.atol))
+        self.block_jacobian = ExpressionJacobian(expressions, variables, self.time, scales, blocks, requested)
+        self.linear_policy = self.block_jacobian.policy
+        # Preserve the dense finite-difference default for small existing systems.
+        self.jacobian = self.block_jacobian if self.linear_policy['selected'] == 'sparse' else None
 
     def _normalize(self, expression):
         expression = self._expand(expression).doit()
@@ -321,8 +350,9 @@ class DerivedSystem(DerivedGraph):
         config = self.model['motores'].get('kineticReactions')
         if not config:
             return
-        if self.selection['version'] != 1 or self.selection.get('scaling'):
-            raise LoweringError('kinetic_formulation_unsupported', 'Kinetic declarations currently require the identity explicit graph selection (version 1).')
+        if (self.selection['version'] not in (1, 5) or self.selection.get('scaling')
+                or self.selection.get('algebraic')):
+            raise LoweringError('kinetic_formulation_unsupported', 'Kinetic declarations require the identity explicit selection or its zero-accumulation specialization.')
         from core.balances.reaction_equations import declarations
         used = set()
         def visit(key):
@@ -334,8 +364,8 @@ class DerivedSystem(DerivedGraph):
             owner = volume['id']
             if owner not in config['volumes']:continue
             state = volume['supuestos']['materia']
-            if state.get('vista') != 'cantidad' or not state.get('fija'):
-                raise LoweringError('kinetic_geometry_unsupported', 'This kinetic increment requires recorded total-form fixed-volume balances.')
+            if state.get('vista') != 'cantidad' or bool(state.get('fija')) != (config['version'] == 1):
+                raise LoweringError('kinetic_geometry_unsupported', 'Kinetic version 1 requires fixed-volume total balances; version 2 requires the recorded dynamic control volume.')
             graph, _, bindings, source_ids = declarations(self.model, owner)
             if any(key not in used for key in source_ids):
                 raise LoweringError('kinetic_source_not_deduced', 'Apply every stoichiometric generation/consumption definition to its component law through recorded substitutions; zero-source and no-reaction flags cannot bypass this deduction.')
@@ -442,6 +472,12 @@ class DerivedSystem(DerivedGraph):
             if predicate in seen or predicate is sp.S.true:
                 continue
             seen.add(predicate)
+            virtual_source = (self.algebraic_block.virtual_condition(predicate)
+                              if self.nonlinear and hasattr(self.algebraic_block,'virtual_condition') else None)
+            if virtual_source is not None:
+                self.proof_conditions.append({'equationId': key, 'sourceEquationId': virtual_source,
+                    'kind': 'eliminated_coordinate_premise', 'latex': math_latex(predicate, self.graph.names)})
+                continue
             if isinstance(predicate, HoldsOnInterval):
                 equation, coordinate = predicate.args
                 source = graph_equalities.get(sp.srepr(equation))
@@ -577,8 +613,13 @@ class DerivedSystem(DerivedGraph):
         for key, node in self.graph.nodes.items():
             if not key.startswith('operation.') or not isinstance(node.equation, sp.Equality):
                 continue
+            # Virtual composition differentials are a certified constraint
+            # derivation, not additional temporal equations. The reaction
+            # adapter checks their exact final affinity and full source chain.
+            if key in getattr(self.algebraic_block,'virtual_rows',set()):
+                continue
             residual = self._normalize(node.equation.lhs-node.equation.rhs)
-            if residual == 0:
+            if residual == 0 or self._closure_identity(residual):
                 continue
             numerical = si_magnitude(residual).subs(self.parameter_values)
             if numerical.is_number is True and abs(float(numerical)) <= 1e-12:
@@ -792,8 +833,7 @@ class DerivedSystem(DerivedGraph):
             for symbol, key in [('caloric_capacity', 'cId'), ('T_reference', 'TRefId'), ('u_reference', 'uRefId')]:
                 check_binding(sp.Symbol(symbol+'__'+owner, real=True), parameters[key])
         if self.model['motores'].get('hydraulicNetwork') is None:
-            if any(v['balances']['momento'] for v in self.model['volumenes']):
-                raise LoweringError('unsupported_momentum_regime', 'Active momentum needs an admitted reduced physical regime; general momentum/DAE execution is not supported.')
+            self._reduced_momentum_admission()
             return
         from .hydraulics import validate_admission
         config = validate_admission(self.model)
@@ -845,6 +885,44 @@ class DerivedSystem(DerivedGraph):
             if radius.is_number is not True or radius <= 0 or not math.isclose(2*float(radius), diameter, rel_tol=1e-8):
                 raise LoweringError('inconsistent_geometry', 'The positive outer-radius datum must agree with the circular diameter.')
             self.hydraulic_guards.append((flows[0], pressures, diameter, viscosity, minimum))
+
+    def _reduced_momentum_admission(self):
+        """Active momentum without a hydraulic-network definition (demo-02-momentum).
+
+        Only the reduced journals are admitted: a straight hydraulic path whose path balance is in
+        the ancestry of a selected differential row (its flow is integrated, inertia retained), and
+        a vertical-gravity storage whose static pressure is integrated from a declared reference.
+        Density, port pressures and losses enter as recorded relations of the selected graph, never
+        as network data; their domains are enforced at run time like any other selected condition.
+        """
+        active = [v for v in self.model['volumenes'] if v['balances']['momento']]
+        if not active:
+            return
+        from core.balances import momentum_derivation as momentum
+        from core.modelo.operation_journal import replay
+        journal = self.model['motores'].get('momentumDerivation', {}).get('volumes', {})
+        used = set()
+        def visit(key):
+            if key in used:
+                return
+            used.add(key)
+            for parent in self.graph.nodes[key].inputs:
+                visit(parent)
+        for row in self.selection['states']:
+            visit(row['equationId'])
+        self.momentum_paths = []
+        for volume in active:
+            owner = volume['id']; entry = journal.get(owner)
+            if not entry:
+                raise LoweringError('unsupported_momentum_regime', 'Record the momentum journal of ' + owner + ' before executing its active balance.')
+            state = replay(entry, momentum.fundamental, momentum.normalize)[-1]
+            if state['form'] == 'hydraulic':
+                key = 'momentum.' + owner + '.path.pressure-form'
+                if key not in used:
+                    raise LoweringError('unsupported_momentum_regime', 'Select the differential row deduced from the path momentum balance of ' + owner + '; the flow of a reduced path is integrated, not prescribed.', key)
+                self.momentum_paths.append(owner)
+            elif not (state['form'] == 'local' and state['verticalGravity'] and state['pressureReference']):
+                raise LoweringError('unsupported_momentum_regime', 'Active momentum of ' + owner + ' needs the reduced hydraulic path or the hydrostatic storage reduction; general momentum/DAE execution is not supported.')
 
     def _report(self):
         from .presentation import solution_strategy
@@ -937,6 +1015,8 @@ class DerivedSystem(DerivedGraph):
                 if source in labels and symbol['id'] not in labels:
                     labels[symbol['id']] = r'\left(' + labels[source] + r'\right)_{\mathrm{ref}}'
         report['symbolLabels'] = labels
+        if hasattr(self, 'linear_policy'):
+            report['matrix'] += ' BDF linear algebra policy: '+json.dumps(self.linear_policy, sort_keys=True)
         report['strategy'] = solution_strategy(report, self.model)
         return report
 
@@ -1053,6 +1133,24 @@ class DerivedSystem(DerivedGraph):
                 if q not in reverse:
                     raise LoweringError('missing_quantity', 'The thermodynamic graph lacks the closure quantity ' + str(q))
                 self.ids[q] = reverse[q]
+
+    def _closure_identity(self, residual):
+        """True when a residual vanishes through the recorded definitions among closure outputs.
+
+        The instantiated phase molar mass M^k = sum_i x_i^k M_i and liquid volume V^L = n^L v^L are
+        graph definitions that every package state satisfies; an operation that relies on them (for
+        example the sum of phase-donor relations) is a consequence, not a new constraint.
+        """
+        identities = {}
+        for closure in getattr(self, 'closures', []):
+            prefix = 'thermodynamics.' + closure.owner + '.'
+            for key in [prefix + 'phase-molar-mass-' + label for label in closure.phases] + [prefix + 'liquid-volume']:
+                if key in self.graph.nodes:
+                    equation = self.graph.nodes[key].equation
+                    identities[equation.lhs] = self._expand(equation.rhs)
+        if not identities:
+            return False
+        return sp.cancel(sp.together(self._normalize(residual.xreplace(identities)))) == 0
 
     def closure_values(self, t, state):
         return np.concatenate([closure.evaluate(t, state)[0] for closure in self.closures])
