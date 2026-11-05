@@ -1818,6 +1818,8 @@ Agree SI, ordering, signs and reference/package fingerprints. State returns ln(a
 
 **Priority output:** time and 1D + time. 2D/3D stay as future branches, without delaying the validation of one volume or one dimension.
 
+**Readiness without execution (user decision, 5 November 2026, `dec-nonspatial-100-pde-ready`).** The target is a complete nonspatial engine, with spatial execution still deferred. The deduction kernel must nevertheless be able to deduce and publish PDE models that keep their spatial terms: local conservation with divergence and gradient operators, constitutive fluxes, and initial and boundary conditions on a declared domain. A model whose terms still need a mesh is published as such and handed to Transform as requiring discretization; it is rejected by Solve with a located reason, never silently reduced. Meshes, discretization and PDE solvers remain F7 work for later. A readiness audit of the current kernel against this requirement comes first.
+
 ## F8. Thermodynamic extensions and diagrams
 
 | Branch | Pending work | Closing requirement |
