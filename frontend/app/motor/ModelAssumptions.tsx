@@ -12,6 +12,34 @@ import { OPERACIONES_TERMO, type SupuestosTermo } from './recorridoTermodinamico
 import energyStyles from './balances.module.css';
 import type {FormulacionEnergia,FormaEnergia} from './recorridoEnergia';
 import type {MomentumDevelopment, MomentumControl} from '../models/momentumDerivation';
+import type {ModeloComun,ModelTemplate} from '../../motores/modelo/contrato';
+
+export function IndexedStages({model}:{model:ModeloComun|undefined}) {
+  const set=model?.indexSet;if(!set||!model)return null;
+  return <details className={styles.details}><summary>Indexed stages · {set.index} = 1…n</summary>
+    <p>n = {model.datos[set.countDataId].declaracion.texto} · Solve datum {set.countDataId}</p>
+    <p>Generic stage: {set.genericStage}. One recorded deduction; expansion does not author new assumptions.</p>
+    <ul>{set.connections.map((rule,i)=><li key={i}>{rule.outlet} of {set.index} → {rule.inlet} of {set.index}{rule.offset>0?'+':''}{rule.offset}</li>)}</ul>
+    <p>Exposed ports</p><ul>{set.exposures.map(port=><li key={port.id}>{port.id} · {port.port} · {port.at}</li>)}</ul>
+    <p>Variants</p><ul>{set.variants.map((variant,i)=><li key={i}>{variant.at}: {variant.template}</li>)}</ul>
+    {Object.entries(set.templates).map(([id,template])=><section key={id}><p>Template {id}</p><TemplatePorts template={template.template}/></section>)}
+    <p>Read-only topology. Numerical network execution is pending.</p>
+  </details>;
+}
+
+export function TemplatePorts({template}:{template:ModelTemplate|undefined}) {
+  if(!template)return null;
+  return <details className={styles.details}><summary>Ports · {template.ports.length}</summary>
+    <p>{template.equipment?'Equipment':'Template'} · {template.id} · {template.templateVersion}</p>
+    <p>Read-only boundary declarations for future connections.</p>
+    <ul>{template.ports.map(port=><li key={port.id}><strong>{port.id}</strong> · {port.kind} {port.direction}
+      <p>Volume {port.volumeId} · {port.boundary.type} {port.boundary.id}</p>
+      {port.kind==='material'&&<p>{port.direction==='inlet'?'Exterior state: stream estadoExterior':`Donor phase: ${port.donorPhase??'homogeneous mixture'}`}</p>}
+      <p>{Object.entries(port.variables).map(([name,variable])=>`${name}: ${variable.unitSI}`).join(' · ')}</p>
+    </li>)}</ul>
+    <p>Recorded recipe: {template.recipe.journals.join(', ')}</p>
+  </details>;
+}
 
 /** General physical switches; the Python replay supplies dependencies and effects. */
 export function MomentumAssumptions({development,disabled,change,represent}:{development:MomentumDevelopment|undefined;disabled:boolean;change:(key:MomentumControl['key'],value:boolean)=>void;represent:(action:string)=>void}){
