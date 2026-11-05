@@ -59,6 +59,20 @@ const corruptions=[
  a=>a.initialization.scope.timeSI=Infinity,
 ];
 for(const corrupt of corruptions){const result=structuredClone(live.result);corrupt(result.procedencia.assessment);assert.throws(()=>leerResultados(result));}
+assert.equal(live.result.procedencia.assessment.resultSignatureVersion,2);
+for(const version of [0,3,null,true,'2']){
+ const result=structuredClone(live.result);result.procedencia.assessment.resultSignatureVersion=version;
+ assert.throws(()=>leerResultados(result));
+}
+const missingDigest=structuredClone(live.result);delete missingDigest.procedencia.assessment.resultSignature;
+assert.throws(()=>leerResultados(missingDigest));
+for(const version of [undefined,1]){
+ const result=structuredClone(live.result);
+ if(version===undefined)delete result.procedencia.assessment.resultSignatureVersion;
+ else result.procedencia.assessment.resultSignatureVersion=version;
+ assert.equal(leerResultados(result),result);
+}
+console.log('Assessment signature version: 9 transport contract checks passed.');
 const old=structuredClone(live.result);delete old.procedencia.assessment;
 assert.equal(leerResultados(old),old);assert.ok(assessmentLines().every(line=>line.includes('Not evaluated')));
 
