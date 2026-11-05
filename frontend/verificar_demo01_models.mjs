@@ -55,4 +55,34 @@ for(const report of reports){
 const [reactor,drum]=reports.map(r=>r.derivedExecution.thermodynamicClosures[0]);
 check(reactor.mode==='single_phase'&&reactor.specification==='UV'&&reactor.liquidOnly&&reactor.anchor==='liquid','Reactor: liquid-only UV closure with the liquid formation anchor');
 check(drum.mode==='equilibrium'&&drum.specification==='PH'&&drum.candidatePhases.join()==='V,L','Drum: PH equilibrium closure with vapour and liquid candidates');
+const React=require('react'),{renderToStaticMarkup}=require('react-dom/server');
+const CompilationSummary=load(path.join(directory,'app/models/CompilationSummary')).default;
+for(const report of reports){
+  const html=renderToStaticMarkup(React.createElement(CompilationSummary,{report}));
+  check(html.includes('derived-execution bridge')&&html.includes('every RHS evaluation'),'Package closure summary explains ongoing coupling');
+  for(const closure of report.derivedExecution.thermodynamicClosures){
+    check(html.includes(closure.volumeId)&&html.includes(closure.package)&&html.includes(closure.specification),'Summary renders published volume, package and state specification');
+  }
+  check(!html.includes('The declared thermodynamic assumptions remain attached'),'Package closure does not use the generic summary');
+}
+const {commonTimeEvents,ResultEvents}=load(path.join(directory,'app/motor/ResultEvents'));
+const {commonEventMarkers,EventMarkerLabel}=load(path.join(directory,'app/motor/TableroMotor'));
+const events=[{codigo:'aparicion_fase',ejeId:'time',valor:12.25,descripcion:'Vapour appeared',propietarioId:'volumen:drum'},
+  {codigo:'desaparicion_fase',ejeId:'time',valor:20.5,descripcion:'Liquid disappeared',propietarioId:'volumen:drum'},
+  {codigo:'other',ejeId:'space',valor:3,descripcion:'Spatial event'}];
+const common={ejes:[{id:'time',rol:'tiempo',unidadSI:'s'},{id:'space',rol:'coordenada',unidadSI:'m'}],eventos:events};
+assert.deepEqual(commonTimeEvents(common),events.slice(0,2));checks++;
+const html=renderToStaticMarkup(React.createElement(ResultEvents,{result:common}));
+for(const text of ['Phase appearance','Phase disappearance','12.25','20.5','Vapour appeared','Liquid disappeared','volumen:drum'])check(html.includes(text),'Event list publishes '+text);
+check(!html.includes('Spatial event'),'Spatial events are not labelled as time events');
+check(commonTimeEvents(undefined).length===0,'Legacy results without common events are unchanged');
+check(renderToStaticMarkup(React.createElement(ResultEvents,{}))==='','No fabricated legacy event panel');
+const markers=commonEventMarkers({commonResult:common},{tipo:'tiempo',x:'t'},'K');
+assert.deepEqual(markers.map(marker=>marker.props.x),[12.25,20.5]);checks++;
+check(markers.every(marker=>marker.props.yAxisId==='K'&&marker.props.label.value.includes('volumen:drum')),'Event markers use the actual chart axis and owner');
+check(markers.every(marker=>marker.props.label.content.type===EventMarkerLabel),'Event labels use the measured plot-bounded renderer');
+check(commonEventMarkers({commonResult:common},{tipo:'perfil',x:'t'},'K').length===0,'No markers on spatial profiles');
+check(commonEventMarkers({commonResult:common},{tipo:'tiempo',x:'T'},'K').length===0,'No time markers on phase plots');
+check(commonEventMarkers({commonResult:common},{tipo:'tiempo',x:'t'},undefined).length===0,'No markers without a plotted y axis');
+check(commonTimeEvents({...common,eventos:[]}).length===0,'No events is valid');
 console.log(JSON.stringify({checks,models:sheets.length,compilationReader:'passed'}));
