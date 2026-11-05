@@ -1,8 +1,10 @@
 /** Declaration transport only. Python verifies units and conservation. */
 import type {ModeloComun} from '../../motores/modelo/contrato';
 export type KineticReaction={id:string;stoichiometry:Record<string,string>;orders:Record<string,number>;rateConstantDataId:string;arrhenius?:{energyDataId:string;temperatureDataId:string}};
-export type KineticVolume={volumeDataId:string;molarMassDataIds:Record<string,string>;elements:Record<string,Record<string,number>>;reactions:KineticReaction[]};
-export type KineticReactions={format:'rage.kinetic-reactions';version:1;volumes:Record<string,KineticVolume>};
+type KineticVolumeContent={molarMassDataIds:Record<string,string>;elements:Record<string,Record<string,number>>;reactions:KineticReaction[]};
+export type KineticVolume=KineticVolumeContent&{volumeDataId:string};
+export type DynamicKineticVolume=KineticVolumeContent&{volumeSource:{kind:'control_volume'}};
+export type KineticReactions={format:'rage.kinetic-reactions';version:1;volumes:Record<string,KineticVolume>}|{format:'rage.kinetic-reactions';version:2;volumes:Record<string,DynamicKineticVolume>};
 function object(value:unknown,required:string[],optional:string[]=[]):Record<string,unknown>{
   if(!value||typeof value!=='object'||Array.isArray(value))throw new Error('Expected a kinetic declaration object.');
   const o=value as Record<string,unknown>;
@@ -13,16 +15,18 @@ const record=(v:unknown)=>object(v,[],Object.keys(v&&typeof v==='object'&&!Array
 const same=(a:string[],b:string[])=>a.slice().sort().join('|')===b.slice().sort().join('|');
 export function readKineticReactions(value:unknown,model:ModeloComun):KineticReactions{
   const root=object(value,['format','version','volumes']);
-  if(root.format!=='rage.kinetic-reactions'||root.version!==1)throw new Error('Unsupported kinetic reaction format/version.');
+  if(root.format!=='rage.kinetic-reactions'||![1,2].includes(root.version as number))throw new Error('Unsupported kinetic reaction format/version.');
   const volumes=record(root.volumes);
-  if(Object.keys(volumes).length&&model.motores.derivedExecution&&model.motores.derivedExecution.version!==1)throw new Error('Kinetic declarations require explicit derived execution version 1.');
+  if(Object.keys(volumes).length&&model.motores.derivedExecution&&![1,5].includes(model.motores.derivedExecution.version))throw new Error('Kinetic declarations require explicit execution or its zero-accumulation specialization.');
   if(Object.keys(volumes).length>160)throw new Error('Too many kinetic volumes.');
   const datum=(id:unknown)=>{if(typeof id!=='string'||!Object.hasOwn(model.datos,id))throw new Error('Unknown kinetic datum.');};
   for(const [owner,item] of Object.entries(volumes)){
     const volume=model.volumenes.find(v=>v.id===owner);
     if(!volume?.balances.materia)throw new Error('Kinetics requires a volume with component balances.');
-    const entry=object(item,['volumeDataId','molarMassDataIds','elements','reactions']),components=volume.componenteIds.map(String);
-    datum(entry.volumeDataId);const masses=record(entry.molarMassDataIds);
+    const entry=object(item,[root.version===1?'volumeDataId':'volumeSource','molarMassDataIds','elements','reactions']),components=volume.componenteIds.map(String);
+    if(root.version===1)datum(entry.volumeDataId);
+    else if(object(entry.volumeSource,['kind']).kind!=='control_volume')throw new Error('Version 2 uses the dynamic control-volume quantity V(t).');
+    const masses=record(entry.molarMassDataIds);
     if(!same(Object.keys(masses),components))throw new Error('Declare molar masses for every component.');
     Object.values(masses).forEach(datum);const elements=record(entry.elements);
     if(!Object.keys(elements).length||Object.keys(elements).length>120)throw new Error('Declare elemental composition.');
