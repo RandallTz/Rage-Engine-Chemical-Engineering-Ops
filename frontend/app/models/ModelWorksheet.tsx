@@ -11,6 +11,7 @@ import ModelDomainControls from './ModelDomainControls';
 import ModelReadiness from './ModelReadiness';
 import {ModelAssessmentText} from './AssessmentText';
 import ui from './equationWorkbench.module.css';
+import {TemplatePorts,IndexedStages} from '../motor/ModelAssumptions';
 
 const ConfigurationContext=createContext<{open:boolean;content:ReactNode}|null>(null);
 export function ModelConfigurationProvider({open,content,children}:{open:boolean;content:ReactNode;children:ReactNode}){
@@ -43,6 +44,8 @@ export default function ModelWorksheet({family,label,assumptions,variables,setti
     <aside className={`${styles.assumptions} ${styles.operationsPanel}`} aria-label={aria}>
       <header><div><h2>Assumptions</h2><p className={styles.groupHint}>{physicalModel?.ensamblaje?.volumenes.find(v=>v.id===(physicalModel.volumenActivo??physicalModel.ensamblaje?.volumenes[0]?.id))?.nombre??'Selected physical region'} · {equationFamily}</p><p className={styles.groupHint}>Changes apply to this region and family. Viewing equations does not change the model.</p></div></header>
       <ModelReadiness/>
+      <TemplatePorts template={physicalModel?.commonModel?.template}/>
+      <IndexedStages model={physicalModel?.commonModel}/>
       <div className={family==='materia'||family==='momento'?undefined:`${balanceStyles.supuestos} ${balanceStyles.operacionesEnergia} ${styles.assumptionBody}`}>{assumptions}</div>
       {typed&&<EquationOperationControls/>}
       <ModelDomainControls/>
