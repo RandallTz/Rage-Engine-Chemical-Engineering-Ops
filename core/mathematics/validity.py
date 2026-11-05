@@ -53,7 +53,7 @@ def validate(predicates, domains=(), substitutions=None):
     Singleton and sign reasoning is exact. General multivariate implication is
     deliberately not claimed. SI projection is used only for the proof.
     """
-    from .domains import singleton_substitutions, validate_domains, _unsatisfiable
+    from .domains import singleton_substitutions, validate_domains, _unsatisfiable, ask_once
     domains = tuple(domains)
     sets = validate_domains(domains)
     singleton = singleton_substitutions(None, domains)
@@ -74,7 +74,7 @@ def validate(predicates, domains=(), substitutions=None):
         relevant = tuple(premise for premise in domains if changed.has(premise.quantity))
         if relevant and isinstance(changed, sp.Unequality):
             context = sp.And(*(premise.predicate for premise in relevant))
-            if sp.ask(sp.Q.zero(changed.lhs-changed.rhs), context) is True:
+            if ask_once(sp.Q.zero(changed.lhs-changed.rhs), context) is True:
                 raise MathematicsError('A required nonzero condition contradicts a recorded domain.')
         parameters = changed.free_symbols
         if len(parameters) == 1:
