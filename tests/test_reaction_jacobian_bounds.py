@@ -273,15 +273,17 @@ class TraceAndRejection(unittest.TestCase):
         self.assertEqual([(d["code"], d["path"]) for d in out["diagnostics"]],
                          [("FORMATION_REFERENCE_INVALID", "nu[1]")])
 
-    def test_package_phase_reported_unsupported(self):
+    def test_nrtl_package_phase_reported_unsupported(self):
+        # UNIFAC and ideal-liquid package phases are enclosed (tests/test_reaction_jacobian_bounds_liquid.py);
+        # NRTL is not extended and returns no substitute
         from core.mezclas import Sistema
-        phase = ce.PackagePhase(Sistema("unifac-dortmund-public", ["64-17-5", "71-36-3", H2O]), "liquido")
-        box = {"T": [340.0, 341.0], "P": [1e5, 1e5], "n": [[1, 1], [1, 1], [1, 1]]}
-        out = reaction_jacobian_bounds(phase, [[0, 0, 0]], box, phase_id="liquido", standard_state="pure_liquid_TP")
+        phase = ce.PackagePhase(Sistema("nrtl-chemsep", ["64-17-5", H2O]), "liquido")
+        box = {"T": [340.0, 341.0], "P": [1e5, 1e5], "n": [[1, 1], [1, 1]]}
+        out = reaction_jacobian_bounds(phase, [[0, 0]], box, phase_id="liquido", standard_state="pure_liquid_TP")
         self.assertFalse(out["certified"])
         self.assertEqual([d["code"] for d in out["diagnostics"]], ["PROVIDER_UNSUPPORTED"])
         self.assertEqual(out["anchor"], "gas")
-        self.assertEqual(set(out["fingerprints"]), {"package", "pureData", "formationReference"})
+        self.assertEqual(set(out["fingerprints"]), {"package", "pureData", "formationReference", "activityModel"})
 
     def assertRejects(self, code, path, fn):
         with self.assertRaises(ce.ChemicalEquilibriumError) as cm:
