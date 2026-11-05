@@ -41,8 +41,17 @@ from casos_adimensionalizacion import (FORMAS_SECCION3, OBJ_A, OBJ_D, OBJ_K, TER
 fallos = []
 
 
+# Published examples were generated on Windows. Linux libm and LAPACK may differ in the last bits of a float
+# (observed in CI on 5 Nov 2026: 1.6e-14 relative in a stiffness ratio, sin(pi/4) one ulp apart), so floats are
+# compared to 1e-12 relative (absolute floor 1e-300); every other value, key, length and type stays exact.
+REL_TOL_EXAMPLE = 1e-12
+
+
 def _differences(a, b, where="$"):
     """Paths where two JSON values differ, with both values, so a platform difference is visible in CI logs."""
+    if isinstance(a, float) and isinstance(b, float):
+        same = a == b or abs(a - b) <= REL_TOL_EXAMPLE * max(abs(a), abs(b), 1e-300)
+        return [] if same else [f"{where}: current {a!r} vs published {b!r}"]
     if isinstance(a, dict) and isinstance(b, dict):
         out = []
         for k in sorted(set(a) | set(b), key=str):
@@ -1188,8 +1197,9 @@ for nombre, construir in EJEMPLOS.items():
     sol = json.loads(ruta_sol.read_text(encoding="utf-8"))
     actual = procesar(sol)
     publicado = json.loads(ruta_res.read_text(encoding="utf-8"))
-    check(f"ejemplo {nombre}: el resultado publicado coincide con el nucleo actual", actual == publicado,
-          "; ".join(_differences(actual, publicado)[:8]))
+    diferencias = _differences(actual, publicado)
+    check(f"ejemplo {nombre}: el resultado publicado coincide con el nucleo actual", not diferencias,
+          "; ".join(diferencias[:8]))
 
 print()
 if fallos:
