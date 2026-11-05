@@ -1,5 +1,6 @@
 """Dimensional algebra and safe arithmetic for explicitly declared quantities."""
 import hashlib
+from functools import lru_cache
 import sympy as sp
 from core import expresiones_motor as expressions
 from core.unidades import interpretar
@@ -14,11 +15,27 @@ def known_unit(expression,units):
     return None
 
 
+@lru_cache(maxsize=16384)
+def _quantity_atoms(expression):
+    return frozenset(s for s in expression.atoms(sp.Symbol,sp.Function,sp.Derivative)
+        if isinstance(s,(sp.Symbol,sp.Derivative)) or s.func.__name__ not in
+        ('VolumeIntegral','BoundaryFlux','Divergence','Gradient','StateDifferential'))
+
+
+@lru_cache(maxsize=32768)
+def _quantity_identity(expression):
+    text=sp.srepr(expression)
+    return text,'x'+hashlib.sha256(text.encode()).hexdigest()[:10]
+
+
 def catalog(graph,units):
-    quantities={s for node in graph.nodes.values() for s in node.equation.atoms(sp.Symbol,sp.Function,sp.Derivative) if isinstance(s,(sp.Symbol,sp.Derivative)) or s.func.__name__ not in ('VolumeIntegral','BoundaryFlux','Divergence','Gradient','StateDifferential')}
+    from .preparation import enabled
+    atoms = _quantity_atoms if enabled() else _quantity_atoms.__wrapped__
+    identity = _quantity_identity if enabled() else _quantity_identity.__wrapped__
+    quantities=set().union(*(atoms(node.equation) for node in graph.nodes.values()))
     quantities.update(units)
-    ordered=sorted(quantities,key=sp.srepr)
-    return {('x'+hashlib.sha256(sp.srepr(s).encode()).hexdigest()[:10]):s for s in ordered}
+    ordered=sorted(quantities,key=lambda q:identity(q)[0])
+    return {identity(q)[1]:q for q in ordered}
 
 
 def dimension(expression,units,unit_resolver=known_unit):
