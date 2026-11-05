@@ -11,7 +11,7 @@ export default function AssessmentText({assessment,error}:{assessment?:ModelAsse
   const value=assessment??typed?.assessment;
   return <>{assessmentLines(value).map((line,index)=><p key={index}>{line}</p>)}
     {value?.certification.scope.samples!==undefined&&<p>Published scope · {String(value.certification.scope.samples)} samples · {String(value.certification.scope.startSI)}–{String(value.certification.scope.endSI)} s · {value.certification.scope.complete?'complete':'partial'}</p>}
-    {typed&&!value&&<>{typed.code&&<p>{typed.code} · {typed.path??'modelo'} · HTTP {typed.httpStatus}</p>}{typed.diagnostics.map((d,index)=><p key={index}>{d.code} · {d.path}: {d.message}</p>)}</>}
+    {typed&&!value&&<>{typed.code&&<p>{typed.code} · {typed.path??'modelo'} · HTTP {typed.httpStatus}</p>}{typed.diagnostics.map((d,index)=><p key={index}>{d.code} · {d.path}: {d.message}{d.reachability!==undefined&&<span> · Reachability evidence: {JSON.stringify(d.reachability)}</span>}</p>)}</>}
   </>;
 }
 
