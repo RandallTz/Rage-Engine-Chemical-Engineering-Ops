@@ -58,6 +58,7 @@ def _volumen(modelo, vid):
 
 
 AGUA = "agua-iapws95"
+CUBICO = "peng-robinson-vdw1f"      # F8b mixture EOS: core/termodinamica/cubic_eos.py (k_ij = 0 through the layer)
 
 
 def _cas(modelo, v):
@@ -86,6 +87,8 @@ def candidatas(modelo, vid):
         if _cas(modelo, v) != [agua.CAS]:
             raise NoSoportado("el paquete agua-iapws95 describe agua pura: el volumen debe tener solo agua (7732-18-5)")
         return ["vapor-1", "liquido-1"]
+    if paq["modelo"]["id"] == CUBICO:
+        return ["vapor-1", "liquido-1"]     # two-phase package; a third phase is rejected, never published
     liquido = mz.PAQUETES[paq["modelo"]["id"]].liquido if paq["modelo"]["id"] in mz.PAQUETES else None
     if liquido is None:
         raise NoSoportado(f"el paquete {paq['modelo']['id']} todavía no está envuelto por la capa")
@@ -116,6 +119,8 @@ def cierre(modelo, vid, n, especificacion):
     v, paq = _volumen(modelo, vid)
     if paq["modelo"]["id"] == AGUA:
         return _cierre_agua(modelo, v, n, especificacion)
+    if paq["modelo"]["id"] == CUBICO:
+        return _cierre_cubico(modelo, v, n, especificacion)
     sis = _sistema(modelo, v, paq)
     nv = np.array([float(n[c] if c in n else n[str(c)]) for c in v["componenteIds"]])
     tipo = especificacion[0]
@@ -223,3 +228,68 @@ def _cierre_agua(modelo, v, n, especificacion):
             "H": float(e.h * m), "U": float(e.u * m), "fases": fases, "complementariedad": resid,
             "presentes": [f["id"] for f in fases if f["presente"]],
             "verificaciones": {k: [float(x)] for k, x in e.residuos.items()}}
+
+
+def _cierre_cubico(modelo, v, n, especificacion):
+    """Closure of the Peng-Robinson mixture package: same candidates, tm scale and complementarity as the
+    mixture packages. tm of an absent candidate is the least non-trivial tangent-plane minimum of the present
+    phase (core/termodinamica/cubic_flash.stability); without one it is None, as for the other packages."""
+    from core.termodinamica import cubic_eos, cubic_flash
+    cas = _cas(modelo, v)
+    ids_c = list(v["componenteIds"])
+    nv = np.array([float(n[c] if c in n else n[str(c)]) for c in ids_c])
+    idx = [i for i in range(len(nv)) if nv[i] > 0]
+    try:
+        eos = cubic_eos.PengRobinsonMixture(tuple(cas[i] for i in idx))
+        tipo = especificacion[0]
+        if tipo == "TP":
+            st = cubic_flash.flash_TP(eos, especificacion[1], especificacion[2], nv[idx])
+            st["T"], st["P"] = especificacion[1], especificacion[2]
+        elif tipo == "PH":
+            st = cubic_flash.flash_PH(eos, especificacion[1], especificacion[2], nv[idx])
+        elif tipo == "UV":
+            st = cubic_flash.flash_UV(eos, especificacion[1], especificacion[2], nv[idx])
+        else:
+            raise ValueError(f"especificación no admitida: {tipo}")
+    except cubic_eos.CubicOutOfScope as e:
+        raise NoSoportado(f"paquete {CUBICO} en el volumen {v['id']}: {e}") from e
+    ntot = float(nv.sum())
+    presentes = {("vapor-1" if p["kind"] == "vapor" else "liquido-1"): p for p in st["phases"]
+                 if p["n"] > TOL_PRESENTE * ntot}
+    if len(st["phases"]) == 1:
+        otras = list(st["trials"])
+        tm_abs = min((t[1] for t in otras), default=None)
+        w_abs = min(otras, key=lambda t: t[1])[0] if otras else None
+    fases = []
+    for k in candidatas(modelo, v["id"]):
+        tipo_k = "vapor" if k.startswith("vapor") else "liquido"
+        f = presentes.get(k)
+        if f is not None:
+            comp = {c: 0.0 for c in ids_c}
+            for j, i in enumerate(idx):
+                comp[ids_c[i]] = float(f["x"][j])
+            fases.append({"id": k, "tipo": tipo_k, "presente": True, "n": float(f["n"]), "beta": float(f["n"]) / ntot,
+                          "composicion": comp, "tm": 0.0})
+        elif len(st["phases"]) == 1 and tm_abs is not None:
+            comp = {c: 0.0 for c in ids_c}
+            for j, i in enumerate(idx):
+                comp[ids_c[i]] = float(w_abs[j])
+            fases.append({"id": k, "tipo": tipo_k, "presente": False, "n": 0.0, "beta": 0.0,
+                          "composicionIncipiente": comp, "tm": float(tm_abs)})
+        else:
+            fases.append({"id": k, "tipo": tipo_k, "presente": False, "n": 0.0, "beta": 0.0,
+                          "composicionIncipiente": None, "tm": None})
+    resid = 0.0
+    for f in fases:
+        if f["tm"] is not None:
+            resid = max(resid, abs(f["beta"] * f["tm"]), max(0.0, -f["tm"]), max(0.0, -f["beta"]))
+    H = sum(p["n"] * p["h"] for p in st["phases"])
+    V = sum(p["n"] * p["v"] for p in st["phases"])
+    U = sum(p["n"] * p["u"] for p in st["phases"])
+    return {"volumenId": v["id"], "especificacion": especificacion[0], "T": float(st["T"]), "P": float(st["P"]),
+            "V": float(V), "H": float(H), "U": float(U), "fases": fases, "complementariedad": resid,
+            "presentes": [f["id"] for f in fases if f["presente"]],
+            "verificaciones": {"equilibrio": [st["mu_residual"], cubic_flash.TOL_MU,
+                                              "max |ln f_i^V - ln f_i^L| between present phases"],
+                               "estabilidad": [max(0.0, -st["tm_min"]), cubic_flash.TOL_TM,
+                                               "-min tm over the non-trivial tangent-plane minima"]}}
