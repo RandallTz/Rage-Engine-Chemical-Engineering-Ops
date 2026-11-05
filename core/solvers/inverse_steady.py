@@ -143,12 +143,18 @@ class InverseSteadySystem(SteadySystem):
         self.seed_regularity = self.problem.check()
         self.specification = specification
         self.report = self.compilation_report()
-        # A specification is Solve data: Model (source) and Transform formulation stay valid.
+        # A specification is Solve data: the report pins the unchanged forward selection, so the Model
+        # (source), Transform formulation and forward settings signatures stay valid; the augmentation
+        # (freed inputs replace parameters, specification rows follow the forward rows) is the block below.
+        self.report['selection'] = selection
         self.report['formulationSignature'] = self.forward_formulation_signature
+        self.report['settingsSignature'] = signature(selection['nonlinear'])
         referenced = sorted({v for row in specification['specifications']+specification['freedInputs'] for k, v in row.items() if k.endswith('DataId')})
-        self.report['specificationSignature'] = signature([specification, {k: self.model['datos'][k]['declaracion'] for k in referenced}])
+        data = {k: self.model['datos'][k]['declaracion'] for k in referenced}
+        self.report['signature'] = signature([selection, self.model['datos'], self.model['estudio'], specification])
+        self.report['specificationSignature'] = signature([specification, data])
         self.report['inverseSpecification'] = {
-            'format': inverse_spec.FORMAT, 'version': 1, 'record': specification,
+            'format': inverse_spec.FORMAT, 'version': 1, 'record': specification, 'data': data,
             'rows': [{'id': key, 'quantityId': row['quantityId'], 'targetSI': t, 'unit': self._unit(q),
                       'latex': f'{sp.latex(q)} - {t!r} = 0'} for (key, row, q), t in zip(spec_rows, targets)],
             'freedInputs': [{'quantityId': r['quantityId'], 'unit': self._unit(q)} for r, q in zip(freed_rows, freed)],
