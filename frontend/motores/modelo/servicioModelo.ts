@@ -1,3 +1,5 @@
+import {readInverseSpecification,inverseDataIds,type InverseSpecification} from './inverseSpecification';
+import {steadySignature} from './steadyContract';
 /** Cliente HTTP del modelo común (sin interfaz): POST /modelo/resolver. El cálculo es del servidor. */
 import type { ModeloComun } from "./contrato";
 import { leerResultados } from "../resultados/lector";
@@ -26,6 +28,18 @@ export const transporteHTTP: TransporteModelo = async (modelo, signal) => {
   return cuerpo;
 };
 
+export function inverseTransport(record:InverseSpecification):TransporteModelo {
+  readInverseSpecification(record);
+  return async(modelo,signal)=>{
+    const response=await fetch(`${API}/resolver`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({modelo,inverseSpecification:record}),cache:'no-store',signal:signal?AbortSignal.any([signal,AbortSignal.timeout(600000)]):AbortSignal.timeout(600000)});
+    const value=await response.json();if(!response.ok)throw responseError(value,response.status,'The inverse specification was rejected.');
+    const result=leerResultados(value),report=result.procedencia.compilation;
+    const data=Object.fromEntries(inverseDataIds(record).map(id=>[id,modelo.datos[id].declaracion]));
+    if(report?.version!==2||report.specificationSignature!==steadySignature([record,data])||report.signature!==steadySignature([modelo.motores.derivedExecution,modelo.datos,modelo.estudio,record]))throw new Error('The result belongs to another inverse specification.');
+    return result;
+  };
+}
+
 export async function resolverModelo(modelo: ModeloComun, signal?: AbortSignal, transporte: TransporteModelo = transporteHTTP): Promise<ConjuntoResultados> {
   const result=leerResultados(await transporte(modelo, signal));
   if(result.procedencia.assessment&&result.modeloId!==modelo.id)throw new Error('The assessed result belongs to another model.');
@@ -36,7 +50,7 @@ export async function describeCompilation(model: ModeloComun, signal?: AbortSign
   return requestCompilation({ modelo: model }, signal);
 }
 
-export async function requestCompilation(body: { modelo: ModeloComun } | { solicitudV2: unknown }, signal?: AbortSignal) {
+export async function requestCompilation(body: { modelo: ModeloComun;inverseSpecification?:InverseSpecification } | { solicitudV2: unknown }, signal?: AbortSignal) {
   return (await requestCompilationAssessment(body,signal)).report;
 }
 
@@ -51,8 +65,8 @@ export async function requestAssessment(model:ModeloComun, signal?:AbortSignal, 
   return assessment;
 }
 
-export async function requestCompilationAssessment(body: { modelo: ModeloComun } | { solicitudV2: unknown }, signal?: AbortSignal) {
-  if('modelo' in body){
+export async function requestCompilationAssessment(body: { modelo: ModeloComun;inverseSpecification?:InverseSpecification } | { solicitudV2: unknown }, signal?: AbortSignal) {
+  if('modelo' in body&&!body.inverseSpecification){
     const assessment=await requestAssessment(body.modelo,signal);
     if(!assessment.compilation)throw rejectedAssessment(assessment);
     return {report:assessment.compilation,assessment};
@@ -62,7 +76,13 @@ export async function requestCompilationAssessment(body: { modelo: ModeloComun }
     body: JSON.stringify(body), cache: 'no-store', signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(60000)]) : AbortSignal.timeout(60000) });
   const value = await response.json();
   if (!response.ok) throw responseError(value,response.status,'The selected formulation could not be compiled.');
-  return {report:readCompilationReport(value),assessment:undefined};
+  const report=readCompilationReport(value);
+  if('modelo' in body&&body.inverseSpecification){
+    const record=readInverseSpecification(body.inverseSpecification),model=body.modelo;
+    const data=Object.fromEntries(inverseDataIds(record).map(id=>[id,model.datos[id].declaracion]));
+    if(report.version!==2||report.sourceModelId!==model.id||report.specificationSignature!==steadySignature([record,data])||report.signature!==steadySignature([model.motores.derivedExecution,model.datos,model.estudio,record]))throw new Error('The compilation belongs to another inverse specification.');
+  }
+  return {report,assessment:undefined};
 }
 
 /** Descripción termodinámica de un modelo (POST /modelo/termodinamica): cierre declarado, fases candidatas
