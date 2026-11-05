@@ -292,8 +292,11 @@ def _parse(text,quantities,conditions=None,units=None):
 def build(model,definition=None,*,unbound=False):
     definition=definition or model.get('motores',{}).get('equationWorkbench') or {'format':FORMAT,'version':1,'operations':[],'cursor':0}
     read_definition(definition)
-    graph,final,locations,units=_source_graph(model,unbound=unbound)
-    return replay_operations(graph,final,locations,units,definition,require_same_family=True,unit_resolver=_known_unit)
+    from .preparation_cache import replay_build
+    def replay_recipe():
+        graph,final,locations,units=_source_graph(model,unbound=unbound)
+        return replay_operations(graph,final,locations,units,definition,require_same_family=True,unit_resolver=_known_unit)
+    return replay_build(model,definition,unbound,SOURCE_REVISION,replay_recipe)
 
 
 def _source_findings(model):
@@ -374,6 +377,8 @@ def edit(model,action,*,unbound=False):
 
 
 def ensure_executable(model):
+    if model.get('motores', {}).get('equilibriumReactions'):
+        raise JournalError('Equilibrium reactions require the selected recorded extent formulation; no generated-model fallback is allowed.')
     if model.get('motores', {}).get('kineticReactions', {}).get('volumes'):
         raise JournalError('Kinetic declarations require explicit selection of the replayed derived graph. The earlier generated or equilibrium model will not be substituted.')
     definition=model.get('motores',{}).get('equationWorkbench')
