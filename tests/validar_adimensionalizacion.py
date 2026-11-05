@@ -41,6 +41,26 @@ from casos_adimensionalizacion import (FORMAS_SECCION3, OBJ_A, OBJ_D, OBJ_K, TER
 fallos = []
 
 
+def _differences(a, b, where="$"):
+    """Paths where two JSON values differ, with both values, so a platform difference is visible in CI logs."""
+    if isinstance(a, dict) and isinstance(b, dict):
+        out = []
+        for k in sorted(set(a) | set(b), key=str):
+            if k not in a or k not in b:
+                out.append(f"{where}.{k}: only in {'current' if k in a else 'published'}")
+            else:
+                out += _differences(a[k], b[k], f"{where}.{k}")
+        return out
+    if isinstance(a, list) and isinstance(b, list):
+        if len(a) != len(b):
+            return [f"{where}: length {len(a)} vs {len(b)}"]
+        out = []
+        for i, (x, y) in enumerate(zip(a, b)):
+            out += _differences(x, y, f"{where}[{i}]")
+        return out
+    return [] if a == b else [f"{where}: current {a!r} vs published {b!r}"]
+
+
 def check(nombre, ok, detalle=""):
     print(f"[{'OK ' if ok else 'FALLA'}] {nombre}{(' -- ' + detalle) if detalle and not ok else ''}")
     if not ok:
@@ -1167,7 +1187,9 @@ for nombre, construir in EJEMPLOS.items():
         continue
     sol = json.loads(ruta_sol.read_text(encoding="utf-8"))
     actual = procesar(sol)
-    check(f"ejemplo {nombre}: el resultado publicado coincide con el nucleo actual", actual == json.loads(ruta_res.read_text(encoding="utf-8")))
+    publicado = json.loads(ruta_res.read_text(encoding="utf-8"))
+    check(f"ejemplo {nombre}: el resultado publicado coincide con el nucleo actual", actual == publicado,
+          "; ".join(_differences(actual, publicado)[:8]))
 
 print()
 if fallos:
