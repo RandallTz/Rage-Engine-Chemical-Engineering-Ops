@@ -180,12 +180,19 @@ for (const m of board.milestones) {
   if (m.status !== 'active') problem(`milestone ${m.id}: only an active milestone can be claimed (status ${m.status}); release the claim when it stops`);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(c.since || '')) problem(`milestone ${m.id}: claim since must be YYYY-MM-DD`);
   const files = checkPathList(`milestone ${m.id} claim`, c.files);
+  // A taken user decision may authorise one agent to edit the other agent's paths (for example a takeover).
+  let authorised = false;
+  if (c.authorizedBy !== undefined) {
+    const d = board.decisions.find((x) => x.id === c.authorizedBy);
+    if (!d || d.status !== 'taken' || d.owner !== 'user') problem(`milestone ${m.id}: claim authorizedBy ${c.authorizedBy} must name a decision taken by the user`);
+    else authorised = true;
+  }
   for (const f of files) {
     const s = shared.find((x) => overlaps(f, x));
     if (s) problem(`milestone ${m.id}: claim path ${f} overlaps the shared file ${s}; shared files are edited by exact replacement, never claimed`);
     for (const other of AGENTS.filter((a) => a !== c.agent)) {
       const o = owned[other].find((x) => overlaps(f, x));
-      if (o) problem(`milestone ${m.id}: ${c.agent} claims ${f}, owned by ${other} (${o}); coordinate through the user first`);
+      if (o && !authorised) problem(`milestone ${m.id}: ${c.agent} claims ${f}, owned by ${other} (${o}); coordinate through the user first`);
     }
   }
   claims.push({ id: m.id, agent: c.agent, files });
