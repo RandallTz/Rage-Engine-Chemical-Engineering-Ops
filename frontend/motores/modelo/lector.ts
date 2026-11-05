@@ -1,3 +1,5 @@
+import {readEquilibriumReactions} from './equilibriumReactions';
+import {readIndexSet} from './indexSetContract';
 import {readKineticReactions} from '../../app/models/kineticReactions';
 import {readEquationWorkbench} from '../../app/models/equationWorkbench';
 import {readDerivedExecution} from './derivedExecution';
@@ -40,7 +42,7 @@ function unicos(items: unknown[], ruta: string): Set<unknown> {
 const ref = (v: unknown, conjunto: Set<unknown>, ruta: string, que: string) => { if (!conjunto.has(v)) fallo(ruta, `referencia inexistente (${que} ${String(v)})`); };
 
 export function leerModeloComun(dato: unknown): ModeloComun {
-  const m = claves(dato, "modelo", CLAVES, ["restricciones", "observables", "verificaciones"]);
+  const m = claves(dato, "modelo", CLAVES, ["restricciones", "observables", "verificaciones", "template", "indexSet"]);
   if (m.formato !== "rage.modelo") fallo("formato", "valor no admitido");
   if (m.version !== VERSION_MODELO) fallo("version", "valor no admitido");
   const datos = new Set(Object.keys(obj(m.datos, "datos")));
@@ -75,6 +77,8 @@ export function leerModeloComun(dato: unknown): ModeloComun {
     if (mat.modo === "por_componente") Object.values(obj(mat.caudalIds, r + ".materia.caudalIds")).forEach(d => dato_(d, r + ".materia.caudalIds"));
     else if (mat.modo === "total_desde_donante") dato_(mat.caudalId, r + ".materia.caudalId");
     else fallo(r + ".materia.modo", "valor no admitido");
+    if ('extraccion' in o) for (const key of Object.keys(obj(o.extraccion,r+'.extraccion'))) ref(key,vols,r+'.extraccion.'+key,'volume');
+    if ('estadoExterior' in o) dato_(obj(o.estadoExterior,r+'.estadoExterior').temperaturaId,r+'.estadoExterior.temperaturaId');
   });
   unicos(lista(m.intercambios, "intercambios"), "intercambios");
   if (m.estudio !== null) {
@@ -103,7 +107,11 @@ export function leerModeloComun(dato: unknown): ModeloComun {
       }
     });
   }
-  for (const k of Object.keys(obj(m.motores, "motores"))) if (!['adimensionalizacion', 'materialDerivation', 'energyDerivation', 'thermodynamicDerivation', 'dynamicDefinition', 'momentumDerivation','hydraulicNetwork','equationWorkbench','derivedExecution','kineticReactions'].includes(k)) fallo(`motores.${k}`, "motor desconocido");
+  obj(m.motores, "motores");
+  if ('template' in m) readTemplate(m as unknown as ModeloComun);
+  if ('indexSet' in m) readIndexSet(m as unknown as ModeloComun,leerModeloComun);
+  for (const k of Object.keys(obj(m.motores, "motores"))) if (!['adimensionalizacion', 'materialDerivation', 'energyDerivation', 'thermodynamicDerivation', 'dynamicDefinition', 'momentumDerivation','hydraulicNetwork','equationWorkbench','derivedExecution','kineticReactions','equilibriumReactions'].includes(k)) fallo(`motores.${k}`, "motor desconocido");
+  if((m.motores as Obj).equilibriumReactions!==undefined)readEquilibriumReactions((m.motores as Obj).equilibriumReactions,m as unknown as ModeloComun);
   if((m.motores as Obj).kineticReactions!==undefined)readKineticReactions((m.motores as Obj).kineticReactions,m as unknown as ModeloComun);
   if((m.motores as Obj).derivedExecution!==undefined)readDerivedExecution((m.motores as Obj).derivedExecution,m.datos as Record<string,unknown>);
   if((m.motores as Obj).equationWorkbench!==undefined)readEquationWorkbench((m.motores as Obj).equationWorkbench);
@@ -146,4 +154,64 @@ export function leerModeloComun(dato: unknown): ModeloComun {
   }
   if (!["documento_adimensional", "ensamblaje_v2", "hoja_motor_materia", "nuevo"].includes(obj(m.procedencia, "procedencia").tipo as string)) fallo("procedencia.tipo", "valor no admitido");
   return m as unknown as ModeloComun;
+}
+
+type PhysicalJournalName='materialDerivation'|'energyDerivation'|'momentumDerivation'|'thermodynamicDerivation';
+export function requiredEquipmentJournals(model:ModeloComun):PhysicalJournalName[] {
+  const required:PhysicalJournalName[]=['materialDerivation','energyDerivation','momentumDerivation'];
+  if(model.volumenes.some(v=>v.termodinamica.tipo==='equilibrio'))required.push('thermodynamicDerivation');
+  return required;
+}
+
+function readTemplate(model:ModeloComun) {
+  const text=(v:unknown,r:string)=>{if(typeof v!=='string'||!v.trim())fallo(r,'Nonempty text required');};
+  const t=claves(model.template,'template',['format','version','id','templateVersion','equipment','recipe','ports']);
+  if(t.format!=='rage.model-template'||t.version!==1)fallo('template','Expected rage.model-template version 1');
+  text(t.id,'template.id');text(t.templateVersion,'template.templateVersion');
+  if(typeof t.equipment!=='boolean')fallo('template.equipment','Boolean required');
+  const journals=lista(claves(t.recipe,'template.recipe',['journals']).journals,'template.recipe.journals');
+  const allowed=['materialDerivation','energyDerivation','momentumDerivation','thermodynamicDerivation','equationWorkbench'];
+  if(!journals.length||new Set(journals).size!==journals.length||journals.some(j=>typeof j!=='string'||!allowed.includes(j)||!Object.hasOwn(model.motores,j)))fallo('template.recipe.journals','Expected unique references to existing deduction journals');
+  for(const journal of journals) obj((model.motores as Obj)[journal as string],'motores.'+journal);
+  if(t.equipment&&requiredEquipmentJournals(model).some(journal=>!journals.includes(journal)))fallo('template.recipe.journals','Equipment requires recorded matter, energy and momentum journals, plus thermodynamics for package closures');
+  const ports=lista(t.ports,'template.ports'),seen=new Set(),boundaries=new Set();
+  if(t.equipment&&!ports.length)fallo('template.ports','Equipment requires at least one port');
+  ports.forEach((value,i)=>{
+    const r=`template.ports[${i}]`,p=claves(value,r,['id','volumeId','direction','kind','boundary','variables'],['donorPhase','exteriorState']);
+    text(p.id,r+'.id');text(p.volumeId,r+'.volumeId');
+    if(seen.has(p.id))fallo(r+'.id','Duplicate port identity');seen.add(p.id);
+    const volume=model.volumenes.find(v=>v.id===p.volumeId);
+    if(!volume)fallo(r+'.volumeId','Unknown volume');
+    if(!['inlet','outlet'].includes(p.direction as string)||!['material','heat','work'].includes(p.kind as string))fallo(r,'Invalid port direction or kind');
+    const b=claves(p.boundary,r+'.boundary',['type','id']);text(b.id,r+'.boundary.id');
+    if(!['stream','exchange','term'].includes(b.type as string))fallo(r+'.boundary.type','Invalid boundary type');
+    const identity=JSON.stringify([b.type,b.type==='term'?p.volumeId:'',b.id]);
+    if(boundaries.has(identity))fallo(r+'.boundary','Boundary already has a port');boundaries.add(identity);
+    const open=(s:{desde:string|null;hasta:string|null})=>{if(s.desde!==(p.direction==='inlet'?null:p.volumeId)||s.hasta!==(p.direction==='inlet'?p.volumeId:null))fallo(r+'.boundary','Port direction must match an open boundary of its volume');};
+    let units:Record<string,string>;
+    if(p.kind==='material'){
+      const stream=model.corrientes.find(s=>s.id===b.id);
+      if(b.type!=='stream'||!stream)fallo(r+'.boundary','Material port requires an existing stream');
+      open(stream!);
+      if(p.direction==='inlet'){
+        if('donorPhase' in p||p.exteriorState!=='estadoExterior'||!stream!.estadoExterior)fallo(r,'Inlet requires its stream exterior state and no donor phase');
+      }else{
+        if('exteriorState' in p||!('donorPhase' in p))fallo(r,'Outlet requires donorPhase and no exterior state');
+        const extraction=stream!.extraccion?.[p.volumeId as string];
+        const expected=extraction?.tipo==='fase'?extraction.fase:null;
+        if(p.donorPhase!==expected||(p.donorPhase!==null&&typeof p.donorPhase!=='string'))fallo(r+'.donorPhase','Donor phase must match the stream extraction');
+      }
+      const base=stream!.materia.base;
+      units={flow:{masica:'kg/s',molar:'mol/s',volumetrica:'m^3/s'}[base],composition:'1',temperature:'K',pressure:'Pa',specificEnthalpy:base==='molar'?'J/mol':'J/kg'};
+    }else{
+      if('donorPhase' in p||'exteriorState' in p)fallo(r,'Only material ports declare donor or exterior states');
+      if(b.type==='exchange'&&p.kind==='heat'){
+        const exchange=model.intercambios.find(q=>q.id===b.id);
+        if(!exchange)fallo(r+'.boundary','Unknown heat exchange');open(exchange!);
+      }else if(!(b.type==='term'&&b.id===(p.kind==='heat'?'calor':'trabajo_viscoso')&&Object.hasOwn(volume!.terminos??{},b.id as string)))fallo(r+'.boundary','Expected an existing heat or work boundary term');
+      units={power:'W'};
+    }
+    const variables=claves(p.variables,r+'.variables',Object.keys(units));
+    for(const [key,unit]of Object.entries(units))if(claves(variables[key],r+'.variables.'+key,['unitSI']).unitSI!==unit)fallo(r+'.variables.'+key,'Expected SI unit '+unit);
+  });
 }
