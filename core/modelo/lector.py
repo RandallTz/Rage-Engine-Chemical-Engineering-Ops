@@ -20,7 +20,7 @@ FUNCIONES_DATO = ["inicial", "frontera", "geometria", "estudio", "parametro"]
 FRONTERAS = ["rigida", "presion_prescrita", "sin_relacion", "malla_1d"]
 SUPUESTOS_CIERRE = ["fase_no_evaluada", "u_lineal"]
 PROCEDENCIAS = ["documento_adimensional", "ensamblaje_v2", "hoja_motor_materia", "nuevo"]
-MOTORES = ["adimensionalizacion", "materialDerivation", "energyDerivation", "thermodynamicDerivation", "dynamicDefinition", "momentumDerivation", "hydraulicNetwork", "equationWorkbench", "derivedExecution", "kineticReactions"]
+MOTORES = ["adimensionalizacion", "materialDerivation", "energyDerivation", "thermodynamicDerivation", "dynamicDefinition", "momentumDerivation", "hydraulicNetwork", "equationWorkbench", "derivedExecution", "kineticReactions", "equilibriumReactions"]
 
 
 class ErrorModelo(Exception):
@@ -123,7 +123,7 @@ def leer_modelo_inspeccion(dato):
 def _read_model(dato, *, inspect_initialization):
     if len(json.dumps(dato, ensure_ascii=False).encode("utf-8")) > LIMITE_BYTES:
         _fallo("modelo", "The model exceeds 8 MB")
-    m = _claves(dato, "modelo", CLAVES, ["restricciones", "observables", "verificaciones"])
+    m = _claves(dato, "modelo", CLAVES, ["restricciones", "observables", "verificaciones", "template", "indexSet"])
     _opcion(m["formato"], "formato", ["rage.modelo"])
     _opcion(m["version"], "version", [VERSION])
     _texto(m["id"], "id")
@@ -205,12 +205,21 @@ def _read_model(dato, *, inspect_initialization):
                 _obj(o["expresion"], f"{clave}[{i}].expresion")
 
     motores = _obj(m["motores"], "motores")
+    if "template" in m:
+        _read_template(m)
+    if "indexSet" in m:
+        from .index_sets import read_index_set
+        read_index_set(m)
     for nombre, cfg in motores.items():
         _opcion(nombre, f"motores.{nombre}", MOTORES)
     if 'kineticReactions' in motores:
         from .reaction_definition import read_definition
         try:read_definition(motores['kineticReactions'], m)
         except (ValueError, TypeError, KeyError) as error:_fallo('motores.kineticReactions', str(error))
+    if 'equilibriumReactions' in motores:
+        from .equilibrium_reactions import read_definition
+        try:read_definition(motores['equilibriumReactions'],m)
+        except (ValueError,TypeError,KeyError,ArithmeticError) as error:_fallo('motores.equilibriumReactions',str(error))
     if "adimensionalizacion" in motores:
         _leer_adim(motores["adimensionalizacion"], m)
     if 'equationWorkbench' in motores:
@@ -264,6 +273,99 @@ def _read_model(dato, *, inspect_initialization):
     proc = _obj(m["procedencia"], "procedencia")
     _opcion(proc.get("tipo"), "procedencia.tipo", PROCEDENCIAS)
     return m
+
+
+def _read_template(m):
+    """Connectability metadata only; journals remain the deduction authority."""
+    t = _claves(m["template"], "template", ["format", "version", "id", "templateVersion", "equipment", "recipe", "ports"])
+    if t["format"] != "rage.model-template" or type(t["version"]) is not int or t["version"] != 1:
+        _fallo("template", "Expected rage.model-template version 1")
+    for key in ("id", "templateVersion"):
+        _texto(t[key], "template." + key)
+    _bool(t["equipment"], "template.equipment")
+    recipe = _claves(t["recipe"], "template.recipe", ["journals"])
+    journals = _lista(recipe["journals"], "template.recipe.journals")
+    allowed = ["materialDerivation", "energyDerivation", "momentumDerivation", "thermodynamicDerivation", "equationWorkbench"]
+    if not journals:
+        _fallo("template.recipe.journals", "At least one recorded journal is required")
+    seen = set()
+    for journal in journals:
+        _texto(journal, "template.recipe.journals")
+        if journal not in allowed or journal not in m["motores"] or journal in seen:
+            _fallo("template.recipe.journals", "Expected unique references to existing deduction journals")
+        _obj(m["motores"][journal], "motores." + journal)
+        seen.add(journal)
+    if t["equipment"]:
+        required = ["materialDerivation", "energyDerivation", "momentumDerivation"]
+        if any(v["termodinamica"]["tipo"] == "equilibrio" for v in m["volumenes"]):
+            required.append("thermodynamicDerivation")
+        if any(journal not in journals for journal in required):
+            _fallo("template.recipe.journals", "Equipment requires recorded matter, energy and momentum journals, plus thermodynamics for package closures")
+    ports = _lista(t["ports"], "template.ports")
+    if t["equipment"] and not ports:
+        _fallo("template.ports", "Equipment requires at least one port")
+    seen, boundaries = set(), set()
+    for i, value in enumerate(ports):
+        r = f"template.ports[{i}]"
+        p = _claves(value, r, ["id", "volumeId", "direction", "kind", "boundary", "variables"], ["donorPhase", "exteriorState"])
+        _texto(p["id"], r + ".id")
+        if p["id"] in seen:
+            _fallo(r + ".id", "Duplicate port identity")
+        seen.add(p["id"])
+        _texto(p["volumeId"], r + ".volumeId")
+        volume = next((v for v in m["volumenes"] if v["id"] == p["volumeId"]), None)
+        if volume is None:
+            _fallo(r + ".volumeId", "Unknown volume")
+        _opcion(p["direction"], r + ".direction", ["inlet", "outlet"])
+        _opcion(p["kind"], r + ".kind", ["material", "heat", "work"])
+        b = _claves(p["boundary"], r + ".boundary", ["type", "id"])
+        _texto(b["id"], r + ".boundary.id")
+        _opcion(b["type"], r + ".boundary.type", ["stream", "exchange", "term"])
+        identity = (b["type"], p["volumeId"] if b["type"] == "term" else "", b["id"])
+        if identity in boundaries:
+            _fallo(r + ".boundary", "Boundary already has a port")
+        boundaries.add(identity)
+        if p["kind"] == "material":
+            stream = next((s for s in m["corrientes"] if s["id"] == b["id"]), None)
+            if b["type"] != "stream" or stream is None:
+                _fallo(r + ".boundary", "Material port requires an existing stream")
+            _check_open_port(stream, p, r)
+            if p["direction"] == "inlet":
+                if "donorPhase" in p or p.get("exteriorState") != "estadoExterior" or not stream.get("estadoExterior"):
+                    _fallo(r, "Inlet requires its stream exterior state and no donor phase")
+            else:
+                if "exteriorState" in p or "donorPhase" not in p:
+                    _fallo(r, "Outlet requires donorPhase (null for a homogeneous donor) and no exterior state")
+                extraction = stream.get("extraccion", {}).get(p["volumeId"], {})
+                expected = extraction.get("fase") if extraction.get("tipo") == "fase" else None
+                if p["donorPhase"] != expected or (p["donorPhase"] is not None and not isinstance(p["donorPhase"], str)):
+                    _fallo(r + ".donorPhase", "Donor phase must match the stream extraction")
+            base = stream["materia"]["base"]
+            units = {"flow": {"masica": "kg/s", "molar": "mol/s", "volumetrica": "m^3/s"}[base], "composition": "1", "temperature": "K", "pressure": "Pa", "specificEnthalpy": "J/mol" if base == "molar" else "J/kg"}
+        else:
+            if "donorPhase" in p or "exteriorState" in p:
+                _fallo(r, "Only material ports declare donor or exterior states")
+            if b["type"] == "exchange" and p["kind"] == "heat":
+                exchange = next((q for q in m["intercambios"] if q["id"] == b["id"]), None)
+                if exchange is None:
+                    _fallo(r + ".boundary", "Unknown heat exchange")
+                _check_open_port(exchange, p, r)
+            elif b["type"] == "term" and b["id"] == ("calor" if p["kind"] == "heat" else "trabajo_viscoso") and b["id"] in volume.get("terminos", {}):
+                pass
+            else:
+                _fallo(r + ".boundary", "Expected an existing heat or work boundary term")
+            units = {"power": "W"}
+        variables = _claves(p["variables"], r + ".variables", list(units))
+        for key, unit in units.items():
+            v = _claves(variables[key], r + ".variables." + key, ["unitSI"])
+            if v["unitSI"] != unit:
+                _fallo(r + ".variables." + key, "Expected SI unit " + unit)
+
+
+def _check_open_port(boundary, port, path):
+    expected = (None, port["volumeId"]) if port["direction"] == "inlet" else (port["volumeId"], None)
+    if (boundary["desde"], boundary["hasta"]) != expected:
+        _fallo(path + ".boundary", "Port direction must match an open boundary of its volume")
 
 
 def _leer_volumen(v, r, ids_comp, ids_paq, lec):
