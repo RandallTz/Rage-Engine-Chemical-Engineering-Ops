@@ -48,7 +48,7 @@ Claude and Codex work at the same time, and either may continue in a new chat or
 2. **Pick.** Take an item whose `owner` is you, or one the user assigns. A new session of the same agent continues that agent's own claim; for Codex this holds on either account. Do not take an item that the other agent has claimed.
 3. **Claim before editing.** In the same edit that sets the milestone to `active`, add `claim: {agent, since, files, note}`. List every file or directory (ending in `/`) that the work will create or change, and keep the list narrow. The check fails when:
    - claims of different agents overlap;
-   - a claim covers a path in the other agent's `ownership`;
+   - a claim covers a path in the other agent's `ownership`, unless the claim names in `authorizedBy` a decision taken by the user (for example `dec-demo02-ownership`), which the check verifies;
    - a claim covers a `sharedFiles` entry;
    - a claimed milestone is not `active`.
 4. **Stay inside the claim.** Edit only your claimed paths and files no one has claimed. If you need a path that the other agent claims or owns, stop and ask the user.
