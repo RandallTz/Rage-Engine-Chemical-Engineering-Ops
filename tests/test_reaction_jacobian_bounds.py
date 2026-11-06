@@ -12,6 +12,7 @@ and of the binary64 conversion; (d) trace inventories; (e) rejections and locate
 Run: python tests/test_reaction_jacobian_bounds.py
 """
 import itertools
+import json
 import math
 import sys
 import unittest
@@ -326,6 +327,76 @@ class TraceAndRejection(unittest.TestCase):
         dlo, dhi = out["bounds"]["dg_dT"][0]
         self.assertLess(hi - lo, 1e-3 * 1.01)          # |dg/dT| ~ 0.03 1/K over 0.01 K, with headroom
         self.assertLess(dhi - dlo, 1e-6)
+
+
+class PrecisionThreadSafety(unittest.TestCase):
+    """A1 review F5-1: the save/set/restore of the process-global mpmath iv.prec must not interleave between
+    threads. A spy wraps the ideal-gas enclosure, sleeps inside it to force the interleaving, and records the
+    precision at its entry and exit; every evaluation must run at the recorded 113 bits and the caller's iv.prec
+    must be restored. Negative control: against the delivery before the repair (no lock) the spy observes 53 bits
+    inside a running evaluation and iv.prec is left at 113 after the threads finish."""
+
+    def test_concurrent_calls_keep_and_record_their_precision(self):
+        import threading
+        import time
+        gas = ce.IdealGasPhase([CO, CO2, H2, H2O])
+        nu = [[-1, 1, 1, -1]]
+        box = {"T": [500.0, 700.0], "P": [1e5, 2e5], "n": [[1.0, 2.0]] * 4}
+        seen, results, errors = [], [], []
+        real = jb._enclose
+
+        def spy(*a, **k):
+            seen.append(m.iv.prec)
+            time.sleep(0.02)
+            out = real(*a, **k)
+            seen.append(m.iv.prec)
+            return out
+
+        def worker():
+            try:
+                for _ in range(3):
+                    results.append(reaction_jacobian_bounds(gas, nu, box, **VAP))
+            except Exception as exc:              # pragma: no cover - reported below
+                errors.append(exc)
+
+        caller_prec = m.iv.prec
+        jb._enclose = spy
+        try:
+            threads = [threading.Thread(target=worker) for _ in range(3)]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+        finally:
+            jb._enclose = real
+        self.assertEqual(errors, [])
+        self.assertEqual(m.iv.prec, caller_prec)
+        self.assertEqual(len(results), 9)
+        self.assertEqual(set(seen), {jb.PRECISION_BITS})
+        for r in results:
+            self.assertTrue(r["certified"])
+            self.assertEqual(r["proof"]["precision_bits"], jb.PRECISION_BITS)
+        self.assertEqual(len({json.dumps(r["bounds"], sort_keys=True) for r in results}), 1)
+
+    def test_foreign_precision_change_is_located(self):
+        gas = ce.IdealGasPhase([CO, CO2, H2, H2O])
+        real = jb._enclose
+
+        def meddle(*a, **k):
+            out = real(*a, **k)
+            m.iv.prec = 53                         # other code changes the global context mid-call
+            return out
+        caller_prec = m.iv.prec
+        jb._enclose = meddle
+        try:
+            r = reaction_jacobian_bounds(gas, [[-1, 1, 1, -1]], {"T": [500.0, 700.0], "P": [1e5, 2e5],
+                                                                 "n": [[1.0, 2.0]] * 4}, **VAP)
+        finally:
+            jb._enclose = real
+            m.iv.prec = caller_prec
+        self.assertFalse(r["certified"])
+        self.assertEqual([d["code"] for d in r["diagnostics"]], ["PRECISION_CHANGED"])
+        self.assertIsNone(r["proof"])
 
 
 if __name__ == "__main__":
