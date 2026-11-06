@@ -109,7 +109,7 @@ def _publish(system, times, samples, mode, *, events=(), status='resuelto', evid
             bindings = {}
             prefix = 'port.'+port['id']+'.'
             if port['kind'] == 'material':
-                _,fluxes,enthalpy = discharge(stage,port,'indexSet.ports.'+port['id'])
+                _,fluxes,enthalpy = discharge(stage,port,getattr(system,'location','indexSet')+'.ports.'+port['id'])
                 total = sum(fluxes)
                 bindings['flow'] = add(prefix+'flow','Boundary mass flow','kg/s',evaluate(j,total))
                 bindings['composition'] = [add(prefix+'fraction.'+str(k),'Boundary mass fraction','1',evaluate(j,q/total)) for k,q in enumerate(fluxes,1)]
@@ -155,7 +155,7 @@ def _publish(system, times, samples, mode, *, events=(), status='resuelto', evid
                                    if not row['id'].startswith('reactions.equilibrium_limit.')):
         raise _failure('index_network_publication_failed','Connected sample verification failed.','indexedNetwork')
     result = conjunto(system.model['id'],system.model['nombre'],status,
-        {'motor':'rage.compilador.indexed_network','metodo':system.method if dynamic else 'damped_newton',
+        {'motor':getattr(system,'publication_engine','rage.compilador.indexed_network'),'metodo':system.method if dynamic else 'damped_newton',
          'firma':expansion['sourceSignature'],'networkEvidence':{'version':1,'mode':mode,'linearPolicy':system.linear_policy,
          'numerical':evidence,'unresolvedPortSeries':missing}},axes,rows,events,checks,modeloId=system.model['id'])
     result['indexedNetwork'] = {'version':2,'indexSetId':identity,'count':len(stages),'mode':mode,

@@ -105,8 +105,19 @@ class IndexedDerivedSystem:
         else:
             self.stages = [DerivedSystem(row['model']) for row in self.expansion['stages']]
         self.template_systems = templates
+        self.location = 'indexSet'
+        self._assemble(linear_solver)
+
+    def _assemble(self, linear_solver):
+        """Compose replayed stage namespaces through the expansion connections.
+
+        Shared by index-set networks and flowsheets: both supply `expansion`
+        (stages with their replayed models, connections and exposed ports),
+        `stages` (lowered stage systems) and `location` for diagnostics.
+        """
+        where = self.location
         if any(s.nonlinear or s.scaled is not None for s in self.stages):
-            raise _failure('index_network_unsupported_formulation', 'Indexed assembly requires identity explicit stage selections.', 'indexSet')
+            raise _failure('index_network_unsupported_formulation', 'Indexed assembly requires identity explicit stage selections.', where)
         self.offsets = np.cumsum([0]+[len(s.initial()) for s in self.stages]).tolist()
         self.time = sp.Symbol('network_time', real=True)
         self.variables = list(sp.symbols('network_state:'+str(self.offsets[-1]), real=True))
@@ -124,25 +135,25 @@ class IndexedDerivedSystem:
             a, b = connection['from']['stage']-1, connection['to']['stage']-1
             donor, receiver = self.stages[a], self.stages[b]
             port = next(p for p in donor.model['template']['ports'] if p['id']==connection['from']['portId'])
-            components, fluxes, enthalpy = discharge(donor, port, 'indexSet.connections.'+connection['id'])
+            components, fluxes, enthalpy = discharge(donor, port, where+'.connections.'+connection['id'])
             target = connection['to']['boundary']['id']
             closure = next((c for c in receiver.closures if target in c.inlets), None)
             if closure is None:
-                raise _failure('index_network_unsupported_inlet', 'The receiving stream needs the existing package exterior-state bindings.', 'indexSet.connections.'+connection['id'])
-            check_connection_pressure(donor, port, receiver, closure, 'indexSet.connections.'+connection['id'])
+                raise _failure('index_network_unsupported_inlet', 'The receiving stream needs the existing package exterior-state bindings.', where+'.connections.'+connection['id'])
+            check_connection_pressure(donor, port, receiver, closure, where+'.connections.'+connection['id'])
             components, fluxes = align_transport(donor.model, components, fluxes, closure,
-                                                'indexSet.connections.'+connection['id'])
+                                                where+'.connections.'+connection['id'])
             weights = [sp.Function('inlet_mass_fraction_'+str(i)+'__'+target)(receiver.time) for i in components]
             component_flows = [sp.Function('q__'+target+'__'+str(i))(receiver.time) for i in components]
             candidates = [sp.cancel(receiver._expand(q)/receiver._expand(w)) for q,w in zip(component_flows,weights)]
             flow = candidates[0]
             if flow not in receiver.parameter_values or any(c != flow for c in candidates):
-                raise _failure('index_network_unsupported_inlet', 'Record one bound inlet mass flow multiplying the package mass fractions.', 'indexSet.connections.'+connection['id'])
+                raise _failure('index_network_unsupported_inlet', 'Record one bound inlet mass flow multiplying the package mass fractions.', where+'.connections.'+connection['id'])
             boundary = {flow:sp.Dummy('connected_flow')}
             for quantity in closure.inlets[target]['values']:
                 boundary[receiver.parameter_symbols[quantity]] = sp.Dummy('connected_inlet')
             if set(boundary) & self.bindings[b].keys():
-                raise _failure('index_network_shared_boundary_datum', 'Connected inlet bindings must be independent.', 'indexSet.connections.'+connection['id'])
+                raise _failure('index_network_shared_boundary_datum', 'Connected inlet bindings must be independent.', where+'.connections.'+connection['id'])
             self.bindings[b].update(boundary)
             donor_rows.append((a,b,components,fluxes,enthalpy,closure,target,flow,boundary))
         # Local constants and authored symbols remain scoped to their stage.
@@ -166,7 +177,7 @@ class IndexedDerivedSystem:
                 if updated == expression: break
                 expression = updated
             if expression.free_symbols & boundary_symbols:
-                raise _failure('index_network_algebraic_loop', 'Connected boundary values contain an unresolved algebraic loop.', 'indexSet.connections')
+                raise _failure('index_network_algebraic_loop', 'Connected boundary values contain an unresolved algebraic loop.', where+'.connections')
             return sp.cancel(expression)
         self.connected_expression = lambda j, expression: connect(scope(j, expression))
         expressions = []
@@ -194,7 +205,7 @@ class IndexedDerivedSystem:
         self.tf = self.stages[0].tf
         self.method = self.stages[0].method
         if any(s.tf != self.tf or s.method != self.method for s in self.stages):
-            raise _failure('index_network_incompatible_study', 'Stage horizons and integration methods must agree.', 'indexSet.templates')
+            raise _failure('index_network_incompatible_study', 'Stage horizons and integration methods must agree.', where+'.templates')
 
     def initial(self):
         return np.concatenate([s.initial() for s in self.stages])
