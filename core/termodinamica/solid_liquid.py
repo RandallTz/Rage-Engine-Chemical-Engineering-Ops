@@ -59,7 +59,9 @@ Operations (binary helpers and N-species crystallization temperature):
 Rejections are `FueraDeAlcance` with `datos["cause"]` (and `datos["solid"]` when a solid is involved):
 `outside_window`, `invalid_composition`, `invalid_temperature`, `pure_liquid_stable`, `solubility_underflow`,
 `liquidus_below_solid_T_min`, `liquidus_below_activity_range`, `liquidus_above_window`,
-`liquid_liquid_instability`, `no_saturation_root` and, from `solid_data`, `melting_T_undefined`.
+`liquid_liquid_instability`, `no_saturation_root` and, from `solid_data`, `melting_T_undefined` and
+`invalid_pressure` (P not finite and positive, checked before every other use of P). A solid index that is not
+a species of the system, or a species without a solid record, is `FaltaParametro` with codigo `SOLIDO_AUSENTE`.
 """
 
 import math
@@ -106,21 +108,41 @@ class SolidLiquidSystem:
         return cls(cas, unifac.LiquidoUNIFAC(list(cas), variant), solids, source=f"UNIFAC {variant}")
 
     # --- domain ----------------------------------------------------------------
+    def _species_index(self, i):
+        """A species index of the system: an integer (not bool) in 0..N-1. Otherwise a located FueraDeAlcance with
+        cause `invalid_species_index` (A1 repairs review R2)."""
+        if isinstance(i, (int, np.integer)) and not isinstance(i, bool) and 0 <= i < len(self.cas):
+            return int(i)
+        raise mz.FueraDeAlcance("invalido", f"Species index {i!r} is not a species of this system "
+                                f"(0..{len(self.cas) - 1}: {list(self.cas)}).", cause="invalid_species_index",
+                                index=repr(i), species=list(self.cas))
+
     def _solid(self, i):
+        """The solid record of species index i. A located FaltaParametro SOLIDO_AUSENTE when the index is not a
+        species of the system (A1 review SLE-2: never a raw IndexError) or the species has no solid record."""
+        valid = isinstance(i, (int, np.integer)) and not isinstance(i, bool) and 0 <= i < len(self.cas)
+        if not valid:
+            raise mz.FaltaParametro(f"Solid index {i!r} is not a species of this system (0..{len(self.cas) - 1}: "
+                                    f"{list(self.cas)}).", (), codigo="SOLIDO_AUSENTE",
+                                    detalle={"tipo": "solido", "cas": None, "indice": repr(i),
+                                             "especies": list(self.cas)})
         if i not in self.solids:
             raise mz.FaltaParametro(f"No solid record for {self.cas[i]}.", (self.cas[i],), codigo="SOLIDO_AUSENTE",
                                     detalle={"tipo": "solido", "cas": self.cas[i]})
         return self.solids[i]
 
     def window(self, i, P):
-        """[T_lo, T_hi] where solid i and the activity model are both defined."""
+        """[T_lo, T_hi] where solid i and the activity model are both defined. P is validated first
+        (finite, > 0; located cause `invalid_pressure`), also for dv = 0 records (A1 review SLE-1)."""
         s = self._solid(i)
+        solid_data.check_pressure(P, s)
         lo, hi = s.T_min, s.melting_T(P)
         if self.T_range is not None:
             lo, hi = max(lo, self.T_range[0]), min(hi, self.T_range[1])
         return lo, hi
 
     def _check(self, i, T, P):
+        self._solid(i)
         if not (math.isfinite(T) and T > 0.0):
             raise mz.FueraDeAlcance("invalido", f"T = {T!r} K is not a positive temperature.", T_fuera=True,
                                     cause="invalid_temperature", solid=self.cas[i])
@@ -153,7 +175,9 @@ class SolidLiquidSystem:
         return -(math.log(x[i]) + self.lngamma(T, x)[i]) - s.dg_fus(T, P) / (R * T)
 
     def hbar_E(self, i, T, x):
-        """Partial excess enthalpy -RT^2 (d ln gamma_i/dT)_x, central difference (step 1e-4 T)."""
+        """Partial excess enthalpy -RT^2 (d ln gamma_i/dT)_x, central difference (step 1e-4 T). i must be a species
+        index of the system (located `invalid_species_index` otherwise; A1 repairs review R2)."""
+        i = self._species_index(i)
         h = 1e-4 * T
         d = (self.lngamma(T + h, x)[i] - self.lngamma(T - h, x)[i]) / (2 * h)
         return -R * T * T * d
@@ -161,6 +185,7 @@ class SolidLiquidSystem:
     def latent_heat(self, i, T, P, x):
         """L_i = hbar_i^L - h_i^S = dh_fus,i(T) + dv (P - P_m) + hbar_i^E, J/mol released on crystallization."""
         s = self._solid(i)
+        solid_data.check_pressure(P, s)
         return s.dh_fus(T) + s.dv * (P - s.P_m) + self.hbar_E(i, T, x)
 
     # --- liquid stability ----------------------------------------------------------
@@ -266,8 +291,10 @@ class SolidLiquidSystem:
         registered solids present in x. A solid is skipped only when its liquidus lies below its own record's
         T_min (it cannot appear in the record's range), or when its saturated liquid is unstable at a
         temperature below the selected one (the liquid x has crystallized before reaching it). Any other failure
-        of a present solid raises, naming the solid and the cause (F9-R12)."""
+        of a present solid raises, naming the solid and the cause (F9-R12). P is validated before any solid is
+        tried, so an invalid P is never reported as a liquidus below T_min (A1 review SLE-1)."""
         x = self._composition(x)
+        solid_data.check_pressure(P)
         best, unstable = None, []
         for i in sorted(self.solids):
             if x[i] <= 0.0:
@@ -406,8 +433,17 @@ class SolidLiquidSystem:
     def certify(self, point):
         """Fresh residuals: tm_S = 0 for each declared solid, tm_S >= 0 for every other registered solid whose
         window contains T (no further solid supersaturates the liquid), normalization, window, and the
-        liquid's own stability (tangent-plane test, F9-R11). Adds latent heats."""
+        liquid's own stability (tangent-plane test, F9-R11). Adds latent heats. Every declared solid in
+        point["solids"] (a list or tuple) must be a registered solid of the system (`_solid`: FaltaParametro
+        SOLIDO_AUSENTE otherwise), so an undeclared index can never yield "cumple" (A1 repairs review R2)."""
         T, P, x = point["T"], point["P"], np.asarray(point["x"], float)
+        declared = point["solids"]
+        if not isinstance(declared, (list, tuple)):
+            raise mz.FueraDeAlcance("invalido", f"point['solids'] = {declared!r} is not a list of solid indices.",
+                                    cause="invalid_species_index", index=repr(declared), species=list(self.cas))
+        for i in declared:
+            self._solid(i)
+        declared = {int(i) for i in declared}
         res = {}
         ok = abs(x.sum() - 1.0) <= TOL_X and bool(np.all(x >= 0))
         latent = {}
@@ -416,7 +452,7 @@ class SolidLiquidSystem:
             inside = lo - 1e-9 <= T <= hi + 1e-9
             tm = self.solid_tm(i, T, P, x) if inside and ok else None
             res[self.cas[i]] = tm
-            if i in point["solids"]:
+            if i in declared:
                 ok = ok and inside and abs(tm) <= TOL_TM
                 if ok:
                     latent[self.cas[i]] = self.latent_heat(i, T, P, x)
