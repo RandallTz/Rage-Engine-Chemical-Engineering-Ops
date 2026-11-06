@@ -80,6 +80,21 @@ TOL_SATURACION_MAXWELL = 1e-9
 TOL_DERIVADAS = 1e-6        # cp, cv analiticas frente a diferencias centradas
 PUNTOS_POR_RAMA = 400
 
+# Near-critical resolvability of the saturation densities (F9-R13). The Maxwell conditions fix the coexisting density
+# gap rho' - rho'' only to a relative error of about EPS_P / s, where s = rho (dP/drho)_T / Psat is the relative
+# isothermal stiffness of either saturated phase and EPS_P the relative precision of a binary64 IAPWS-95 pressure.
+# Measured against an independent mpmath solution of the Maxwell conditions: the `chemicals` fits reach
+# |d(rho' - rho'')| / (rho' - rho'') = 5e-15 / s from 1e-2 to 1e-7 K below T_c and then break down, and no binary64
+# Newton on P and g improves on them (its residual is pure rounding noise there). The Maxwell residual itself stays
+# ~1e-14 even for wrong densities, so it is not evidence. A saturation state is published only where the attainable
+# relative error of the density gap, SATURATION_EPS_P / s, is at most SATURATION_GAP_RTOL; that is s >= 1e-9, about
+# 1.1e-7 K below T_c. Closer to T_c `saturacion` raises SaturationNotResolvable (motivo 'region_critica'). IAPWS-95's
+# own critical temperature lies about 1.9e-11 K below 647.096 K (min over rho of (dP/drho)_T vanishes there), so
+# for smaller gaps the EOS has no coexistence at all.
+SATURATION_EPS_P = 1e-14            # conservative relative pressure precision (measured 5e-15)
+SATURATION_GAP_RTOL = 1e-5          # admitted relative error of rho' - rho''
+SATURATION_MIN_STIFFNESS = SATURATION_EPS_P / SATURATION_GAP_RTOL
+
 
 class FueraDeAlcance(Exception):
     """El modelo no puede evaluar este T/P. `motivo` es una de:
@@ -91,6 +106,21 @@ class FueraDeAlcance(Exception):
         self.motivo = motivo
         self.mensaje = mensaje
         self.datos = datos
+
+
+class SaturationNotResolvable(FueraDeAlcance, ValueError):
+    """Saturation below T_c that binary64 cannot resolve (motivo 'region_critica'). It is also a ValueError, so the
+    existing callers (_campana, ramas) keep treating such a T like a supercritical one: no separable branches."""
+
+    def __init__(self, mensaje, **datos):
+        super().__init__("region_critica", mensaje, **datos)
+
+
+def _critical_point(T, rho):
+    return FueraDeAlcance(
+        "region_critica",
+        f"T = {T!r} K, rho = {rho!r} kg/m3 is the IAPWS-95 critical point (delta = tau = 1), where the non-analytic "
+        "terms of the residual Helmholtz energy are singular.", T=T, rho=rho)
 
 
 @dataclass(frozen=True)
@@ -113,11 +143,14 @@ class Propiedades:
 
 def _phi(T, rho):
     tau, d = TC / T, rho / RHOC
-    return (tau, d,
-            _w.iapws95_A0(tau, d), _w.iapws95_dA0_dtau(tau, d), _w.iapws95_d2A0_dtau2(tau, d),
-            _w.iapws95_Ar(tau, d), _w.iapws95_dAr_ddelta(tau, d), _w.iapws95_d2Ar_ddelta2(tau, d),
-            _w.iapws95_dAr_dtau(tau, d), _w.iapws95_d2Ar_dtau2(tau, d),
-            _w.iapws95_d2Ar_ddeltadtau(tau, d))
+    try:
+        return (tau, d,
+                _w.iapws95_A0(tau, d), _w.iapws95_dA0_dtau(tau, d), _w.iapws95_d2A0_dtau2(tau, d),
+                _w.iapws95_Ar(tau, d), _w.iapws95_dAr_ddelta(tau, d), _w.iapws95_d2Ar_ddelta2(tau, d),
+                _w.iapws95_dAr_dtau(tau, d), _w.iapws95_d2Ar_dtau2(tau, d),
+                _w.iapws95_d2Ar_ddeltadtau(tau, d))
+    except ZeroDivisionError:
+        raise _critical_point(T, rho) from None
 
 
 def presion(T, rho):
@@ -134,7 +167,10 @@ def _dP_drho(T, rho):
 def helmholtz(T, rho):
     """f(T, rho) [J/kg]."""
     tau, d = TC / T, rho / RHOC
-    return R * T * (_w.iapws95_A0(tau, d) + _w.iapws95_Ar(tau, d))
+    try:
+        return R * T * (_w.iapws95_A0(tau, d) + _w.iapws95_Ar(tau, d))
+    except ZeroDivisionError:
+        raise _critical_point(T, rho) from None
 
 
 def propiedades(T, rho):
@@ -190,7 +226,13 @@ def saturacion(T):
     TOL_SATURACION_MAXWELL se pulen con el mismo Newton de Maxwell de
     coexistencia() y Psat pasa a ser P(rho''); donde el ajuste ya cumple, sus
     valores se conservan sin cambio. Si el Newton sale de sus ramas o no
-    mejora, quedan los valores del ajuste y su residuo."""
+    mejora, quedan los valores del ajuste y su residuo.
+
+    Near T_c (F9-R13) the Maxwell residual stops being evidence: P and g are so flat that wrong densities also give
+    ~1e-14. The returned state must therefore also have relative stiffness rho (dP/drho)_T / Psat >=
+    SATURATION_MIN_STIFFNESS in both phases, the condition under which binary64 fixes the density gap to
+    SATURATION_GAP_RTOL; otherwise SaturationNotResolvable (a ValueError with motivo 'region_critica'). This only
+    rejects states (T_c - T below about 1.1e-7 K); every accepted state is unchanged."""
     if not T < TC:
         raise ValueError("Por encima de T_c no hay saturacion")
 
@@ -205,7 +247,9 @@ def saturacion(T):
     if not (rl > RHOC > rv and _dP_drho(T, rl) > 0 and _dP_drho(T, rv) > 0):
         # a fracciones de ulp de T_c las dos ramas se juntan en rho_c y (dP/drho)_T = 0: la campana no se
         # resuelve en coma flotante y, como por encima de T_c, no hay saturacion que publicar
-        raise ValueError(f"Saturacion no resoluble a T = {T!r} K (junto a T_c)")
+        raise SaturationNotResolvable(
+            f"Saturation not resolvable at T = {T!r} K (T_c - T = {TC - T:.3g} K): the fitted branches do not "
+            "straddle rho_c with positive (dP/drho)_T.", T=T, gap=TC - T)
     residuo = residuo_de(Psat, rl, rv)
     if residuo > TOL_SATURACION_MAXWELL:
         pulido = _newton_maxwell(T, rl, rv)
@@ -213,6 +257,13 @@ def saturacion(T):
             r_pulido = residuo_de(pulido[3].P, pulido[0], pulido[1])
             if r_pulido < residuo:
                 rl, rv, Psat, residuo = pulido[0], pulido[1], pulido[3].P, r_pulido
+    rigidez = min(rl * _dP_drho(T, rl), rv * _dP_drho(T, rv)) / Psat
+    if not rigidez >= SATURATION_MIN_STIFFNESS:
+        raise SaturationNotResolvable(
+            f"Saturation not resolvable at T = {T!r} K (T_c - T = {TC - T:.3g} K): relative stiffness "
+            f"rho (dP/drho)_T / Psat = {rigidez:.3g} < {SATURATION_MIN_STIFFNESS:.3g}, so binary64 cannot fix "
+            f"rho' - rho'' to {SATURATION_GAP_RTOL:g} and the Maxwell residual ({residuo:.3g}) is no evidence.",
+            T=T, gap=TC - T, stiffness=rigidez)
     return Saturacion(T=T, Psat=Psat, rho_l=rl, rho_v=rv, residuo=residuo)
 
 
