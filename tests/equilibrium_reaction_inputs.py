@@ -12,9 +12,13 @@ NU=[-1,-1,1,1]
 
 
 def author(owner='gas', record_potential=True, potential_kind='constitutive', species=None, nu=None, molar_masses=(.028,.018,.044,.002),
-           reference=(2,2,0,0), temperature=800, pressure=1e5, extent_box=(.5,1.5), seed=1):
+           reference=(2,2,0,0), temperature=800, pressure=1e5, extent_box=(.5,1.5), seed=1, liquid=None, state_width=.01, step_tolerance=1e-10):
     """Generic in species and one reaction row: the extent species is the last
-    one with a nonzero coefficient and zero reference; a zero column is inert."""
+    one with a nonzero coefficient and zero reference; a zero column is inert.
+
+    liquid: None (ideal gas, F5-C1) or {'package': model id, 'anchor': 'gas'|'liquid',
+    'form': 'activity'|'ideal'|'gas'} for a package liquid region (B3). The form
+    is what the Model records for mu_i, so a wrong form is a negative control."""
     SPECIES_=list(species or SPECIES);NU_=list(nu or NU);count=len(SPECIES_)
     k=max(i for i,c in enumerate(NU_) if c!=0);assert reference[k]==0
     others=[j for j in range(count) if j!=k]
@@ -84,7 +88,29 @@ def author(owner='gas', record_potential=True, potential_kind='constitutive', sp
         current=a.append('state_variation',family='thermodynamics',sources=[current],symbol=q(n),right=str(nu)+'*virtualExtent',reason='Stoichiometric virtual composition direction; formation reference is included in chemical potentials')
     a.append('declare_domain',family='thermodynamics',sources=[current],symbol='virtualExtent',domain='nonzero',reason='Nonzero virtual stoichiometric displacement for the stationary Gibbs variation')
     current=a.append('divide',family='thermodynamics',sources=[current],right='virtualExtent*gasConstant*'+q(f('T__'+owner)))
-    if record_potential:
+    if record_potential and liquid is not None:
+        # Liquid package region (B3): mu_i = mu_i*(T,P) + R T log(x_i gamma_i),
+        # x_i = n_i/sum_k n_k over every species (inerts included). The
+        # pure-liquid standard potential and the activity coefficient are
+        # functions of the state named by the declaration's package.
+        T,P=q(f('T__'+owner)),q(f('P__'+owner));total='('+'+'.join(q(n) for n in amounts)+')'
+        if liquid['form']=='gas':a.append('declare_symbol',name='standardPressure',unit='Pa')
+        for i,n in enumerate(amounts,1):
+            if NU_[i-1]==0:continue
+            standard=declare('pureLiquidPotential'+str(i),'J/mol')
+            mu=f('mu_'+str(i)+'__'+owner)
+            if liquid['form']=='activity':
+                gamma=declare('activityCoefficient'+str(i),'1')
+                argument=q(n)+'*'+q(gamma)+'/'+total
+            elif liquid['form']=='ideal':
+                argument=q(n)+'/'+total
+            else:
+                argument=q(n)+'*'+P+'/('+total+'*standardPressure)'
+            relation=a.relation(q(mu),q(standard)+'+gasConstant*'+T+'*log('+argument+')',
+                'Liquid mixture chemical potential: pure-liquid standard potential at the system T and P, mole fraction and activity coefficient of the declared package liquid model',
+                family='thermodynamics',kind=potential_kind)
+            current=a.substitute(current,relation,mu,family='thermodynamics')
+    elif record_potential:
         # Thermodynamic constitutive closure selected by the declaration
         # (ideal_gas, gas anchor, ideal_gas_P0): one generic row per species,
         # substituted into the affinity through the shared operations.
@@ -105,20 +131,23 @@ def author(owner='gas', record_potential=True, potential_kind='constitutive', sp
            'temperatureId':q(f('T__'+owner)),'pressureId':q(f('P__'+owner)),
            'amountIds':[q(n) for n in amounts],'referenceIds':[q(b[others.index(i)]) if i!=k else 'zeroReference' for i in range(count)],
            'extentIds':[q(xi)],'reactions':[{'id':'shift','stoichiometry':[str(nu) for nu in NU_],'equationId':current}]}
+    if liquid is not None:
+        model['termodinamica']['paquetes']=[{'id':'reactionLiquid','modelo':{'id':liquid['package'],'version':'1'}}]
+        entry.update({'provider':'package','phaseId':'liquido','standardState':'pure_liquid_TP','anchor':liquid['anchor'],'packageId':'reactionLiquid'})
     model['motores']['equilibriumReactions']={'format':'rage.equilibrium-reactions','version':1,'volumes':{owner:entry}}
     def datum(key,value,unit):return _datum(model,key,value,unit)
     parameters={q(f('T__'+owner)):datum('temperature',temperature,'K'),q(f('P__'+owner)):datum('pressure',pressure,'Pa'),
                 'zeroReference':datum('zero',0,'mol'),'gasConstant':datum('R',8.314462618,'J/(mol*K)')}
-    if record_potential:parameters['standardPressure']=datum('P0',1e5,'Pa')
+    if record_potential and (liquid is None or liquid['form']=='gas'):parameters['standardPressure']=datum('P0',1e5,'Pa')
     parameters.update({'molarMass'+str(i):datum('M'+str(i),mass,'kg/mol') for i,mass in enumerate(molar_masses,1)})
     parameters[q(V)]=v['frontera']['datoId']
     initial={q(x):datum('initial'+str(i),value,'mol') for i,(x,value) in enumerate(zip(b,[reference[j] for j in others]))}
-    bounds={q(x):{key:datum('b'+str(i)+key,value,'mol') for key,value in [('lowerDataId',base-.01),('upperDataId',base+.01)]} for i,(x,base) in enumerate(zip(b,[reference[j] for j in others]))}
+    bounds={q(x):{key:datum('b'+str(i)+key,value,'mol') for key,value in [('lowerDataId',base-state_width),('upperDataId',base+state_width)]} for i,(x,base) in enumerate(zip(b,[reference[j] for j in others]))}
     extent={key:datum('extent'+key,value,'mol') for key,value in [('seedDataId',seed),('lowerDataId',extent_box[0]),('upperDataId',extent_box[1]),('scaleDataId',1)]}
     model['estudio']={'tipo':'temporal','tiempoId':datum('tf',1,'s'),'muestras':3,'metodoSolicitado':'bdf','rtol':1e-7,'atol':{'cantidad':1e-9,'energia':1e-6}}
     model['motores']['derivedExecution']={'format':'rage.derived-execution','version':4,'sourceSignature':source_signature(model),
         'timeId':q(t),'states':states,'algebraic':[{'quantityId':q(xi),'equationId':current}], 'reconstructions':recon,
         'parameters':parameters,'initialValues':initial,'initialEquations':[],'checks':[],
-        'nonlinear':{'variables':{q(xi):extent},'residualScales':{current:datum('affinityScale',1,'1')},'residualTolerance':1e-10,'stepTolerance':1e-10,'maxIterations':30,'maxBacktracks':20},
+        'nonlinear':{'variables':{q(xi):extent},'residualScales':{current:datum('affinityScale',1,'1')},'residualTolerance':1e-10,'stepTolerance':step_tolerance,'maxIterations':30,'maxBacktracks':20},
         'dae':{'stateBounds':bounds,'driftTolerance':1e-9}}
     return leer_modelo_comun(model)
