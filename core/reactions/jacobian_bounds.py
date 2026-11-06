@@ -36,8 +36,17 @@ Enclosure method. Every quantity is evaluated in mpmath interval arithmetic (dir
   [lo_i/(lo_i + sum_(j!=i) hi_j), hi_i/(hi_i + sum_(j!=i) lo_j)]; the composition term of g is the intersection
   of sum nu_i ln[x_i] and sum nu_i ln[n_i] - Dnu ln[N]. dg/dn uses [1/n_k] and [1/N].
 - P: Dnu ln(P/P0) and Dnu/P are monotone, evaluated at the endpoints.
-Endpoints are rounded floor/ceiling to binary64 and then widened by one more ulp (math.nextafter), which
-absorbs any error of mpmath's 113-bit elementary functions (far below one binary64 ulp).
+The guarantee comes from mpmath's directed rounding: every interval operation and elementary function
+(mpi_log, mpi_exp, powers) rounds its lower end down and its upper end up at 113 bits, so each interval contains
+the exact range. Endpoints are then rounded floor/ceiling to binary64 and widened by one more ulp
+(math.nextafter) as a safety margin only; one ulp of a result near zero (g near 0 at equilibrium, by
+cancellation) is not by itself a bound on the 113-bit error of its terms, and it is not relied on as one.
+
+Precision and threads (A1 review F5-1). mpmath's `iv` context is process-global. The save, set to 113 bits,
+evaluation and restore of `iv.prec` run under one module lock, so concurrent calls never interleave: each call
+computes at the precision it records, and the caller's `iv.prec` is restored when the call returns. Code outside
+this module that changes `iv.prec` during an evaluation is detected (the precision is checked after the
+evaluation) and the box is returned uncertified with the diagnostic PRECISION_CHANGED.
 
 Validity proof (each item is checked, never assumed): the provider is a supported type whose phase and
 standard state match the request; the T box lies inside every species' Poling cp range; T, P and every n
@@ -71,6 +80,7 @@ taken as exact binary64 values; the provider's own floating-point evaluation of 
 import hashlib
 import json
 import math
+import threading
 from fractions import Fraction
 
 import numpy as np
@@ -84,6 +94,7 @@ from core.termodinamica import unifac_intervals
 FORMAT = "rage.reaction-jacobian-bounds"
 VERSION = 1
 PRECISION_BITS = 113
+_PRECISION_LOCK = threading.RLock()     # serializes the save/set/evaluate/restore of the global iv.prec (F5-1)
 T_PIECES = 64
 
 METHOD = ("mpmath interval arithmetic: natural extension intersected with the mean-value form on "
@@ -649,8 +660,9 @@ ASSUMPTIONS = (
     "Provider data (Poling cp/R coefficients, Hf, S0, R, T0, P0) are taken as exact binary64 values.",
     "mu includes the formation reference (Hf - T S0); no reaction heat is added; g and dg/dT carry it once.",
     "Absolute entropies stand in for formation entropies only for exactly element-balanced rows (checked).",
-    "mpmath 113-bit directed interval arithmetic errs by far less than one binary64 ulp; the extra ulp of "
-    "widening covers it.",
+    "Every interval operation and elementary function is directed-rounded (floor/ceiling) by mpmath at 113 bits, "
+    "so each computed interval contains the exact range; the extra binary64 ulp of widening is a safety margin, "
+    "not the source of the guarantee.",
 )
 
 PACKAGE_METHOD = (
@@ -677,8 +689,9 @@ PACKAGE_ASSUMPTIONS = (
     "mu includes the formation reference (Hf - T S0); no reaction heat is added; g and dg/dT carry it once.",
     "Absolute entropies stand in for formation entropies only for exactly element-balanced rows (checked).",
     "A species admitted only in the liquid must be in a liquid phase with anchor='liquid' (checked).",
-    "mpmath 113-bit directed interval arithmetic errs by far less than one binary64 ulp; the extra ulp of "
-    "widening covers it.",
+    "Every interval operation and elementary function is directed-rounded (floor/ceiling) by mpmath at 113 bits, "
+    "so each computed interval contains the exact range; the extra binary64 ulp of widening is a safety margin, "
+    "not the source of the guarantee.",
 )
 
 
@@ -703,20 +716,28 @@ def reaction_jacobian_bounds(provider, nu, box, *, phase_id, standard_state):
     if diagnostics:
         result["diagnostics"] = diagnostics
         return result
-    old = iv.prec
-    iv.prec = PRECISION_BITS
     counts = None
-    try:
-        if package:
-            bounds, counts = _enclose_package(provider, NU, T, P, n)
-        else:
-            bounds = _enclose(provider, NU, T, P, n)
-    except ValueError as exc:                            # an interval argument left its function's domain
-        result["diagnostics"].append({"code": "ENCLOSURE_DOMAIN", "path": "box",
-                                      "message": f"The interval evaluation left a function's domain: {exc}"})
+    with _PRECISION_LOCK:
+        old = iv.prec
+        iv.prec = PRECISION_BITS
+        try:
+            if package:
+                bounds, counts = _enclose_package(provider, NU, T, P, n)
+            else:
+                bounds = _enclose(provider, NU, T, P, n)
+            used = iv.prec
+        except ValueError as exc:                        # an interval argument left its function's domain
+            result["diagnostics"].append({"code": "ENCLOSURE_DOMAIN", "path": "box",
+                                          "message": f"The interval evaluation left a function's domain: {exc}"})
+            return result
+        finally:
+            iv.prec = old
+    if used != PRECISION_BITS:
+        result["diagnostics"].append({"code": "PRECISION_CHANGED", "path": "proof.precision_bits",
+                                      "message": f"mpmath iv.prec was changed to {used} bits by other code during "
+                                                 f"the evaluation (expected {PRECISION_BITS}); the precision of "
+                                                 "the evaluation cannot be recorded."})
         return result
-    finally:
-        iv.prec = old
     for key, rows in bounds.items():
         for j, row in enumerate(rows):
             cells = row if key == "dg_dn" else [row]
@@ -730,7 +751,7 @@ def reaction_jacobian_bounds(provider, nu, box, *, phase_id, standard_state):
         return result
     proof = {"method": PACKAGE_METHOD if package else METHOD, "rounding": ROUNDING,
              "assumptions": list(PACKAGE_ASSUMPTIONS if package else ASSUMPTIONS), "validity": validity,
-             "precision_bits": PRECISION_BITS, "temperature_pieces": T_PIECES}
+             "precision_bits": used, "temperature_pieces": T_PIECES}
     if package:
         proof["excess_pieces"] = None if counts is None else {"T": counts[0], "n": counts[1:]}
     result.update(certified=True, bounds=bounds, proof=proof)
