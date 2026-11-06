@@ -26,6 +26,12 @@ assert.deepEqual(leerModeloComun(model),model);checks++;
 assert.deepEqual(leerResultados(result),result);checks++;
 readCompilationReport(result.procedencia.compilation);checks++;
 readEquationWorkbench(model.motores.equationWorkbench);checks++;
+// F1 repair: one recorded thermodynamic constitutive mu_i relation per species,
+// placed in the existing Thermodynamics panel by its family.
+const {panelDeEcuacion}=load(path.join(here,'app/motor/ubicacionEcuaciones'));
+const potentials=model.motores.equationWorkbench.operations.filter(op=>op.kind==='declare_relation'&&op.relationKind==='constitutive'&&op.family==='thermodynamics');
+assert.equal(potentials.length,model.motores.equilibriumReactions.volumes.gas.species.length);checks++;
+for(const op of potentials){assert.equal(panelDeEcuacion({id:'operation',familia:op.family}),'termodinamica');assert.ok(op.right.includes('log('));checks++;}
 const mutations=[
   r=>r.extra=true,r=>r.version=2,r=>r.volumes.gas.extra=true,
   r=>r.volumes.gas.species.reverse(),r=>r.volumes.gas.phaseId='solid',
