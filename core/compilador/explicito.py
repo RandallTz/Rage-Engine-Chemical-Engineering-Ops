@@ -18,8 +18,8 @@ instant a variable would leave its domain, located by bisection. Values
 are never clipped and execution never continues outside the domain.
 
 Outside this entry point's scope (NoSoportado with a reason): spatial
-derivatives and differential operators (handled by the discretization engine),
-algebraic equations (DAEs), derivatives above first order, and declared
+coordinates, conditions and differential operators (a located AdmissionError
+'requires_discretization'; spatial discretization is deferred, F7), algebraic equations (DAEs), derivatives above first order, and declared
 functions without definitions.
 """
 
@@ -94,8 +94,13 @@ class SistemaExplicito:
         if len(tiempos) != 1:
             raise NoSoportado("matematico: exactly one time variable is required")
         self.tiempo = tiempos[0]
-        if any(s["rol"] == "coordenada" for s in mat["simbolos"]):
-            raise NoSoportado("Fields with spatial coordinates require the discretization engine (step 5.2)")
+        coordenadas = [(k, s["id"]) for k, s in enumerate(mat["simbolos"]) if s["rol"] == "coordenada"]
+        if coordenadas:
+            k, cid = coordenadas[0]
+            raise AdmissionError('requires_discretization',
+                                 f"Fields depend on the spatial coordinate {', '.join(c for _, c in coordenadas)}; "
+                                 "spatial discretization is deferred (F7) and this time-only entry point has no discretization engine.",
+                                 f"matematico.simbolos[{k}]")
         self.campos = [s["id"] for s in mat["simbolos"] if s["rol"] == "campo"]
         if not self.campos:
             raise NoSoportado("matematico: no field variables to integrate")
@@ -132,7 +137,9 @@ class SistemaExplicito:
                 self.valores[sid] = _valor_SI(self.modelo["datos"][clave], f"datos.{clave}", _dim_de_simbolo(s))
         # One first-order differential equation per field variable.
         self.f = [None] * len(self.campos)
-        for e in mat["ecuaciones"]:
+        self._rutas = {}
+        for k, e in enumerate(mat["ecuaciones"]):
+            self._rutas[f"Equation {e['id']}"] = f"matematico.ecuaciones[{k}]"
             lado, otro = (e["izquierda"], e["derecha"]) if e["izquierda"]["tipo"] == "derivada" else (e["derecha"], e["izquierda"])
             if lado["tipo"] != "derivada" or lado["expresion"]["tipo"] != "simbolo" or lado["respecto"] != self.tiempo:
                 raise NoSoportado(f"Equation {e['id']}: this entry point only executes d(variable)/d{self.tiempo} = expression (algebraic equations and DAEs are unsupported here)")
@@ -159,8 +166,11 @@ class SistemaExplicito:
         est = self.modelo["estudio"]
         if est is None or est["tipo"] != "temporal":
             raise NoSoportado("The model does not request a time-dependent study")
-        if est.get("espacial") and any(self.modelo["volumenes"][k]["frontera"]["tipo"] == "malla_1d" for k in range(len(self.modelo["volumenes"]))):
-            raise NoSoportado("A volume with a 1D mesh requires the discretization engine (step 5.2)")
+        mallas = [k for k, v in enumerate(self.modelo["volumenes"]) if v["frontera"]["tipo"] == "malla_1d"]
+        if est.get("espacial") and mallas:
+            raise AdmissionError('requires_discretization',
+                                 "A volume with a 1D mesh needs spatial discretization, which is deferred (F7) in this time-only entry point (no discretization engine).",
+                                 f"volumenes[{mallas[0]}].frontera")
         dt = self.modelo["datos"][est["tiempoId"]]
         self.tf = _valor_SI(dt, f"datos.{est['tiempoId']}", dim_t)
         if not (self.tf > 0 and math.isfinite(self.tf)):
@@ -183,9 +193,11 @@ class SistemaExplicito:
             return
         self.g = [None] * len(self.campos)
         initial_constraints = [[] for _ in self.campos]
-        for c in mat["condiciones"]:
+        for k, c in enumerate(mat["condiciones"]):
             if c["tipo"] != "inicial":
-                raise NoSoportado(f"Condition {c['id']}: {c['tipo']} requires spatial coordinates")
+                raise AdmissionError('requires_discretization',
+                                     f"Condition {c['id']}: {c['tipo']} requires spatial coordinates; spatial discretization is deferred (F7).",
+                                     f"matematico.condiciones[{k}]")
             iz, de = c["ecuacion"]["izquierda"], c["ecuacion"]["derecha"]
             if iz["tipo"] != "simbolo" or iz["id"] not in self.indice:
                 raise NoSoportado(f"Condition {c['id']}: expected variable = expression")
@@ -266,6 +278,10 @@ class SistemaExplicito:
             raise NoSoportado(f"{donde}: declared function {e['funcionId']} has no definition")
         if t == "derivada":
             raise NoSoportado(f"{donde}: derivative inside the right-hand side (with respect to {e['respecto']}): requires the discretization engine")
+        if t in ("gradiente", "divergencia", "laplaciano"):
+            raise AdmissionError('requires_discretization',
+                                 f"{donde}: operator {t} requires spatial discretization, which is deferred (F7) (no discretization engine here).",
+                                 getattr(self, '_rutas', {}).get(donde, 'matematico.ecuaciones'))
         raise NoSoportado(f"{donde}: operator {t}: requires the discretization engine (step 5.2)")
 
     def _check_initial_constraints(self, constraints):
