@@ -183,7 +183,16 @@ m["matematico"]["ecuaciones"][0]["izquierda"] = s("m")
 rechaza("Algebraic equation unsupported by this entry point", m, "algebraic equations and DAEs are unsupported here")
 m = copy.deepcopy(ago)
 m["matematico"]["simbolos"].append(simbolo("x", "coordenada", D(L=1)))
-rechaza("Spatial coordinate requires discretization", m, "discretization engine")
+rechaza("Spatial coordinate requires discretization", m, "spatial discretization is deferred (F7)")
+# PDE-0 (5 November 2026): the only spatial input in this block; its rejection is now located.
+try:
+    SistemaExplicito(m)
+    check("Spatial coordinate: located requires_discretization", False, "no lo rechazó")
+except NoSoportado as e:
+    fila = (getattr(e, "diagnostics", None) or [{}])[0]
+    k = next(i for i, x in enumerate(m["matematico"]["simbolos"]) if x["id"] == "x")
+    check("Spatial coordinate: located requires_discretization",
+          fila.get("code") == "requires_discretization" and fila.get("path") == f"matematico.simbolos[{k}]", fila)
 m = copy.deepcopy(ago)
 m["matematico"]["ecuaciones"][0]["izquierda"] = der("m", 2)
 rechaza("Second-order derivative", m, "order 2")
