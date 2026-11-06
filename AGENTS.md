@@ -44,7 +44,7 @@ The documentation index is [docs/README.md](docs/README.md). The repository is b
 
 Minimum rules (details in ARCHITECTURE.md §8):
 
-- No commit or push unless the user asks; when committing, file by file, never `git add -A`.
+- **Standing commit permission (user decision, 6 November 2026, `dec-standing-commit-permission`):** Claude and Codex may integrate, commit and push to `fase-a-adopcion` without asking each time, once the work has passed its independent review and its tests. Commit file by file by explicit path, never `git add -A`; never commit another agent's uncommitted files or paths it claims. Pull requests, merges into `main`, force pushes and history rewrites still need the user's explicit request.
 - Do not modify `/motor` or its backends without an explicit request.
 - The interface does not calculate: science, units and solvers live in Python.
 - Every model starts from the fundamental equations and reaches the needed model through recorded assumptions; the model is never posed directly (ARCHITECTURE.md §2, principle 10).
