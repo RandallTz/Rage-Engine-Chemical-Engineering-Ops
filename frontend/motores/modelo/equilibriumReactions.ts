@@ -1,11 +1,11 @@
 /** Identity/shape transport only. Python owns reaction rank and certification. */
 import type {ModeloComun} from './contrato';
-export type EquilibriumReactionRegion={provider:'ideal_gas'|'package';species:string[];phaseId:'vapor'|'liquido';standardState:'ideal_gas_P0'|'pure_liquid_TP';anchor:'gas'|'liquid';temperatureId:string;pressureId:string;amountIds:string[];referenceIds:string[];extentIds:string[];reactions:{id:string;stoichiometry:string[];equationId:string}[]};
+export type EquilibriumReactionRegion={provider:'ideal_gas'|'package';species:string[];phaseId:'vapor'|'liquido';standardState:'ideal_gas_P0'|'pure_liquid_TP';anchor:'gas'|'liquid';temperatureId:string;pressureId:string;amountIds:string[];referenceIds:string[];extentIds:string[];reactions:{id:string;stoichiometry:string[];equationId:string}[];packageId?:string};
 export type EquilibriumReactions={format:'rage.equilibrium-reactions';version:1;volumes:Record<string,EquilibriumReactionRegion>};
-function object(value:unknown,fields?:string[]):Record<string,unknown>{
+function object(value:unknown,fields?:string[],optional:string[]=[]):Record<string,unknown>{
   if(!value||typeof value!=='object'||Array.isArray(value))throw new Error('Expected an equilibrium reaction object.');
   const row=value as Record<string,unknown>;
-  if(fields&&(Object.keys(row).length!==fields.length||fields.some(k=>!Object.hasOwn(row,k))))throw new Error('Unknown or missing equilibrium reaction fields.');
+  if(fields&&(fields.some(k=>!Object.hasOwn(row,k))||Object.keys(row).some(k=>!fields.includes(k)&&!optional.includes(k))))throw new Error('Unknown or missing equilibrium reaction fields.');
   return row;
 }
 const identity=(v:unknown)=>typeof v==='string'&&v.length>0;
@@ -18,8 +18,10 @@ export function readEquilibriumReactions(value:unknown,model:ModeloComun):Equili
   for(const [owner,v] of Object.entries(regions)){
     const region=model.volumenes.find(v=>v.id===owner);
     if(!region||model.motores.kineticReactions?.volumes[owner])throw new Error('Missing or competing reaction region.');
-    const r=object(v,['provider','species','phaseId','standardState','anchor','temperatureId','pressureId','amountIds','referenceIds','extentIds','reactions']);
+    const r=object(v,['provider','species','phaseId','standardState','anchor','temperatureId','pressureId','amountIds','referenceIds','extentIds','reactions'],['packageId']);
     if(!['ideal_gas','package'].includes(String(r.provider))||!['vapor','liquido'].includes(String(r.phaseId))||!['gas','liquid'].includes(String(r.anchor))||!['ideal_gas_P0','pure_liquid_TP'].includes(String(r.standardState)))throw new Error('Invalid provider/reference choice.');
+    // Optional since 6 November 2026 (B3): only a package provider names a declared package; Python rejects a missing one.
+    if(Object.hasOwn(r,'packageId')&&(r.provider!=='package'||!model.termodinamica.paquetes.some(p=>p.id===r.packageId)))throw new Error('Only a package provider names a declared packageId.');
     ids(r.species);ids(r.amountIds);ids(r.referenceIds);ids(r.extentIds);
     const species=region.componenteIds.map(c=>model.componentes.find(v=>v.id===c)?.identidadQuimica?.cas);
     if(JSON.stringify(species)!==JSON.stringify(r.species)||r.amountIds.length!==species.length||r.referenceIds.length!==species.length||!identity(r.temperatureId)||!identity(r.pressureId))throw new Error('Reaction species and graph coordinates disagree.');
