@@ -19,21 +19,32 @@ class Gradient(sp.Function):
 
 
 class VolumeIntegral(sp.Function):
-    nargs=1
+    """Volume integral of a local density.
+
+    The one-argument form keeps its historical binding of the coordinate
+    names x, y, z and s. When a spatial domain is declared (PDE-1), the
+    second argument is the tuple of chart axes the integral binds; only
+    those coordinates are then removed from the free symbols.
+    """
+    nargs=(1,2)
     @property
     def free_symbols(self):
         # Integration binds spatial coordinates. The resulting inventory has
         # time dependence, rather than the local field's spatial arguments.
+        if len(self.args)==2:return self.args[0].free_symbols-set(self.args[1])
         return {s for s in self.args[0].free_symbols if str(s) not in ('x','y','z','s')}
     def _eval_derivative(self,symbol):
         return sp.Derivative(self,symbol,evaluate=False)
     def _latex(self,printer):return r'\int_{V(t)} '+printer._print(self.args[0])+r'\,dV'
     @classmethod
-    def eval(cls,expression):
+    def eval(cls,expression,bound=None):
+        extra=() if bound is None else (bound,)
+        if bound is not None and (not isinstance(bound,sp.Tuple) or not bound or any(not isinstance(a,sp.Symbol) for a in bound)):
+            raise TypeError('A volume integral binds a nonempty tuple of coordinate symbols.')
         if expression==0:return sp.S.Zero
-        if expression.is_Add:return sp.Add(*(cls(term) for term in expression.args))
+        if expression.is_Add:return sp.Add(*(cls(term,*extra) for term in expression.args))
         coefficient,rest=expression.as_coeff_Mul()
-        if coefficient!=1:return coefficient*cls(rest)
+        if coefficient!=1:return coefficient*cls(rest,*extra)
 
 
 class BoundaryFlux(sp.Function):
@@ -51,3 +62,78 @@ class StateDifferential(sp.Function):
     nargs=1
     def _latex(self,printer):return r'\mathrm d\!\left('+printer._print(self.args[0])+r'\right)'
 
+
+
+# --- Spatial content detection (PDE-0, 5 November 2026) -------------------------
+# A field equation keeps spatial coordinates as arguments, derivatives with
+# respect to them, or unexpanded divergence/gradient operators. Integrated
+# operators (volume integrals, boundary fluxes) bind their coordinates and are
+# not spatial content. Detection is purely structural; it never discretizes.
+
+def is_coordinate(symbol,time=None,declared=()):
+    """A spatial coordinate: a chart axis name, the path coordinate s, or a declared axis.
+
+    Names may carry the producers' owner suffix (x__v1). Scalar quantities such
+    as a temperature T or a parameter alpha are never coordinates, even when a
+    declared function depends on them (review P1, 6 November 2026).
+    """
+    if not isinstance(symbol,sp.Symbol) or symbol==time:return False
+    if symbol in declared:return True
+    from .domains import CHARTS
+    return str(symbol).split('__')[0] in {*(axis for axes in CHARTS.values() for axis in axes),'s'}
+
+
+def field_coordinates(quantity,time=None,declared=()):
+    """Spatial coordinates among a field's arguments (never the selected time)."""
+    if not isinstance(quantity,sp.core.function.AppliedUndef):return ()
+    return tuple(a for a in quantity.args if is_coordinate(a,time,declared))
+
+
+def spatial_content(expression,time=None,declared=()):
+    """Fields, coordinates and operators that require spatial discretization."""
+    fields={};coordinates=set();operators=set();derivatives=False
+    def visit(node):
+        nonlocal derivatives
+        if isinstance(node,(VolumeIntegral,BoundaryFlux)):return
+        if isinstance(node,(Divergence,Gradient)):operators.add(type(node).__name__)
+        if isinstance(node,sp.Derivative):
+            spatial=[v for v,_ in node.variable_count if is_coordinate(v,time,declared)]
+            if spatial:derivatives=True;coordinates.update(spatial)
+        found=field_coordinates(node,time,declared)
+        if found:fields[node]=found;coordinates.update(found)
+        for argument in node.args:
+            if isinstance(argument,sp.Basic):visit(argument)
+    visit(expression)
+    return {'fields':tuple(sorted(fields,key=sp.default_sort_key)),
+            'coordinates':tuple(sorted(coordinates,key=sp.default_sort_key)),
+            'operators':tuple(sorted(operators)),'derivatives':derivatives}
+
+
+def requires_discretization(graph,rows,time=None):
+    """Located findings for selected rows whose equations are spatial.
+
+    ``rows`` are equation identities of the selected formulation. Each finding
+    names the row, its spatial coordinates, fields and unexpanded operators.
+    Rows absent from the graph are left to the caller's own admission checks.
+    """
+    declared=tuple(axis for domain in getattr(graph,'spatial_domains',{}).values() for axis in domain.axes)
+    findings=[]
+    for equation_id in rows:
+        node=graph.nodes.get(equation_id)
+        if node is None or not isinstance(node.equation,sp.Equality):continue
+        content=spatial_content(node.equation,time,declared)
+        if content['coordinates'] or content['operators']:
+            findings.append({'equationId':equation_id,
+                             'coordinates':[str(c) for c in content['coordinates']],
+                             'fields':[str(f) for f in content['fields']],
+                             'operators':list(content['operators'])})
+    return findings
+
+
+def discretization_message(finding):
+    subject=', '.join(finding.get('fields') or [])
+    coordinates=', '.join(finding.get('coordinates') or [])
+    operators=', '.join(finding.get('operators') or [])
+    text=(subject or 'The selected equation')+(' depend on ' if len(finding.get('fields') or [])>1 else ' depends on ')+(coordinates or 'a spatial chart')
+    if operators:text+=' through unexpanded '+operators
+    return text+'; spatial discretization is deferred (F7). Solve executes time-only states; select Transform rows without spatial fields.'
