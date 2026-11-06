@@ -311,5 +311,85 @@ class InputHygiene(unittest.TestCase):
             lowroot.melting_T(1e8)
 
 
+class A1PressureAndIndex(unittest.TestCase):
+    """A1 review SLE-1 and SLE-2 (5 November 2026). Both registered solids have dv = 0, so melting_T returned
+    T_m before any pressure check and dg_fus = 0 * (P - P_m) turned a NaN P into NaN. Negative control: against
+    the delivery before the repair, solid_tm returns NaN or a number for NaN and negative P, liquidus_T reports
+    the false cause liquidus_below_solid_T_min, crystallization_T silently skips every solid, and an index
+    outside the system raises IndexError."""
+    BAD_P = (float("nan"), -1e5, 0.0, float("inf"), -float("inf"))
+
+    def setUp(self):
+        self.sle = SolidLiquidSystem([BZ, CY], mz.LiquidoIdeal(2))
+
+    def cause(self, fn, *a):
+        with self.assertRaises(mz.FueraDeAlcance) as cm:
+            fn(*a)
+        return cm.exception.datos.get("cause")
+
+    def test_invalid_pressure_is_located_everywhere(self):
+        s = self.sle
+        for Pb in self.BAD_P:
+            with self.subTest(P=Pb):
+                self.assertEqual(self.cause(sd.REGISTRY[BZ].melting_T, Pb), "invalid_pressure")
+                self.assertEqual(self.cause(s.solid_tm, 0, 250.0, Pb, [0.5, 0.5]), "invalid_pressure")
+                self.assertEqual(self.cause(s.solubility, 0, 250.0, Pb), "invalid_pressure")
+                self.assertEqual(self.cause(s.solubility_roots, 1, 250.0, Pb), "invalid_pressure")
+                self.assertEqual(self.cause(s.liquidus_T, 0, [0.5, 0.5], Pb), "invalid_pressure")
+                self.assertEqual(self.cause(s.crystallization_T, [0.5, 0.5], Pb), "invalid_pressure")
+                self.assertEqual(self.cause(s.latent_heat, 0, 250.0, Pb, [0.5, 0.5]), "invalid_pressure")
+                self.assertEqual(self.cause(s.eutectic, Pb), "invalid_pressure")
+        # a dv != 0 record is rejected for the same cause, before Newton
+        dv = sd.SolidPure(BZ, "t", "I", 278.69, P, 9866.3, 0.0, 2e-6, 100.0)
+        self.assertEqual(self.cause(dv.melting_T, float("nan")), "invalid_pressure")
+        # a valid P keeps the verified values (closed form with dcp = 0 for cyclohexane, ideal liquid)
+        T = 250.0
+        c = sd.REGISTRY[CY]
+        self.assertAlmostEqual(s.solid_tm(1, T, P, [0.5, 0.5]),
+                               -math.log(0.5) - c.dh_m * (1 - T / c.T_m) / (R * T), delta=1e-14)
+
+    def test_crystallization_with_nan_pressure_is_not_skipped(self):
+        with self.assertRaises(mz.FueraDeAlcance) as cm:
+            self.sle.crystallization_T([0.5, 0.5], float("nan"))
+        self.assertEqual(cm.exception.datos["cause"], "invalid_pressure")
+        self.assertNotIn("T_min", cm.exception.mensaje)
+
+    def test_solid_index_outside_the_system(self):
+        for i in (2, 5, -1, 1.0, True):
+            for call in (lambda: self.sle.solid_tm(i, 250.0, P, [0.5, 0.5]),
+                         lambda: self.sle.liquidus_T(i, [0.5, 0.5], P),
+                         lambda: self.sle.window(i, P),
+                         lambda: self.sle.latent_heat(i, 250.0, P, [0.5, 0.5])):
+                with self.subTest(i=i):
+                    with self.assertRaises(mz.FaltaParametro) as cm:
+                        call()
+                    self.assertEqual(cm.exception.codigo, "SOLIDO_AUSENTE")
+                    self.assertEqual(cm.exception.detalle["especies"], [BZ, CY])
+        # a species of the system without a solid record keeps its own located message
+        only_bz = SolidLiquidSystem([BZ, CY], mz.LiquidoIdeal(2), solids={BZ: sd.REGISTRY[BZ]})
+        with self.assertRaises(mz.FaltaParametro) as cm:
+            only_bz.solid_tm(1, 250.0, P, [0.5, 0.5])
+        self.assertEqual((cm.exception.codigo, cm.exception.detalle["cas"]), ("SOLIDO_AUSENTE", CY))
+
+
+    def test_certify_and_hbar_E_validate_indices(self):
+        """A1 repairs review R2: certify accepted undeclared solids ([7] gave "cumple" for an unsaturated liquid)
+        and hbar_E took -1 as species 1. Negative control: both fail before the repair."""
+        point = {"T": 250.0, "P": P, "x": [0.5, 0.5]}
+        for bad in ([7], [True], [-1], [1.0], [None], ["0"], [0, 2]):
+            with self.subTest(solids=bad):
+                with self.assertRaises(mz.FaltaParametro) as cm:
+                    self.sle.certify({**point, "solids": bad})
+                self.assertEqual(cm.exception.codigo, "SOLIDO_AUSENTE")
+        for bad in (7, None, "0"):
+            with self.subTest(solids=bad):
+                self.assertEqual(self.cause(self.sle.certify, {**point, "solids": bad}), "invalid_species_index")
+        self.assertEqual(self.sle.certify({**point, "solids": [0]})["certificate"], "no_cumple")
+        for bad in (-1, True, None, 2, 1.0, "0"):
+            with self.subTest(i=bad):
+                self.assertEqual(self.cause(self.sle.hbar_E, bad, 250.0, [0.5, 0.5]), "invalid_species_index")
+        self.assertEqual(self.sle.hbar_E(1, 250.0, [0.5, 0.5]), 0.0)     # ideal liquid: no excess enthalpy
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
