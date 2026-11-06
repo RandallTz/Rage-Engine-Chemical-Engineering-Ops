@@ -128,8 +128,11 @@ def certify_extent(provider, nu, reference_box, extent_box, temperature, pressur
     try:
         determinant = nonsingular(jacobian)
     except LoweringError as error:
-        if error.diagnostics[0]['code'] != 'reaction_index_not_certified' or _depth >= 20:
+        if error.diagnostics[0]['code'] != 'reaction_index_not_certified':
             raise
+        if _depth >= 20:
+            reject('reaction_index_not_certified', 'Extent subdivision reached its depth limit 20 without proving every leaf '
+                   'nonsingular; leaf box '+str([list(pair(p)) for p in extent_box])+'.', 'equilibriumReactions.extentJacobian')
         # Longest relative width, stable index tie-break, hence reproducible.
         widths = [(float(p[1])-float(p[0]))/max(1.,abs(float(p[0])),abs(float(p[1]))) for p in extent_box]
         axis = max(range(len(widths)), key=widths.__getitem__)
@@ -154,10 +157,10 @@ def certify_extent(provider, nu, reference_box, extent_box, temperature, pressur
                 'extentBox':[list(pair(p)) for p in extent_box], 'provider':bounds,
                 'jacobianBounds':jacobian,'determinantBounds':list(determinant),
                 'split':{'axis':axis,'point':midpoint,'children':children},
-                'method':'Adaptive closed-box bisection; every leaf has certified outward interval composition and nonzero Gaussian pivots. The split tree covers the declared box.'}
+                'method':'Adaptive closed binary64-box bisection; every leaf has certified outward interval composition and nonzero Gaussian pivots. The split tree covers the declared box.'}
     return {'format':'rage.reaction-extent-proof','version':1,'certified':True,'index':1,
             'independent':independent,'N':[[str(v) for v in row] for row in N.tolist()],
             'referenceBox':[list(pair(p)) for p in reference_box],
             'extentBox':[list(pair(p)) for p in extent_box], 'provider':bounds,
             'jacobianBounds':jacobian,'determinantBounds':list(determinant),
-            'method':'Outward binary64 interval composition dg/dxi=(dg/dn)N and interval Gaussian elimination.'}
+            'method':'Outward binary64-box interval composition dg/dxi=(dg/dn)N and interval Gaussian elimination.'}
