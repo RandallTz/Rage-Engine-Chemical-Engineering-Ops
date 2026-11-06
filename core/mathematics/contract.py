@@ -40,7 +40,7 @@ def read_definition(value):
     if value['format']!=FORMAT or type(value['version']) is not int or value['version']!=1:raise JournalError('Unsupported equation workbench version.')
     if not isinstance(value['operations'],list) or len(value['operations'])>400 or type(value['cursor']) is not int or not 0<=value['cursor']<=len(value['operations']):raise JournalError('Invalid equation operation history cursor.')
     for op in value['operations']:
-        keys(op,['kind','family'],['sources','symbol','relation','name','unit','left','right','reason','dependencies','relationKind','sourceSignatures','domain','domains','lower','upper','lowerOpen','upperOpen','endpointUnit',*SPATIAL_FIELDS])
+        keys(op,['kind','family'],['sources','symbol','relation','name','unit','left','right','reason','dependencies','relationKind','sourceSignatures','domain','domains','lower','upper','lowerOpen','upperOpen','endpointUnit','source',*SPATIAL_FIELDS])
         if op['kind'] not in RULES or not isinstance(op['family'],str) or not op['family'].strip() or len(op['family'])>80:raise JournalError('Unknown equation operation or family.')
         for k in ['symbol','relation','name','unit','left','right','reason','endpointUnit']:
             if k in op and (not isinstance(op[k],str) or not op[k].strip() or len(op[k])>500):raise JournalError('Invalid equation operation text.')
@@ -48,6 +48,13 @@ def read_definition(value):
         if 'dependencies' in op and (not isinstance(op['dependencies'],list) or len(op['dependencies'])>12 or any(not isinstance(s,str) or not s for s in op['dependencies']) or len(set(op['dependencies']))!=len(op['dependencies'])):raise JournalError('Select distinct dependency quantities (at most twelve).')
         if 'dependencies' in op and op['kind'] not in ('declare_function','change_dependencies'):raise JournalError('This operation does not accept dependencies.')
         if 'relationKind' in op and (op['kind']!='declare_relation' or op['relationKind'] not in ('definition','constitutive','constraint')):raise JournalError('Classify a relation as a definition, constitutive relation or condition.')
+        if 'source' in op:
+            if op['kind']!='declare_relation' or op.get('relationKind')!='constitutive':raise JournalError('A source belongs to a constitutive relation.')
+            source=op['source']
+            try:keys(source,['kind','citation','validRange'],['url','table'])
+            except JournalError as error:raise JournalError('Relation source: '+str(error)) from error
+            for field in source:
+                if not isinstance(source[field],str) or not source[field].strip() or len(source[field])>1000:raise JournalError('Invalid relation source field: '+field+'.')
         if 'domain' in op and (op['kind']!='declare_domain' or op['domain'] not in ('real','positive','nonnegative','negative','nonpositive','nonzero','zero','interval')):raise JournalError('Select a supported real domain.')
         bounds=('lower','upper','lowerOpen','upperOpen')
         if op.get('domain')=='interval':
@@ -57,7 +64,7 @@ def read_definition(value):
         if any(field in op for field in SPATIAL_FIELDS) and op['kind']!='declare_spatial_domain':raise JournalError('Chart, coordinates, intervals and boundary parts belong only to spatial domain declarations.')
         if op['kind']=='declare_spatial_domain' and 'reason' in op and 'chart' in op and all(field in op for field in SPATIAL_FIELDS):read_spatial_domain(op)
         if op['kind']=='volume_integrate' and 'domains' in op and (not isinstance(op['domains'],list) or len(op['domains'])!=1 or not isinstance(op['domains'][0],str) or not op['domains'][0].strip()):raise JournalError('Select exactly one declared spatial domain for the volume integral.')
-        if 'domains' in op and (op['kind'] not in ('isolate','substitute','volume_integrate') or not isinstance(op['domains'],list) or not op['domains'] or len(op['domains'])>24 or any(not isinstance(s,str) or not s.strip() for s in op['domains']) or len(set(op['domains']))!=len(op['domains'])):raise JournalError('Select distinct recorded domain conditions (at most twenty-four).')
+        if 'domains' in op and (op['kind'] not in ('isolate','substitute','volume_integrate','declare_relation') or not isinstance(op['domains'],list) or not op['domains'] or len(op['domains'])>24 or any(not isinstance(s,str) or not s.strip() for s in op['domains']) or len(set(op['domains']))!=len(op['domains'])):raise JournalError('Select distinct recorded domain conditions (at most twenty-four).')
         required={'state_variation':['sources','symbol','right','reason'],'declare_domain':['sources','symbol','domain','reason'],'declare_spatial_domain':['sources','chart','coordinates','intervals','parts','reason'],'combine':['sources'],'substitute':['sources','relation','symbol'],'isolate':['sources','symbol'],'expand':['sources'],'factor':['sources'],'differentiate':['sources','symbol'],'integrate':['sources','symbol','name'],'volume_integrate':['sources'],'gauss':['sources'],'reynolds':['sources'],'zero':['sources','symbol','reason'],'apply_zero':['sources','symbol','reason'],'declare_symbol':['name','unit'],'declare_function':['name','unit','dependencies'],'change_dependencies':['sources','symbol','dependencies','reason'],'declare_relation':['left','right','reason'],'multiply':['sources','right'],'divide':['sources','right']}[op['kind']]
         if any(k not in op for k in required):raise JournalError('The equation operation is missing its inputs.')
         if op['kind']!='combine' and 'sources' in op and len(op['sources'])!=1:raise JournalError('This operation acts on one selected equation.')
