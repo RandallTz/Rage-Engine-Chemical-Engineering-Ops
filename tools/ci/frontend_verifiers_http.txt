@@ -1,0 +1,4 @@
+# HTTP verifiers: need the API at NEXT_PUBLIC_API_URL (no Next.js). Run after the API starts.
+# Order matters: the app-flow prerequisite writes .tmp/demo02-app-results, which result_charts reads.
+verificar_demo02_app_flow.mjs :: ../tests/test_demo02_app_prerequisites.py
+verificar_result_charts.mjs
