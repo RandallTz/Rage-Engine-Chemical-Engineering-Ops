@@ -50,6 +50,67 @@ def _indexed_request(body, *, solve):
         raise HTTPException(422, {'message': str(error), 'diagnostics': _located_diagnostics(error)}) from error
 
 
+def _flowsheet_failure(error):
+    diagnostics = _located_diagnostics(error)
+    if not diagnostics and isinstance(error, ErrorModelo):
+        diagnostics = [{'code': 'invalid_model', 'path': error.ruta, 'message': error.mensaje}]
+    return HTTPException(422, {'message': str(error), 'diagnostics': diagnostics})
+
+
+FLOWSHEET_GUARD = {'message': 'Flowsheets require flowsheet network lowering; no instance is solved in their place.',
+                   'diagnostics': [{'code': 'flowsheet_not_lowered', 'path': 'flowsheet',
+                                    'message': 'Use flowsheetExecution with /modelo/compilation or /modelo/resolver.'}]}
+
+
+@router.post('/flowsheet-expansion')
+def flowsheet_expansion(body: Any = Body(...)):
+    """Replay every recorded template instance of a flowsheet; nothing is lowered."""
+    from core.modelo.flowsheet import expand_flowsheet
+    from core.modelo.template_instance import TemplateInstanceError
+    try:
+        if (not isinstance(body, dict) or set(body) != {'format', 'version', 'model'}
+                or body['format'] != 'rage.flowsheet-expansion.request' or type(body['version']) is not int or body['version'] != 1):
+            raise ValueError('Expected rage.flowsheet-expansion.request version 1.')
+        return expand_flowsheet(body['model'])[0]
+    except (ErrorModelo, TemplateInstanceError, ValueError, KeyError, TypeError) as error:
+        raise _flowsheet_failure(error) from error
+
+
+@router.post('/flowsheet-execution')
+def prepare_flowsheet_execution(body: Any = Body(...)):
+    """Prepare the connected network and return its compilation; steady zeroes the original rates."""
+    from core.compilador.flowsheet_network import prepare
+    try:
+        if (not isinstance(body, dict) or set(body) != {'format', 'version', 'model', 'mode'}
+                or body['format'] != 'rage.flowsheet-execution.request' or type(body['version']) is not int or body['version'] != 1
+                or body['mode'] not in ('dynamic', 'steady')):
+            raise ValueError('Expected rage.flowsheet-execution.request version 1 with mode dynamic or steady.')
+        model = leer_modelo_comun(body['model'])
+        if 'flowsheet' not in model:
+            raise ValueError('A flowsheet is required.')
+        return prepare(model, body['mode'])[1]
+    except (ErrorModelo, ValueError, KeyError, TypeError, NoSoportado) as error:
+        raise _flowsheet_failure(error) from error
+
+
+def _flowsheet_request(body, *, solve):
+    from core.compilador.flowsheet_network import prepare, resolve, validate_selection
+    try:
+        if set(body) != {'modelo', 'flowsheetExecution'}:
+            raise ValueError('Expected modelo and flowsheetExecution only.')
+        model = leer_modelo_comun(body['modelo'])
+        if 'flowsheet' not in model:
+            raise ValueError('A flowsheet is required.')
+        selected = validate_selection(model, body['flowsheetExecution'])
+        return resolve(model, selected) if solve else prepare(model, selected['mode'])[1]
+    except (ErrorModelo, ValueError, KeyError, TypeError, NoSoportado) as error:
+        raise _flowsheet_failure(error) from error
+
+
+def _is_flowsheet(body, key):
+    return isinstance(body, dict) and isinstance(body.get(key), dict) and 'flowsheet' in body[key]
+
+
 @router.post('/chart-data')
 def result_chart_data(body: Any = Body(...)):
     from core.modelo.result_charts import chart_data
@@ -101,6 +162,8 @@ def steady_transform(body: Any = Body(...)):
             raise ValueError('Expected rage.steady-transform.request version 1.')
         if isinstance(body['model'], dict) and 'indexSet' in body['model']:
             raise ValueError('Indexed stage networks require network lowering before a steady Transform.')
+        if _is_flowsheet(body, 'model'):
+            raise HTTPException(422, FLOWSHEET_GUARD)
         return prepare_steady_transform(body['model'])
     except (ErrorModelo, ValueError, KeyError, TypeError, NoSoportado) as error:
         diagnostics = _located_diagnostics(error)
@@ -284,6 +347,10 @@ def _inverse_steady(body, model):
 
 @router.post("/resolver")
 def resolver_modelo(cuerpo: Any = Body(...)):
+    if isinstance(cuerpo, dict) and 'flowsheetExecution' in cuerpo:
+        return _flowsheet_request(cuerpo, solve=True)
+    if _is_flowsheet(cuerpo, 'modelo'):
+        raise HTTPException(422, FLOWSHEET_GUARD)
     if isinstance(cuerpo, dict) and 'indexedExecution' in cuerpo:
         return _indexed_request(cuerpo, solve=True)
     if isinstance(cuerpo, dict) and isinstance(cuerpo.get('modelo'), dict) and 'indexSet' in cuerpo['modelo']:
@@ -325,6 +392,8 @@ def model_assessment(body: Any = Body(...)):
             raise ValueError('Expected rage.model-assessment.request v1 with one model.')
         if 'indexSet' in body['model']:
             raise HTTPException(422, {'message': 'Indexed stage networks require network lowering.', 'diagnostics': [{'code': 'index_set_not_lowered', 'path': 'indexSet'}]})
+        if 'flowsheet' in body['model']:
+            raise HTTPException(422, FLOWSHEET_GUARD)
         return read_assessment(assess_model(body['model'], initialize=body.get('initialize', True)))
     except (ValueError, TypeError) as error:
         raise HTTPException(422, {'message': str(error)}) from error
@@ -332,6 +401,10 @@ def model_assessment(body: Any = Body(...)):
 
 @router.post("/compilation")
 def describe_compilation(cuerpo: Any = Body(...)):
+    if isinstance(cuerpo, dict) and 'flowsheetExecution' in cuerpo:
+        return _flowsheet_request(cuerpo, solve=False)
+    if _is_flowsheet(cuerpo, 'modelo'):
+        raise HTTPException(422, FLOWSHEET_GUARD)
     if isinstance(cuerpo, dict) and 'indexedExecution' in cuerpo:
         return _indexed_request(cuerpo, solve=False)
     if isinstance(cuerpo, dict) and set(cuerpo) == {"solicitudV2"}:
