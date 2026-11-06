@@ -26,7 +26,7 @@ What survives a switch, and what does not:
 Before stopping, or when the user says they will switch accounts:
 
 1. Record the exact next step in the milestone's `nextAction`.
-2. Name in the claim `note` the worktree path and branch that hold uncommitted work, if any. Do not commit unless the user asks.
+2. Name in the claim `note` the worktree path and branch that hold uncommitted work, if any. Reviewed and tested work may be committed and pushed under `dec-standing-commit-permission` (see AGENTS.md); unreviewed work stays uncommitted.
 3. Stop your own processes by PID.
 
 When a session starts, on either account:
