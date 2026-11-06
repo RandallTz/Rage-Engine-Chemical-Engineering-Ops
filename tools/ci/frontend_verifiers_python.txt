@@ -25,3 +25,8 @@ verificar_equilibrium_reactions.mjs :: ../tests/test_equilibrium_reaction_constr
 verificar_indexed_workspace.mjs :: ../tests/test_indexed_execution_http.py
 verificar_inverse_steady.mjs :: ../tests/test_inverse_steady_http.py
 verificar_steady_transform.mjs :: ../tests/test_steady_transform.py
+# Paired by Codex on 6 Nov 2026 (prerequisite tests write the .tmp publications):
+verificar_indexed_execution.mjs :: ../tests/test_indexed_execution_contract.py
+verificar_index_sets.mjs :: ../tests/test_index_sets.py
+verificar_indexed_results.mjs :: ../tests/test_indexed_results.py
+verificar_template_instance.mjs :: ../tests/test_template_instance.py
