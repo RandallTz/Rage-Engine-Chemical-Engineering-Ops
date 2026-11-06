@@ -54,9 +54,31 @@ export function readChartLayout(value:unknown,sources?:ChartSources):ChartLayout
   return layout;
 }
 export function defaultChartLayout(result:ConjuntoResultados):ChartLayout{
-  if(result.indexedNetwork?.mode==='steady'){
-    const profile=result.indexedNetwork.profiles.find(p=>result.series.some(s=>s.id===p.seriesId&&s.unidadSI==='K'));
-    if(profile)return {format:'rage.result-charts',version:1,charts:[{id:'stage-temperature',title:'Temperature by stage',type:'xy',x:{kind:'axis',id:result.indexedNetwork.stageAxisId!,unit:'1'},y:{unit:'K'},events:false,series:[{source:'current',id:profile.seriesId}]}]};
+  const network=result.indexedNetwork;
+  if(network){
+    const rows=new Map(result.series.map(row=>[row.id,row]));
+    const charts:ChartSpec[]=[];
+    if(network.mode==='steady'){
+      for(const profile of network.profiles){
+        const row=rows.get(profile.seriesId)!;
+        charts.push({id:`profile-${charts.length+1}`,title:row.nombre,type:'xy',x:{kind:'axis',id:network.stageAxisId!,unit:'1'},y:{unit:row.unidadSI},events:false,series:[{source:'current',id:row.id}]});
+      }
+    }else{
+      const groups=new Map<string,{axis:string;unit:string;title:string;ids:string[]}>();
+      for(const stage of network.stages)for(const id of stage.seriesIds){
+        const row=rows.get(id)!;
+        const axis=result.ejes.find(a=>a.id===row.ejes[0]&&a.rol==='tiempo');
+        if(!axis||row.ejes.length!==1)continue;
+        const key=JSON.stringify([id.slice(stage.ownerId.length+1),axis.id,row.unidadSI]);
+        const group=groups.get(key)??{axis:axis.id,unit:row.unidadSI,title:row.nombre,ids:[]};
+        group.ids.push(id);groups.set(key,group);
+      }
+      for(const group of groups.values())for(let offset=0;offset<group.ids.length;offset+=100){
+        const axis=result.ejes.find(a=>a.id===group.axis)!;
+        charts.push({id:`stages-${charts.length+1}`,title:group.title,type:'time_series',x:{kind:'axis',id:axis.id,unit:axis.unidadSI},y:{unit:group.unit},events:true,series:group.ids.slice(offset,offset+100).map(id=>({source:'current',id}))});
+      }
+    }
+    if(charts.length)return {format:'rage.result-charts',version:1,charts:charts.slice(0,100)};
   }
   const series=result.series.find(s=>s.unidadSI==='K'&&s.ejes.length<=1)??result.series.find(s=>s.ejes.length<=1);
   if(!series)return {format:'rage.result-charts',version:1,charts:[]};
@@ -92,7 +114,8 @@ export async function prepareCharts(layout:ChartLayout,sources:ChartSources,sign
       const values=Array.isArray(rows[0].values)?rows[0].values:[rows[0].values];
       const xRow=raw[1]?rows.find(r=>r.kind===raw[1].kind&&r.id===raw[1].id&&r.unit===raw[1].unit):undefined;
       const xs=xRow?.values as number[]|undefined;
-      traces.push({name:`${ref.source} · ${row.nombre}`,points:values.map((y,i)=>({x:xs?xs[i]:i,y}))});
+      const stage=result.indexedNetwork?.stages.find(s=>s.seriesIds.includes(row.id));
+      traces.push({name:`${ref.source} · ${stage?`Stage ${stage.index} · `:''}${row.nombre}`,points:values.map((y,i)=>({x:xs?xs[i]:i,y}))});
       if(spec.events&&xRow)events.push(...xRow.events);
     }
     if(spec.type==='time_series'){
