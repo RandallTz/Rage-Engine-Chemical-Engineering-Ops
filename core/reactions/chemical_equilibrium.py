@@ -478,3 +478,10 @@ def reaction_jacobian_bounds(provider, nu, box, *, phase_id, standard_state):
     core/reactions/jacobian_bounds.py (imported here lazily: that module uses the phase classes above)."""
     from core.reactions.jacobian_bounds import reaction_jacobian_bounds as bounds
     return bounds(provider, nu, box, phase_id=phase_id, standard_state=standard_state)
+
+
+def heat_capacity_bounds(provider, box, *, phase_id, standard_state):
+    """Certified enclosure of C_p = -T d2G/dT2 at fixed P and n over a state box, with a positivity proof (B3
+    part 2, thermal coupling, 6 November 2026). Defined in core/reactions/jacobian_bounds.py."""
+    from core.reactions.jacobian_bounds import heat_capacity_bounds as bounds
+    return bounds(provider, box, phase_id=phase_id, standard_state=standard_state)

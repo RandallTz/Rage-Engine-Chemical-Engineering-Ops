@@ -695,6 +695,108 @@ PACKAGE_ASSUMPTIONS = (
 )
 
 
+# --- heat capacity (B3 part 2, thermal coupling, claude-b, 6 November 2026) ----------------------------------
+CP_FORMAT = "rage.heat-capacity-bounds"
+CP_VERSION = 1
+CP_PIECES = 16
+
+CP_METHOD = (
+    "C_p = -T d2G/dT2 at fixed P and n, with G = sum_i n_i mu_i the provider's Gibbs energy (formation shift "
+    "Hf - T S0 is linear in T and drops out). Standard part sum n_i phi_i''(T) by second-order interval automatic "
+    "differentiation in T (the same phi_i as the affinity enclosure; liquid v_L P and the ideal-gas R T ln(x P/P0) "
+    "terms are linear in T and drop out); excess part C_p^E = -R T (2 dE/dT + T d2E/dT2), E = sum_i n_i ln gamma_i "
+    f"(UNIFAC in amount form, second order in T, amounts as constant intervals). {CP_PIECES} equal T pieces, "
+    "natural interval extension on each, hull returned. IdealGasPhase: C_p = R_d sum_i n_i sum_k a_ik T^k.")
+
+
+def _enclose_heat_capacity(provider, T, n):
+    nI = [_I(lo, hi) for lo, hi in n]
+    s = len(nI)
+    R = _I(_ce.R)
+    if isinstance(provider, _ce.IdealGasPhase):
+        Rd = _I(_md.R)
+        total = None
+        for a, b in _T_pieces(*T):
+            t = _I(a, b)
+            cp = sum((nI[i] * sum((_I(float(c)) * t ** k for k, c in enumerate(e.cp)), _I(0))
+                      for i, e in enumerate(provider.especies)), _I(0)) * Rd
+            total = cp if total is None else _join(total, cp)
+        return total
+    forms = _PackageStandard(provider)
+    model = None
+    if provider.tipo == "liquido" and _activity_kind(provider) == "unifac":
+        model = unifac_intervals.UnifacIntervalModel(provider.sistema._modelo_sub(list(range(s))))
+    total = None
+    cuts = [T[0]] + [T[0] + (T[1] - T[0]) * i / CP_PIECES for i in range(1, CP_PIECES)] + [T[1]] \
+        if T[0] < T[1] else [T[0], T[1]]
+    for a, b in zip(cuts[:-1], cuts[1:]):
+        tt = ad.var(a, b, 0, order=2)
+        TI = _I(a, b)
+        second = sum((nI[i] * forms.phi(i, tt).h.get((0, 0), _I(0)) for i in range(s)), _I(0))
+        cp = -TI * second
+        if model is not None:
+            lg = model.lngamma(tt, [ad.const(v, 2) for v in nI])
+            E = sum((lg[i].scale(nI[i]) for i in range(1, s)), lg[0].scale(nI[0]))
+            cp = cp - R * TI * (2 * E.g.get(0, _I(0)) + TI * E.h.get((0, 0), _I(0)))
+        total = cp if total is None else _join(total, cp)
+    return total
+
+
+def heat_capacity_bounds(provider, box, *, phase_id, standard_state):
+    """Outward-rounded enclosure of the isobaric heat capacity C_p(T, P, n) [J/K] of the provider phase over the
+    WHOLE box, with a positivity proof (B3 part 2: dT/dxi|_{H,P} = -Delta_r h / C_p needs C_p > 0).
+
+    Same provider scope, validity proof and precision discipline as reaction_jacobian_bounds. Returns
+    certified False with HEAT_CAPACITY_NOT_POSITIVE (path bounds.Cp) when the lower bound is not strictly
+    positive, never a sampled substitute."""
+    _check_provider(provider, phase_id, standard_state)
+    s = len(provider.cas)
+    T, P, n = _check_box(box, s)
+    result = {"format": CP_FORMAT, "version": CP_VERSION, "certified": False, "species": list(provider.cas),
+              "phase_id": phase_id, "standard_state": standard_state,
+              "anchor": getattr(provider, "anchor", "gas"),
+              "box": {"T": list(T), "P": list(P), "n": [list(p) for p in n]},
+              "fingerprints": _fingerprints(provider), "bounds": None, "proof": None, "diagnostics": []}
+    package = not isinstance(provider, _ce.IdealGasPhase)
+    diagnostics, validity = (_package_validity if package else _validity)(provider, np.zeros((1, s)), T, P, n)
+    if diagnostics:
+        result["diagnostics"] = diagnostics
+        return result
+    with _PRECISION_LOCK:
+        old = iv.prec
+        iv.prec = PRECISION_BITS
+        try:
+            cp = _enclose_heat_capacity(provider, T, n)
+            used = iv.prec
+        except ValueError as exc:
+            result["diagnostics"].append({"code": "ENCLOSURE_DOMAIN", "path": "box",
+                                          "message": f"The interval evaluation left a function's domain: {exc}"})
+            return result
+        finally:
+            iv.prec = old
+    if used != PRECISION_BITS:
+        result["diagnostics"].append({"code": "PRECISION_CHANGED", "path": "proof.precision_bits",
+                                      "message": f"mpmath iv.prec was changed to {used} bits during the evaluation."})
+        return result
+    pair = _to_pair(cp)
+    if not all(math.isfinite(v) for v in pair):
+        result["diagnostics"].append({"code": "NONFINITE_BOUND", "path": "bounds.Cp",
+                                      "message": "The heat-capacity enclosure is not finite in binary64."})
+        return result
+    if not pair[0] > 0:
+        result["diagnostics"].append({"code": "HEAT_CAPACITY_NOT_POSITIVE", "path": "bounds.Cp",
+                                      "message": f"The heat-capacity enclosure [{pair[0]:.6g}, {pair[1]:.6g}] J/K is "
+                                                 "not proved strictly positive over the box; dT/dxi at fixed H and P "
+                                                 "is not certified."})
+        result["bounds"] = {"Cp": pair}
+        return result
+    result.update(certified=True, bounds={"Cp": pair},
+                  proof={"method": CP_METHOD, "rounding": ROUNDING, "validity": validity, "precision_bits": used,
+                         "temperature_pieces": CP_PIECES if package else T_PIECES,
+                         "assumptions": list(PACKAGE_ASSUMPTIONS if package else ASSUMPTIONS)})
+    return result
+
+
 def reaction_jacobian_bounds(provider, nu, box, *, phase_id, standard_state):
     """Versioned, outward-rounded enclosures of g, dg/dn, dg/dT and dg/dP over the whole box (module docstring).
 
