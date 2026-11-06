@@ -1,5 +1,6 @@
 """Ordered mathematical replay, independent of physical source producers."""
 import copy
+import json
 import re
 from dataclasses import dataclass,field
 from types import MappingProxyType
@@ -203,7 +204,22 @@ def replay_operations(source,selected,owners,declared_units,definition,*,require
             if a is not None and b is not None and a!=b:raise JournalError('The two sides of this relation have incompatible dimensions.')
             relation_kind=op.get('relationKind','definition')
             title={'definition':'Declared definition','constitutive':'Declared constitutive relation','constraint':'Declared condition'}[relation_kind]
-            graph.add(key,left,right,title,'declared_relation',assumptions=tuple(dict.fromkeys(conditions)),family=op['family'],kind=relation_kind);blocking=True
+            domain_ids=op.get('domains',[])
+            for domain_id in domain_ids:
+                if domain_id not in graph.domains:raise JournalError('Relation domain '+domain_id+': select a recorded typed domain condition.')
+                premise=graph.domains[domain_id]
+                if not (left.has(premise.quantity) or right.has(premise.quantity)):
+                    raise JournalError('Relation domain '+domain_id+': its quantity must occur in the relation.')
+                unit=_known_unit(premise.quantity,units)
+                if unit is None or interpretar(unit)['afin']:
+                    raise JournalError('Relation domain '+domain_id+': its quantity needs a declared absolute unit.')
+            source=op.get('source')
+            if source is not None:
+                conditions.append('Source: '+json.dumps(source,sort_keys=True,ensure_ascii=False,separators=(',',':')))
+            graph.add(key,left,right,title,'declared_relation',inputs=tuple(domain_ids),assumptions=tuple(dict.fromkeys(conditions)),family=op['family'],kind=relation_kind,
+                      predicates=tuple(graph.domains[domain_id].expression for domain_id in domain_ids))
+            graph.nodes[key].source=copy.deepcopy(source)
+            blocking=True
         elif kind in ('multiply','divide'):
             conditions=[];factor=_parse(op['right'],quantities,conditions,units);_dimension(factor,units)
             if factor.is_zero is True:raise JournalError('Scaling by zero would destroy the equation. Select a nonzero factor.')
