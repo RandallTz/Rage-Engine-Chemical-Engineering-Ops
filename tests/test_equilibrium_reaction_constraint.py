@@ -66,7 +66,7 @@ def test_nonbinary_exact_stoichiometry_is_not_silently_rounded():
     assert caught.value.diagnostics[0]['code']=='reaction_coefficient_not_representable'
 
 
-@pytest.mark.parametrize('failure',['nonpositive','domain','phase','uncertified','unsupported'])
+@pytest.mark.parametrize('failure',['nonpositive','domain','phase','uncertified','unsupported','unsupported_vapour'])
 def test_provider_rejections_are_located(failure,monkeypatch):
     gas=ce.IdealGasPhase(SPECIES);kw={'phase_id':'vapor','standard_state':'ideal_gas_P0'}
     ext=[[.5,1.5]];temperature=[800,800]
@@ -75,16 +75,21 @@ def test_provider_rejections_are_located(failure,monkeypatch):
     elif failure=='phase':kw['phase_id']='liquido'
     elif failure=='uncertified':
         monkeypatch.setattr(ce,'reaction_jacobian_bounds',lambda *a,**k:{'certified':False,'diagnostics':[{'code':'NONFINITE_BOUND','path':'bounds.dg_dn','message':'Uncertified test provider'}]})
+    elif failure=='unsupported_vapour':
+        from core.mezclas import Sistema
+        # Package vapour regions are not admitted by the extent gate (B3 review R1).
+        gas=ce.PackagePhase(Sistema('unifac-dortmund-public',['64-17-5','7732-18-5']),'vapor',anchor='gas')
+        ext=[[-.1,.1]];temperature=[350,350]
     else:
         from core.mezclas import Sistema
-        # A real liquid provider must never be replaced by the ideal-gas one.
-        gas=ce.PackagePhase(Sistema('unifac-dortmund-public',['64-17-5','7732-18-5']),'liquido',anchor='liquid')
+        # B3 admits UNIFAC liquids; a liquid model without certified bounds (NRTL) is still rejected, never replaced.
+        gas=ce.PackagePhase(Sistema('nrtl-chemsep',['64-17-5','7732-18-5']),'liquido',anchor='liquid')
         kw={'phase_id':'liquido','standard_state':'pure_liquid_TP'}
         ext=[[-.1,.1]]
     with pytest.raises(LoweringError) as caught:
-        certify_extent(gas,[NU] if failure!='unsupported' else [[-1,1]],[[2,2],[2,2],[0,0],[0,0]] if failure!='unsupported' else [[1,1],[1,1]],ext,temperature,[1e5,1e5],**kw)
+        certify_extent(gas,[NU] if not failure.startswith('unsupported') else [[-1,1]],[[2,2],[2,2],[0,0],[0,0]] if not failure.startswith('unsupported') else [[1,1],[1,1]],ext,temperature,[1e5,1e5],**kw)
     assert caught.value.diagnostics[0]['path'].startswith('equilibriumReactions.')
-    expected={'nonpositive':'BOX_NONPOSITIVE','domain':'OUT_OF_DOMAIN','phase':'PHASE_MISMATCH','uncertified':'NONFINITE_BOUND','unsupported':'PROVIDER_UNSUPPORTED'}
+    expected={'nonpositive':'BOX_NONPOSITIVE','domain':'OUT_OF_DOMAIN','phase':'PHASE_MISMATCH','uncertified':'NONFINITE_BOUND','unsupported':'PROVIDER_UNSUPPORTED','unsupported_vapour':'PROVIDER_UNSUPPORTED'}
     assert caught.value.diagnostics[0]['code']==expected[failure]
 
 
