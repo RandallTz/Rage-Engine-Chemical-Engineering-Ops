@@ -6,3 +6,10 @@ verificar_derived_lifecycle.mjs         # same prerequisites as verificar_derive
 verificar_index1_dae.mjs                # needs .tmp/f3-index1/publication.json; tests/test_f3_index1_dae.py did not produce it (prerequisite pairing unresolved, 5 Nov 2026)
 verificar_nonlinear_algebraic.mjs       # same: .tmp/f3-nonlinear/publication.json not produced by tests/test_f3_nonlinear_algebraic.py
 verificar_todo.mjs                      # legacy runner: treats every verifier not in its stale table as needing a browser and live servers
+# Added 6 Nov 2026 (step-0 verifiers whose prerequisites are not yet paired in CI):
+verificar_indexed_execution.mjs        # needs .tmp/indexed-execution-contract.json and .tmp/indexed-http-* (two producer tests)
+verificar_index_sets.mjs               # needs .tmp/index-sets/*.json; producer not yet identified
+verificar_indexed_results.mjs          # needs .tmp/indexed-results.json; producer not yet identified
+verificar_template_instance.mjs        # needs .tmp/template-instance/publication.json; producer not yet identified
+verificar_demo02_app_flow.mjs          # drives the running app over HTTP and writes .tmp/demo02-app-results
+verificar_result_charts.mjs            # reads .tmp/demo02-app-results written by verificar_demo02_app_flow.mjs
