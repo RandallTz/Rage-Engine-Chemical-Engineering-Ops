@@ -88,6 +88,29 @@ class DerivedSystem(DerivedGraph):
             raise failure from error
 
     @staticmethod
+    def _reject_spatial(graph, selection, states, time):
+        """Located rejection of field rows; spatial discretization is deferred (F7).
+
+        Runs before the nonspatial state checks, which keep their own codes.
+        """
+        from core.mathematics.operators import field_coordinates, requires_discretization, discretization_message
+        for row, q in zip(selection['states'], states):
+            coordinates = field_coordinates(q, time)
+            if coordinates:
+                finding = {'equationId': row['equationId'], 'coordinates': [str(c) for c in coordinates],
+                           'fields': [str(q)], 'operators': []}
+                break
+        else:
+            rows = [row['equationId'] for field in ('states', 'algebraic') for row in selection.get(field, [])]
+            findings = requires_discretization(graph, rows, time)
+            finding = findings[0] if findings else None
+        if finding is not None:
+            error = LoweringError('requires_discretization', discretization_message(finding), finding['equationId'])
+            error.diagnostics[0].update({'coordinates': finding['coordinates'], 'fields': finding['fields'],
+                                         'operators': finding['operators'], 'deferredTo': 'F7'})
+            raise error
+
+    @staticmethod
     def _locate_failure(model, error, stage='admission'):
         selection = model.get('motores', {}).get('derivedExecution', {})
         if selection.get('version') not in (3, 4):
@@ -143,6 +166,7 @@ class DerivedSystem(DerivedGraph):
         if not isinstance(self.time, sp.Symbol) or self._dim(self.time) != {'T': 1}:
             raise LoweringError('invalid_time', 'Select one independent time quantity with time dimension.')
         self.states = [self._quantity(row['quantityId']) for row in self.selection['states']]
+        self._reject_spatial(self.graph, self.selection, self.states, self.time)
         if any(not isinstance(q, sp.core.function.AppliedUndef) or q.args != (self.time,) for q in self.states):
             raise LoweringError('unsupported_state', 'Retained states must depend only on the selected time coordinate.')
         self.ids = {q: row['quantityId'] for q, row in zip(self.states, self.selection['states'])}
