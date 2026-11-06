@@ -1,4 +1,5 @@
 """Public reaction-provider adapter for replayed, semi-explicit extent constraints."""
+import math
 import numpy as np
 import sympy as sp
 from core.mathematics.constants import si_magnitude
@@ -13,25 +14,37 @@ from .derived_graph import LoweringError
 class ReactionBlock(NonlinearBlock):
     def __init__(self, system, residuals):
         config=system.model['motores']['equilibriumReactions']
-        if not system.is_dae or len(config['volumes'])!=1 or system.closures:
-            reject('reaction_formulation_unsupported','Use one smooth reaction extent block with prescribed T/P in version 4.', 'motores.equilibriumReactions')
+        thermal=getattr(system,'thermal_reaction',False)
+        if not system.is_dae or len(config['volumes'])!=1 or system.closures and not thermal:
+            reject('reaction_formulation_unsupported','Use one smooth reaction extent block in version 4, with prescribed T/P or with the package closure of its own region.', 'motores.equilibriumReactions')
         self.owner,self.declaration=next(iter(config['volumes'].items()))
         entry=self.declaration
         volume=next(v for v in system.model['volumenes'] if v['id']==self.owner)
         caloric=volume['termodinamica'].get('supuesto') if volume['termodinamica'].get('tipo')=='supuesto' else None
-        if volume['balances']['energia']:
+        # B3 part 2: the region's own package closure is the caloric closure.
+        self.closure=next((c for c in system.closures if c.owner==self.owner),None) if thermal else None
+        self.stage='initialization'
+        if volume['balances']['energia'] and self.closure is None:
             # F2 precondition: the volume's recorded caloric assumption is not
             # the provider's caloric potential, so an energy balance would mix
-            # two thermodynamic descriptions of one region.
+            # two thermodynamic descriptions of one region. A u_lineal (or any
+            # declared) inventory has no formation reference: it would lose the
+            # reaction heat.
             reject('reaction_thermal_coupling_unsupported',
                    'Thermal coupling is not admitted: the volume caloric assumption '+repr(caloric)+' differs from the '
-                   'reaction provider caloric potential (the provider partial molar enthalpies with formation reference). '
-                   'Reconcile the caloric closure with the provider first; until then use prescribed T/P with an inactive '
-                   'energy balance.',
+                   'reaction provider caloric potential (the provider partial molar enthalpies with formation reference), '
+                   'so the reaction heat would be lost. Select the reaction package as the volume closure (select_closure, '
+                   'with the formation reference of the declaration anchor) or use prescribed T/P with an inactive energy balance.',
                    'volumenes.'+self.owner+'.termodinamica' if caloric else 'motores.equilibriumReactions')
-        self.caloric_limitation=('Caloric limitation: the recorded volume caloric assumption '+repr(caloric)+' is unused here '
-            '(prescribed T and P, inactive energy balance) and is not the provider caloric potential; thermal coupling stays rejected '
-            'until it is reconciled with the provider.')
+        if self.closure is not None:
+            self._thermal_preconditions(system,volume,entry)
+            self.caloric_limitation=('Thermal coupling: T = T(H, P, n(xi)) from the package closure of '+self.owner+' (specification '
+                +self.closure.spec+', formation anchor '+str(self.closure.anchor)+'), the same provider as the reaction potentials; '
+                'the formation-referenced enthalpy carries the reaction heat once and the energy balance has no volumetric source.')
+        else:
+            self.caloric_limitation=('Caloric limitation: the recorded volume caloric assumption '+repr(caloric)+' is unused here '
+                '(prescribed T and P, inactive energy balance) and is not the provider caloric potential; thermal coupling needs '
+                'the reaction package as the volume closure.')
         dimensions={'temperatureId':{'Theta':1},'pressureId':{'M':1,'L':-1,'T':-2}}
         for field,expected in dimensions.items():
             if system._dim(system._quantity(entry[field]))!=expected:
@@ -52,8 +65,18 @@ class ReactionBlock(NonlinearBlock):
         if [r['quantityId'] for r in system.algebraic_rows]!=entry['extentIds'] or [r['equationId'] for r in system.algebraic_rows]!=[entry['reactions'][i]['equationId'] for i in self.independent]:
             reject('reaction_partition_invalid','Select only independent extents in the declared reaction order.', 'motores.derivedExecution.algebraic')
         self.temperature,self.pressure=[si_magnitude(system._expand(system._quantity(entry[f]))).subs(system.parameter_values) for f in ('temperatureId','pressureId')]
-        if not all(v.is_number and float(v)>0 for v in (self.temperature,self.pressure)):
-            reject('reaction_thermal_coupling_unsupported','T and P must be prescribed; a coupled thermal index proof is not available.', 'motores.equilibriumReactions')
+        self.T_local={}
+        if self.closure is not None:
+            # T is the closure output; the symbolic checks below use a positive
+            # placeholder and every evaluation uses T(H, P, n(xi)).
+            if system._quantity(entry['temperatureId'])!=self.closure.T:
+                reject('reaction_coordinate_mismatch','Select the closure temperature of the reaction region.','motores.equilibriumReactions.volumes.'+self.owner+'.temperatureId')
+            self.temperature=sp.Symbol('closure_temperature',positive=True)
+            self.T_local={self.closure.T:self.temperature}
+            if not (self.pressure.is_number and float(self.pressure)>0):
+                reject('reaction_thermal_coupling_unsupported','The coupled region needs its prescribed pressure datum.','motores.equilibriumReactions.volumes.'+self.owner+'.pressureId')
+        elif not all(v.is_number and float(v)>0 for v in (self.temperature,self.pressure)):
+            reject('reaction_thermal_coupling_unsupported','T and P must be prescribed, or T must be the output of the region package closure (thermal coupling).', 'motores.equilibriumReactions')
         self.references=[si_magnitude(system._expand(system._quantity(q))).subs(system.parameter_values) for q in entry['referenceIds']]
         amounts=[si_magnitude(system._expand(system._quantity(q))).subs(system.parameter_values) for q in entry['amountIds']]
         if any(system._quantity(q) in system.states for q in entry['amountIds']):
@@ -82,11 +105,11 @@ class ReactionBlock(NonlinearBlock):
             for i,key in closures.items():
                 if self.potential_rows.setdefault(i,key)!=key:
                     reject('reaction_chemical_potential_ambiguous','Every reaction must use the same recorded chemical-potential relation of each species.',key)
-            expression=si_magnitude(system._expand(node.equation.lhs-node.equation.rhs)).subs(system.parameter_values)
+            expression=si_magnitude(system._expand(node.equation.lhs-node.equation.rhs)).subs(system.parameter_values).xreplace(self.T_local)
             # Unsubstituted species keep the generic mu_i; substituted ones use
             # the recorded constitutive right-hand side.
             terms=[system.graph.nodes[closures[i]].equation.rhs if i in closures else q for i,q in enumerate(mu)]
-            expected=si_magnitude(system._expand(sum(self.nu[j,i]*q for i,q in enumerate(terms)))).subs(system.parameter_values)/RT
+            expected=si_magnitude(system._expand(sum(self.nu[j,i]*q for i,q in enumerate(terms)))).subs(system.parameter_values).xreplace(self.T_local)/RT
             same=lambda a,b:sp.simplify(sp.expand_log(a-b,force=True))==0
             if not same(expression,expected) and not same(expression,-expected):
                 ratio=sp.simplify(expression/expected)
@@ -122,8 +145,79 @@ class ReactionBlock(NonlinearBlock):
         self.n_function=sp.lambdify(self.arguments,self.amounts,'numpy')
         self.ref_function=sp.lambdify(self.arguments,self.references,'numpy')
         self.residual=lambda *args: np.asarray(self.state(args)['affinity_RT'])[self.independent]
-        self.jacobian=lambda *args: np.asarray(self.nu[self.independent,:],dtype=float)@np.asarray(self.state(args)['dmu_dn'])@np.asarray(self.N,dtype=float)/(chemistry.R*float(self.temperature))
+        self.jacobian=self._jacobian
         self.last_certificate=None
+        if self.closure is not None:
+            self.energy_function=sp.lambdify(self.arguments,si_magnitude(system._expand(self.closure.energy)).subs(system.parameter_values),'numpy')
+
+    def _jacobian(self, *args):
+        """dg/dxi = (dg/dn) N, plus at fixed H and P the temperature path
+        (dg/dT)(dT/dxi) = Delta_r h Delta_r h^T / (R T^2 C_p) (Gibbs-Helmholtz)."""
+        state=self.state(args);T=float(state['T'])
+        rows=np.asarray(self.nu[self.independent,:],dtype=float)
+        J=rows@np.asarray(state['dmu_dn'])@np.asarray(self.N,dtype=float)/(chemistry.R*T)
+        if self.closure is not None:
+            enthalpy=rows@np.asarray(state['h_partial'])
+            J=J+np.outer(enthalpy,enthalpy)/(chemistry.R*T*T*float(state['closure']['dH_dT']))
+        return J
+
+    def _thermal_preconditions(self, system, volume, entry):
+        """B3 part 2 admission: the volume's caloric closure is the reaction provider.
+
+        Each precondition is a located rejection: same package, same formation
+        anchor (None would lose the reaction heat), a single phase of the declared
+        kind, a prescribed pressure (PH: a rigid incompressible liquid with
+        Delta_r v != 0 does not determine P), an active energy balance with no
+        volumetric source (a source equal to the reaction heat would count it twice)."""
+        owner=self.owner;closure=self.closure
+        if entry['provider']!='package' or volume['termodinamica'].get('paqueteId')!=entry.get('packageId'):
+            reject('reaction_caloric_provider_mismatch','The volume closure package must be the reaction provider package '+repr(entry.get('packageId'))+'.',
+                   'volumenes.'+owner+'.termodinamica.paqueteId')
+        if closure.anchor is None:
+            reject('reaction_caloric_reference_missing','The closure has no recorded formation reference, so its energies would lose the reaction heat; '
+                   'record the '+('liquid' if entry['anchor']=='liquid' else 'gas')+' formation reference of the declaration anchor.',
+                   'motores.thermodynamicDerivation.volumes.'+owner)
+        if closure.anchor!=entry['anchor']:
+            reject('reaction_caloric_reference_mismatch','The closure formation reference '+repr(closure.anchor)+' differs from the reaction anchor '+repr(entry['anchor'])+'.',
+                   'motores.thermodynamicDerivation.volumes.'+owner)
+        kind={'liquido':'liquid','vapor':'vapor'}.get(entry['phaseId'])
+        if not closure.single or closure.kind!=kind:
+            reject('reaction_phase_policy_unsupported','A coupled reaction region is one phase of the declared kind: record the single-phase '
+                   +str(kind)+' policy.','volumenes.'+owner+'.termodinamica.politica')
+        if closure.spec!='PH':
+            if kind=='liquid':
+                reject('reaction_rigid_liquid_ill_posed','A rigid incompressible liquid region with Delta_r v != 0 does not determine its pressure, '
+                       'and the single-phase UV closure keeps P a datum (dropping P Delta_r v work). Use the prescribed-pressure (PH) region.',
+                       'volumenes.'+owner+'.frontera')
+            reject('reaction_rigid_volume_unsupported','The single-phase UV closure keeps P a datum; a rigid coupled vapour region needs a '
+                   'pressure-from-volume closure. Use the prescribed-pressure (PH) region.','volumenes.'+owner+'.frontera')
+        if not volume['balances']['energia']:
+            reject('reaction_energy_balance_required','The coupled region integrates its energy inventory.','volumenes.'+owner+'.balances.energia')
+        from core.balances import energy_derivation as energy
+        from core.modelo.operation_journal import replay
+        journal=system.model['motores'].get('energyDerivation',{}).get('volumes',{}).get(owner)
+        state=replay(journal,energy.fundamental,energy.normalize)[-1] if journal else {}
+        if not state.get('sinFuenteVolumetrica'):
+            reject('reaction_heat_double_counted','Record no_volume_source: the formation-referenced enthalpy already carries the reaction heat, '
+                   'so a volumetric source equal to it would count it twice.','motores.energyDerivation.volumes.'+owner)
+
+    def temperature_box(self):
+        """The declared validity interval of the closure temperature (Model domain premises)."""
+        located='volumenes.'+self.owner+'.termodinamica'
+        lower,upper=[],[]
+        for premise in self.system.graph.domains.values():
+            if premise.quantity!=self.closure.T or premise.domain!='interval':
+                continue
+            scale=premise.scale if premise.explicit_units else sp.S.One
+            lower.append(si_magnitude(premise.allowed.start*scale));upper.append(si_magnitude(premise.allowed.end*scale))
+        if not lower:
+            reject('reaction_temperature_box_missing','Declare the validity interval of the closure temperature (declare_domain, interval) '
+                   'so that the coupled extent Jacobian is certified over it and checked at runtime.',located)
+        lo,hi=max(lower),min(upper)
+        if not (lo.is_number and hi.is_number and 0<lo<hi):
+            reject('reaction_temperature_box_missing','The declared closure temperature interval must be finite, positive and nonempty.',located)
+        from fractions import Fraction
+        return [outward(Fraction(str(lo)),False),outward(Fraction(str(hi)),True)]
 
     def _potential_closures(self, system, visited, mu, amounts, located):
         """Recorded constitutive mu_i rows in the ancestry, checked against the executed provider.
@@ -136,7 +230,7 @@ class ReactionBlock(NonlinearBlock):
         closures={}
         pressure=system._quantity(self.declaration['pressureId'])
         x=[sp.Symbol('amount_'+str(i),positive=True) for i in range(len(amounts))];p=sp.Symbol('pressure',positive=True)
-        local={**{a:s for a,s in zip(amounts,x)},pressure:p}
+        local={**{a:s for a,s in zip(amounts,x)},pressure:p,**self.T_local}
         data={q:system.parameter_values[s] for q,s in system.parameter_symbols.items() if q!=pressure}
         R=sp.Rational(str(chemistry.R));P0=sp.Rational(str(chemistry.P0));T=self.temperature
         for key in sorted(visited):
@@ -166,8 +260,9 @@ class ReactionBlock(NonlinearBlock):
                 reject('reaction_chemical_potential_provider_mismatch',
                        'The recorded relation is not the ideal_gas provider form mu_i0(T) + R T log(n_i P/(n P0)) selected by the declaration.',key)
             # Constant in (n, P) by the derivative checks: evaluate it anywhere.
-            offset=sp.N(standard.subs(functions[0],0).subs({**{v:1 for v in x},p:P0}),30)
-            if not offset.is_number or abs(offset)>1e-12*abs(R*T):
+            # Divided by T: with a coupled region T is the positive closure placeholder.
+            offset=sp.N(sp.expand(standard.subs(functions[0],0).subs({**{v:1 for v in x},p:P0})/T),30)
+            if not offset.is_number or abs(offset)>1e-12*R:
                 reject('reaction_standard_pressure_mismatch','The recorded standard pressure must equal the provider ideal_gas_P0 reference, 1e5 Pa.',key)
             closures[i]=key;self.standard_functions[key]=functions[0]
         return closures
@@ -191,11 +286,12 @@ class ReactionBlock(NonlinearBlock):
             try:return chemistry.IdealGasPhase(entry['species']),None
             except chemistry.ChemicalEquilibriumError as error:
                 reject(error.code,str(error),located+'.species')
-        if (entry['phaseId'],entry['standardState'])!=('liquido','pure_liquid_TP'):
-            reject('STANDARD_STATE_MISMATCH','A package reaction region is one liquid phase with the pure_liquid_TP standard state; '
-                   'package vapour reaction regions are not admitted by this compiler.', located)
+        vapour=(entry['phaseId'],entry['standardState'])==('vapor','ideal_gas_P0') and self.closure is not None
+        if (entry['phaseId'],entry['standardState'])!=('liquido','pure_liquid_TP') and not vapour:
+            reject('STANDARD_STATE_MISMATCH','A package reaction region is one liquid phase with the pure_liquid_TP standard state, '
+                   'or (with its own package caloric closure) one vapour phase with the ideal_gas_P0 standard state.', located)
         if 'packageId' not in entry:
-            reject('reaction_package_missing','Name the thermodynamic package whose liquid executes the reaction potentials.',located+'.packageId')
+            reject('reaction_package_missing','Name the thermodynamic package whose phase executes the reaction potentials.',located+'.packageId')
         from core import catalogo, mezclas, unifac
         from core.termodinamica.derived_bridge import PACKAGE_ALIASES
         package=next(p for p in system.model['termodinamica']['paquetes'] if p['id']==entry['packageId'])
@@ -204,6 +300,17 @@ class ReactionBlock(NonlinearBlock):
         name=PACKAGE_ALIASES.get(package['modelo']['id'],package['modelo']['id'])
         if name not in mezclas.PAQUETES:
             reject('PROVIDER_UNSUPPORTED','Unknown thermodynamic package '+repr(package['modelo']['id'])+'.',located+'.packageId')
+        if vapour:
+            # The package vapour is the ideal-gas mixture of the package pure data
+            # (Poling cp, formation reference of the anchor): the recorded mu_i has
+            # the ideal-gas form, as for the ideal_gas provider.
+            try:
+                sistema=mezclas.Sistema(name,entry['species'])
+                return chemistry.PackagePhase(sistema,'vapor',anchor=entry['anchor']),None
+            except mezclas.FaltaParametro as error:
+                reject('PROVIDER_UNSUPPORTED','The package cannot represent the declared species: '+str(error),located+'.packageId')
+            except chemistry.ChemicalEquilibriumError as error:
+                reject(error.code,str(error),located+('.anchor' if error.code=='LIQUID_ANCHOR_REQUIRED' else '.species'))
         # The package description names its liquid model, hence the form the
         # recorded mu_i must have; only enclosed models are admitted.
         model=mezclas.PAQUETES[name].liquido
@@ -226,6 +333,9 @@ class ReactionBlock(NonlinearBlock):
             reject(error.code,str(error),located+('.anchor' if error.code=='LIQUID_ANCHOR_REQUIRED' else '.species'))
 
     def _provider_text(self):
+        if self.activity is None and isinstance(self.provider,chemistry.PackagePhase):
+            return ('package '+self.declaration['packageId']+' vapour ('+self.provider.sistema.paquete.id+', ideal gas, formation anchor '
+                    +self.provider.anchor+')')
         if self.activity is None:
             return 'ideal_gas provider'
         return ('package '+self.declaration['packageId']+' liquid ('+self.provider.sistema.paquete.id+', '
@@ -279,7 +389,7 @@ class ReactionBlock(NonlinearBlock):
             return provider_source
         if not isinstance(predicate,(sp.Unequality,sp.Contains)):
             return None
-        value=(si_magnitude(self.system._expand(predicate.lhs-predicate.rhs)).subs(self.system.parameter_values)
+        value=(si_magnitude(self.system._expand(predicate.lhs-predicate.rhs)).subs(self.system.parameter_values).xreplace(self.T_local)
                if isinstance(predicate,sp.Unequality) else None)
         for key,premise in self.system.graph.domains.items():
             condition=premise.expression
@@ -298,7 +408,9 @@ class ReactionBlock(NonlinearBlock):
             if value is None:
                 continue
             ratio=sp.cancel(value/symbol)
-            if ratio.is_number and ratio.is_nonzero:
+            # Coupled region: the normalization R T keeps the closure temperature,
+            # which is positive wherever the closure executes (package T range).
+            if ratio.free_symbols<={self.temperature} and ratio.is_nonzero:
                 return key
         return None
 
@@ -347,26 +459,130 @@ class ReactionBlock(NonlinearBlock):
         return gammas[present[0]] if sign>0 else None
 
     def state(self,args):
-        state=chemistry.evaluate_reactions(self.provider,np.asarray(self.nu,dtype=float),T=float(self.temperature),P=float(self.pressure),n=self.n_function(*args),phase_id=self.declaration['phaseId'],standard_state=self.declaration['standardState'])
+        n=self.n_function(*args)
+        closure=None
+        if self.closure is None:
+            T=float(self.temperature)
+        else:
+            if not np.all(np.asarray(n,dtype=float)>0):
+                raise NonlinearError('reaction_domain','An amount is zero or negative: ln a_i is not finite; nothing is clipped.')
+            closure=self._closure_state(args,n)
+            T=float(closure['T'])
+        state=chemistry.evaluate_reactions(self.provider,np.asarray(self.nu,dtype=float),T=T,P=float(self.pressure),n=n,phase_id=self.declaration['phaseId'],standard_state=self.declaration['standardState'])
         if not state['valid']:
             raise NonlinearError('reaction_domain',state['validity']['message'])
+        if closure is not None:
+            state['closure']=closure
         return state
+
+    def _closure_state(self,args,n):
+        """T(H, P, n(xi)) of the region's package closure; a failure at a trial point is
+        an inadmissible evaluation for the shared Newton (ValueError), never clipped."""
+        from core.solvers import Detencion
+        try:
+            return self.closure.temperature_at(n,float(self.energy_function(*args)),float(self.pressure),self.stage)
+        except (Detencion,LoweringError) as error:
+            raise ValueError('Package closure of '+self.owner+': '+str(error)) from error
+
+    def _closure_row(self,args):
+        from core.solvers import Detencion
+        n=self.n_function(*args)
+        try:
+            return self.closure.outputs_at(n,float(self.energy_function(*args)),float(self.pressure),self.stage)
+        except (Detencion,LoweringError) as error:
+            raise ValueError('Package closure of '+self.owner+': '+str(error)) from error
+
+    def set_conditions(self,margins):
+        if self.closure is None:
+            return super().set_conditions(margins)
+        # Margins may use closure outputs (T, V, ...), evaluated at n(xi).
+        self.condition_arguments=[*self.arguments,*self.closure.outputs]
+        self.conditions=[]
+        for expr,strict,key,label in margins:
+            value=si_magnitude(expr).subs(self.system.parameter_values)
+            self._validate_condition(value)
+            self.conditions.append((sp.lambdify(self.condition_arguments,value,modules='math'),strict,key))
+
+    def _validate_condition(self,expression):
+        if expression in self.condition_arguments or expression.is_Number:
+            return
+        if expression.is_Add or expression.is_Mul or expression.is_Pow and expression.exp.is_Integer:
+            for arg in (expression.args if not expression.is_Pow else (expression.base,)):
+                self._validate_condition(arg)
+            return
+        raise NonlinearError('nonlinear_unsupported_expression','Only bound arithmetic with integer powers and guarded division is admitted: '+str(expression))
+
+    def _coupled_solve(self,t,state,stage):
+        from core.solvers.nonlinear import solve
+        args=[float(t),*map(float,state[:len(self.system.states)])]
+        # Margins of the recorded closure-temperature interval: the extent proof
+        # covers the extent box times that interval, and only this runtime
+        # check keeps T inside it (B3 part 2 review R2).
+        interval_keys={key for key,premise in self.system.graph.domains.items()
+                       if premise.quantity==self.closure.T and premise.domain=='interval'}
+        excluded=[]
+        def admissible(z):
+            if not self.conditions:
+                return True
+            try:
+                outputs=self._closure_row([*args,*z])
+            except (ValueError,NonlinearError):
+                return False
+            for function,strict,key in self.conditions:
+                value=float(function(*args,*z,*outputs))
+                if not math.isfinite(value) or value<0 or strict and value==0:
+                    if key in interval_keys:
+                        excluded.append(float(outputs[0]))
+                    return False
+            return True
+        try:
+            z,detail=solve(lambda z:self.residual(*args,*z),
+                           lambda z:np.array(self.jacobian(*args,*z)).reshape(len(z),len(z)),
+                           self.seed,self.bounds,self.scales,self.residual_scales,
+                           residual_tolerance=self.config['residualTolerance'],step_tolerance=self.config['stepTolerance'],
+                           max_iterations=self.config['maxIterations'],max_backtracks=self.config['maxBacktracks'],
+                           admissible=admissible)
+        except NonlinearError as error:
+            if excluded and error.code in ('nonlinear_invalid_seed','nonlinear_domain'):
+                box=self.temperature_box()
+                error=NonlinearError('reaction_temperature_out_of_interval',
+                    'The closure temperature of '+self.owner+' left its recorded validity interval ['+repr(box[0])+', '+repr(box[1])+
+                    '] K (last trial T = '+repr(excluded[-1])+' K). The index-one proof covers the extent box times that interval '
+                    'only; widen the recorded interval (declare_domain on the closure temperature) if the state is physical.',
+                    **{k:v for k,v in error.diagnostic.items() if k not in ('code','message','terminationReason')})
+                error.diagnostic.update(self.location(t,stage))
+                error.diagnostic.update(path='volumenes.'+self.owner+'.termodinamica',temperatureInterval=box,temperature=excluded[-1])
+            else:
+                if stage!='initialization' and error.code=='nonlinear_invalid_seed':
+                    error=NonlinearError('nonlinear_domain','The current state is outside the admitted nonlinear domain.',
+                                         **{k:v for k,v in error.diagnostic.items() if k not in ('code','message','terminationReason')})
+                error.diagnostic.update(self.location(t,stage))
+            error.diagnostics=[error.diagnostic]
+            raise error
+        self.calls+=1
+        self.last={**detail,**self.location(t,stage)}
+        return z,detail['residualNorm']
 
     def certify_index(self,bounds):
         try:
             reference=[tuple(outward(v,i==1) for i,v in enumerate(interval(e,bounds))) for e in self.references]
         except ValueError as error:
             reject('reaction_reference_not_certified',str(error),'motores.equilibriumReactions.volumes.'+self.owner+'.referenceIds')
+        thermal=self.closure is not None
+        temperature=self.temperature_box() if thermal else [float(self.temperature)]*2
         try:
             proof=certify_extent(self.provider,self.nu.tolist(),reference,[bounds[q] for q in self.unknowns],
-                [float(self.temperature)]*2,[float(self.pressure)]*2,phase_id=self.declaration['phaseId'],standard_state=self.declaration['standardState'])
+                temperature,[float(self.pressure)]*2,phase_id=self.declaration['phaseId'],standard_state=self.declaration['standardState'],
+                thermal=thermal)
         except LoweringError as error:
             for diagnostic in error.diagnostics:
                 suffix=diagnostic.get('path','equilibriumReactions').removeprefix('equilibriumReactions').lstrip('.')
                 diagnostic['path']='motores.equilibriumReactions.volumes.'+self.owner+('.'+suffix if suffix else '')
             raise
         self.extent_proof=proof
-        return {'index':1,'determinant':'det((dg/dn) N)','determinantBounds':[str(v) for v in proof['determinantBounds']],
+        return {'index':1,'determinant':'det((dg/dn) N + R T^2 (dg/dT)(dg/dT)^T / C_p)' if thermal else 'det((dg/dn) N)',
+                **({'temperatureBox':proof['temperatureBox'],'heatCapacityBounds':proof['heatCapacityBounds']} if thermal else {}),
+                'determinantBounds':[str(v) for v in proof['determinantBounds']],
                 'proof':proof['method']+' Chemical-potential relations: '+str([self.potential_rows[i] for i in sorted(self.potential_rows)])
                     +' executed by the '+self._provider_text()+'. Provider fingerprints: '+str(proof['provider']['fingerprints'])+' '+self.caloric_limitation}
 
@@ -374,7 +590,11 @@ class ReactionBlock(NonlinearBlock):
         return sp.simplify(si_magnitude(expression).subs(self.system.parameter_values))==0
 
     def evaluate(self,t,state,stage='runtime'):
-        z,residual=super().evaluate(t,state,stage)
+        self.stage=stage
+        if self.closure is None:
+            z,residual=super().evaluate(t,state,stage)
+        else:
+            z,residual=self._coupled_solve(t,state,stage)
         args=[float(t),*map(float,state[:len(self.system.states)]),*z]
         evaluated=self.state(args)
         certificate=chemistry.certify_reactions(evaluated,n0=self.ref_function(*args),A=chemistry.element_matrix(self.provider.cas)[0])
