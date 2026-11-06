@@ -65,4 +65,6 @@ def test_resigned_structural_corruption_rejects(reports):
     case('unknown stage report field', lambda r:r['stages'][0]['dynamicReport'].update(extra=True))
     case('unknown derivation evidence', lambda r:r['stages'][0]['dynamicReport']['derivedExecution'].update(extra=True))
     case('missing steady report', lambda r:r['stages'][0].update(steadyReport=None), 'steady')
-    Path('.tmp/indexed-execution-contract.json').write_text(json.dumps({'valid':values,'invalid':invalid}),encoding='utf-8')
+    output = Path('.tmp/indexed-execution-contract.json')
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps({'valid':values,'invalid':invalid}),encoding='utf-8')
