@@ -37,7 +37,7 @@ def _diagnostics(validation, error, request):
             if path.startswith('/intercambios/'):
                 path = path.replace('/intercambios/','/intercambiosTermicos/',1)
         code = row.get('nativeCode', 'MOTOR_ENS_FORMA')
-        status = 'no_soportado' if row.get('code', '').startswith('unsupported_') else 'invalido'
+        status = 'no_soportado' if row.get('code', '').startswith('unsupported_') or row.get('code') == 'requires_discretization' else 'invalido'
         initialization = row.get('initializationStatus')
         if initialization:
             status = {'pendiente':'incompleto','no_soportada':'no_soportado','incompatible':'invalido'}[initialization]
