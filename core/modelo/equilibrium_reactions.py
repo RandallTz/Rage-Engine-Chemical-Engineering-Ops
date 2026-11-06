@@ -16,13 +16,18 @@ def read_definition(value, model):
     volumes={v['id']:v for v in model['volumenes']}
     for owner,entry in value['volumes'].items():
         keys(entry,['provider','species','phaseId','standardState','anchor','temperatureId','pressureId',
-                    'amountIds','referenceIds','extentIds','reactions'])
+                    'amountIds','referenceIds','extentIds','reactions'],['packageId'])
         if owner not in volumes or owner in model['motores'].get('kineticReactions',{}).get('volumes',{}):
             raise ValueError('Reaction region is missing or has competing kinetic declarations.')
         if entry['provider'] not in ('ideal_gas','package') or entry['phaseId'] not in ('vapor','liquido') or entry['anchor'] not in ('gas','liquid'):
             raise ValueError('Declare the physical phase, provider and formation anchor.')
         if entry['standardState'] not in ('ideal_gas_P0','pure_liquid_TP'):
             raise ValueError('Unknown reaction standard state.')
+        # Optional since 6 November 2026 (B3): a package provider names the
+        # declared thermodynamic package that executes its potentials. Earlier
+        # package declarations without it still load; the compiler rejects them.
+        if 'packageId' in entry and (entry['provider']!='package' or entry['packageId'] not in [p['id'] for p in model['termodinamica']['paquetes']]):
+            raise ValueError('Only a package provider names a packageId, and it must be a declared thermodynamic package.')
         species=entry['species'];components={c['id']:c for c in model['componentes']}
         expected=[components[c].get('identidadQuimica',{}).get('cas') for c in volumes[owner]['componenteIds']]
         if not isinstance(species,list) or not species or species!=expected or len(set(species))!=len(species) or any(not isinstance(c,str) or not c for c in species):
