@@ -201,6 +201,11 @@ jobs:
           done
           curl -sf http://127.0.0.1:8001/salud
 
+      - name: HTTP verifiers (API only)
+        env:
+          NEXT_PUBLIC_API_URL: http://127.0.0.1:8001
+        run: node tools/ci/run_frontend_verifiers.mjs http
+
       - name: Build and serve the frontend
         working-directory: frontend
         env:
