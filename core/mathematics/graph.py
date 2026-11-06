@@ -58,6 +58,7 @@ class EquationNode:
     dependent: bool = False
     branches: tuple = ()
     predicates: tuple = ()
+    source: object = None
 
 
 class EquationGraph:
