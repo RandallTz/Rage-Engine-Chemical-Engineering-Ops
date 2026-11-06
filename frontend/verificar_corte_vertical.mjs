@@ -36,17 +36,23 @@ const ejemplo = JSON.parse(fs.readFileSync(path.join(RAIZ, "docs/ejemplos/modelo
 let n = 0;
 const ok = (v, m) => { n++; assert.ok(v, m); };
 ok(validacion.relaciones.some(x => x.id === "equilibrio.A") && validacion.variables.includes("volumen.A.fase.vapor-1.tm"), "POST /modelo/validar: relaciones y variables de la capa, con el vapor desde el principio");
-// Report where a fresh result differs from the published one (platform floats show up here first).
+// The published result was generated on Windows; Linux libm gives the same integration within ~1e-13 relative
+// (observed in CI on 6 Nov 2026: an event time 393.02647369376547 vs 393.0264736937146). Numbers are compared to
+// 1e-9 relative (absolute floor 1e-12); keys, lengths, types, strings and every other value stay exact.
+const REL_TOL = 1e-9, ABS_TOL = 1e-12;
 const differences = (a, b, at = "$", out = []) => {
   if (out.length >= 8) return out;
-  if (a && b && typeof a === "object" && typeof b === "object" && Array.isArray(a) === Array.isArray(b)) {
+  if (typeof a === "number" && typeof b === "number") {
+    if (!(a === b || Math.abs(a - b) <= Math.max(ABS_TOL, REL_TOL * Math.max(Math.abs(a), Math.abs(b))))) out.push(`${at}: fresh ${a} vs published ${b}`);
+  } else if (a && b && typeof a === "object" && typeof b === "object" && Array.isArray(a) === Array.isArray(b)) {
     const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
     for (const key of keys) differences(a[key], b[key], `${at}.${key}`, out);
   } else if (!isDeepStrictEqual(a, b)) out.push(`${at}: fresh ${JSON.stringify(a)} vs published ${JSON.stringify(b)}`);
   return out;
 };
-if (!isDeepStrictEqual(resultados, ejemplo)) console.error(differences(resultados, ejemplo).join("\n"));
-ok(isDeepStrictEqual(resultados, ejemplo), "POST /modelo/resolver: el mismo conjunto que la prueba del compilador");
+const diferencias = differences(resultados, ejemplo);
+if (diferencias.length) console.error(diferencias.join("\n"));
+ok(diferencias.length === 0, "POST /modelo/resolver: el mismo conjunto que la prueba del compilador");
 leerResultados(resultados); n++;
 
 const especs = especificacionesPorOmision(resultados);
