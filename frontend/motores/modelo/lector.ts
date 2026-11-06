@@ -1,5 +1,6 @@
 import {readEquilibriumReactions} from './equilibriumReactions';
 import {readIndexSet} from './indexSetContract';
+import {readFlowsheet, readFlowsheetLayout} from './flowsheet';
 import {readKineticReactions} from '../../app/models/kineticReactions';
 import {readEquationWorkbench} from '../../app/models/equationWorkbench';
 import {readDerivedExecution} from './derivedExecution';
@@ -42,7 +43,7 @@ function unicos(items: unknown[], ruta: string): Set<unknown> {
 const ref = (v: unknown, conjunto: Set<unknown>, ruta: string, que: string) => { if (!conjunto.has(v)) fallo(ruta, `referencia inexistente (${que} ${String(v)})`); };
 
 export function leerModeloComun(dato: unknown): ModeloComun {
-  const m = claves(dato, "modelo", CLAVES, ["restricciones", "observables", "verificaciones", "template", "indexSet"]);
+  const m = claves(dato, "modelo", CLAVES, ["restricciones", "observables", "verificaciones", "template", "indexSet", "flowsheet", "flowsheetLayout"]);
   if (m.formato !== "rage.modelo") fallo("formato", "valor no admitido");
   if (m.version !== VERSION_MODELO) fallo("version", "valor no admitido");
   const datos = new Set(Object.keys(obj(m.datos, "datos")));
@@ -110,6 +111,8 @@ export function leerModeloComun(dato: unknown): ModeloComun {
   obj(m.motores, "motores");
   if ('template' in m) readTemplate(m as unknown as ModeloComun);
   if ('indexSet' in m) readIndexSet(m as unknown as ModeloComun,leerModeloComun);
+  if ('flowsheet' in m) readFlowsheet(m as unknown as ModeloComun,leerModeloComun);
+  if ('flowsheetLayout' in m) readFlowsheetLayout(m as unknown as ModeloComun);
   for (const k of Object.keys(obj(m.motores, "motores"))) if (!['adimensionalizacion', 'materialDerivation', 'energyDerivation', 'thermodynamicDerivation', 'dynamicDefinition', 'momentumDerivation','hydraulicNetwork','equationWorkbench','derivedExecution','kineticReactions','equilibriumReactions'].includes(k)) fallo(`motores.${k}`, "motor desconocido");
   if((m.motores as Obj).equilibriumReactions!==undefined)readEquilibriumReactions((m.motores as Obj).equilibriumReactions,m as unknown as ModeloComun);
   if((m.motores as Obj).kineticReactions!==undefined)readKineticReactions((m.motores as Obj).kineticReactions,m as unknown as ModeloComun);

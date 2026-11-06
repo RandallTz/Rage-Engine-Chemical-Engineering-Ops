@@ -123,7 +123,7 @@ def leer_modelo_inspeccion(dato):
 def _read_model(dato, *, inspect_initialization):
     if len(json.dumps(dato, ensure_ascii=False).encode("utf-8")) > LIMITE_BYTES:
         _fallo("modelo", "The model exceeds 8 MB")
-    m = _claves(dato, "modelo", CLAVES, ["restricciones", "observables", "verificaciones", "template", "indexSet"])
+    m = _claves(dato, "modelo", CLAVES, ["restricciones", "observables", "verificaciones", "template", "indexSet", "flowsheet", "flowsheetLayout"])
     _opcion(m["formato"], "formato", ["rage.modelo"])
     _opcion(m["version"], "version", [VERSION])
     _texto(m["id"], "id")
@@ -210,6 +210,12 @@ def _read_model(dato, *, inspect_initialization):
     if "indexSet" in m:
         from .index_sets import read_index_set
         read_index_set(m)
+    if "flowsheet" in m:
+        from .flowsheet import read_flowsheet
+        read_flowsheet(m)
+    if "flowsheetLayout" in m:
+        from .flowsheet import read_layout
+        read_layout(m)
     for nombre, cfg in motores.items():
         _opcion(nombre, f"motores.{nombre}", MOTORES)
     if 'kineticReactions' in motores:

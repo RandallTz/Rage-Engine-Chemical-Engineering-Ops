@@ -74,6 +74,10 @@ export type Restriccion = { simboloId: string; tipo: "no_negativo" }
 export type ModeloComun = {
   template?: ModelTemplate;
   indexSet?: import('./indexSetContract').IndexSet;
+  /** Optional rage.flowsheet v1 network of recorded template instances (Python-owned replay and lowering). */
+  flowsheet?: import('./flowsheet').Flowsheet;
+  /** Presentation-only block positions; never part of the executable source signature. */
+  flowsheetLayout?: import('./flowsheet').FlowsheetLayout;
   formato: "rage.modelo"; version: typeof VERSION_MODELO;
   id: string; nombre: string;
   componentes: Componente[];
