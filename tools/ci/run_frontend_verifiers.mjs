@@ -61,7 +61,11 @@ let total = 0;
 for (const { file, pre } of files) {
   const start = Date.now();
   const env = { ...process.env, MPLBACKEND: 'Agg', PYTHONUTF8: '1', PYTHONIOENCODING: 'utf-8' };
-  let r = pre ? spawnSync('python', [pre], { cwd: frontend, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024, env }) : { status: 0 };
+  // A pytest file (test_*.py) as prerequisite runs under pytest; any other script runs directly.
+  // pytest runs from the repository root so that tests import `core`.
+  const isPytest = pre && path.basename(pre).startsWith('test_');
+  const preArgs = isPytest ? ['-m', 'pytest', '-q', '-p', 'no:cacheprovider', path.resolve(frontend, pre)] : [pre];
+  let r = pre ? spawnSync('python', preArgs, { cwd: isPytest ? path.resolve(frontend, '..') : frontend, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024, env }) : { status: 0 };
   if (r.status === 0) r = spawnSync(process.execPath, [file], {
     cwd: frontend, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024,
     env,
