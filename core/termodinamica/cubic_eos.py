@@ -66,7 +66,14 @@ CS_H = 1e-30            # complex step
 
 
 class CubicOutOfScope(Exception):
-    """A state or request outside what this package can evaluate; never replaced by a default."""
+    """A state or request outside what this package can evaluate; never replaced by a default.
+
+    `datos` locates the rejection when the caller supplies it: `cause` (for example `liquid_liquid_split`,
+    `no_critical_point_in_window`, `outside_bracket`) and the state (T, P, z, ...)."""
+
+    def __init__(self, message="", **datos):
+        super().__init__(message)
+        self.mensaje, self.datos = message, datos
 
 
 @lru_cache(maxsize=None)
