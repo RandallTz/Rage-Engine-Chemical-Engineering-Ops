@@ -12,7 +12,7 @@ def read_definition(value, model):
         raise ValueError('Declare at least one reaction region.')
     selection=model['motores'].get('derivedExecution')
     if selection is not None and selection.get('version')!=4:
-        raise ValueError('Equilibrium reactions require the recorded index-one extent selection (version 4); thermal/steady composition is not admitted.')
+        raise ValueError('Equilibrium reactions require the recorded index-one extent selection (version 4); steady composition is not admitted.')
     volumes={v['id']:v for v in model['volumenes']}
     for owner,entry in value['volumes'].items():
         keys(entry,['provider','species','phaseId','standardState','anchor','temperatureId','pressureId',
