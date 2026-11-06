@@ -92,8 +92,11 @@ def certify_extent(provider, nu, reference_box, extent_box, temperature, pressur
         reject('reaction_index_not_certified', 'Extent subdivision exhausted its 4096-box budget.', 'equilibriumReactions.extentJacobian')
     # Freeze this compiler increment's reviewed provider scope even while the
     # independent package team extends its public bounds implementation.
-    if not isinstance(provider,chemistry.IdealGasPhase):
-        reject('PROVIDER_UNSUPPORTED','This compiler increment admits certified IdealGasPhase extent blocks only.','equilibriumReactions.provider')
+    # B3 (6 November 2026): a package liquid phase is admitted; its liquid
+    # model is checked by reaction_jacobian_bounds (NRTL: PROVIDER_UNSUPPORTED).
+    if not (isinstance(provider,chemistry.IdealGasPhase)
+            or isinstance(provider,chemistry.PackagePhase) and provider.tipo=='liquido'):
+        reject('PROVIDER_UNSUPPORTED','This compiler increment admits certified IdealGasPhase and liquid PackagePhase extent blocks only.','equilibriumReactions.provider')
     rows = sp.Matrix([[sp.Rational(str(v)) for v in row] for row in nu])
     if any(not v.is_finite or sp.Rational(float(v))!=v for v in rows):
         reject('reaction_coefficient_not_representable','The public provider accepts binary64 coefficients; this exact rational cannot be transported without changing its value.','equilibriumReactions.stoichiometry')
