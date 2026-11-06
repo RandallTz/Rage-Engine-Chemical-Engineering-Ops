@@ -191,9 +191,14 @@ def test_version_two_side_ports_preserve_version_one():
     for case in side_port_rejections():
         with pytest.raises(ErrorResultados, match='indexedNetwork'):
             leer_resultados(case['result'])
+    write_frontend_fixture(Path('.tmp/indexed-results.json'))
+
+
+def write_frontend_fixture(destination):
+    destination.parent.mkdir(parents=True,exist_ok=True)
+    destination.write_text(json.dumps({'valid':{**publications(),'typedPorts':boundary_contract_fixture(), 'sidePorts':side_port_fixture()},
+        'invalid':malformed_cases()+boundary_rejections()+side_port_rejections()}),encoding='utf8')
 
 
 if __name__=='__main__':
-    destination=Path(sys.argv[1]);destination.parent.mkdir(parents=True,exist_ok=True)
-    destination.write_text(json.dumps({'valid':{**publications(),'typedPorts':boundary_contract_fixture(), 'sidePorts':side_port_fixture()},
-        'invalid':malformed_cases()+boundary_rejections()+side_port_rejections()}),encoding='utf8')
+    write_frontend_fixture(Path(sys.argv[1]))
