@@ -18,8 +18,19 @@ class ReactionBlock(NonlinearBlock):
         self.owner,self.declaration=next(iter(config['volumes'].items()))
         entry=self.declaration
         volume=next(v for v in system.model['volumenes'] if v['id']==self.owner)
+        caloric=volume['termodinamica'].get('supuesto') if volume['termodinamica'].get('tipo')=='supuesto' else None
         if volume['balances']['energia']:
-            reject('reaction_thermal_coupling_unsupported','This first extent adapter requires prescribed T/P without a retained energy block.','motores.equilibriumReactions')
+            # F2 precondition: the volume's recorded caloric assumption is not
+            # the provider's caloric potential, so an energy balance would mix
+            # two thermodynamic descriptions of one region.
+            reject('reaction_thermal_coupling_unsupported',
+                   'Thermal coupling is not admitted: the volume caloric assumption '+repr(caloric)+' differs from the '
+                   'reaction provider caloric potential (ideal-gas cp integrals and formation enthalpies). Reconcile the '
+                   'caloric closure with the provider first; until then use prescribed T/P with an inactive energy balance.',
+                   'volumenes.'+self.owner+'.termodinamica' if caloric else 'motores.equilibriumReactions')
+        self.caloric_limitation=('Caloric limitation: the recorded volume caloric assumption '+repr(caloric)+' is unused here '
+            '(prescribed T and P, inactive energy balance) and is not the provider caloric potential; thermal coupling stays rejected '
+            'until it is reconciled with the provider.')
         dimensions={'temperatureId':{'Theta':1},'pressureId':{'M':1,'L':-1,'T':-2}}
         for field,expected in dimensions.items():
             if system._dim(system._quantity(entry[field]))!=expected:
@@ -57,9 +68,10 @@ class ReactionBlock(NonlinearBlock):
             reject('reaction_coordinate_mismatch','Recorded amounts must be n_ref + N xi with extent-independent references.', 'motores.equilibriumReactions.amountIds')
         # Every residual must be the actual normalized chemical affinity from
         # the Gibbs differential, not a user-supplied function or final formula.
-        mu=[sp.Function('mu_'+str(c)+'__'+self.owner)(system.time) for c in next(v for v in system.model['volumenes'] if v['id']==self.owner)['componenteIds']]
+        mu=[sp.Function('mu_'+str(c)+'__'+self.owner)(system.time) for c in volume['componenteIds']]
         RT=sp.Rational(str(chemistry.R))*self.temperature
-        self.virtual_rows=set()
+        self.virtual_rows=set();self.potential_rows={};self.standard_functions={}
+        located='motores.equilibriumReactions.volumes.'+self.owner
         for j,row in enumerate(entry['reactions']):
             node=system._equation(row['equationId'])
             visited=set()
@@ -69,20 +81,45 @@ class ReactionBlock(NonlinearBlock):
                 for parent in system.graph.nodes[key].inputs:visit(parent)
             visit(row['equationId'])
             fundamental='thermodynamics.'+self.owner+'.fundamental'
+            if fundamental not in visited:
+                reject('reaction_constraint_not_deduced','Select the normalized affinity derived from the fundamental Gibbs differential.', located+'.reactions.'+str(j))
+            closures=self._potential_closures(system,visited,mu,expected_amounts,located)
+            for i,key in closures.items():
+                if self.potential_rows.setdefault(i,key)!=key:
+                    reject('reaction_chemical_potential_ambiguous','Every reaction must use the same recorded chemical-potential relation of each species.',key)
             expression=si_magnitude(system._expand(node.equation.lhs-node.equation.rhs)).subs(system.parameter_values)
-            expected=sum(self.nu[j,i]*q for i,q in enumerate(mu))/RT
-            ratio=sp.simplify(expression/expected)
-            if fundamental in visited and ratio.is_number and ratio not in (sp.S.One,-sp.S.One) and ratio != 0:
-                reject('reaction_gas_constant_mismatch',
-                       'Normalize affinity with the provider gas constant 8.314462618 J/(mol K).',
-                       'motores.equilibriumReactions.volumes.'+self.owner+'.reactions.'+str(j))
-            if fundamental not in visited or sp.simplify(expression-expected)!=0 and sp.simplify(expression+expected)!=0:
-                reject('reaction_constraint_not_deduced','Select the normalized affinity derived from the fundamental Gibbs differential.', 'motores.equilibriumReactions.volumes.'+self.owner+'.reactions.'+str(j))
+            # Unsubstituted species keep the generic mu_i; substituted ones use
+            # the recorded constitutive right-hand side.
+            terms=[system.graph.nodes[closures[i]].equation.rhs if i in closures else q for i,q in enumerate(mu)]
+            expected=si_magnitude(system._expand(sum(self.nu[j,i]*q for i,q in enumerate(terms)))).subs(system.parameter_values)/RT
+            same=lambda a,b:sp.simplify(sp.expand_log(a-b,force=True))==0
+            if not same(expression,expected) and not same(expression,-expected):
+                ratio=sp.simplify(expression/expected)
+                if ratio.is_number and ratio not in (sp.S.One,-sp.S.One) and ratio != 0:
+                    reject('reaction_gas_constant_mismatch',
+                           'Normalize affinity with the provider gas constant 8.314462618 J/(mol K).',
+                           located+'.reactions.'+str(j))
+                reject('reaction_constraint_not_deduced','Select the normalized affinity derived from the fundamental Gibbs differential.', located+'.reactions.'+str(j))
+            # A species with a zero column in every reaction contributes
+            # mu_i * 0 and cannot be substituted; only reacting species need
+            # their recorded potential.
+            reacting={i for i in range(len(mu)) if any(self.nu[r,i]!=0 for r in range(self.nu.rows))}
+            if not reacting<=set(closures):
+                # Persisted F5-C1 documents stop at the generic affinity; the
+                # ideal-gas potential must now be a recorded Model relation.
+                reject('reaction_chemical_potential_not_recorded',
+                       'Record mu_i = mu_i0(T) + R T log(n_i P/(n P0)) for every species as a thermodynamic constitutive relation '
+                       '(declare_relation, relationKind constitutive) and substitute it into the selected affinity. '
+                       'Documents saved before 5 November 2026 repairs need these two operations appended.',
+                       located+'.reactions.'+str(j))
             for key in visited:
                 if key.startswith('operation.'):
                     operation=system.replayed.definition['operations'][int(key.split('.')[1])-1]
-                    if operation['kind'] not in ('state_variation','divide','multiply','expand','factor'):
-                        reject('reaction_constraint_not_deduced','The virtual Gibbs chain must use recorded differential variations and algebraic normalization.',key)
+                    allowed=('state_variation','divide','multiply','expand','factor','substitute','declare_relation')
+                    if operation['kind'] not in allowed or operation['kind']=='declare_relation' and key not in closures.values():
+                        reject('reaction_constraint_not_deduced','The virtual Gibbs chain must use recorded differential variations, the recorded chemical-potential relations and algebraic normalization.',key)
+                    if operation['kind']=='substitute' and operation['relation'] not in closures.values():
+                        reject('reaction_constraint_not_deduced','Only the recorded chemical-potential relations may be substituted into the equilibrium affinity.',key)
                     self.virtual_rows.add(key)
         # Reuse the common settings, damped Newton, guards and diagnostics.
         super().__init__(system,[sp.S.Zero]*len(residuals))
@@ -92,6 +129,50 @@ class ReactionBlock(NonlinearBlock):
         self.residual=lambda *args: np.asarray(self.state(args)['affinity_RT'])[self.independent]
         self.jacobian=lambda *args: np.asarray(self.nu[self.independent,:],dtype=float)@np.asarray(self.state(args)['dmu_dn'])@np.asarray(self.N,dtype=float)/(chemistry.R*float(self.temperature))
         self.last_certificate=None
+
+    def _potential_closures(self, system, visited, mu, amounts, located):
+        """Recorded constitutive mu_i rows in the ancestry, checked against the executed provider.
+
+        The provider executes mu_i = mu_i0(T) + R T ln(n_i P/(n_t P0)). A
+        recorded row is admitted only if, with its data substituted, it is that
+        function of (n, P) plus one undefined standard-potential function of
+        time, with the provider's R and P0. No species or case branches.
+        """
+        closures={}
+        pressure=system._quantity(self.declaration['pressureId'])
+        x=[sp.Symbol('amount_'+str(i),positive=True) for i in range(len(amounts))];p=sp.Symbol('pressure',positive=True)
+        local={**{a:s for a,s in zip(amounts,x)},pressure:p}
+        data={q:system.parameter_values[s] for q,s in system.parameter_symbols.items() if q!=pressure}
+        R=sp.Rational(str(chemistry.R));P0=sp.Rational(str(chemistry.P0));T=self.temperature
+        for key in sorted(visited):
+            node=system.graph.nodes[key]
+            if node.rule!='declared_relation' or node.equation.lhs not in mu:
+                continue
+            if node.family!='thermodynamics' or node.kind!='constitutive':
+                reject('reaction_chemical_potential_not_constitutive','A chemical potential enters the affinity only through a thermodynamic constitutive relation.',key)
+            i=mu.index(node.equation.lhs)
+            if i in closures:
+                reject('reaction_chemical_potential_ambiguous','Record one chemical-potential relation per species.',key)
+            value=si_magnitude(node.equation.rhs.xreplace(local)).xreplace(data)
+            # Pressure derivative R T/P names the gas constant of the relation.
+            scale=sp.simplify(sp.diff(value,p)*p/T)
+            if scale.is_number and sp.simplify(scale-R)!=0:
+                reject('reaction_gas_constant_mismatch','The chemical-potential relation must use the provider gas constant 8.314462618 J/(mol K).',key)
+            standard=sp.expand_log(value-R*T*sp.log(x[i]*p/(sum(x)*P0)),force=True)
+            functions=[f for f in standard.atoms(sp.core.function.AppliedUndef)]
+            if (any(sp.simplify(sp.diff(standard,v))!=0 for v in [*x,p]) or len(functions)!=1
+                    or functions[0].args!=(system.time,)
+                    or any(f in functions for f in [*mu,*amounts,*system.states,*system.algebraic_quantities])
+                    or any(k!=key and f==functions[0] for k,f in self.standard_functions.items())
+                    or sp.simplify(sp.diff(standard,functions[0])-1)!=0):
+                reject('reaction_chemical_potential_provider_mismatch',
+                       'The recorded relation is not the ideal_gas provider form mu_i0(T) + R T log(n_i P/(n P0)) selected by the declaration.',key)
+            # Constant in (n, P) by the derivative checks: evaluate it anywhere.
+            offset=sp.N(standard.subs(functions[0],0).subs({**{v:1 for v in x},p:P0}),30)
+            if not offset.is_number or abs(offset)>1e-12*abs(R*T):
+                reject('reaction_standard_pressure_mismatch','The recorded standard pressure must equal the provider ideal_gas_P0 reference, 1e5 Pa.',key)
+            closures[i]=key;self.standard_functions[key]=functions[0]
+        return closures
 
     def virtual_condition(self, predicate):
         """Discharged Model premises on an eliminated virtual coordinate only."""
@@ -141,7 +222,8 @@ class ReactionBlock(NonlinearBlock):
             raise
         self.extent_proof=proof
         return {'index':1,'determinant':'det((dg/dn) N)','determinantBounds':[str(v) for v in proof['determinantBounds']],
-                'proof':proof['method']+' Provider fingerprints: '+str(proof['provider']['fingerprints'])}
+                'proof':proof['method']+' Chemical-potential relations: '+str([self.potential_rows[i] for i in sorted(self.potential_rows)])
+                    +' executed by the ideal_gas provider. Provider fingerprints: '+str(proof['provider']['fingerprints'])+' '+self.caloric_limitation}
 
     def is_consequence(self,expression):
         return sp.simplify(si_magnitude(expression).subs(self.system.parameter_values))==0
