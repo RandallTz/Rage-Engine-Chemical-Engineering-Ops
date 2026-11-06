@@ -6,3 +6,4 @@ verificar_derived_lifecycle.mjs         # same prerequisites as verificar_derive
 verificar_index1_dae.mjs                # needs .tmp/f3-index1/publication.json; tests/test_f3_index1_dae.py did not produce it (prerequisite pairing unresolved, 5 Nov 2026)
 verificar_nonlinear_algebraic.mjs       # same: .tmp/f3-nonlinear/publication.json not produced by tests/test_f3_nonlinear_algebraic.py
 verificar_todo.mjs                      # legacy runner: treats every verifier not in its stale table as needing a browser and live servers
+verificar_flowsheet_contract.mjs        # needs .tmp/flowsheet/accepted.json from tests/test_flowsheet_network.py (~30 min with its DOP853 reference); pair when slow pytest tiers land
