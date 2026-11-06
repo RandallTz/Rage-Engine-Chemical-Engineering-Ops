@@ -153,6 +153,9 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
+        with:
+          # verificar_model_assessment.mjs reads a historical blob with git show.
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
