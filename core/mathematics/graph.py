@@ -65,6 +65,7 @@ class EquationGraph:
         self.nodes={}
         self.names=names or {}
         self.domains={}
+        self.spatial_domains={}
 
     def __deepcopy__(self,memo):
         # SymPy expressions are immutable. Reconstructing an unevaluated Eq
@@ -72,7 +73,35 @@ class EquationGraph:
         result=type(self)(dict(self.names));memo[id(self)]=result
         result.nodes={key:replace(node) for key,node in self.nodes.items()}
         result.domains=dict(self.domains)
+        result.spatial_domains=dict(self.spatial_domains)
         return result
+
+    def declare_spatial_domain(self,id_,source,domain,reason):
+        """Record a typed spatial domain (PDE-1) on a field equation.
+
+        Each coordinate interval becomes an ordinary domain premise node, so the
+        existing membership machinery applies; the domain node carries the
+        chart and oriented boundary parts. Nothing is discretized here.
+        """
+        from .domains import SpatialDomain,validate_domains
+        if not isinstance(domain,SpatialDomain):raise JournalError('A spatial domain declaration requires a typed spatial domain.')
+        if id_ in self.nodes or source not in self.nodes:raise JournalError('A spatial domain has a repeated ID or missing input.')
+        equation=self.nodes[source].equation
+        if not isinstance(equation,sp.Equality):raise JournalError('Declare a spatial domain on a field equation, not on a condition.')
+        absent=[str(c) for c in domain.coordinates if not equation.has(c)]
+        if absent:raise JournalError('The spatial domain coordinates must occur in the selected field equation: '+', '.join(absent)+'.')
+        validate_domains([*self.domains.values(),*domain.intervals])
+        family=self.nodes[source].family;interval_ids=[]
+        for coordinate,premise in zip(domain.coordinates,domain.intervals):
+            key=id_+'.interval.'+str(coordinate)
+            if key in self.nodes:raise JournalError('A spatial domain interval has a repeated ID.')
+            self.nodes[key]=EquationNode(premise.expression,'Coordinate interval of '+str(coordinate),'spatial_interval',(source,),
+                                         (reason,math_latex(premise.expression,self.names)),family,'constraint')
+            self.domains[key]=premise;interval_ids.append(key)
+        self.nodes[id_]=EquationNode(domain.expression,'Declare spatial domain','spatial_domain',tuple(interval_ids),
+                                     (reason,*domain.describe()),family,'constraint')
+        self.spatial_domains[id_]=domain
+        return id_
 
     def declare_domain(self,id_,source,quantity,domain,reason,declaration=None,**bounds):
         from .domains import DomainPremise,validate_domains
