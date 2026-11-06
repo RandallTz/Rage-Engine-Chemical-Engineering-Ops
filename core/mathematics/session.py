@@ -79,6 +79,23 @@ def edit_history(source,selected,owners,declared_units,definition,action,*,requi
     return updated
 
 
+def _spatial_domain_for(graph,source,selected=None):
+    """Declared spatial domain bound by a volume integral, or None (old behaviour).
+
+    Without any declared spatial domain the historical one-argument integral is
+    kept unchanged (audit risk 4). An explicit selection must name a declared
+    spatial domain; otherwise one domain whose coordinates occur in the source
+    is used, and several candidates require an explicit selection.
+    """
+    if selected:
+        if selected[0] not in graph.spatial_domains:raise JournalError('Select a declared spatial domain for the volume integral.')
+        return selected[0]
+    equation=graph.nodes[source].equation
+    candidates=[key for key,domain in graph.spatial_domains.items() if all(equation.has(c) for c in domain.coordinates)]
+    if len(candidates)>1:raise JournalError('Several declared spatial domains apply; select one for the volume integral.')
+    return candidates[0] if candidates else None
+
+
 def replay_operations(source,selected,owners,declared_units,definition,*,require_same_family=False,unit_resolver=known_unit):
     read_definition(definition)
     graph=copy.deepcopy(source);final=list(selected);locations=dict(owners);units=dict(declared_units)
@@ -147,6 +164,38 @@ def replay_operations(source,selected,owners,declared_units,definition,*,require
                 bounds={**bounds,'lower':exact_endpoint(op['lower'])*factor,'upper':exact_endpoint(op['upper'])*factor,'explicit_units':True}
             graph.declare_domain(key,sources[0],quantity,op['domain'],op['reason'],declaration=declaration,scale=basis,**bounds);blocking=True
             if declaration is not None:locations[key+'.declared']=locations[sources[0]]
+        elif kind=='declare_spatial_domain':
+            from .domains import DomainPremise,SpatialDomain,BoundaryPart,exact_endpoint,admit_coordinate
+            from .errors import MathematicsError
+            coordinates=[]
+            for identity in op['coordinates']:
+                if identity not in quantities or not isinstance(quantities[identity],sp.Symbol):raise JournalError('Select current independent coordinates for the spatial domain.')
+                coordinates.append(quantities[identity])
+            for coordinate in coordinates:admit_coordinate(op['chart'],coordinate)
+            intervals=[]
+            for coordinate,interval in zip(coordinates,op['intervals']):
+                unit=_known_unit(coordinate,units)
+                if unit is None or interpretar(unit)['afin'] or interpretar(unit)['dimension']!={'L':1}:
+                    raise JournalError('Coordinate '+str(coordinate)+' needs a declared absolute length unit.')
+                factor=sp.S.One
+                if 'endpointUnit' in interval:
+                    try:conversion=exact_conversion(interval['endpointUnit'])
+                    except ErrorUnidad as error:raise JournalError('The endpoint unit has no supported exact conversion: '+str(error)) from error
+                    if conversion['afin'] or conversion['dimension']!=interpretar(unit)['dimension']:raise JournalError('Interval endpoints of '+str(coordinate)+' have incompatible units.')
+                    factor=sp.Rational(conversion['factor'])
+                elif interpretar(unit)['factor']!=1:raise JournalError('Record an explicit endpoint unit for scaled coordinates.')
+                try:
+                    intervals.append(DomainPremise(coordinate,'interval',lower=exact_endpoint(interval['lower'])*factor,upper=exact_endpoint(interval['upper'])*factor,
+                                                   lower_open=interval['lowerOpen'],upper_open=interval['upperOpen'],
+                                                   scale=unit_basis(interpretar(unit)['dimension']),explicit_units=True))
+                except MathematicsError as error:raise JournalError('Interval of '+str(coordinate)+': '+str(error)) from error
+            try:
+                parts=tuple(BoundaryPart(part['name'],coordinates[op['coordinates'].index(part['coordinate'])],part['end']) for part in op['parts'])
+                domain=SpatialDomain(op['chart'],tuple(coordinates),tuple(intervals),parts)
+            except MathematicsError as error:raise JournalError(str(error)) from error
+            graph.declare_spatial_domain(key,sources[0],domain,op['reason'])
+            for coordinate in coordinates:locations[key+'.interval.'+str(coordinate)]=locations.get(sources[0],'system')
+            blocking=True
         elif kind=='declare_relation':
             conditions=[op['reason']]
             left,right=_parse(op['left'],quantities,conditions,units),_parse(op['right'],quantities,conditions,units)
@@ -174,7 +223,13 @@ def replay_operations(source,selected,owners,declared_units,definition,*,require
         elif kind in ('expand','factor'):graph.transform(key,sources[0],sp.expand if kind=='expand' else sp.factor,'Apply '+kind+' to the selected equation',kind)
         elif kind in ('volume_integrate','gauss','reynolds'):
             from .operators import VolumeIntegral as VI,BoundaryFlux as BF,Divergence as Div
-            if kind=='volume_integrate':graph.transform(key,sources[0],VI,'Integrate both sides over the current domain','volume_integration')
+            if kind=='volume_integrate':
+                domain_id=_spatial_domain_for(graph,sources[0],op.get('domains'))
+                if domain_id is None:graph.transform(key,sources[0],VI,'Integrate both sides over the current domain','volume_integration')
+                else:
+                    bound=sp.Tuple(*graph.spatial_domains[domain_id].axes)
+                    graph.transform(key,sources[0],lambda e:VI(e,bound),'Integrate both sides over the declared spatial domain','volume_integration',
+                                    ('Spatial domain '+domain_id+' binds '+', '.join(map(str,bound)),))
             elif kind=='gauss':
                 equation=graph.nodes[sources[0]].equation
                 if not any(isinstance(n,VI) and isinstance(n.args[0],Div) for n in sp.preorder_traversal(equation)):raise JournalError('Gauss requires an integrated divergence in the selected equation.')
@@ -197,8 +252,8 @@ def replay_operations(source,selected,owners,declared_units,definition,*,require
                 replacements={}
                 for i,target in enumerate(dict.fromkeys(targets)):
                     field=target.args[0].expr;theorem=key+'.theorem.'+str(i+1)
-                    graph.add(theorem,sp.Derivative(VI(field),t,evaluate=False),target+BF(field*vb),'Reynolds transport identity','transport_theorem',assumptions=('Sufficiently regular fields and domain motion',),family=op['family'],kind='definition')
-                    locations[theorem]=owner;replacements[target]=sp.Derivative(VI(field),t,evaluate=False)-BF(field*vb)
+                    graph.add(theorem,sp.Derivative(VI(field,*target.args[1:]),t,evaluate=False),target+BF(field*vb),'Reynolds transport identity','transport_theorem',assumptions=('Sufficiently regular fields and domain motion',),family=op['family'],kind='definition')
+                    locations[theorem]=owner;replacements[target]=sp.Derivative(VI(field,*target.args[1:]),t,evaluate=False)-BF(field*vb)
                 graph.substitute(key,sources[0],replacements,'Substitute Reynolds transport term by term',inputs=tuple(key+'.theorem.'+str(i+1) for i in range(len(replacements))))
         else:
             if op['symbol'] not in quantities:raise JournalError('The selected quantity changed. Select it again from the current equation graph.')
