@@ -129,6 +129,12 @@ class PackageClosure:
         self.evaluations = 0
         self.fingerprint = None
         self.initial_signature = None
+        # B3 part 2: a volume whose amounts are n = n_ref + N xi of an equilibrium
+        # extent block. The reaction block supplies xi; `extend` appends it to a
+        # state vector before the inputs are evaluated.
+        self.extend = None
+        self.width = None
+        self.point_cache = {}
 
     # --- admission --------------------------------------------------------------------------------
     def _call(self, function, *args, stage, **kwargs):
@@ -182,14 +188,18 @@ class PackageClosure:
             values[out['stream_w', stream['id'], i]] = float(z[index] * M[index] / Mz)
         return {'phase': kind, 'T': T, 'P': P, 'z': z.tolist(), 'values': values, 'fingerprint': caloric['fingerprint']}
 
-    def bind_inputs(self):
-        """Express the closure inputs in retained states and data; outputs must not feed back."""
+    def bind_inputs(self, algebraic=()):
+        """Express the closure inputs in retained states and data; outputs must not feed back.
+
+        algebraic: the extents of a coupled equilibrium block (B3 part 2), admitted
+        in the amounts only; energy and mechanical inputs stay states and data."""
         system = self.system
         forbidden = set(system.closure_quantities)
         self.input_expressions = []
-        for quantity in [*self.amounts, self.energy, self.mechanical]:
+        for index, quantity in enumerate([*self.amounts, self.energy, self.mechanical]):
             value = system._expand(quantity)
-            bad = value.atoms(sp.core.function.AppliedUndef) - set(system.states) - set(system.parameter_symbols.values())
+            allowed = set(algebraic) if index < len(self.amounts) else set()
+            bad = value.atoms(sp.core.function.AppliedUndef) - set(system.states) - set(system.parameter_symbols.values()) - allowed
             if value.has(*forbidden) or bad:
                 raise LoweringError('closure_input_unresolved', 'Select reconstructions that express the closure input ' + str(quantity) +
                                     ' in retained states and data (for example the package amount from the component mass).')
@@ -209,6 +219,8 @@ class PackageClosure:
 
     # --- evaluation -------------------------------------------------------------------------------
     def _inputs(self, t, y):
+        if self.extend is not None and len(y) < self.width:
+            y = self.extend(t, y)
         values = [float(f(t, y)) for f in self.inputs]
         n = values[:len(self.amounts)]
         return n, values[-2], values[-1]
@@ -234,6 +246,22 @@ class PackageClosure:
         self.cache[key] = result
         return result
 
+    def temperature_at(self, n, energy, P, stage):
+        """Single-phase T(E, P, n) and the caloric state there, for trial amounts of a coupled
+        equilibrium extent block (B3 part 2). Same bridge call as `_single`; the phase-stability
+        test runs at accepted and published states (`evaluate`), not at every Newton trial."""
+        key = (tuple(float(v) for v in n), float(energy), float(P), stage == 'runtime')
+        cached = self.point_cache.get(key)
+        if cached is not None:
+            return cached
+        quantity = 'H' if self.spec == 'PH' else 'U'
+        result = self._call(bridge.phase_temperature, self.package, self.species, list(n), P, energy, quantity=quantity,
+                            phase=self.kind, anchor=self.anchor, liquid_only=self.liquid_only, check_stability=False, stage=stage)
+        if len(self.point_cache) > 4096:
+            self.point_cache.clear()
+        self.point_cache[key] = result
+        return result
+
     def _single(self, n, energy, P, stage):
         quantity = 'H' if self.spec == 'PH' else 'U'
         r = self._call(bridge.phase_temperature, self.package, self.species, n, P, energy, quantity=quantity, phase=self.kind,
@@ -243,6 +271,13 @@ class PackageClosure:
             if stage == 'runtime':
                 raise Detencion('politica_incumplida', message)
             raise LoweringError('invalid_initial_domain', message)
+        return self._single_row(r, n, energy)
+
+    def outputs_at(self, n, energy, P, stage):
+        """Closure output vector at trial amounts of a coupled extent block (no stability test)."""
+        return self._single_row(self.temperature_at(n, energy, P, stage), n, energy)[0]
+
+    def _single_row(self, r, n, energy):
         N = float(sum(n))
         label = self.phases[0]
         M = float(np.dot(n, self.molar_masses) / N)
@@ -409,6 +444,89 @@ class ClosureRuntime:
     def rhs(self, t, state):
         extended = np.concatenate([state, self.system.closure_values(t, state)])
         return np.array([f(t, extended) for f in self.f], dtype=float)
+
+    def dominio(self, t, state):
+        return np.array([f(t, state) for f, _ in self.dominios])
+
+    def describir_dominio(self, index):
+        return self.dominios[index][1]
+
+
+class ReactionClosureRuntime:
+    """Version-4 evaluator of a thermally coupled equilibrium volume (B3 part 2).
+
+    The vector is [states, budgets, extents, closure outputs]: the extents come from
+    the reaction block's Newton solve at the current states, and the package closure
+    outputs (T, V and the per-phase quantities) are evaluated at n = n_ref + N xi,
+    the energy state and the mechanical datum. Expressions that use neither are
+    compiled unchanged; nothing is integrated or reconstructed here.
+    """
+
+    def __init__(self, system):
+        self.system = system
+        self.campos = [system.ids[q] for q in system.states] + ['budget_' + str(i) for i in range(len(system.checks))]
+        self.evaluator = SistemaExplicito.__new__(SistemaExplicito)
+        self.evaluator.tiempo = system.ids[system.time]
+        self.evaluator.indice = {key: i for i, key in enumerate(self.campos)}
+        offset = len(self.campos)
+        self.evaluator.indice.update({system.ids[q]: offset + i for i, q in enumerate(system.algebraic_quantities)})
+        self.width = offset + len(system.algebraic_quantities)
+        self.evaluator.indice.update({system.ids[q]: self.width + i for i, q in enumerate(system.closure_quantities)})
+        self.evaluator.valores = {system.ids[q]: float(value) for q, value in system.parameter_values.items()}
+        self.evaluator.valores.update({identity: 1. for q, identity in system.ids.items() if isinstance(q, UnitBasis)})
+        self.indice = self.evaluator.indice
+        self.algebraic_ids = {system.ids[q] for q in system.algebraic_quantities}
+        self.closure_ids = {system.ids[q] for q in system.closure_quantities}
+        for closure in system.closures:
+            closure.compile(lambda tree: self.evaluator._compilar(tree, 'closure input'))
+            closure.width = self.width
+            closure.extend = self._with_extents
+        trees = [system._ast(e) for e in [*system.rates.values(), *(rate for _, _, rate, _ in system.checks)]]
+        self.needs_closures = any(self._uses(tree, self.closure_ids) for tree in trees)
+        self.f = [self.evaluator._compilar(tree, 'retained nonlinear formulation') for tree in trees]
+        self.observables = [(row['quantityId'], str(system._quantity(row['quantityId'])), system._unit(system._quantity(row['quantityId'])),
+                             self._compilar(system._ast(expr), 'reconstruction')) for row, expr in system.reconstructed]
+        self.dominios = [(self._compilar(system._ast(expr), 'condition'), label) for expr, _, _, label in system.margins]
+        study = system.model['estudio']
+        self.tf = float(system._datum(study['tiempoId'], {'T': 1}))
+        self.metodo = temporal_method(study['metodoSolicitado'])
+        dims = [system._dim(q) for q in system.states] + [system._dim(inventory) for _, inventory, _, _ in system.checks]
+        a = study['atol']
+        self.atol = np.array([a.get('energia', a['cantidad']) if dim == {'M': 1, 'L': 2, 'T': -2} else a['cantidad'] for dim in dims])
+
+    @staticmethod
+    def _uses(e, ids):
+        return (isinstance(e, dict) and (e.get('tipo') == 'simbolo' and e.get('id') in ids or any(ReactionClosureRuntime._uses(v, ids) for v in e.values()))
+                or isinstance(e, list) and any(ReactionClosureRuntime._uses(v, ids) for v in e))
+
+    def _with_extents(self, t, state):
+        state = np.asarray(state, dtype=float)[:len(self.campos)]
+        z, _ = self.system.solve_algebraic(t, state)
+        return np.concatenate([state, z])
+
+    def extended(self, t, state, z):
+        """[state, z] plus the closure outputs when a retained rate uses them."""
+        values = np.concatenate([np.asarray(state, dtype=float)[:len(self.campos)], z])
+        if not self.needs_closures:
+            return values
+        return np.concatenate([values, self.system.closure_values(t, values)])
+
+    def _compilar(self, expression, label):
+        function = self.evaluator._compilar(expression, label)
+        if self._uses(expression, self.closure_ids):
+            def evaluate(t, state):
+                values = self._with_extents(t, state)
+                return function(t, np.concatenate([values, self.system.closure_values(t, values)]))
+            return evaluate
+        if self._uses(expression, self.algebraic_ids):
+            return lambda t, state: function(t, self._with_extents(t, state))
+        return function
+
+    def inicial(self):
+        return np.array([float(self.system.initial_values[q]) for q in self.system.states] + [0.] * len(self.system.checks))
+
+    def rhs(self, t, state):
+        raise AssertionError('Nonlinear blocks must use the retained DerivedSystem RHS.')
 
     def dominio(self, t, state):
         return np.array([f(t, state) for f, _ in self.dominios])

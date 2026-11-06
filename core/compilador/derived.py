@@ -146,8 +146,16 @@ class DerivedSystem(DerivedGraph):
         if model.get('matematico') is not None or model['motores'].get('adimensionalizacion') is not None:
             raise LoweringError('competing_formulation', 'Select the derived graph alone; cached mathematical trees and competing scaling selections are not execution inputs.')
         equilibrium = [v for v in model['volumenes'] if v['termodinamica']['tipo'] != 'supuesto']
-        if equilibrium and (self.selection['version'] != 1 or self.selection.get('scaling') or self.selection.get('algebraic')):
-            raise LoweringError('closure_formulation_unsupported', 'Package closures are lowered in the identity explicit selection (version 1) without scaling or algebraic blocks.')
+        # B3 part 2: a version-4 selection admits package closures when every
+        # package volume is the region of its own equilibrium-extent block; the
+        # reaction block then supplies the closure amounts n = n_ref + N xi.
+        reacting = set((model['motores'].get('equilibriumReactions') or {}).get('volumes', {}))
+        self.thermal_reaction = bool(equilibrium) and self.is_dae and all(v['id'] in reacting for v in equilibrium)
+        if equilibrium and not self.thermal_reaction and (self.selection['version'] != 1 or self.selection.get('scaling') or self.selection.get('algebraic')):
+            raise LoweringError('closure_formulation_unsupported', 'Package closures are lowered in the identity explicit selection (version 1) without scaling or algebraic blocks, '
+                                'or in a version-4 selection whose package volumes are all equilibrium-extent regions.')
+        if self.thermal_reaction and self.selection.get('scaling'):
+            raise LoweringError('closure_formulation_unsupported', 'A thermally coupled equilibrium-extent block is lowered without scaling.')
         for volume in model['volumenes']:
             for balance, journal in [('materia', 'materialDerivation'), ('energia', 'energyDerivation')]:
                 if volume['balances'][balance] and volume['id'] not in model['motores'].get(journal, {}).get('volumes', {}):
@@ -283,7 +291,7 @@ class DerivedSystem(DerivedGraph):
             self.guards.extend((guard, row['equationId']) for guard in guards)
         self.reconstructed = [(row, self._expand(self._quantity(row['quantityId']))) for row in self.selection['reconstructions']]
         for closure in self.closures:
-            closure.bind_inputs()
+            closure.bind_inputs(self.algebraic_quantities if self.thermal_reaction else ())
         self._initial_conditions()
         self.proof_conditions = []
         bound_coordinates = {p.args[1] for node in self.graph.nodes.values() for p in node.predicates if isinstance(p, HoldsOnInterval) and p.args[1] != self.time}
@@ -299,8 +307,8 @@ class DerivedSystem(DerivedGraph):
         if analysis['estado'] != 'compatible':
             raise LoweringError('incompatible_lowering', 'The lowered AST does not preserve the declared equation dimensions: ' + str(analysis))
         if self.closures:
-            from .derived_closure import ClosureRuntime
-            self.numeric = ClosureRuntime(self)
+            from .derived_closure import ClosureRuntime, ReactionClosureRuntime
+            self.numeric = ReactionClosureRuntime(self) if self.thermal_reaction else ClosureRuntime(self)
         else:
             self.numeric = NonlinearRuntime(self) if self.nonlinear else SistemaExplicito(self.lowered)
         if self.algebraic_block is not None and not self.nonlinear:
@@ -411,6 +419,17 @@ class DerivedSystem(DerivedGraph):
                 else:self.replacements[target] = node.equation.rhs
 
     def _initial_conditions(self):
+        if self.is_dae and self.thermal_reaction:
+            # The amounts at t0 are n_ref + N xi(0), and xi(0) depends on T(0):
+            # a temperature datum would be the coupled equilibrium temperature,
+            # not a feed state. Require the conserved energy inventory instead.
+            for closure in self.closures:
+                energy_id = next((qid for qid, q in self.quantities.items() if q == closure.energy), None)
+                if energy_id not in self.selection['initialValues']:
+                    from .reaction_extent import reject
+                    reject('reaction_initial_energy_required', 'A thermally coupled equilibrium volume is initialized by its energy inventory '
+                           + str(closure.energy) + ' (a datum, for example the enthalpy of the unreacted feed); a temperature datum is not admitted.',
+                           'motores.derivedExecution.initialValues')
         if self.is_dae:
             missing = {r['quantityId'] for r in self.selection['states']} - set(self.selection['initialValues'])
             if missing:
@@ -1064,7 +1083,7 @@ class DerivedSystem(DerivedGraph):
     def rhs(self, t, state):
         if self.nonlinear:
             z, _ = self.solve_algebraic(t, state)
-            extended = np.concatenate([state, z])
+            extended = self.numeric.extended(t, state, z) if self.thermal_reaction else np.concatenate([state, z])
             try:
                 value = np.array([f(t, extended) for f in self.numeric.f])
                 if not np.all(np.isfinite(value)):
