@@ -25,8 +25,9 @@ class ReactionBlock(NonlinearBlock):
             # two thermodynamic descriptions of one region.
             reject('reaction_thermal_coupling_unsupported',
                    'Thermal coupling is not admitted: the volume caloric assumption '+repr(caloric)+' differs from the '
-                   'reaction provider caloric potential (ideal-gas cp integrals and formation enthalpies). Reconcile the '
-                   'caloric closure with the provider first; until then use prescribed T/P with an inactive energy balance.',
+                   'reaction provider caloric potential (the provider partial molar enthalpies with formation reference). '
+                   'Reconcile the caloric closure with the provider first; until then use prescribed T/P with an inactive '
+                   'energy balance.',
                    'volumenes.'+self.owner+'.termodinamica' if caloric else 'motores.equilibriumReactions')
         self.caloric_limitation=('Caloric limitation: the recorded volume caloric assumption '+repr(caloric)+' is unused here '
             '(prescribed T and P, inactive energy balance) and is not the provider caloric potential; thermal coupling stays rejected '
@@ -45,13 +46,7 @@ class ReactionBlock(NonlinearBlock):
         species_quantities=expected_amounts+[sp.Function('m__'+self.owner+'__'+str(c))(system.time) for c in volume['componenteIds']]
         if any(q in fixed for q in species_quantities):
             reject('reaction_fixed_species_initialization','Initialize conserved coordinates; independently fixed species would overconstrain equilibrium initialization.','motores.derivedExecution.initialValues')
-        if entry['provider']!='ideal_gas':
-            reject('PROVIDER_UNSUPPORTED','Package-phase equilibrium reaction bounds are not admitted by this compiler.', 'motores.equilibriumReactions.volumes.'+self.owner+'.provider')
-        if (entry['phaseId'],entry['standardState'],entry['anchor'])!=('vapor','ideal_gas_P0','gas'):
-            reject('STANDARD_STATE_MISMATCH','Ideal gas requires vapor, gas formation anchor and ideal_gas_P0.', 'motores.equilibriumReactions.volumes.'+self.owner)
-        try:self.provider=chemistry.IdealGasPhase(entry['species'])
-        except chemistry.ChemicalEquilibriumError as error:
-            reject(error.code,str(error),'motores.equilibriumReactions.volumes.'+self.owner+'.species')
+        self.provider,self.activity=self._provider(system,entry)
         self.nu=sp.Matrix([[sp.Rational(v) for v in r['stoichiometry']] for r in entry['reactions']])
         self.independent=list(self.nu.T.rref()[1]);self.N=self.nu[self.independent,:].T
         if [r['quantityId'] for r in system.algebraic_rows]!=entry['extentIds'] or [r['equationId'] for r in system.algebraic_rows]!=[entry['reactions'][i]['equationId'] for i in self.independent]:
@@ -106,9 +101,9 @@ class ReactionBlock(NonlinearBlock):
             reacting={i for i in range(len(mu)) if any(self.nu[r,i]!=0 for r in range(self.nu.rows))}
             if not reacting<=set(closures):
                 # Persisted F5-C1 documents stop at the generic affinity; the
-                # ideal-gas potential must now be a recorded Model relation.
+                # provider potential must now be a recorded Model relation.
                 reject('reaction_chemical_potential_not_recorded',
-                       'Record mu_i = mu_i0(T) + R T log(n_i P/(n P0)) for every species as a thermodynamic constitutive relation '
+                       'Record '+self._form_text()+' for every reacting species as a thermodynamic constitutive relation '
                        '(declare_relation, relationKind constitutive) and substitute it into the selected affinity. '
                        'Documents saved before 5 November 2026 repairs need these two operations appended.',
                        located+'.reactions.'+str(j))
@@ -154,6 +149,9 @@ class ReactionBlock(NonlinearBlock):
             if i in closures:
                 reject('reaction_chemical_potential_ambiguous','Record one chemical-potential relation per species.',key)
             value=si_magnitude(node.equation.rhs.xreplace(local)).xreplace(data)
+            if self.activity is not None:
+                closures[i]=key;self._liquid_closure(system,key,value,i,x,p,mu,amounts)
+                continue
             # Pressure derivative R T/P names the gas constant of the relation.
             scale=sp.simplify(sp.diff(value,p)*p/T)
             if scale.is_number and sp.simplify(scale-R)!=0:
@@ -174,8 +172,111 @@ class ReactionBlock(NonlinearBlock):
             closures[i]=key;self.standard_functions[key]=functions[0]
         return closures
 
+    def _provider(self, system, entry):
+        """The executed provider named by the declaration, and its activity form.
+
+        ideal_gas: IdealGasPhase, vapor, ideal_gas_P0, gas anchor (F5-C1, unchanged).
+        package:   the declared package's single liquid phase, pure_liquid_TP. The
+        package's liquid model fixes the functional form the recorded mu_i must
+        have: 'activity' (UNIFAC: one activity coefficient per species) or
+        'ideal' (ideal solution, no activity coefficient). Other liquid models
+        (NRTL) are not admitted. Returns (provider, None | 'activity' | 'ideal').
+        """
+        located='motores.equilibriumReactions.volumes.'+self.owner
+        if entry['provider']=='ideal_gas':
+            if 'packageId' in entry:
+                reject('reaction_package_unexpected','The ideal_gas provider executes no package; remove packageId.',located+'.packageId')
+            if (entry['phaseId'],entry['standardState'],entry['anchor'])!=('vapor','ideal_gas_P0','gas'):
+                reject('STANDARD_STATE_MISMATCH','Ideal gas requires vapor, gas formation anchor and ideal_gas_P0.', located)
+            try:return chemistry.IdealGasPhase(entry['species']),None
+            except chemistry.ChemicalEquilibriumError as error:
+                reject(error.code,str(error),located+'.species')
+        if (entry['phaseId'],entry['standardState'])!=('liquido','pure_liquid_TP'):
+            reject('STANDARD_STATE_MISMATCH','A package reaction region is one liquid phase with the pure_liquid_TP standard state; '
+                   'package vapour reaction regions are not admitted by this compiler.', located)
+        if 'packageId' not in entry:
+            reject('reaction_package_missing','Name the thermodynamic package whose liquid executes the reaction potentials.',located+'.packageId')
+        from core import catalogo, mezclas, unifac
+        from core.termodinamica.derived_bridge import PACKAGE_ALIASES
+        package=next(p for p in system.model['termodinamica']['paquetes'] if p['id']==entry['packageId'])
+        if package.get('datosPuros'):
+            reject('PROVIDER_UNSUPPORTED','Reaction bounds enclose the published package data only; pure-data substitutions are not admitted.',located+'.packageId')
+        name=PACKAGE_ALIASES.get(package['modelo']['id'],package['modelo']['id'])
+        if name not in mezclas.PAQUETES:
+            reject('PROVIDER_UNSUPPORTED','Unknown thermodynamic package '+repr(package['modelo']['id'])+'.',located+'.packageId')
+        # The package description names its liquid model, hence the form the
+        # recorded mu_i must have; only enclosed models are admitted.
+        model=mezclas.PAQUETES[name].liquido
+        activity='activity' if model.startswith('unifac_') else 'ideal' if model=='ideal' else None
+        if activity is None:
+            reject('PROVIDER_UNSUPPORTED','The liquid model '+repr(model)+' of package '+repr(package['modelo']['id'])+
+                   ' has no certified reaction bounds (UNIFAC and the ideal solution have; NRTL is not extended).',located+'.packageId')
+        # The catalog's liquid-only rule (not a species branch): such species
+        # exist only in a liquid-only system, whose formation anchor is liquid.
+        liquid_only=any(c in catalogo.REGISTRO_SOLO_LIQUIDO for c in entry['species'])
+        try:
+            sistema=mezclas.Sistema(name,entry['species'],solo_liquido=liquid_only)
+        except mezclas.FaltaParametro as error:
+            reject('PROVIDER_UNSUPPORTED','The package cannot represent the declared species: '+str(error),located+'.packageId')
+        if not isinstance(sistema.liq,unifac.LiquidoUNIFAC if activity=='activity' else mezclas.LiquidoIdeal):
+            reject('PROVIDER_UNSUPPORTED','The executed liquid '+type(sistema.liq).__name__+' is not the declared '+repr(model)+' model.',located+'.packageId')
+        try:
+            return chemistry.PackagePhase(sistema,'liquido',anchor=entry['anchor']),activity
+        except chemistry.ChemicalEquilibriumError as error:
+            reject(error.code,str(error),located+('.anchor' if error.code=='LIQUID_ANCHOR_REQUIRED' else '.species'))
+
+    def _provider_text(self):
+        if self.activity is None:
+            return 'ideal_gas provider'
+        return ('package '+self.declaration['packageId']+' liquid ('+self.provider.sistema.paquete.id+', '
+                +('activity model '+type(self.provider.sistema.liq).__name__ if self.activity=='activity' else 'ideal solution')
+                +', formation anchor '+self.provider.anchor+')')
+
+    def _form_text(self):
+        if self.activity is None:
+            return 'mu_i = mu_i0(T) + R T log(n_i P/(n P0))'
+        return 'mu_i = mu_i*(T,P) + R T log(n_i/n'+(' gamma_i)' if self.activity=='activity' else ')')
+
+    def _liquid_closure(self, system, key, value, i, x, p, mu, amounts):
+        """Match a recorded liquid mu_i to the executed package phase.
+
+        The provider executes mu_i = mu_i*(T,P) + R T ln(x_i gamma_i) with the
+        package's pure-liquid standard potential and, for an activity model,
+        its activity coefficient. With x_i = n_i/sum_k n_k, the recorded right
+        side minus R T log(x_i) must be exactly one standard-potential function
+        of time plus, for an activity model, R T log of one activity-coefficient
+        function of time, both unused elsewhere; nothing may depend on the
+        amounts or on pressure otherwise, and no constant offset may remain.
+        """
+        R=sp.Rational(str(chemistry.R));T=self.temperature
+        # d value/d x_i = R T (1/x_i - 1/n) names the relation's gas constant.
+        scale=sp.simplify(sp.diff(value,x[i])/(T*(1/x[i]-1/sum(x))))
+        if scale.is_number and sp.simplify(scale-R)!=0:
+            reject('reaction_gas_constant_mismatch','The chemical-potential relation must use the provider gas constant 8.314462618 J/(mol K).',key)
+        rest=sp.expand_log(value-R*T*sp.log(x[i]/sum(x)),force=True)
+        functions=list(rest.atoms(sp.core.function.AppliedUndef))
+        forbidden=[*mu,*amounts,*system.states,*system.algebraic_quantities]
+        used={f for k,fs in self.standard_functions.items() if k!=key for f in fs}
+        mismatch=lambda: reject('reaction_chemical_potential_provider_mismatch',
+            'The recorded relation is not the '+self._form_text()+' form executed by the declared package liquid '
+            '(pure_liquid_TP standard potential'+(' and activity coefficient' if self.activity=='activity' else '')+').',key)
+        if any(f.args!=(system.time,) or f in forbidden or f in used for f in functions):
+            mismatch()
+        standard=[f for f in functions if sp.simplify(sp.diff(rest,f)-1)==0]
+        gamma=[f for f in functions if f not in standard and sp.simplify(sp.diff(rest,f)*f-R*T)==0]
+        if len(standard)!=1 or len(gamma)!=(1 if self.activity=='activity' else 0) or len(functions)!=1+len(gamma):
+            mismatch()
+        remainder=sp.expand_log(rest-standard[0]-sum((R*T*sp.log(g) for g in gamma),sp.S.Zero),force=True)
+        if sp.simplify(remainder)!=0:
+            mismatch()
+        self.standard_functions[key]=(standard[0],*gamma)
+
     def virtual_condition(self, predicate):
-        """Discharged Model premises on an eliminated virtual coordinate only."""
+        """Discharged Model premises on an eliminated virtual coordinate, or
+        the log-argument premise of a matched liquid potential relation."""
+        provider_source=self._provider_premise(predicate)
+        if provider_source is not None:
+            return provider_source
         if not isinstance(predicate,(sp.Unequality,sp.Contains)):
             return None
         value=(si_magnitude(self.system._expand(predicate.lhs-predicate.rhs)).subs(self.system.parameter_values)
@@ -201,6 +302,50 @@ class ReactionBlock(NonlinearBlock):
                 return key
         return None
 
+    def _provider_premise(self, predicate):
+        """x_i gamma_i > 0 from substituting a matched liquid mu_i relation.
+
+        The activity coefficient is a provider function with no numerical
+        lowering of its own, so the premise cannot become a margin. It holds
+        wherever the provider executes: every state evaluation refuses a
+        nonpositive amount (reaction_domain), the certified extent box has
+        strictly positive amount bounds, and the package evaluates gamma_i as
+        exp(ln gamma_i). Admitted only when the premise is exactly a product of
+        positive constants, matched activity coefficients, species amounts and
+        their total; anything else stays an ordinary margin. Returns the
+        relation row that introduced the coefficient, or None.
+        """
+        if self.activity!='activity' or not isinstance(predicate,(sp.StrictGreaterThan,sp.StrictLessThan)):
+            return None
+        gammas={fs[1]:key for key,fs in self.standard_functions.items() if isinstance(fs,tuple) and len(fs)==2}
+        system=self.system
+        value=si_magnitude(system._expand(predicate.lhs-predicate.rhs)).subs(system.parameter_values)
+        if isinstance(predicate,sp.StrictLessThan):
+            value=-value
+        present=[g for g in value.atoms(sp.core.function.AppliedUndef) if g in gammas]
+        if len(present)!=1:
+            return None
+        total=sum(self.amounts,sp.S.Zero)
+        sign=1
+        numerator,denominator=sp.fraction(sp.together(value))
+        for side in (numerator,denominator):
+            for factor in sp.Mul.make_args(side):
+                base,exponent=factor.as_base_exp()
+                if not exponent.is_Integer:
+                    return None
+                if base.is_number:
+                    if not base.is_real or base==0:
+                        return None
+                    sign*=1 if base>0 or exponent%2==0 else -1
+                    continue
+                if base in gammas:
+                    continue
+                match=[s for s in (1,-1) for a in [*self.amounts,total] if sp.expand(base-s*a)==0]
+                if not match:
+                    return None
+                sign*=1 if match[0]>0 or exponent%2==0 else -1
+        return gammas[present[0]] if sign>0 else None
+
     def state(self,args):
         state=chemistry.evaluate_reactions(self.provider,np.asarray(self.nu,dtype=float),T=float(self.temperature),P=float(self.pressure),n=self.n_function(*args),phase_id=self.declaration['phaseId'],standard_state=self.declaration['standardState'])
         if not state['valid']:
@@ -223,7 +368,7 @@ class ReactionBlock(NonlinearBlock):
         self.extent_proof=proof
         return {'index':1,'determinant':'det((dg/dn) N)','determinantBounds':[str(v) for v in proof['determinantBounds']],
                 'proof':proof['method']+' Chemical-potential relations: '+str([self.potential_rows[i] for i in sorted(self.potential_rows)])
-                    +' executed by the ideal_gas provider. Provider fingerprints: '+str(proof['provider']['fingerprints'])+' '+self.caloric_limitation}
+                    +' executed by the '+self._provider_text()+'. Provider fingerprints: '+str(proof['provider']['fingerprints'])+' '+self.caloric_limitation}
 
     def is_consequence(self,expression):
         return sp.simplify(si_magnitude(expression).subs(self.system.parameter_values))==0
