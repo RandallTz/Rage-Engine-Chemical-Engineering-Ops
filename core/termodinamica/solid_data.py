@@ -28,7 +28,24 @@ Values are taken from the NIST Chemistry WebBook (Mask=4 and Mask=6 pages for ea
 """
 
 import math
+import numbers
 from dataclasses import dataclass, field
+
+
+def check_pressure(P, solid=None):
+    """Located rejection (cause `invalid_pressure`) of a pressure that is not a finite positive real number.
+    Every SLE property depends on P through dg_fus = ... + dv (P - P_m); with dv = 0 a NaN P would otherwise
+    propagate silently as NaN (A1 review SLE-1)."""
+    try:
+        ok = isinstance(P, numbers.Real) and not isinstance(P, bool) and math.isfinite(P) and P > 0.0
+    except TypeError:
+        ok = False
+    if not ok:
+        from core.mezclas import FueraDeAlcance
+        who = f" (solid {solid.name}, {solid.cas})" if solid is not None else ""
+        raise FueraDeAlcance("invalido", f"P = {P!r} Pa is not a finite positive pressure{who}.",
+                             cause="invalid_pressure", solid=solid.cas if solid is not None else None, P=P)
+    return float(P)
 
 
 @dataclass(frozen=True)
@@ -60,7 +77,10 @@ class SolidPure:
         """Melting temperature at P: root of dg_fus(T, P) = 0 nearest T_m (T_m itself when dv = 0), by Newton
         from T_m (d(dg_fus)/dT = -ds_fus). Located rejection (F9-R14) when an iterate leaves T > 0 or meets
         ds_fus <= 0, when Newton does not converge in 50 steps, or when the root lies below the record's T_min
-        (the record does not apply there). The record declares no pressure range for constant dv."""
+        (the record does not apply there). The record declares no pressure range for constant dv.
+        P must be a finite positive pressure in every case, also when dv = 0 makes T_m independent of P: a NaN
+        or non-positive P is rejected first with the located cause `invalid_pressure` (A1 review SLE-1)."""
+        check_pressure(P, self)
         if self.dv == 0.0 or P == self.P_m:
             return self.T_m
 
@@ -70,8 +90,6 @@ class SolidPure:
                                  f"{self.polymorph}) at P = {P:.6g} Pa from its record: {why}.", T_fuera=True,
                                  cause="melting_T_undefined", solid=self.cas, P=P)
 
-        if not (math.isfinite(P) and P > 0.0):
-            reject("P is not a positive pressure")
         T = self.T_m
         for _ in range(50):
             ds = self.ds_fus(T)
