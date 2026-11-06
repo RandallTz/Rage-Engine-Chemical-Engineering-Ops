@@ -132,7 +132,9 @@ if(process.argv.includes('--network-only')||process.argv.includes('--cstr-only')
   const temperatures=[];
   for(let j=1;j<=n;j++){
    const id=`${indexId}.stage.${j}`,a=results.dynamic.series.find(s=>s.propietarioId===id&&s.id.includes('.closure.')&&s.unidadSI==='K'),b=results.steady.series.find(s=>s.id===a.id);
-   assert.ok(Math.abs(a.valores.at(-1)-b.valores)<0.05);checks++;temperatures.push({stage:j,dynamic:a.valores.at(-1),steady:b.valores});
+   // CSTR HTTP review observed ~2e-9 K; 1e-7 K leaves a 50-fold margin.
+   const tolerance=reactor?1e-7:0.05;
+   assert.ok(Math.abs(a.valores.at(-1)-b.valores)<tolerance,`Stage ${j}: dynamic ${a.valores.at(-1)}, steady ${b.valores}, tolerance ${tolerance} K`);checks++;temperatures.push({stage:j,dynamic:a.valores.at(-1),steady:b.valores});
   }
   const profile=results.steady.indexedNetwork.profiles.find(p=>results.steady.series.find(s=>s.id===p.seriesId).unidadSI==='K');
   const layout={format:'rage.result-charts',version:1,charts:[{id:'stage-temperature',title:'Stage temperature',type:'xy',x:{kind:'axis',id:'j',unit:'1'},y:{unit:'K'},events:false,series:[{source:'current',id:profile.seriesId}]}]};
