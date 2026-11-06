@@ -4,6 +4,7 @@
 // Usage (from the repository root or from frontend/):
 //   node tools/ci/run_frontend_verifiers.mjs pure     # no server, no browser, no Python
 //   node tools/ci/run_frontend_verifiers.mjs python   # spawn Python (needs requirements.txt); slow
+//   node tools/ci/run_frontend_verifiers.mjs http     # need the API at NEXT_PUBLIC_API_URL
 //   node tools/ci/run_frontend_verifiers.mjs quarantine  # known failing: run non-blocking (continue-on-error)
 //
 // The groups live in tools/ci/frontend_verifiers_<group>.txt, one file name per
@@ -34,7 +35,7 @@ const entries = (name) => read(name).map((l) => {
   return { file, pre };
 });
 
-const groups =['pure', 'python', 'quarantine'];
+const groups =['pure', 'python', 'http', 'quarantine'];
 if (!groups.includes(group)) {
   console.error(`Usage: run_frontend_verifiers.mjs <${groups.join('|')}>`);
   process.exit(2);
