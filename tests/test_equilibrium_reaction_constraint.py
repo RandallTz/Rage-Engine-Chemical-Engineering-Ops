@@ -15,6 +15,7 @@ from equilibrium_reaction_inputs import author,SPECIES,NU
 @pytest.fixture(scope='module')
 def model():
     result=author()
+    Path('.tmp').mkdir(exist_ok=True)
     Path('.tmp/f5-equilibrium-model.json').write_text(json.dumps(result),encoding='utf-8')
     return result
 
