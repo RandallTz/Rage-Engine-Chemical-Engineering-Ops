@@ -19,3 +19,9 @@ verificar_unidades_motor.mjs          # 1
 verificar_workspace_handoffs.mjs      # 10
 verificar_equation_workbench.mjs :: ../tests/test_equation_workbench.py   # 620 together
 verificar_steady_state.mjs :: ../tests/test_f3_steady_state.py            # 204 together
+# Added 6 Nov 2026 (verifiers committed by the step-0 consolidation); prerequisites write their .tmp publications.
+verificar_template_record.mjs        # spawns tests/test_template_record.py --cases itself
+verificar_equilibrium_reactions.mjs :: ../tests/test_equilibrium_reaction_constraint.py
+verificar_indexed_workspace.mjs :: ../tests/test_indexed_execution_http.py
+verificar_inverse_steady.mjs :: ../tests/test_inverse_steady_http.py
+verificar_steady_transform.mjs :: ../tests/test_steady_transform.py
