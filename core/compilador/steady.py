@@ -145,6 +145,19 @@ class SteadySystem(DerivedGraph):
             self.fail('steady_invalid_selection', 'Select the time coordinate whose first derivatives are specialized.')
         self.unknowns = [self._quantity(key) for key in self.selection['unknowns']]
         self.states = [self._quantity(row['quantityId']) for row in self.selection['states']]
+        # Field rows get a located requires_discretization diagnostic (F7 deferred)
+        # before the nonspatial structure check, which keeps its own code.
+        from .derived import DerivedSystem
+        from core.mathematics.operators import field_coordinates, discretization_message
+        DerivedSystem._reject_spatial(self.graph, self.selection, self.states, self.time)
+        for index, (key, q) in enumerate(zip(self.selection['unknowns'], self.unknowns)):
+            coordinates = [str(c) for c in field_coordinates(q, self.time)]
+            if coordinates:
+                error = LoweringError('requires_discretization', discretization_message(
+                    {'fields': [str(q)], 'coordinates': coordinates, 'operators': []}))
+                error.diagnostics[0].update({'path': 'motores.derivedExecution.unknowns['+str(index)+']',
+                    'quantityId': key, 'coordinates': coordinates, 'fields': [str(q)], 'operators': [], 'deferredTo': 'F7'})
+                raise error
         if any(not isinstance(q, (sp.Symbol, sp.core.function.AppliedUndef)) or
                isinstance(q, sp.core.function.AppliedUndef) and q.args != (self.time,) for q in self.unknowns+self.states):
             self.fail('steady_unsupported_structure', 'Unknowns must be scalar or depend only on the selected time.')
