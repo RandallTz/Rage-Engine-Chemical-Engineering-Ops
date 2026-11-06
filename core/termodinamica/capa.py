@@ -252,14 +252,22 @@ def _cierre_cubico(modelo, v, n, especificacion):
         else:
             raise ValueError(f"especificación no admitida: {tipo}")
     except cubic_eos.CubicOutOfScope as e:
-        raise NoSoportado(f"paquete {CUBICO} en el volumen {v['id']}: {e}") from e
+        ns = NoSoportado(f"paquete {CUBICO} en el volumen {v['id']}: {e}")
+        ns.datos = {**getattr(e, "datos", {}), "volumenId": v["id"]}     # located cause (e.g. liquid_liquid_split)
+        raise ns from e
     ntot = float(nv.sum())
     presentes = {("vapor-1" if p["kind"] == "vapor" else "liquido-1"): p for p in st["phases"]
                  if p["n"] > TOL_PRESENTE * ntot}
+    # Absent candidate of one kind: the least tangent-plane minimum whose trial phase is of that kind, by the
+    # same phase-identification parameter that labels present phases (A1 review PR-4). Without a trial of that
+    # kind its tm is None, as for the other packages; a liquid-like trial never stands for the vapour candidate.
+    por_tipo = {}
     if len(st["phases"]) == 1:
-        otras = list(st["trials"])
-        tm_abs = min((t[1] for t in otras), default=None)
-        w_abs = min(otras, key=lambda t: t[1])[0] if otras else None
+        for w, tm in st["trials"]:
+            ph = eos.phase(st["T"], st["P"], w)
+            lab = cubic_flash._label_single(eos, st["T"], st["P"], w, ph["Z"])
+            if lab not in por_tipo or tm < por_tipo[lab][1]:
+                por_tipo[lab] = (w, tm)
     fases = []
     for k in candidatas(modelo, v["id"]):
         tipo_k = "vapor" if k.startswith("vapor") else "liquido"
@@ -270,7 +278,8 @@ def _cierre_cubico(modelo, v, n, especificacion):
                 comp[ids_c[i]] = float(f["x"][j])
             fases.append({"id": k, "tipo": tipo_k, "presente": True, "n": float(f["n"]), "beta": float(f["n"]) / ntot,
                           "composicion": comp, "tm": 0.0})
-        elif len(st["phases"]) == 1 and tm_abs is not None:
+        elif tipo_k in por_tipo:
+            w_abs, tm_abs = por_tipo[tipo_k]
             comp = {c: 0.0 for c in ids_c}
             for j, i in enumerate(idx):
                 comp[ids_c[i]] = float(w_abs[j])
