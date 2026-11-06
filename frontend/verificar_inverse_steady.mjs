@@ -51,12 +51,18 @@ const mutations=[
 ];
 for(const resign of [false,true])for(const mutate of mutations){const bad=structuredClone(live.result);mutate(bad);if(resign)bad.procedencia.steadyDiagnostics.resultSignature=steadyResultSignature(bad);assert.throws(()=>leerResultados(bad));checks++;}
 // An attacker can re-sign unkeyed fingerprints: semantic target/declaration checks must still reject.
-const bad=structuredClone(live.result),report=bad.procedencia.compilation;
-report.inverseSpecification.data[live.record.specifications[0].targetDataId].texto='.61';
-report.specificationSignature=steadySignature([report.inverseSpecification.record,report.inverseSpecification.data]);
-bad.procedencia.steadyDiagnostics.inverseSpecification.specificationSignature=report.specificationSignature;
-bad.procedencia.steadyDiagnostics.resultSignature=steadyResultSignature(bad);
-assert.throws(()=>leerResultados(bad));checks++;
+for(const [id,value] of [
+ [live.record.specifications[0].targetDataId,'.61'],
+ [live.record.specifications[0].residualScaleDataId,'.2'],
+ [live.record.freedInputs[0].upperDataId,'51'],
+]){
+ const bad=structuredClone(live.result),report=bad.procedencia.compilation;
+ report.inverseSpecification.data[id].texto=value;
+ report.specificationSignature=steadySignature([report.inverseSpecification.record,report.inverseSpecification.data]);
+ bad.procedencia.steadyDiagnostics.inverseSpecification.specificationSignature=report.specificationSignature;
+ bad.procedencia.steadyDiagnostics.resultSignature=steadyResultSignature(bad);
+ assert.throws(()=>leerResultados(bad),`Re-signed ${id} edit must be rejected`);checks++;
+}
 check(Math.abs(declaredInverseSI({texto:'25.2',unidad:'kmol/h'},'mol/s')-7)<1e-12,'Existing unit catalog validates molar conversions');
 assert.throws(()=>declaredInverseSI({texto:'300',unidad:'degC'},'K'));checks++;
 const source=structuredClone(live.model),data=Object.fromEntries(inverseDataIds(live.record).map(id=>[id,source.datos[id].declaracion]));
@@ -96,7 +102,13 @@ const quantities=Object.entries(live.names).map(([name,id])=>({id,name,input:nam
 const controls=renderToStaticMarkup(React.createElement(InverseControls,{model,quantities,disabled:false,change(){}}));
 for(const text of ['Target quantity 1','Input to free 1','Target value 1','Freed input seed 1','Freed input lower bound 1','Freed input upper bound 1','Specification residual scale 1','1 specifications','1 freed inputs'])check(controls.includes(text),'Existing Solve renders '+text);
 displayedModel={...model,resultado:wrapped};
-const Results=load(path.join(here,'app/motor/ResultadosHoja')).default;
+const {default:Results,PublishedChecks}=load(path.join(here,'app/motor/ResultadosHoja'));
+const checksHtml=renderToStaticMarkup(React.createElement(PublishedChecks,{checks:[
+ {id:'reactions.equilibrium_limit.cell',descripcion:'Equilibrium limit',valor:0.04,tolerancia:0.001},
+ {id:'mass.balance',descripcion:'Mass balance',valor:2,tolerancia:1},
+]}));
+check(checksHtml.includes('Equilibrium-limit diagnostics')&&checksHtml.includes('reactions.equilibrium_limit.cell · Equilibrium limit: 0.04 / reference tolerance 0.001 · Diagnostic'),'Above-tolerance equilibrium limit is a diagnostic');
+check(checksHtml.includes('mass.balance · Mass balance: 2 / tolerance 1 · Failed'),'A failed certificate remains failed');
 const html=renderToStaticMarkup(React.createElement(Results,{id:model.id}));
 const {default:AssessmentText}=load(path.join(here,'app/models/AssessmentText'));
 const {responseError}=load(path.join(here,'motores/modelo/assessment'));
