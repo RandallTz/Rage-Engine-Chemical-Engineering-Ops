@@ -3,8 +3,16 @@ Phase stability, flashes and saturation points of the Peng-Robinson mixture pack
 
 Both phases are the same function F(T, V, n) of core/termodinamica/cubic_eos.py; they differ only in the volume
 root. Every evaluation takes the root of least Gibbs energy for its own composition, so no phase label enters
-the physics. Labels are assigned afterwards: in a two-phase state the denser phase is the liquid; a single phase
-is labelled by the Venkatarathnam-Oellrich identification parameter (`PIP > 1` liquid-like).
+the physics. Labels are assigned afterwards, phase by phase, by the Venkatarathnam-Oellrich identification
+parameter (`PIP > 1` liquid-like) for a single phase. A certified split is published as vapour (less dense) +
+liquid (denser), as before, unless it is a liquid-liquid split (A1 review PR-1): both phases liquid-like by PIP AND
+the less dense phase itself dense, kappa = v / b <= KAPPA_LL kappa_c (the liquid-liquid density limit of
+cubic_critical, kappa_c = Z_c / Omega_b = 3.95). Such a split is rejected with `CubicOutOfScope` (cause
+`liquid_liquid_split`): the package has one vapour and one liquid candidate, so a liquid-liquid state is never
+published as vapour + liquid. PIP alone is not used for splits because the vapour's PIP passes through 1 near a
+gas-liquid critical point (methanol + water 0.3/0.7 at 581.0 K, 15.31-15.35 MPa, 0.5 K below its critical
+point: light-phase PIP 1.2-5.1 at kappa = 3.95), where the split is a genuine vapour + liquid (A1 repairs review
+R1).
 
 Tangent-plane distance on the layer's scale (per R T and per mole of trial phase, core/termodinamica/capa.py):
 
@@ -166,9 +174,19 @@ def split_TP(eos, T, P, z, w_trial):
     return beta, v / v.sum(), l / l.sum()
 
 
+def _kappa_ll():
+    """Reduced-volume limit v/b of a dense (liquid-liquid) phase, shared with cubic_critical (PR-2)."""
+    from core.termodinamica import cubic_critical
+    return cubic_critical.KAPPA_LL * cubic_critical.kappa_c()
+
+
+def _pip(eos, T, P, x, Z):
+    return float(eos.phase_identification(T, Z * R * T / P, x))
+
+
 def _label_single(eos, T, P, x, Z):
-    V = Z * R * T / P
-    return "liquido" if eos.phase_identification(T, V, x) > 1 else "vapor"
+    """Physical label of one phase: Venkatarathnam-Oellrich PIP > 1 liquid-like, otherwise vapour-like."""
+    return "liquido" if _pip(eos, T, P, x, Z) > 1 else "vapor"
 
 
 def flash_TP(eos, T, P, z):
@@ -198,38 +216,129 @@ def flash_TP(eos, T, P, z):
                               f"(mu {res_mu:.3g}, tm {tm_cert:.3g}); a third phase is outside this package.")
     a = eos.molar_props(T, P, y, pv["Z"])
     b = eos.molar_props(T, P, x, pl["Z"])
-    # denser phase is the liquid
+    # Order by density (less dense first). Density alone cannot tell a vapour from the lighter of two liquids
+    # (benzene + water at 320 K and 1 bar: PIP 11 and 14, kappa 1.1-1.2), so a split whose phases are both
+    # liquid-like AND whose lighter phase is dense is rejected as liquid-liquid (A1 review PR-1; density guard
+    # from the A1 repairs review R1, see the module docstring).
     if a["v"] < b["v"]:
         a, b, y, x, beta = b, a, x, y, 1 - beta
+    pip = [_pip(eos, T, P, y, a["Z"]), _pip(eos, T, P, x, b["Z"])]
+    kappa = [a["v"] / float(np.dot(y, eos.b)), b["v"] / float(np.dot(x, eos.b))]
+    if pip[0] > 1 and pip[1] > 1 and kappa[0] <= _kappa_ll():
+        raise CubicOutOfScope(
+            f"Certified two-phase state at T = {T:.6g} K, P = {P:.6g} Pa is a liquid-liquid split "
+            f"(phase-identification parameters {pip[0]:.4g} and {pip[1]:.4g}, > 1 liquid-like; reduced volumes "
+            f"v/b = {kappa[0]:.4g} and {kappa[1]:.4g} <= {_kappa_ll():.4g}): this package publishes only vapour + "
+            "liquid (candidates vapor-1, liquido-1); a liquid-liquid split needs a second liquid candidate, which "
+            "this package does not have.",
+            cause="liquid_liquid_split", T=T, P=P, z=zn.tolist(), compositions=[y.tolist(), x.tolist()],
+            Z=[a["Z"], b["Z"]], PIP=pip, kappa=kappa)
     return {"phases": [dict(kind="vapor", n=beta * ntot, x=y, **a), dict(kind="liquido", n=(1 - beta) * ntot,
                                                                           x=x, **b)],
             "tm_min": tm_cert, "mu_residual": res_mu, "trials": trials, "d": d}
+
+
+def _bracketed_root(f, lo, hi, what, state, **kw):
+    """brentq on [lo, hi] after checking the bracket; a state outside it is a located CubicOutOfScope
+    (cause `outside_bracket`, A1 review PR-4), never scipy's raw ValueError."""
+    flo, fhi = f(lo), f(hi)
+    if flo == 0.0:
+        return lo
+    if fhi == 0.0:
+        return hi
+    if not (math.isfinite(flo) and math.isfinite(fhi)) or flo * fhi > 0.0:
+        raise CubicOutOfScope(f"{what}: the specified state lies outside the searched bracket [{lo:.6g}, {hi:.6g}] "
+                              f"(residuals {flo:.6g} and {fhi:.6g} at its ends).", cause="outside_bracket",
+                              bracket=[lo, hi], residuals=[flo, fhi], **state)
+    return brentq(f, lo, hi, **kw)
+
+
+def _uv_T_window(g_at, lnPa, lnPb, lo, hi, state):
+    """[T_a, T_b] inside [lo, hi] at which the inner ln P problem of a UV flash has a root (see flash_UV)."""
+    def side(T):
+        g = g_at(T)
+        ga, gb = g(lnPa), g(lnPb)
+        if not (math.isfinite(ga) and math.isfinite(gb)):
+            raise CubicOutOfScope(f"UV flash: non-finite volume residual at T = {T:.6g} K.", cause="outside_bracket",
+                                  T=T, **state)
+        if ga < 0.0 and gb < 0.0:
+            return -1                    # V(P_min) < V: the state needs P < P_min, T too low
+        if ga > 0.0 and gb > 0.0:
+            return 1                     # V(P_max) > V: the state needs P > P_max, T too high
+        return 0
+    s_lo, s_hi = side(lo), side(hi)
+    if s_lo == 0 and s_hi == 0:
+        return lo, hi
+    grid = np.linspace(lo, hi, N_UV_SCAN)
+    sides = [s_lo] + [side(T) for T in grid[1:-1]] + [s_hi]
+    ev = [k for k, s in enumerate(sides) if s == 0]
+    if not ev:
+        raise CubicOutOfScope(
+            f"UV flash: no temperature in [{lo:.6g}, {hi:.6g}] K at which V = {state['V']:.6g} m3 is reached with P in "
+            f"[{math.exp(lnPa):.6g}, {math.exp(lnPb):.6g}] Pa (sides on a {N_UV_SCAN}-point grid: {sides}).",
+            cause="outside_bracket", bracket=[lo, hi], sides=sides, **state)
+
+    def refine(bad, good):
+        for _ in range(N_UV_BISECT):
+            mid = 0.5 * (bad + good)
+            if side(mid) == 0:
+                good = mid
+            else:
+                bad = mid
+        return good
+    ka, kb = ev[0], ev[-1]
+    Ta = float(grid[ka]) if ka == 0 else refine(float(grid[ka - 1]), float(grid[ka]))
+    Tb = float(grid[kb]) if kb == len(grid) - 1 else refine(float(grid[kb + 1]), float(grid[kb]))
+    return Ta, Tb
 
 
 def flash_PH(eos, P, H, z, T_bracket=None):
     z = np.asarray(z, dtype=float)
     lo, hi = T_bracket or (max(eos.T_range[0], 150.0), min(eos.T_range[1], 1000.0))
     f = lambda T: sum(p["n"] * p["h"] for p in flash_TP(eos, T, P, z)["phases"]) - H
-    T = brentq(f, lo, hi, xtol=1e-10, rtol=1e-14, maxiter=200)
+    T = _bracketed_root(f, lo, hi, "PH flash (T)", {"P": P, "H": H, "z": z.tolist()},
+                        xtol=1e-10, rtol=1e-14, maxiter=200)
     st = flash_TP(eos, T, P, z)
     st["T"], st["P"] = T, P
     return st
 
 
+N_UV_SCAN = 25           # T grid of the default UV bracket search
+N_UV_BISECT = 20         # bisections per end of the evaluable T window (grid step / 2^20, ~3e-5 K)
+
+
 def flash_UV(eos, U, V, z, T_bracket=None, P_bracket=(1e3, 5e7)):
-    """Rigid vessel: nested, P(T) from the volume at each T, then T from U. Two-phase V(P) is monotone."""
+    """Rigid vessel: nested, P(T) from the volume at each T, then T from U. Two-phase V(P) is monotone.
+
+    With an explicit T_bracket the outer search is brentq on it (located `outside_bracket` when U is outside).
+    With the default bracket (A1 repairs review R3), the outer search first finds the window of T at which the
+    volume V is reachable with P inside P_bracket: on an isochore P(T) increases with T, so at each T the inner
+    residual V(P) - V at the two P ends tells whether that T is too low (V(P_min) < V), too high (V(P_max) > V)
+    or evaluable. The evaluable window is located on a grid of N_UV_SCAN temperatures and its ends are refined by
+    bisection; brentq in T then runs inside that window. When both default ends are evaluable the window is the
+    default bracket itself, so the result equals the plain search."""
     z = np.asarray(z, dtype=float)
+    lnPa, lnPb = math.log(P_bracket[0]), math.log(P_bracket[1])
+
+    def g_at(T):
+        return lambda lnP: sum(p["n"] * p["v"] for p in flash_TP(eos, T, math.exp(lnP), z)["phases"]) - V
 
     def at_T(T):
-        g = lambda lnP: sum(p["n"] * p["v"] for p in flash_TP(eos, T, math.exp(lnP), z)["phases"]) - V
-        lnP = brentq(g, math.log(P_bracket[0]), math.log(P_bracket[1]), xtol=1e-13, maxiter=200)
+        g = g_at(T)
+        lnP = _bracketed_root(g, lnPa, lnPb, f"UV flash (ln P at T = {T:.6g} K)", {"T": T, "V": V, "z": z.tolist()},
+                              xtol=1e-13, maxiter=200)
         return flash_TP(eos, T, math.exp(lnP), z), math.exp(lnP)
-    lo, hi = T_bracket or (max(eos.T_range[0], 150.0), min(eos.T_range[1], 1000.0))
 
     def f(T):
         st, P = at_T(T)
         return sum(p["n"] * p["u"] for p in st["phases"]) - U
-    T = brentq(f, lo, hi, xtol=1e-10, rtol=1e-14, maxiter=200)
+    if T_bracket is not None:
+        lo, hi = T_bracket
+    else:
+        lo, hi = _uv_T_window(g_at, lnPa, lnPb, max(eos.T_range[0], 150.0), min(eos.T_range[1], 1000.0),
+                              {"U": U, "V": V, "z": z.tolist(), "P_bracket": list(P_bracket)})
+    T = _bracketed_root(f, lo, hi, "UV flash (T)", {"U": U, "V": V, "z": z.tolist()},
+                        xtol=1e-10, rtol=1e-14, maxiter=200)
     st, P = at_T(T)
     st["T"], st["P"] = T, P
     return st
