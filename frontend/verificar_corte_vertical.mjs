@@ -10,9 +10,14 @@ import { isDeepStrictEqual } from "node:util";
 import ts from "typescript";
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url)), RAIZ = path.resolve(AQUI, "..");
+// Relative imports are loaded too (the results reader imports its indexed-network reader); others stay stubs.
+const cache = new Map();
 const cargar = ruta => {
+  if (cache.has(ruta)) return cache.get(ruta).exports;
   const js = ts.transpileModule(fs.readFileSync(ruta + ".ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-  const m = { exports: {} }; new Function("exports", "module", "require", js)(m.exports, m, () => ({})); return m.exports;
+  const m = { exports: {} }; cache.set(ruta, m);
+  const requerir = spec => spec.startsWith(".") ? cargar(path.resolve(path.dirname(ruta), spec)) : ({});
+  new Function("exports", "module", "require", js)(m.exports, m, requerir); return m.exports;
 };
 const { leerResultados } = cargar(path.join(AQUI, "motores/resultados/lector"));
 const { datosGrafica, especificacionesPorOmision } = cargar(path.join(AQUI, "componentes/graficas/datos"));
@@ -31,6 +36,16 @@ const ejemplo = JSON.parse(fs.readFileSync(path.join(RAIZ, "docs/ejemplos/modelo
 let n = 0;
 const ok = (v, m) => { n++; assert.ok(v, m); };
 ok(validacion.relaciones.some(x => x.id === "equilibrio.A") && validacion.variables.includes("volumen.A.fase.vapor-1.tm"), "POST /modelo/validar: relaciones y variables de la capa, con el vapor desde el principio");
+// Report where a fresh result differs from the published one (platform floats show up here first).
+const differences = (a, b, at = "$", out = []) => {
+  if (out.length >= 8) return out;
+  if (a && b && typeof a === "object" && typeof b === "object" && Array.isArray(a) === Array.isArray(b)) {
+    const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+    for (const key of keys) differences(a[key], b[key], `${at}.${key}`, out);
+  } else if (!isDeepStrictEqual(a, b)) out.push(`${at}: fresh ${JSON.stringify(a)} vs published ${JSON.stringify(b)}`);
+  return out;
+};
+if (!isDeepStrictEqual(resultados, ejemplo)) console.error(differences(resultados, ejemplo).join("\n"));
 ok(isDeepStrictEqual(resultados, ejemplo), "POST /modelo/resolver: el mismo conjunto que la prueba del compilador");
 leerResultados(resultados); n++;
 
