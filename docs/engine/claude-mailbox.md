@@ -9,27 +9,9 @@ This is the standing channel between the user's two Claude accounts, **claude-a*
 
 ## Open
 
-- **mb-20261107-2** · 7 November 2026 · from Claude (autoprompt session) · to both · *Autonomous loops recorded*
-  The user decided `dec-autonomous-loops`: runs pick work by codex-queue State tokens and this mailbox, with one item per fresh session. See `tools/roadmap_board/README.md#autonomous-loops`. All nine queue items are now `review pending`, so Claude reviews are the bottleneck that unblocks Codex. Delete this entry once read by the account that continues.
-
-- **mb-20261107-1** · 7 November 2026 · from claude-b · to claude-a · *Full handoff: claude-b stops, claude-a continues all lanes*
-  claude-b reached its usage limit. The user continues with claude-a, which takes over every claude-b item below (user decision, 7 November 2026). Earlier entries mb-20261105-1..3 are superseded: all of that work is committed on `fase-a-adopcion`.
-  - **Read first:** the roadmap "Progress percentages" section (`dec-progress-table`; total about 77%, updated by every delivery that changes the board) and the Demo 0.2 section. Read the board decisions `dec-standing-commit-permission` (integrate, commit file by file and push reviewed and tested work without asking; PRs and main need the user), `dec-claude-absorbs-codex`, `dec-nonspatial-100-pde-ready`, `dec-distribution-download-first` and `dec-progress-table`. The landing-page requirements are recorded in the roadmap; build nothing before Demo 0.2.
-  - **Integration pattern:** commit in the session worktree file by file, cherry-pick into the main checkout, and verify in a clean detached worktree with a `frontend/node_modules` junction (remove it with `cmd /c rmdir` before `git worktree remove`). Then push. The main checkout holds other agents' uncommitted hunks in the roadmap, board, Checklist and `datos.ts`. Stage only your own lines by writing a HEAD-based blob (`git hash-object -w` plus `git update-index --cacheinfo`) and run a plain `git commit`. Never use `git commit -- <path>`, which takes the whole working file. Split working files on LF and strip CR, because they mix CRLF and LF. In a clean checkout, `tsc` reports only the known missing Next `LayoutProps` type.
-  - **Ready to integrate (reviewed):**
-    - (a) DONE 7 November 2026: the Codex integrator and Newton declared-domain guards are committed (through afb3bed) after review and a clean-checkout check (15 tests and the fast tier). The three wording repairs in `.claude/handoff-verdicts/verdict-declared-domains.md` remain optional.
-    - (b) DONE 7 November 2026: the custom-relation panel is committed (through d579f23) after a re-check. http/https URL check, verifier renamed to verify_custom_relations.mjs. Next for Codex: declare_spatial_domain support in equationWorkbench.ts.
-  - **Uncommitted, needs an independent review:**
-    - (c) PDE-2 still awaits its independent review (worktree frosty-goldberg-0c866a, report pde-2-report.md); not started at claude-b close.
-    - (d) DONE 7 November 2026: `demo-02-column` is committed (through 8d5a08f) after review, approve with repairs. R1 is applied: the document was renamed `column.index-set.json`. Follow-ups: R2, `stop_from_exception` and stage-scoped guard keys in `IndexedDerivedSystem` (see the roadmap); the reactive stage stays a pending extension. `demo-02` can now be activated; Codex prompt 6 (demo script and smoke verifier) was handed to the user.
-  - **Still in progress (claude-b sessions, now stopped):**
-    - (e) IN PROGRESS at claude-b close (7 November 2026): Demo 0.2 physics repairs applied in worktree interesting-swanson-797545 (branch claude/interesting-swanson-797545), uncommitted. Drum, momentum, network and fast-tier suites pass. CR-1 makes the CSTR path stiff (3.8 ms flow time), so the CSTR and flowsheet dynamic/steady references were switched to LSODA; those three comparisons were still running. The report status section in that worktree root is current: finish the runs, check LSODA against a tight Radau/mpmath case, then independent review and integration.
-    - (f) DONE 7 November 2026: F8b PSRK committed (3f7baf7..86898e8) after review (approve with repairs R1-R4, applied). Next: capa package entry for PSRK; slow-tier CI assignment of tests/test_psrk_mixture.py. The Rust analysis conclusions are recorded in the roadmap (F3, "Performance and native acceleration: analysis").
-    - (g) A read-only Rust hybrid-performance analysis for the user (no code), which publishes an Artifact on the claude-b account. Its worktree `focused-noether-29d063` has nothing to keep. If the user wants it on claude-a, rerun it there from the current tip.
-  - **Codex:**
-    - Pytest-tier CI files are uncommitted and not yet reported: `run_tests.py`, `tools/ci/check_tiers.py`, `tools/ci/test_tiers.json`, `.github/workflows/validacion.yml`. Review them when the user pastes the Codex report.
-    - Prompt 6 (Demo 0.2 demo script and smoke verifier) waits for the column. Import gives a new model id and clears Results by design, so its test is "import keeps the diagram, topology and data, and re-solving reproduces the results".
-    - Queued for Codex: `declare_spatial_domain` support in `equationWorkbench.ts` once (b) is committed.
-    - Remind Codex that everything new is in English, including file names (`verify_*.mjs`).
-  - **Noise, do not commit:** `frontend/tsconfig.json` (rewritten by a dev server), `frontend/.next-*`, `docs/ejemplos/modelo-comun/*.json` (last-digit drift from the fast tier), `.claude/launch.json`.
-  - **Order after that:** integrate (a) and (b). Review and integrate (d) and (e), which closes the Demo 0.2 review items. Then do the Demo 0.2 release: rebuild the executable with `/actualizar-ejecutable`, write the demo script, tag. Then review and integrate (c) and (f), then PDE-3.
+- **mb-20261107-1** · 7 November 2026 · from claude-b · to claude-a · *Handoff, pending items only* (context: roadmap "Parallel plan" and Demo 0.2)
+  - (e) Demo 0.2 physics repairs: uncommitted in worktree `interesting-swanson-797545`; read `.tmp/runs/{C,D,lsoda_check}.log` and report section 0, finish verification, then independent review and integration.
+  - (c) PDE-2: uncommitted in worktree `frosty-goldberg-0c866a` (`pde-2-report.md`); independent review not started.
+  - Codex CI files uncommitted in the main checkout: `run_tests.py`, `tools/ci/check_tiers.py`, `tools/ci/test_tiers.json`, `.github/workflows/validacion.yml`; review before committing.
+  - Codex prompt 6 (Demo 0.2 demo script and smoke verifier) is unblocked; acceptance is in the roadmap.
+  - Order: (e); Demo 0.2 release (`/actualizar-ejecutable`, demo script, tag); (c); PDE-3.
