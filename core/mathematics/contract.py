@@ -9,8 +9,13 @@ def keys(value,required,optional=()):
 
 
 FORMAT='rage.equation-workbench'
-RULES=('combine','substitute','isolate','expand','factor','differentiate','integrate','volume_integrate','gauss','reynolds','zero','apply_zero','declare_symbol','declare_function','change_dependencies','declare_relation','multiply','divide','state_variation','declare_domain','declare_spatial_domain')
+RULES=('combine','substitute','isolate','expand','factor','differentiate','integrate','volume_integrate','gauss','reynolds','zero','apply_zero','declare_symbol','declare_function','change_dependencies','declare_relation','multiply','divide','state_variation','declare_domain','declare_spatial_domain','restrict_to_boundary','expand_normal_derivative','declare_condition')
 SPATIAL_FIELDS=('chart','coordinates','intervals','parts')
+BOUNDARY_FIELDS=('boundary','form')
+CONDITION_FIELDS=('conditionKind','coefficient','potential','time','instant','instantUnit','neighborBoundary','neighborSymbol')
+CONDITION_KINDS=('initial','dirichlet','neumann','robin','continuity')
+CONDITION_FORMS={'initial':('value',),'dirichlet':('value',),'neumann':('gradient','flux'),'robin':('gradient','flux'),'continuity':('value','flux')}
+
 
 
 def read_spatial_domain(op):
@@ -35,12 +40,51 @@ def read_spatial_domain(op):
             raise JournalError('A boundary part needs a name, an active coordinate and its lower or upper end.')
 
 
+def read_boundary_operation(op):
+    """Shape of the additive PDE-2 rules (6 November 2026): boundary restriction,
+    normal-derivative expansion and typed initial/boundary conditions."""
+    for field in ('boundary','neighborBoundary'):
+        if field in op and (not isinstance(op[field],str) or not re.fullmatch(r'[A-Za-z][A-Za-z0-9_]{0,40}',op[field])):
+            raise JournalError('Name a declared boundary part of the spatial domain.')
+    for field in ('potential','time','neighborSymbol','coefficient','instant','instantUnit'):
+        if field in op and (not isinstance(op[field],str) or not op[field].strip() or len(op[field])>(80 if field in ('instant','instantUnit') else 500)):
+            raise JournalError('Invalid boundary condition field: '+field+'.')
+    if op['kind']=='restrict_to_boundary':
+        if op.get('form') not in ('value','flux'):raise JournalError('Restrict to the boundary by value (trace) or by outward normal flux.')
+        return
+    if op['kind']!='declare_condition':return
+    kind=op.get('conditionKind')
+    if kind not in CONDITION_KINDS:raise JournalError('Classify the condition as initial, Dirichlet, Neumann, Robin or continuity.')
+    form=op.get('form',CONDITION_FORMS[kind][0])
+    if form not in CONDITION_FORMS[kind]:
+        if kind=='initial':raise JournalError('An initial condition restricts the field in time; it has no outward normal. Select a boundary part for a normal-derivative or flux condition.')
+        raise JournalError('A '+kind+' condition does not accept the '+str(form)+' form.')
+    if kind!='initial' and 'boundary' not in op:
+        raise JournalError('A '+kind+' condition needs an oriented boundary part: without it the outward normal is missing.')
+    allowed={'initial':('time','instant','instantUnit'),'dirichlet':(),'neumann':(),'robin':('coefficient','potential'),
+             'continuity':('neighborBoundary','neighborSymbol')}[kind]
+    if any(field in op and field not in allowed for field in CONDITION_FIELDS if field!='conditionKind'):
+        raise JournalError('This field does not belong to a '+kind+' condition.')
+    if kind=='initial' and ('boundary' in op or 'time' not in op or 'instant' not in op):
+        raise JournalError('An initial condition names its time coordinate and instant, and no boundary part.')
+    if 'instantUnit' in op and 'instant' not in op:raise JournalError('An instant unit needs its instant.')
+    if kind=='robin' and 'coefficient' not in op:raise JournalError('A Robin condition needs its exchange coefficient.')
+    if kind=='robin' and (form=='flux')!=('potential' in op):raise JournalError('A flux-form Robin condition names the potential field whose trace drives the exchange; the gradient form does not.')
+    if kind=='continuity':
+        if any(field not in op for field in ('neighborBoundary','neighborSymbol')) or 'right' in op:
+            raise JournalError('A continuity condition names the neighbouring boundary part and field, and no prescribed value.')
+        if len(op.get('domains',[]))!=2:raise JournalError('A continuity condition joins boundary parts of two declared spatial domains.')
+    else:
+        if 'right' not in op:raise JournalError('A '+kind+' condition needs its prescribed value.')
+        if len(op.get('domains',[]))!=1:raise JournalError('Select exactly one declared spatial domain for this condition.')
+
+
 def read_definition(value):
     keys(value,['format','version','operations','cursor'])
     if value['format']!=FORMAT or type(value['version']) is not int or value['version']!=1:raise JournalError('Unsupported equation workbench version.')
     if not isinstance(value['operations'],list) or len(value['operations'])>400 or type(value['cursor']) is not int or not 0<=value['cursor']<=len(value['operations']):raise JournalError('Invalid equation operation history cursor.')
     for op in value['operations']:
-        keys(op,['kind','family'],['sources','symbol','relation','name','unit','left','right','reason','dependencies','relationKind','sourceSignatures','domain','domains','lower','upper','lowerOpen','upperOpen','endpointUnit','source',*SPATIAL_FIELDS])
+        keys(op,['kind','family'],['sources','symbol','relation','name','unit','left','right','reason','dependencies','relationKind','sourceSignatures','domain','domains','lower','upper','lowerOpen','upperOpen','endpointUnit','source',*SPATIAL_FIELDS,*BOUNDARY_FIELDS,*CONDITION_FIELDS])
         if op['kind'] not in RULES or not isinstance(op['family'],str) or not op['family'].strip() or len(op['family'])>80:raise JournalError('Unknown equation operation or family.')
         for k in ['symbol','relation','name','unit','left','right','reason','endpointUnit']:
             if k in op and (not isinstance(op[k],str) or not op[k].strip() or len(op[k])>500):raise JournalError('Invalid equation operation text.')
@@ -63,9 +107,13 @@ def read_definition(value):
         if 'endpointUnit' in op and op.get('domain')!='interval':raise JournalError('Endpoint units belong only to interval declarations.')
         if any(field in op for field in SPATIAL_FIELDS) and op['kind']!='declare_spatial_domain':raise JournalError('Chart, coordinates, intervals and boundary parts belong only to spatial domain declarations.')
         if op['kind']=='declare_spatial_domain' and 'reason' in op and 'chart' in op and all(field in op for field in SPATIAL_FIELDS):read_spatial_domain(op)
+        if any(field in op for field in BOUNDARY_FIELDS) and op['kind'] not in ('restrict_to_boundary','declare_condition'):raise JournalError('Boundary parts and restriction forms belong only to boundary restrictions and conditions.')
+        if any(field in op for field in CONDITION_FIELDS) and op['kind']!='declare_condition':raise JournalError('Condition fields belong only to typed condition declarations.')
+        if op['kind'] in ('restrict_to_boundary','expand_normal_derivative') and 'domains' in op and len(op['domains'])!=1:raise JournalError('Select exactly one declared spatial domain.')
+        if op['kind'] in ('restrict_to_boundary','declare_condition'):read_boundary_operation(op)
         if op['kind']=='volume_integrate' and 'domains' in op and (not isinstance(op['domains'],list) or len(op['domains'])!=1 or not isinstance(op['domains'][0],str) or not op['domains'][0].strip()):raise JournalError('Select exactly one declared spatial domain for the volume integral.')
-        if 'domains' in op and (op['kind'] not in ('isolate','substitute','volume_integrate','declare_relation') or not isinstance(op['domains'],list) or not op['domains'] or len(op['domains'])>24 or any(not isinstance(s,str) or not s.strip() for s in op['domains']) or len(set(op['domains']))!=len(op['domains'])):raise JournalError('Select distinct recorded domain conditions (at most twenty-four).')
-        required={'state_variation':['sources','symbol','right','reason'],'declare_domain':['sources','symbol','domain','reason'],'declare_spatial_domain':['sources','chart','coordinates','intervals','parts','reason'],'combine':['sources'],'substitute':['sources','relation','symbol'],'isolate':['sources','symbol'],'expand':['sources'],'factor':['sources'],'differentiate':['sources','symbol'],'integrate':['sources','symbol','name'],'volume_integrate':['sources'],'gauss':['sources'],'reynolds':['sources'],'zero':['sources','symbol','reason'],'apply_zero':['sources','symbol','reason'],'declare_symbol':['name','unit'],'declare_function':['name','unit','dependencies'],'change_dependencies':['sources','symbol','dependencies','reason'],'declare_relation':['left','right','reason'],'multiply':['sources','right'],'divide':['sources','right']}[op['kind']]
+        if 'domains' in op and (op['kind'] not in ('isolate','substitute','volume_integrate','declare_relation','restrict_to_boundary','expand_normal_derivative','declare_condition') or not isinstance(op['domains'],list) or not op['domains'] or len(op['domains'])>24 or any(not isinstance(s,str) or not s.strip() for s in op['domains']) or len(set(op['domains']))!=len(op['domains'])):raise JournalError('Select distinct recorded domain conditions (at most twenty-four).')
+        required={'state_variation':['sources','symbol','right','reason'],'declare_domain':['sources','symbol','domain','reason'],'declare_spatial_domain':['sources','chart','coordinates','intervals','parts','reason'],'combine':['sources'],'substitute':['sources','relation','symbol'],'isolate':['sources','symbol'],'expand':['sources'],'factor':['sources'],'differentiate':['sources','symbol'],'integrate':['sources','symbol','name'],'volume_integrate':['sources'],'gauss':['sources'],'reynolds':['sources'],'zero':['sources','symbol','reason'],'apply_zero':['sources','symbol','reason'],'declare_symbol':['name','unit'],'declare_function':['name','unit','dependencies'],'change_dependencies':['sources','symbol','dependencies','reason'],'declare_relation':['left','right','reason'],'restrict_to_boundary':['sources','domains','boundary','form'],'expand_normal_derivative':['sources','domains'],'declare_condition':['sources','domains','conditionKind','symbol','reason'],'multiply':['sources','right'],'divide':['sources','right']}[op['kind']]
         if any(k not in op for k in required):raise JournalError('The equation operation is missing its inputs.')
         if op['kind']!='combine' and 'sources' in op and len(op['sources'])!=1:raise JournalError('This operation acts on one selected equation.')
         if 'sourceSignatures' in op:

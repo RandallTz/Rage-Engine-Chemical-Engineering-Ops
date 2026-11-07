@@ -64,6 +64,137 @@ class StateDifferential(sp.Function):
 
 
 
+# --- Boundary restriction operators (PDE-2, 6 November 2026) -------------------
+# A boundary part of a declared spatial domain (PDE-1) is the level set
+# coordinate = point (SI) with an outward unit normal sign*e_coordinate. These
+# operators restrict expressions to that set; they never discretize. They are
+# pointwise, so they distribute over sums and products, pass through factors
+# independent of the restricted coordinate, and commute with derivatives along
+# the other coordinates.
+
+def _boundary_arguments(coordinate,point,sign=None):
+    if not isinstance(coordinate,sp.Symbol):raise TypeError('A boundary restriction binds one coordinate symbol.')
+    point=sp.sympify(point)
+    if not point.is_number or point.is_real is not True:raise TypeError('A boundary restriction needs a real numeric SI coordinate value.')
+    if sign is not None and sign not in (sp.S.One,sp.S.NegativeOne):raise TypeError('The outward normal sign is +1 or -1.')
+
+
+def _depends_on(expression,coordinate):
+    return coordinate in expression.free_symbols
+
+
+class BoundaryTrace(sp.Function):
+    """Restriction of a scalar expression to coordinate = point.
+
+    A field u(x,t) traced on x = 0 is kept as the typed operator, not as u(0,t),
+    so the restricted field keeps its identity for substitution and detection.
+    The same operator restricts in time for initial conditions.
+    """
+    nargs=3
+
+    @classmethod
+    def eval(cls,expression,coordinate,point):
+        _boundary_arguments(coordinate,point)
+        if not _depends_on(expression,coordinate):return expression
+        if expression==coordinate:return point
+        if expression.is_Add:return sp.Add(*(cls(term,coordinate,point) for term in expression.args))
+        if expression.is_Mul:return sp.Mul(*(cls(term,coordinate,point) for term in expression.args))
+        if expression.is_Pow and not _depends_on(expression.exp,coordinate):return cls(expression.base,coordinate,point)**expression.exp
+        if expression.func in (sp.exp,sp.log,sp.sin,sp.cos,sp.tan,sp.Abs):
+            return expression.func(*(cls(argument,coordinate,point) for argument in expression.args))
+        return None
+
+    @property
+    def free_symbols(self):
+        expression,coordinate,point=self.args
+        return (expression.free_symbols-{coordinate})|point.free_symbols
+
+    def _eval_derivative(self,symbol):
+        expression,coordinate,point=self.args
+        if symbol==coordinate:return sp.S.Zero
+        return type(self)(sp.diff(expression,symbol),coordinate,point)
+
+    def _latex(self,printer):
+        expression,coordinate,point=self.args
+        return r'\left.'+printer._print(expression)+r'\right|_{'+printer._print(coordinate)+'='+printer._print(point)+'}'
+
+
+class NormalDerivative(sp.Function):
+    """Outward normal derivative n.grad(u) on the boundary part coordinate = point.
+
+    Arguments: field, coordinate, point (SI) and the outward normal sign. Only
+    factors independent of the coordinate leave the operator; its expansion
+    in the chart is a separate recorded identity (expand_normal_derivative).
+    """
+    nargs=4
+
+    @classmethod
+    def eval(cls,expression,coordinate,point,sign):
+        _boundary_arguments(coordinate,point,sign)
+        if not _depends_on(expression,coordinate):return sp.S.Zero
+        if expression.is_Add:return sp.Add(*(cls(term,coordinate,point,sign) for term in expression.args))
+        if expression.is_Mul:
+            constant,dependent=expression.as_independent(coordinate,as_Add=False)
+            if constant!=1:return constant*cls(dependent,coordinate,point,sign)
+        return None
+
+    @property
+    def free_symbols(self):
+        expression,coordinate,point,sign=self.args
+        return (expression.free_symbols-{coordinate})|point.free_symbols
+
+    def _eval_derivative(self,symbol):
+        expression,coordinate,point,sign=self.args
+        if symbol==coordinate:return sp.S.Zero
+        return type(self)(sp.diff(expression,symbol),coordinate,point,sign)
+
+    def _latex(self,printer):
+        expression,coordinate,point,sign=self.args
+        return r'\left.\frac{\partial '+printer.parenthesize(expression,1000)+r'}{\partial n}\right|_{'+printer._print(coordinate)+'='+printer._print(point)+'}'
+
+
+class NormalComponent(sp.Function):
+    """Outward normal component n.v of a vector expression on a boundary part.
+
+    n.(a grad u) = trace(a) du/dn: the gradient factor is the vector and the
+    other factors are traced scalars. A vector quantity without a gradient (a
+    flux field) keeps its typed normal component for later substitution.
+    """
+    nargs=4
+
+    @classmethod
+    def eval(cls,expression,coordinate,point,sign):
+        _boundary_arguments(coordinate,point,sign)
+        if expression==0:return sp.S.Zero
+        if expression.is_Add:return sp.Add(*(cls(term,coordinate,point,sign) for term in expression.args))
+        if isinstance(expression,Gradient):return NormalDerivative(expression.args[0],coordinate,point,sign)
+        if expression.is_Mul:
+            gradients=[factor for factor in expression.args if isinstance(factor,Gradient)]
+            if len(gradients)==1:
+                scalar=sp.Mul(*(factor for factor in expression.args if factor is not gradients[0]))
+                return BoundaryTrace(scalar,coordinate,point)*NormalDerivative(gradients[0].args[0],coordinate,point,sign)
+            constant,dependent=expression.as_independent(coordinate,as_Add=False)
+            if constant!=1 and not gradients:return constant*cls(dependent,coordinate,point,sign)
+        return None
+
+    @property
+    def free_symbols(self):
+        expression,coordinate,point,sign=self.args
+        return (expression.free_symbols-{coordinate})|point.free_symbols
+
+    def _eval_derivative(self,symbol):
+        expression,coordinate,point,sign=self.args
+        if symbol==coordinate:return sp.S.Zero
+        return type(self)(sp.diff(expression,symbol),coordinate,point,sign)
+
+    def _latex(self,printer):
+        expression,coordinate,point,sign=self.args
+        return r'\left.\mathbf n\cdot'+printer.parenthesize(expression,1000)+r'\right|_{'+printer._print(coordinate)+'='+printer._print(point)+'}'
+
+
+BOUNDARY_OPERATORS=(BoundaryTrace,NormalDerivative,NormalComponent)
+
+
 # --- Spatial content detection (PDE-0, 5 November 2026) -------------------------
 # A field equation keeps spatial coordinates as arguments, derivatives with
 # respect to them, or unexpanded divergence/gradient operators. Integrated
@@ -95,7 +226,7 @@ def spatial_content(expression,time=None,declared=()):
     def visit(node):
         nonlocal derivatives
         if isinstance(node,(VolumeIntegral,BoundaryFlux)):return
-        if isinstance(node,(Divergence,Gradient)):operators.add(type(node).__name__)
+        if isinstance(node,(Divergence,Gradient,*BOUNDARY_OPERATORS)):operators.add(type(node).__name__)
         if isinstance(node,sp.Derivative):
             spatial=[v for v,_ in node.variable_count if is_coordinate(v,time,declared)]
             if spatial:derivatives=True;coordinates.update(spatial)

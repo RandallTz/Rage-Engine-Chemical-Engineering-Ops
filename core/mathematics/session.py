@@ -220,6 +220,17 @@ def replay_operations(source,selected,owners,declared_units,definition,*,require
                       predicates=tuple(graph.domains[domain_id].expression for domain_id in domain_ids))
             graph.nodes[key].source=copy.deepcopy(source)
             blocking=True
+        elif kind in ('restrict_to_boundary','expand_normal_derivative','declare_condition'):
+            # PDE-2 (6 November 2026): boundary trace, normal derivative and typed
+            # conditions on a declared spatial domain; deduction only, never executed.
+            from . import boundary
+            if kind=='restrict_to_boundary':
+                boundary.restrict_to_boundary(graph,key,sources[0],op['domains'][0],op['boundary'],op['form'],op['family'])
+            elif kind=='expand_normal_derivative':
+                _,identities=boundary.expand_normal_derivative(graph,key,sources[0],op['domains'][0],op['family'])
+                for identity in identities:locations[identity]=locations.get(sources[0],'system')
+            else:
+                boundary.declare_condition(graph,key,op,quantities,units,_parse,_dimension,op['family']);blocking=True
         elif kind in ('multiply','divide'):
             conditions=[];factor=_parse(op['right'],quantities,conditions,units);_dimension(factor,units)
             if factor.is_zero is True:raise JournalError('Scaling by zero would destroy the equation. Select a nonzero factor.')
@@ -367,7 +378,7 @@ def replay_operations(source,selected,owners,declared_units,definition,*,require
             locations[key]=owners.pop() if len(owners)==1 else 'system'
             # Consequences supplement their premises; they do not silently
             # replace a physical law or add independent dynamic states.
-            if kind not in ('zero','declare_relation'):graph.nodes[key].dependent=True
+            if kind not in ('zero','declare_relation','declare_condition'):graph.nodes[key].dependent=True
         created=tuple(id_ for id_ in graph.nodes if id_ not in previous)
         after=tuple((id_,graph.nodes[id_].equation) for id_ in created)
         conditions=tuple(dict.fromkeys(condition for id_ in created for condition in graph.conditions_for(id_)))

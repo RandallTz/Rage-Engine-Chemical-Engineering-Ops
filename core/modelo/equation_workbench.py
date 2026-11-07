@@ -366,9 +366,9 @@ def edit(model,action,*,unbound=False):
         if 'operation' not in action:raise JournalError('An equation operation is required.')
         operation=copy.deepcopy(action['operation'])
         read_operation_definition({'format':FORMAT,'version':1,'operations':[operation],'cursor':1})
-        if operation.get('kind') in ('declare_relation','multiply','divide'):
+        if operation.get('kind') in ('declare_relation','multiply','divide','declare_condition'):
             aliases={q['input']:q['id'] for q in describe(model,definition,unbound=unbound)['quantities']}
-            for side in ('left','right'):
+            for side in ('left','right','coefficient'):
                 if isinstance(operation.get(side),str):operation[side]=re.sub(r'\b[A-Za-z][A-Za-z0-9_]*\b',lambda match:aliases.get(match[0],match[0]),operation[side])
         action={**action,'operation':operation}
     graph,final,locations,units=_source_graph(model,unbound=unbound)

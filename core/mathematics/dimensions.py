@@ -70,6 +70,14 @@ def dimension(expression,units,unit_resolver=known_unit):
         result=dict(infer(expression.args[0],units) or {})
         result['L']=result.get('L',0)+(3 if isinstance(expression,VolumeIntegral) else 2 if isinstance(expression,BoundaryFlux) else -1)
         return {k:v for k,v in result.items() if v}
+    from .operators import BoundaryTrace,NormalDerivative,NormalComponent
+    if isinstance(expression,(BoundaryTrace,NormalComponent)):return infer(expression.args[0],units)
+    if isinstance(expression,NormalDerivative):
+        # du/dn = n.grad(u): one inverse length, whatever the coordinate's unit.
+        inner=infer(expression.args[0],units)
+        if inner is None:return None
+        result=dict(inner);result['L']=result.get('L',0)-1
+        return {k:v for k,v in result.items() if v}
     if isinstance(expression,sp.Derivative):
         result=dict(infer(expression.expr,units) or {})
         for variable,count in expression.variable_count:
