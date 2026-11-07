@@ -2,8 +2,11 @@
 
 The expansion owns topology. Each stage still replays and admits its exact
 selected equations. Connections replace exterior boundary bindings, never the
-selected balances or a missing donor law. This internal runtime is not yet an
-HTTP/common-result publication path.
+selected balances or a missing donor law: the receiver's inlet flow, composition
+and enthalpy data by the donor's recorded transport, and the donor's recorded
+discharge-port pressure datum by the receiving volume's pressure
+(`pressure_couplings`). This internal runtime is not yet an HTTP/common-result
+publication path.
 """
 import numpy as np
 import sympy as sp
@@ -56,26 +59,48 @@ def align_transport(donor_model, components, fluxes, closure, path):
     return closure.components, [by_species[key] for key in closure.species]
 
 
-def check_connection_pressure(donor, port, receiver, closure, path):
-    """Admit only a proved equal prescribed boundary pressure, not a frozen mismatch.
+COUPLING_PREMISE = ('The connected stream enters the receiving volume at its uniform thermodynamic pressure; '
+                    'no pressure change is resolved between the discharge port and the receiving volume.')
 
-    Dynamic pressure coupling needs a separate recorded network relation. Until
-    that exists, unresolved or unequal pressures fail closed at the connection.
+
+def check_connection_pressure(donor, port, receiver, closure, path):
+    """Couple a recorded discharge-port pressure to the receiving volume, or prove equal pressures.
+
+    A hydraulic discharge path records its exterior port pressure p2 as one
+    bound boundary datum. A connection replaces exterior boundary bindings, so
+    it replaces that datum by the receiving volume's pressure (network relation
+    p2[j] = P[k], premise COUPLING_PREMISE); the path momentum then responds to
+    the receiving pressure, including when it varies or differs from the donor.
+    The coupling is returned as (donor datum symbol, receiving pressure expression)
+    and is published by the assembly. Without such a datum (a direct phase draw,
+    or a literal/derived port pressure) only a proved equal prescribed pressure
+    is admitted; unresolved or unequal pressures fail closed.
     """
     owner = port['volumeId']
     pressure = sp.Function('p2__'+owner)(donor.time)
     relations = [node.equation.rhs for node in donor.graph.nodes.values()
                  if isinstance(node.equation,sp.Equality) and node.equation.lhs == pressure]
+    target = receiver._expand(closure.P)
+    resolved = si_magnitude(target).subs(receiver.parameter_values)
+    if len(relations) == 1:
+        datum = si_magnitude(donor._expand(pressure))
+        if datum in donor.parameter_values:
+            known = set(getattr(receiver, 'states', ())) | set(getattr(receiver, 'closure_quantities', ()))
+            free = resolved.free_symbols - {getattr(receiver, 'time', None)}
+            if (resolved.atoms(sp.core.function.AppliedUndef) - known or free
+                    or resolved.is_number and resolved.is_positive is not True):
+                raise _failure('index_network_pressure_mismatch',
+                    'The receiving-volume pressure must be a positive bound or state-resolved quantity before it can be coupled to the discharge port.', path)
+            return datum, target
     if not relations:
         # A direct phase draw has no separate hydraulic path boundary.
-        pressure = sp.Function('P__'+owner)(donor.time)
-        relations = [pressure]
+        relations = [sp.Function('P__'+owner)(donor.time)]
     values = [si_magnitude(donor._expand(p)).subs(donor.parameter_values) for p in relations]
-    target = si_magnitude(receiver._expand(closure.P)).subs(receiver.parameter_values)
-    if (not target.is_number or target.is_positive is not True or
-            any(not p.is_number or p.is_positive is not True or sp.simplify(p-target)!=0 for p in values)):
+    if (not resolved.is_number or resolved.is_positive is not True or
+            any(not p.is_number or p.is_positive is not True or sp.simplify(p-resolved)!=0 for p in values)):
         raise _failure('index_network_pressure_mismatch',
-            'Connected discharge and receiving-volume pressures must be the same prescribed value; varying or unequal pressures require recorded pressure coupling.', path)
+            'Without a recorded discharge-port pressure datum, connected discharge and receiving-volume pressures must be the same prescribed value.', path)
+    return None
 
 
 class IndexedDerivedSystem:
@@ -131,6 +156,8 @@ class IndexedDerivedSystem:
             self.maps.append(mapping); self.outputs.extend(outputs)
         substitutions = {}
         donor_rows = []
+        pressure_rows = []
+        self.pressure_couplings = []
         for connection in self.expansion['connections']:
             a, b = connection['from']['stage']-1, connection['to']['stage']-1
             donor, receiver = self.stages[a], self.stages[b]
@@ -140,7 +167,17 @@ class IndexedDerivedSystem:
             closure = next((c for c in receiver.closures if target in c.inlets), None)
             if closure is None:
                 raise _failure('index_network_unsupported_inlet', 'The receiving stream needs the existing package exterior-state bindings.', where+'.connections.'+connection['id'])
-            check_connection_pressure(donor, port, receiver, closure, where+'.connections.'+connection['id'])
+            coupling = check_connection_pressure(donor, port, receiver, closure, where+'.connections.'+connection['id'])
+            if coupling is not None:
+                datum, pressure = coupling
+                if datum in self.bindings[a]:
+                    raise _failure('index_network_shared_boundary_datum', 'Each coupled discharge-port pressure needs its own exterior datum.', where+'.connections.'+connection['id'])
+                placeholder = sp.Dummy('connected_pressure')
+                self.bindings[a][datum] = placeholder
+                pressure_rows.append((b, placeholder, pressure))
+                self.pressure_couplings.append({'connectionId': connection['id'], 'premise': COUPLING_PREMISE,
+                    'from': {'stage': a+1, 'quantity': 'p2__'+port['volumeId'], 'replacedDatum': str(datum)},
+                    'to': {'stage': b+1, 'quantity': str(closure.P)}})
             components, fluxes = align_transport(donor.model, components, fluxes, closure,
                                                 where+'.connections.'+connection['id'])
             weights = [sp.Function('inlet_mass_fraction_'+str(i)+'__'+target)(receiver.time) for i in components]
@@ -170,6 +207,9 @@ class IndexedDerivedSystem:
             for quantity in closure.inlets[target]['values']:
                 name = str(quantity.func).split('__')[0]
                 substitutions[boundary[self.stages[b].parameter_symbols[quantity]]] = replacements[name]
+        # Network relation p2[donor] = P[receiver]: the receiving pressure in its own stage scope.
+        for b, placeholder, pressure in pressure_rows:
+            substitutions[placeholder] = scope(b, pressure)
         boundary_symbols = set(substitutions)
         def connect(expression):
             for _ in range(len(substitutions)+1):
