@@ -4,6 +4,7 @@ import type {ResultadoMotor} from '../motor/modeloNumerico';
 import {readIndexedCompilation,readIndexedResult,type IndexedCompilation} from '../../motores/modelo/indexedExecution';
 import {steadySignature} from '../../motores/modelo/steadyContract';
 import {leerModeloComun} from '../../motores/modelo/lector';
+import {readFlowsheetResult} from '../../motores/modelo/flowsheet';
 
 export type SavedIndexedSelection={version:1;report:IndexedCompilation};
 export function indexedSource(model:HojaMotor){
@@ -28,7 +29,7 @@ export function applyIndexed(model:HojaMotor,report:IndexedCompilation):HojaMoto
 export function validateSavedIndexedResult(result:ResultadoMotor,id:string,signature:string){
   if(result.version!==3&&result.motor!=='rage.compilador.indexed_network')return;
   if(result.version!==3||result.motor!=='rage.compilador.indexed_network'||!result.commonResult||result.firma!==signature||result.commonResult.modeloId!==id||result.compilation||result.seriesEvaluadas||result.valores.length||result.componentes.length||result.x.length)throw new Error('Invalid indexed result wrapper.');
-  const common=readIndexedResult(result.commonResult),steady=common.indexedNetwork!.mode==='steady';
+  const common=result.commonResult.procedencia.motor==='rage.compilador.flowsheet_network'?readFlowsheetResult(result.commonResult).result:readIndexedResult(result.commonResult),steady=common.indexedNetwork!.mode==='steady';
   const times=steady?[]:common.ejes.find(axis=>axis.id==='t')!.valores;
   if(result.modo!==(steady?'steady':'temporal')||result.metodo!==common.procedencia.metodo||result.estado!==common.estado||JSON.stringify(result.tiempos)!==JSON.stringify(times)||JSON.stringify(result.verificationChecks)!==JSON.stringify(common.verificaciones))throw new Error('Indexed wrapper differs from its common result.');
 }
