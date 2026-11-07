@@ -844,6 +844,37 @@ This document keeps the authorized scope and the dependencies. It does not enabl
 
 Update this record when a delivery arrives. Do not create another board with different states in coordination notes, reports or contracts.
 
+### Progress percentages (user-facing; user decision, 6 November 2026; `dec-progress-table`)
+
+The user follows overall progress with this table. Every Claude or Codex delivery that changes a board status updates the affected rows and the total in the same change. The goal it measures is `dec-nonspatial-100-pde-ready`: 100% without spatial execution, while the kernel can deduce PDEs.
+
+**Method.** Each row is scored from the board.
+- Status gives the score: done = 100, review ≈ 85, planned = 0.
+- An active row gets a stated estimate of the delivered fraction, based on its recorded sub-items.
+- Deferred items are excluded: F7 spatial execution, F9-R8 and the native v2 retirement.
+- The total weights the blocks as follows: phases and PDE 40%, Demo 0.2 20%, Demo 0.3 10%, and M1, families, reliability, cleanup and Demo 0.1 together 30%.
+- A percentage is a judgement from recorded evidence, never a claim of acceptance. A row reaches 100 only when its milestone is done.
+
+| Block | State (6 November 2026) | % |
+|---|---|---|
+| M1 minimum usable engine (audit, gates D1 and U1) | 7/7 done | 100 |
+| Deduction families (matter, energy, thermodynamics, dynamics, momentum, hydraulics) | 6/6 done | 100 |
+| Reliability F9-R1..R14 | 13/13 done (R8 deferred) | 100 |
+| Repository cleanup | 9/10 done; English phases 4-7 planned | 90 |
+| **Phases F0-F10 and PDE** | | **73** |
+| · F0, F1 UNIFAC, F2, F8, F10 | done | 100 |
+| · F3 equation engine and solution methods | review | 90 |
+| · F9 quality and CI | CI green; required checks on main pending | 80 |
+| · F5 reactors and equilibrium | F5-C1, B3 parts 1 and 2 integrated; feed-temperature initialization, rigid and open/multi-extent regions pending | 70 |
+| · F8b remaining thermodynamics | mixture critical loci and UNIFAC-based EOS mixing rules pending | 60 |
+| · F4 boundaries and real equipment | template contract in review | 30 |
+| · PDE deduction without spatial execution | PDE-0 and PDE-1 of PDE-0..7 | 25 |
+| · F6 momentum and hydraulic network | planned | 15 |
+| **Demo 0.1** | released; English UI in review | **97** |
+| **Demo 0.2** | flowsheet and 2D diagram done; column delivered; six items in review; release pending | **76** |
+| Demo 0.3 | partial | ~35 |
+| **Project total (weighted)** | 0.40·73 + 0.20·76 + 0.10·35 + 0.30·97.4 | **≈ 77** |
+
 | ID | Verifiable state | Next work / evidence |
 |---|---|---|
 | BASE-N | Integrated within the published scope | [N integration](../history/frontend/integration-delivery-n-components.md); the delivery need not be repeated |
