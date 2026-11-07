@@ -35,6 +35,6 @@ Rules that apply to every run:
 | 6 | Template instances: replay a template's recorded recipe into a new connectable model | Strong (Astra) | `demo-02-drum` onward (F4) | `review pending` · independent review |
 | 7 | Repairs RC-1 to RC-7 from the independent review of items 1-2 | Light | Commit of items 1-2; `demo-02-drum` (RC-3) | `review pending` · independent review |
 | 8 | `demo-02-stages`: one generic template, Solve count, expansion and network execution | Strong (Astra) | F4 + F3; Codex under dec-demo02-codex-numerics and dec-demo02-codex-physics | `review pending` · CSTR/train acceptance review and CR-2 re-review (evidence: roadmap F3/F9-R8 and Demo 0.2) |
-| 9 | Demo 0.3 Results chart groundwork | Strong | Results; demo-03 | `in progress` · claude-a RV-4 re-review; spatial work deferred |
+| 9 | Demo 0.3 Results chart groundwork | Strong | Results; demo-03 | `repairs requested` · RV-8 (decode lowering-cache constants once; roadmap Demo 0.2, Codex RV-4 / CR-2 repairs); spatial work deferred |
 
 Delivery evidence, counts and timings for these items are in the roadmap (Demo 0.2, F3/F9-R8 and F5 sections). The earlier per-item prompts were removed on 7 November 2026: items 1-9 are delivered, and new work uses the generic prompt.
