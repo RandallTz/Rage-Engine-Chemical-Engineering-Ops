@@ -1,5 +1,6 @@
 'use client';
 import IndexedTransform from './IndexedTransform';
+import {FlowsheetTransform} from './FlowsheetWorkspace';
 
 import {useEffect,useState} from 'react';
 
@@ -28,7 +29,7 @@ import {requestFormulation} from './formulationRequests';
 
 type Selection=Omit<TemporalDerivedExecution,'version'> & {version:1|2|3|4|5;unknowns?:string[];invariants?:Record<string,string>};
 export default function DerivedExecution({model}:{model:HojaMotor}){
-  return model.commonModel?.indexSet?<IndexedTransform model={model}/>:<OrdinaryDerivedExecution model={model}/>;
+  return model.commonModel?.flowsheet?<FlowsheetTransform model={model}/>:model.commonModel?.indexSet?<IndexedTransform model={model}/>:<OrdinaryDerivedExecution model={model}/>;
 }
 function OrdinaryDerivedExecution({model}:{model:HojaMotor}){
 
