@@ -31,7 +31,7 @@ Rules that apply to every run:
 | 2 | Results: list phase events of derived models; describe `package_closure` in the compilation summary | Light | Demo 0.1/0.2 presentation | `in progress` · claude-a re-check of the events, closure summary and RC-6 |
 | 3 | F3 slice 5 inverse specifications over HTTP, contracts, strict readers and Solve/Results | Light | F3; sizing (Demo after 0.3) | `repairs requested` · F3H-1, F3H-2 (roadmap F3 fifth slice, item 3 review); F3H-3 is Claude's |
 | 4 | F5-C1 equilibrium-reaction constraint in Model/compiler | Strong (Astra) | F5; the reactive stage of `demo-02-column` | `in progress` · claude-a re-review of repairs F1-F6; liquid/thermal/steady integration is roadmap F5 work |
-| 5 | Steady state as a one-step Transform technique over the current dynamic selection | Light | `demo-02-steady` (UI half) | `in progress` · claude-a independent review of RT-1..RT-4 |
+| 5 | Steady state as a one-step Transform technique over the current dynamic selection | Light | `demo-02-steady` (UI half) | `repairs requested` · RT-6, RT-7 (roadmap Demo 0.2, item 5 review of 7 November); RT-7 first |
 | 6 | Template instances: replay a template's recorded recipe into a new connectable model | Strong (Astra) | `demo-02-drum` onward (F4) | `review pending` · independent review |
 | 7 | Repairs RC-1 to RC-7 from the independent review of items 1-2 | Light | Commit of items 1-2; `demo-02-drum` (RC-3) | `review pending` · independent review |
 | 8 | `demo-02-stages`: one generic template, Solve count, expansion and network execution | Strong (Astra) | F4 + F3; Codex under dec-demo02-codex-numerics and dec-demo02-codex-physics | `review pending` · CSTR/train acceptance review and CR-2 re-review (evidence: roadmap F3/F9-R8 and Demo 0.2) |
