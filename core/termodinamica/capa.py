@@ -246,7 +246,8 @@ def _cierre_cubico(modelo, v, n, especificacion):
     complementarity as the mixture packages. tm of an absent candidate is the least non-trivial tangent-plane
     minimum of the present phase (core/termodinamica/cubic_flash.stability); without one it is None, as for the
     other packages. PSRK rejects a TP state below a species' alpha regression range (located, as in psrk.py) and,
-    since H and U are always published, a species without an ideal-gas cp record (CO2: `no_ideal_gas_record`)."""
+    since H and U are always published, a state outside a light gas's ideal-gas cp record (CO2: Poling appendix A,
+    50-1000 K, core/termodinamica/psrk_data.py) as `outside_ideal_gas_range`."""
     from core.termodinamica import cubic_eos, cubic_flash
     from core.unifac import FaltaDatoUNIFAC
     pid = _volumen(modelo, v["id"])[1]["modelo"]["id"]
