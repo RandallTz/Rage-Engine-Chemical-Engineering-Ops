@@ -783,6 +783,36 @@ Results chart groundwork delivered (2 November 2026; review pending): optional r
 
 **External integration rule (from now on).** The engine runs headless through a versioned JSON contract over HTTP or as a Python package. The web interface is one client; a future 3D environment would be another. This restates the rule that the interface does not calculate.
 
+### Distribution and landing page (requirements; user decision, 6 November 2026; `dec-distribution-download-first`, open `dec-product-offer`)
+
+Work on the landing page starts after Demo 0.2. Until then these requirements constrain current work and are not a task.
+
+**Distribution model (taken).** The simulator is a free download that anyone can install and run locally: the desktop app with its local Python backend. The user does not operate a hosted compute service, so local machines carry the computation and maintaining the backend means release engineering (installers, updates), not server operations. GitHub serves technical users (code, issues, releases); the landing page serves non-technical users. The user also wants to learn to sell a product through it.
+
+**Constraints on current work.**
+- The current app assumes one trusted local user: models are stored in the browser and the backend has no authentication, quotas or isolation. It must never be exposed on a public server as it is.
+- New work must not deepen that assumption without a clear boundary. Keep the backend stateless, keep models as versioned documents, and keep long solves suitable for asynchronous jobs, so that a hosted option stays possible later without a rewrite.
+- The landing page is a separate static site. It is not a page, route or frontend of the simulator.
+
+**Landing page content (first version).**
+- One sentence, without jargon, that states the problem the simulator solves.
+- A short video or animation of the Demo 0.2 flow: flowsheet diagram, Solve, verified Results.
+- Windows download, with system requirements.
+- Three to five short tutorials, from "my first reactor" to "a network of equipment", plus plain-language explanations of the method (Model → Transform → Solve → Results, deduction from fundamental laws).
+- A "why trust it" section: every formula is checked against independent references, and every model is deduced from fundamental laws with recorded assumptions.
+- An optional email sign-up for news, to measure interest. Analytics, if any, respect privacy.
+
+**Product requirements for the download (harder than the page itself).**
+- A signed Windows installer, so the operating system does not flag it as unsafe, and an update channel.
+- A guided first run for someone who has never seen the program.
+- One product name used everywhere. The README says "Rage Engine" while the executable is `SimuladorDR`; settle one English, searchable name before publishing.
+
+**Open decisions (`dec-product-offer`), to settle before building the page.**
+- **License.** Open source (MIT or Apache for reach, GPL to keep derivatives open) or a free closed binary. This determines what can be sold later.
+- **Name and brand.**
+- **First audience.** Students and teachers of chemical engineering are the suggested starting point: the pain is clear, they share within communities and they do not require industrial certification. Industry and researchers (a Python package of the engine) come later.
+- **Later monetization**, which leaves the free base unchanged: courses, advanced tutorials, support or professional features.
+
 ### Research dossiers (planned; Gemini not yet in use)
 
 When the user brings Gemini in, it acts as a researcher and never writes code. Before an equipment item or a physics is deduced, it delivers one dossier per topic in `docs/references/<topic>.md`, with fixed sections:
