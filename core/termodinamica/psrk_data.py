@@ -21,14 +21,31 @@ records of core/termodinamica/solid_data.py serve only the SLE operation):
       for CO2 (the gas is its own group): the PSRK subgroup 117 'CO2' (main group 56) is declared.
 
 A species with no record raises CubicOutOfScope (cause `no_pure_record`), never a default.
+
+Ideal-gas caloric records of the light gases (F8b, 7 November 2026). The layer always publishes H and U, so a
+light gas needs the ideal-gas part of the same reference as every mixture package (core/mezclas_datos: h = 0 and
+s = 0 of the pure ideal gas at T0 = 298.15 K, P0 = 1e5 Pa). The record takes the same form and source as the
+catalog species: cp_ig/R = a0 + a1 T + a2 T^2 + a3 T^3 + a4 T^4 of Poling, Prausnitz and O'Connell, The Properties
+of Gases and Liquids 5th ed., appendix A (chemicals Cp_data_Poling), and h, s, g by the catalog's own integrals
+(mezclas_datos.Especie), so there is one reference formula:
+
+  carbon dioxide (124-38-9): a = (3.259, 1.356e-3, 1.502e-5, -2.374e-8, 1.056e-11), 50-1000 K. Checked against
+      the NIST-JANAF table C-095 (Chase, J. Phys. Chem. Ref. Data Monograph 9, 1998; standard state 1 bar):
+      200-1000 K, cp within 1.7 %, H - H(298.15 K) within 0.16 kJ/mol and S - S(298.15 K) within 0.19 J/(mol K)
+      (tests/test_psrk_mixture.py, IdealGasCalorics).
+
+A light gas without a caloric record raises CubicOutOfScope (cause `no_ideal_gas_record`) in caloric operations, and
+a temperature outside the record's range raises cause `outside_ideal_gas_range`; neither has a default.
 """
 
 from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Callable
 
+from core import mezclas_datos as _datos
 from core.termodinamica.cubic_eos import CubicOutOfScope
 
 
@@ -58,6 +75,36 @@ LIGHT_GASES = {
         "Span and Wagner, J. Phys. Chem. Ref. Data 25 (1996) 1509: critical point and vapour-pressure "
         "ancillary eq. 3.13 (triple point 216.592 K to T_c); PSRK subgroup 117 (CO2) declared"),
 }
+
+
+@dataclass(frozen=True)
+class IdealGasRecord:
+    """Ideal-gas caloric record of a light gas: cp_ig/R = sum a_k T^k on T_cp, on the reference of mezclas_datos."""
+    cas: str
+    cp: tuple                       # (a0..a4), cp/R = sum a_k T^k
+    T_cp: tuple                     # (T_min, T_max) of the polynomial, K
+    source: str
+
+    # the catalog's own integrals (they read only self.cp): one reference formula for every package
+    cp_ig = _datos.Especie.cp_ig
+    h_ig = _datos.Especie.h_ig
+    s_ig0 = _datos.Especie.s_ig0
+    g_ig0 = _datos.Especie.g_ig0
+
+
+@lru_cache(maxsize=None)
+def ideal_gas_record(cas):
+    """Ideal-gas caloric record of a light gas of this module (Poling appendix A, as for catalog species)."""
+    if cas not in LIGHT_GASES:
+        raise CubicOutOfScope(f"No ideal-gas caloric record for the light gas {cas}.", cause="no_ideal_gas_record",
+                              species=[cas])
+    import chemicals.heat_capacity as hc
+    with _datos.CARGA_DATOS:
+        c = hc.Cp_data_Poling.loc[cas]
+    return IdealGasRecord(cas, tuple(float(c[k]) for k in ("a0", "a1", "a2", "a3", "a4")),
+                          (float(c.Tmin), float(c.Tmax)),
+                          "Poling, Prausnitz and O'Connell, The Properties of Gases and Liquids 5th ed., appendix A "
+                          "(chemicals Cp_data_Poling)")
 
 
 def record(cas):
