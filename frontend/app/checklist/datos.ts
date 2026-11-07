@@ -107,6 +107,7 @@ export const engineCapabilities = [
       'Energy budgets, sample certification and second-law checks when the required boundary-temperature data are available.',
       'Results of deduced package models publish closure outputs, a fresh package-certificate row and, for kinetic volumes, an equilibrium-limit row (F5-C3) comparing the final state with the certify_reactions/solve_extents equilibrium at the same T, P and element inventory, plus the reaction enthalpy from the package.',
       'F5 fixed-volume kinetic graphs retain formation energy in an explicitly authored thermodynamic caloric relation and add no reaction-heat term to total internal energy. The adiabatic batch matches its analytic temperature rise, with monitored caloric validity and independent Arrhenius/refinement reference; real-package integration and independent review remain pending.',
+      'Local conduction PDE authoring (PDE-3): the Fourier law q = -k grad T is declared from the local first law as a typed constitutive root (Fourier 1822 source, dimension check, positive-conductivity premise), and the divergence is expanded on a declared Cartesian, cylindrical or spherical domain by recorded chart restatement and Lame-factor identities. Checked against analytic slab, plate, cylinder and sphere solutions and Cartesian finite differences; spatial execution remains deferred (F7).',
       'Unsupported energy terms, algebraic accumulation and conflicting zero-heat assumptions are rejected by the equilibrium compiler.',
     ],
     pending:[
