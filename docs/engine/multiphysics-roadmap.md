@@ -865,19 +865,19 @@ The user follows overall progress with this table. Every Claude or Codex deliver
 | Deduction families (matter, energy, thermodynamics, dynamics, momentum, hydraulics) | 6/6 done | 100 |
 | Reliability F9-R1..R14 | 13/13 done (R8 deferred) | 100 |
 | Repository cleanup | 9/10 done; English phases 4-7 planned | 90 |
-| **Phases F0-F10 and PDE** | | **73** |
+| **Phases F0-F10 and PDE** | | **74** |
 | · F0, F1 UNIFAC, F2, F8, F10 | done | 100 |
 | · F3 equation engine and solution methods | review | 90 |
 | · F9 quality and CI | CI green; required checks on main pending | 80 |
 | · F5 reactors and equilibrium | F5-C1, B3 parts 1 and 2 integrated; feed-temperature initialization, rigid and open/multi-extent regions pending | 70 |
-| · F8b remaining thermodynamics | mixture critical loci and UNIFAC-based EOS mixing rules pending | 60 |
+| · F8b remaining thermodynamics | PSRK (SRK + UNIFAC-PSRK g^E rule), elevated-pressure VLE and experimental critical loci reviewed and committed; exposure (capa entry, route and view) and better CO2–alcohol parameters pending | 80 |
 | · F4 boundaries and real equipment | template contract in review | 30 |
 | · PDE deduction without spatial execution | PDE-0 and PDE-1 of PDE-0..7 | 25 |
 | · F6 momentum and hydraulic network | planned | 15 |
 | **Demo 0.1** | released; English UI in review | **97** |
 | **Demo 0.2** | flowsheet, 2D diagram and column done; six items in review; release pending | **79** |
 | Demo 0.3 | partial | ~35 |
-| **Project total (weighted)** | 0.40·73 + 0.20·79 + 0.10·35 + 0.30·97.4 | **≈ 78** |
+| **Project total (weighted)** | 0.40·74 + 0.20·79 + 0.10·35 + 0.30·97.4 | **≈ 78** |
 
 | ID | Verifiable state | Next work / evidence |
 |---|---|---|
@@ -1954,6 +1954,47 @@ Diagrams are slices of a model, not new physical laws or calculations that gover
 **F8b mixture equation of state and critical region, fourth extension (Claude, 5 November 2026).** `core/termodinamica/cubic_eos.py`, `cubic_flash.py` and `cubic_critical.py`; layer package `peng-robinson-vdw1f` (`core/termodinamica/capa.py`, candidates vapor-1 and liquido-1). Scope choice against the layer contract: one residual Helmholtz function serves both phases, so the layer's fixed candidates, tm scale and complementarity apply unchanged, and it is the only route past the gamma-phi packages' declared domain (ideal vapour P <= 5e5 Pa, liquid T < 0.9 T_c) into the critical region. Peng-Robinson with van der Waals one-fluid mixing is the minimal published EOS that reproduces each pure critical point from catalog data alone: T_c and P_c of the species' Wagner record and omega from its definition on that same record (benzene 0.2094, toluene 0.2639, water 0.3436, ethanol 0.6433); Robinson-Peng 1978 alpha; k_ij = 0 through the layer. NRTL is not extended. Derivation: F = A^r/RT(T, V, n) is the only constitutive function; Omega_a, Omega_b and Z_c are solved from (dP/dV)_T = (d2P/dV2)_T = 0; P, ln phi_i = dF/dn_i - ln Z, h^r = -RT^2 F_T + PV - nRT and the (T, P) composition derivative follow by the chain rule (Michelsen and Mollerup ch. 3), with the (T, V) Hessian by complex step of the analytic gradient; energies use the catalog's cp_ig and the shared ideal-gas reference. Operations: tangent-plane stability on the layer's tm scale (Wilson, pure and binary-scan seeds, successive substitution then BFGS), certified TP flash (Rachford-Rice then Newton on G with the analytic Hessian; fugacity equality <= 1e-10, fresh stability of the split), PH and UV flashes, pure saturation, bubble and dew points and curves by continuation into the critical region, and mixture gas-liquid critical points by the Heidemann-Khalil criterion (Michelsen's algorithm, every critical point on the reduced-volume scan). Evidence, `tests/test_cubic_eos_mixture.py` (12 tests, about 50 s): Omega_a, Omega_b, Z_c against Peng and Robinson 1976; chain-rule derivatives against a complex step of F 1.2e-15; ln phi against the closed form 8.9e-15 and `thermo` PRMIX 9.7e-15; Gibbs-Duhem 1.6e-15, symmetry 2.7e-15, d ln phi/dn against finite differences 3.2e-9, d(g^r/RT)/dP = (Z - 1)/P and d(g^r/RT)/dT = -h^r/RT^2 within 1e-9; pure limits: the critical solver returns the catalog T_c, P_c (1e-10), water saturation against IAPWS-95 within 1.5 % at 450-640 K (15 % at 300 K, the known PR low-temperature error) and T_c within 0.04 %, benzene and toluene saturation against their Wagner records to 0.99 T_c (4.8 MPa) within 2.1 %; benzene + toluene bubble pressures at 333.15 and 353.15 K against Lee, Chen, Lee, Chang and Ko, Fluid Phase Equilib. 280 (2009) 42-48 (NIST ThermoML) within 3.7 % (k_ij = 0); benzene + toluene critical locus (x_benzene 0.25, 0.5, 0.75: 585.27 K 4.316 MPa, 578.19 K 4.521 MPa, 570.51 K 4.717 MPa) against an independent route, the binary determinant criteria in molar Helmholtz (v, x) by nested finite differences, 3.9e-5 K and 5.8e-7 in P; the bubble curve traced by continuation reaches it (P/P_c - 1 = 5.4e-6 at T_c - 1e-3 K); certified two-phase flashes at T_c - 1, 0.1 and 0.01 K with tie lines shrinking to 1.6e-3; one stable phase above T_c at P_c; the gamma-phi packages reject that state (FueraDeAlcance); PH and UV invert TP to 1e-10 K; layer closure complementarity < 1e-12. Findings, not implemented: (1) experimental mixture critical loci and elevated-pressure binary VLE for catalog-only pairs (for example Hicks and Young 1975, Barr-David and Dodge 1959) were not reachable in this delivery, and the classic cubic-EOS test systems need light gases absent from `core/catalogo.py` (not Claude-owned); the mixture validation is therefore numerical plus pure-limit and low-pressure data; (2) the package is reachable through `capa.cierre` only: no compiler admission, route, contract or Results view (Codex), and no declared k_ij record in the common model; (3) no volume translation, so liquid densities carry the PR error; quadratic mixing only, so polar pairs are outside k_ij = 0 accuracy; (4) a third phase (L-L-V) is rejected, never published; (5) the critical tracer is about 5 s per point and is verified on binaries only. Next in f8b: independent review; experimental mixture-critical and high-pressure references; a UNIFAC-based EOS mixing rule (PSRK or VTPR) as the UNIFAC-priority route to high pressure.
 
 **Independent A1 cross-review (Claude, read-only, 5 November 2026; lane A task done by claude-b while claude-a is inactive).** `reaction_jacobian_bounds` (ideal gas and UNIFAC liquid): **approve**. Re-derived the affinity, Gibbs-Helmholtz dg/dT, the liquid standard part and the amount-form UNIFAC; fuzzed against independent 40-digit references with 0 enclosure violations (ideal gas 915 boxes and 90,036 checks; interval UNIFAC with real and random extreme parameters 12,800 checks; full liquid path 420 checks). F5-1 (low): the global `iv.prec` save and restore is not thread-safe; use a private interval context or a lock. F5-2: wording of the rounding guarantee. SLE with the F9-R10/R11/R12/R14 repairs: **approve with repairs**; R10 (ln x to 4e-15 down to x = 2e-70), R11 (benzene solid + water: one stable root inside the independent convex-hull binodal) and R12 confirmed closed; benzene + cyclohexane original UNIFAC matches `thermo` to 1.6e-15 (eutectic 224.370905 K, x = 0.275102). SLE-1 (low-medium): P is not validated when dv = 0, so NaN P gives the false cause `liquidus_below_solid_T_min`, silently skipped by `crystallization_T`, and negative P is accepted. SLE-2 (low): out-of-range solid index raises IndexError. Peng-Robinson mixture EOS: **approve with repairs**; against `thermo.PR78MIX` on 120 random states Z to 3.7e-15 and ln phi to 2.5e-14; Heidemann-Khalil critical points agree with an independent mpmath Reid-Beegle solver to 2e-11 K. PR-1 (medium): an L-L split is labelled vapour + liquid (benzene + water at 320 K, 1 bar). PR-2 (medium): `critical_points` returns negative-pressure and L-L roots as gas-liquid points and an empty list without diagnostic. PR-3 (low): null-vector sign not fixed. PR-4 (low): absent candidates share one trial; PH/UV brackets raise raw ValueError. Codex RV-4 and CR-2 repairs: **approve** (signed zero and adjacent binary64 constants get distinct instances; unequal, zero, negative, time-dependent or unbound discharge pressures rejected at the connection path). Tests: 85 + 11 passed.
+
+**F8b PSRK, elevated-pressure VLE and experimental critical loci, fifth extension (Claude, 7 November 2026).** `core/termodinamica/psrk.py` and `psrk_data.py`.
+
+- **Scope choice.** PSRK (Holderbaum and Gmehling 1991; Horstmann et al. 2005) is the UNIFAC-based route to high pressure that can be built from data already in the repository. thermo 0.6.1 distributes the PSRK table, the gas groups and the DDBST assignments. VTPR also needs volume translations and Twu parameters, which are absent. NRTL is not extended.
+- **Derivation.** One SRK residual Helmholtz function, F = −n ln(1 − B/V) − n α_m ln(1 + B/V).
+  - Ω_a and Ω_b are solved from the critical conditions.
+  - A1 = −ln(2.1/1.1) is derived from the SRK pure residual Gibbs energy at PSRK's reference v/b = 1.1 (published −0.64663).
+  - α_m = Σxα_i + (g^E/RT + Σx ln(b/b_i))/A1, with UNIFAC (PSRK table) evaluated by the existing `LiquidoUNIFAC` code.
+  - ∂F/∂n_i and ∂F/∂V are analytic.
+  - The cubic package's F-based methods, saturation and Heidemann–Khalil solver are reused unchanged.
+- **Data provenance.**
+  - The Mathias–Copeman constants are re-regressed by the published method on each species' vapour-pressure record, linearly through the exact Maxwell α*(T). They are not the published PSRK compound constants. For CO2 the regressed α agrees with those constants within 0.25 %.
+  - CO2 data come from Span and Wagner 1996.
+  - The PSRK interaction table is thermo's TSV (sha256 recorded). It was not checked entry by entry against the Horstmann et al. 2005 appendix. Exchanging the CO2–OH directions makes CO2 + ethanol worse, which supports the orientation.
+- **Bubble points** are certified:
+  - fugacity equality, normalization and distinct phases;
+  - the incipient phase must be less dense than the feed (`past_critical_point`);
+  - |y − x| ≥ 1e-3 (`near_critical_unresolved`); the isotherm continuation's step is bounded by |y − x|, so it cannot jump past the critical composition;
+  - after a Newton failure, damped probes classify the case as `trivial_solution` or `past_critical_point` before reporting `not_converged`.
+- **Evidence, `tests/test_psrk_mixture.py` (23 tests, about 160–250 s).**
+  - Closed-form SRK constants 1e-14.
+  - Psat records within 0.19–0.96 %.
+  - Against thermo: ln γ 1e-13, and a and b against thermo's independent `PSRK` class 1e-9.
+  - Complex-step gradients 1e-13; Gibbs–Duhem and symmetry 1e-12.
+  - An independent 30-digit mpmath PSRK: bubble point 1e-10, and Reid–Beegle critical point 1e-6 K against the Heidemann–Khalil point.
+- **Experiment (NIST ThermoML, predictive, no binary parameter).**
+  - Bubble pressures:
+    - CO2 + methanol and CO2 + toluene at 311–391 K and up to 12 MPa (Naidoo et al., FPE 269 (2008) 104), all 12 and 14 points: AARD 4.5 % and 5.0 %, y_CO2 within 0.04 and 0.008;
+    - CO2 + ethanol at 333–373 K (Sima et al., JCED 56 (2011) 5052), all 36 points: 35 published, every one over-predicted by +9.7 % to +64.7 % (AARD 21.8 %). x = 0.77 at 363.15 K is `near_critical_unresolved`. The independent mpmath PSRK and the review's own reference reproduce the package, so the error belongs to the published parameters.
+  - Critical lines:
+    - CO2 + methanol (Liu et al., JCED 48 (2003) 1610): methanol branch +0.3 to +12 K and +6 to +23 %; CO2 end within 3.2 K and 3 %. For x_CO2 = 0.786–0.893 PSRK has no positive-pressure critical point (located rejection, confirmed by the review's independent scan), while the measured line is continuous.
+    - CO2 + ethanol (Sima et al. 2011): x = 0.892–0.931 within 6.8 K and 9.4 %; no PSRK root at 0.83–0.85.
+  - Consistency: the 373.15 K CO2 + methanol isotherm stops at x = 0.70868, where the computed critical locus crosses 373.15 K (0.70866).
+- **Located rejections.** `no_pure_record`, `missing_interaction`, `alpha_below_fit_range`, `trivial_solution`, `past_critical_point`, `near_critical_unresolved`, `not_converged` (with probes), `no_critical_point_in_window`, `no_ideal_gas_record`.
+- **Findings.**
+  1. The CO2–alcohol accuracy and the interrupted loci are parameter or model limits.
+  2. There is no `capa` package, route or Results view.
+  3. Light gases have no caloric record.
+  4. A critical point takes about 10 s.
+  5. `tests/test_psrk_mixture.py` needs a slow-tier CI assignment.
+- **Independent review (7 November 2026): approve with repairs.** R1 (full data set), R2 (located causes), R3 (English names) and R4 (provenance) were repaired. Commits: 4851958 (psrk_data.py), 02c4611 (psrk.py), f65509d (tests) integrated into fase-a-adopcion as 3f7baf7, a8abf6f, b7500b5.
 
 ## F9. Cross-cutting quality and reliable use
 
