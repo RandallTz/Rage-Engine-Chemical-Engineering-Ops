@@ -59,6 +59,8 @@ def _volumen(modelo, vid):
 
 AGUA = "agua-iapws95"
 CUBICO = "peng-robinson-vdw1f"      # F8b mixture EOS: core/termodinamica/cubic_eos.py (k_ij = 0 through the layer)
+PSRK = "psrk-unifac"                 # F8b PSRK: SRK with the UNIFAC (PSRK table) g^E mixing rule, core/termodinamica/psrk.py
+EOS_PAQUETES = (CUBICO, PSRK)        # one residual Helmholtz function for both phases: the same closure serves both
 
 
 def _cas(modelo, v):
@@ -87,7 +89,7 @@ def candidatas(modelo, vid):
         if _cas(modelo, v) != [agua.CAS]:
             raise NoSoportado("el paquete agua-iapws95 describe agua pura: el volumen debe tener solo agua (7732-18-5)")
         return ["vapor-1", "liquido-1"]
-    if paq["modelo"]["id"] == CUBICO:
+    if paq["modelo"]["id"] in EOS_PAQUETES:
         return ["vapor-1", "liquido-1"]     # two-phase package; a third phase is rejected, never published
     liquido = mz.PAQUETES[paq["modelo"]["id"]].liquido if paq["modelo"]["id"] in mz.PAQUETES else None
     if liquido is None:
@@ -119,7 +121,7 @@ def cierre(modelo, vid, n, especificacion):
     v, paq = _volumen(modelo, vid)
     if paq["modelo"]["id"] == AGUA:
         return _cierre_agua(modelo, v, n, especificacion)
-    if paq["modelo"]["id"] == CUBICO:
+    if paq["modelo"]["id"] in EOS_PAQUETES:
         return _cierre_cubico(modelo, v, n, especificacion)
     sis = _sistema(modelo, v, paq)
     nv = np.array([float(n[c] if c in n else n[str(c)]) for c in v["componenteIds"]])
@@ -230,19 +232,34 @@ def _cierre_agua(modelo, v, n, especificacion):
             "verificaciones": {k: [float(x)] for k, x in e.residuos.items()}}
 
 
+def _ecuacion_estado(pid, cas):
+    """The package's residual Helmholtz model over the present species (`EOS_PAQUETES`)."""
+    from core.termodinamica import cubic_eos
+    if pid == PSRK:
+        from core.termodinamica import psrk
+        return psrk.PSRKMixture(cas)
+    return cubic_eos.PengRobinsonMixture(cas)
+
+
 def _cierre_cubico(modelo, v, n, especificacion):
-    """Closure of the Peng-Robinson mixture package: same candidates, tm scale and complementarity as the
-    mixture packages. tm of an absent candidate is the least non-trivial tangent-plane minimum of the present
-    phase (core/termodinamica/cubic_flash.stability); without one it is None, as for the other packages."""
+    """Closure of the cubic mixture packages (Peng-Robinson, PSRK): same candidates, tm scale and
+    complementarity as the mixture packages. tm of an absent candidate is the least non-trivial tangent-plane
+    minimum of the present phase (core/termodinamica/cubic_flash.stability); without one it is None, as for the
+    other packages. PSRK rejects a TP state below a species' alpha regression range (located, as in psrk.py) and,
+    since H and U are always published, a species without an ideal-gas cp record (CO2: `no_ideal_gas_record`)."""
     from core.termodinamica import cubic_eos, cubic_flash
+    from core.unifac import FaltaDatoUNIFAC
+    pid = _volumen(modelo, v["id"])[1]["modelo"]["id"]
     cas = _cas(modelo, v)
     ids_c = list(v["componenteIds"])
     nv = np.array([float(n[c] if c in n else n[str(c)]) for c in ids_c])
     idx = [i for i in range(len(nv)) if nv[i] > 0]
     try:
-        eos = cubic_eos.PengRobinsonMixture(tuple(cas[i] for i in idx))
+        eos = _ecuacion_estado(pid, tuple(cas[i] for i in idx))
         tipo = especificacion[0]
         if tipo == "TP":
+            if hasattr(eos, "check_temperature"):
+                eos.check_temperature(especificacion[1])
             st = cubic_flash.flash_TP(eos, especificacion[1], especificacion[2], nv[idx])
             st["T"], st["P"] = especificacion[1], especificacion[2]
         elif tipo == "PH":
@@ -251,8 +268,12 @@ def _cierre_cubico(modelo, v, n, especificacion):
             st = cubic_flash.flash_UV(eos, especificacion[1], especificacion[2], nv[idx])
         else:
             raise ValueError(f"especificación no admitida: {tipo}")
+    except FaltaDatoUNIFAC as e:
+        ns = NoSoportado(f"paquete {pid} en el volumen {v['id']}: {e}")
+        ns.datos = {"cause": "unifac_data_missing", "detalle": e.detalle, "volumenId": v["id"]}
+        raise ns from e
     except cubic_eos.CubicOutOfScope as e:
-        ns = NoSoportado(f"paquete {CUBICO} en el volumen {v['id']}: {e}")
+        ns = NoSoportado(f"paquete {pid} en el volumen {v['id']}: {e}")
         ns.datos = {**getattr(e, "datos", {}), "volumenId": v["id"]}     # located cause (e.g. liquid_liquid_split)
         raise ns from e
     ntot = float(nv.sum())
