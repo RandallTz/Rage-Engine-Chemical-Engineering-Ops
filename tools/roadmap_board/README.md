@@ -88,7 +88,7 @@ Run one autonomous-loop item for this repository, following "Autonomous loops" i
 **Generic prompt (Codex):**
 
 ```
-Run one autonomous-loop item for this repository, following "Autonomous loops" in tools/roadmap_board/README.md exactly, as Codex. Take the first codex-queue item in "repairs requested", else the first in "ready". End with the single status line the procedure defines and the report "board refresh pending".
+Run one autonomous-loop item for this repository, following "Autonomous loops" in tools/roadmap_board/README.md exactly, as Codex. Read the queue and board from origin: run git fetch origin and work in a fresh worktree of origin/fase-a-adopcion, never from the main checkout, whose branch can lag and holds uncommitted work. Your own uncommitted work there (for example the demo-02 claim) is not a blocker: leave it, or resume it in your worktree. Take the first codex-queue item in "repairs requested", else the first in "ready". End with the single status line the procedure defines and the report "board refresh pending".
 ```
 
 ## Refreshing the board (Claude sessions)
