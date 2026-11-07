@@ -29,7 +29,7 @@ Rules that apply to every run:
 |---|---|---|---|---|
 | 1 | `demo-02-contract`: equipment template marker and typed ports in the common model | Strong (Astra) | Every Demo 0.2 equipment; F4 boundaries | `repairs requested` · RC-8 to RC-11 (roadmap Demo 0.2, item 1 re-check); RC-8 first |
 | 2 | Results: list phase events of derived models; describe `package_closure` in the compilation summary | Light | Demo 0.1/0.2 presentation | `in progress` · claude-a re-check of the events, closure summary and RC-6 |
-| 3 | F3 slice 5 inverse specifications over HTTP, contracts, strict readers and Solve/Results | Light | F3; sizing (Demo after 0.3) | `review pending` · independent review (roadmap F3 fifth slice) |
+| 3 | F3 slice 5 inverse specifications over HTTP, contracts, strict readers and Solve/Results | Light | F3; sizing (Demo after 0.3) | `in progress` · claude-a independent review (roadmap F3 fifth slice) |
 | 4 | F5-C1 equilibrium-reaction constraint in Model/compiler | Strong (Astra) | F5; the reactive stage of `demo-02-column` | `review pending` · re-review of repairs F1-F6; liquid/thermal/steady integration is roadmap F5 work |
 | 5 | Steady state as a one-step Transform technique over the current dynamic selection | Light | `demo-02-steady` (UI half) | `in progress` · claude-a independent review of RT-1..RT-4 |
 | 6 | Template instances: replay a template's recorded recipe into a new connectable model | Strong (Astra) | `demo-02-drum` onward (F4) | `review pending` · independent review |
