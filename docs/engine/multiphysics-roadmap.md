@@ -1741,7 +1741,7 @@ The user asked whether to bring Rust in progressively. The goal is to make the e
   - reuse closure evaluations for event margins;
   - keep LaTeX rendering off the Solve path.
 - **P1:** the lowered IR with generated-code and Jacobian backends, verified bit for bit or within a stated tolerance against the interpreter.
-- **P2:** an optional PyO3/maturin spike with a measured go/no-go criterion, covering a batched UNIFAC kernel and an IR evaluator. Alternatives were compared: Numba, Cython, JAX/XLA, CasADi-style C code generation, and Cranelift/LLVM.
+- **P2:** an optional PyO3/maturin spike with a measured go/no-go criterion, covering a scalar UNIFAC kernel (with dγ/dT) and an IR evaluator. The kernel is scalar because the closure algorithms (Brent, Newton, stability descent) call γ sequentially, so batching cannot replace the single call. Adoption requires at least 3 times over the best Python alternative on the target and at least 25% end to end on the flowsheet or stage train, with every check unchanged. Alternatives were compared: Numba, Cython, JAX/XLA, CasADi-style C code generation, and Cranelift/LLVM.
 - **P3:** batched closure evaluation.
 - **P4:** an interactive runtime. Worker processes run the simulation. A command journal records parameter changes, events and perturbations with consistent simulation time. Results stream to the interface without blocking. Concurrent runs are supported. This is interactive (soft) real time, not hard real time.
 - **P5:** spatial PDE execution, when the user resumes spatial work.
@@ -1750,6 +1750,9 @@ The user asked whether to bring Rust in progressively. The goal is to make the e
 - The Rust figures are estimates, because no Rust toolchain is installed on this machine.
 - cProfile inflates paths with many small calls, so the flowsheet shares are relative.
 - The cubic EOS and IAPWS-95 inside a network were not profiled.
+- The interpreter sums with `math.fsum` (correctly rounded). A generated or native backend that adds left to right changes the last bits, so exact-value validations stay on the reference backend unless the user approves a stated tolerance.
+
+Full report (private page): https://claude.ai/artifact/16fdaNy5kBsWg7j9L3oJ9X.
 
 ## F4. Boundaries and real equipment
 
