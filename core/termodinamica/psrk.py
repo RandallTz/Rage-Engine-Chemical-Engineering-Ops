@@ -279,7 +279,9 @@ class PSRKMixture(PengRobinsonMixture):
         self.b = ob * R * self.Tc / self.Pc
         self.kij = np.zeros((self.nc, self.nc))
         self.gE = PSRKUnifac(self.cas, {c: psrk_groups(c) for c in self.cas})
-        self.esp = [datos.especie(c) if c not in psrk_data.LIGHT_GASES else None for c in self.cas]
+        # ideal-gas part: the catalog species' own record, or the light gas's caloric record (psrk_data)
+        self.esp = [datos.especie(c) if c not in psrk_data.LIGHT_GASES else psrk_data.ideal_gas_record(c)
+                    for c in self.cas]
         self.T_range = (float(np.max(self.T_fit_lo)), math.inf)
 
     # --- temperature functions -------------------------------------------------
@@ -361,10 +363,11 @@ class PSRKMixture(PengRobinsonMixture):
         return out
 
     def molar_props(self, T, P, x, Z):
-        if any(e is None for e in self.esp):
-            raise CubicOutOfScope("Caloric properties need an ideal-gas cp record; light gases of psrk_data have "
-                                  "none in the catalog.", cause="no_ideal_gas_record",
-                                  species=[c for c, e in zip(self.cas, self.esp) if e is None])
+        out = [e.cas for e in self.esp if isinstance(e, psrk_data.IdealGasRecord)
+               and not e.T_cp[0] <= float(np.real(T)) <= e.T_cp[1]]
+        if out:
+            raise CubicOutOfScope(f"T = {float(np.real(T)):.6g} K is outside the ideal-gas cp record of {out}.",
+                                  cause="outside_ideal_gas_range", T=float(np.real(T)), species=out)
         return super().molar_props(T, P, x, Z)
 
 
