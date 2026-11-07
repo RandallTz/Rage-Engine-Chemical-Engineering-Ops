@@ -47,7 +47,15 @@ for (const g of [...groups, 'other']) for (const { file: f } of entries(g)) {
   if (known.has(f)) { console.error(`${f} is listed in both '${known.get(f)}' and '${g}'`); process.exit(1); }
   known.set(f, g);
 }
-const onDisk = readdirSync(frontend).filter((f) => /^verificar_.*\.mjs$/.test(f));
+function discoverVerifiers(directory, relative = '') {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    if (entry.name.startsWith('.') || entry.name === 'node_modules') return [];
+    const name = relative ? `${relative}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) return discoverVerifiers(path.join(directory, entry.name), name);
+    return entry.isFile() && /^(?:verify|verificar)_.*\.mjs$/.test(entry.name) ? [name] : [];
+  });
+}
+const onDisk = discoverVerifiers(frontend);
 const unlisted = onDisk.filter((f) => !known.has(f));
 const missing = [...known.keys()].filter((f) => !onDisk.includes(f));
 if (unlisted.length || missing.length) {
