@@ -1,5 +1,6 @@
 'use client';
 import IndexedStageSolve from './IndexedStageSolve';
+import {FlowsheetSolve} from './FlowsheetWorkspace';
 import {inverseTransport} from '../../motores/modelo/servicioModelo';
 import {inverseDataIds,readInverseSolve,type InverseSolve} from '../../motores/modelo/inverseSpecification';
 import {requestFormulation} from './formulationRequests';
@@ -18,7 +19,7 @@ import {selectedDerivedModel} from './derivedSelection';
 import styles from '../motor/trabajoMotor.module.css';
 
 export default function DerivedSolve({model}:{model:HojaMotor}){
-  return model.commonModel?.indexSet?<IndexedStageSolve model={model}/>:<OrdinaryDerivedSolve model={model}/>;
+  return model.commonModel?.flowsheet?<FlowsheetSolve model={model}/>:model.commonModel?.indexSet?<IndexedStageSolve model={model}/>:<OrdinaryDerivedSolve model={model}/>;
 }
 function OrdinaryDerivedSolve({model}:{model:HojaMotor}){
   const router=useRouter(),controller=useRef<AbortController|null>(null);
