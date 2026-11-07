@@ -33,7 +33,7 @@ Rules that apply to every run:
 | 4 | F5-C1 equilibrium-reaction constraint in Model/compiler | Strong (Astra) | F5; the reactive stage of `demo-02-column` | `repairs requested` · RA-1 (Python reader accepts Unicode digits; roadmap F5 claude-a re-review), RA-2 doc update with it |
 | 5 | Steady state as a one-step Transform technique over the current dynamic selection | Light | `demo-02-steady` (UI half) | `repairs requested` · RT-6, RT-7 (roadmap Demo 0.2, item 5 review of 7 November); RT-7 first |
 | 6 | Template instances: replay a template's recorded recipe into a new connectable model | Strong (Astra) | `demo-02-drum` onward (F4) | `review pending` · independent review |
-| 7 | Repairs RC-1 to RC-7 from the independent review of items 1-2 | Light | Commit of items 1-2; `demo-02-drum` (RC-3) | `review pending` · independent review |
+| 7 | Repairs RC-1 to RC-7 from the independent review of items 1-2 | Light | Commit of items 1-2; `demo-02-drum` (RC-3) | `accepted` · claude-a review of 7 November (roadmap Demo 0.2); controller removes the row |
 | 8 | `demo-02-stages`: one generic template, Solve count, expansion and network execution | Strong (Astra) | F4 + F3; Codex under dec-demo02-codex-numerics and dec-demo02-codex-physics | `review pending` · CSTR/train acceptance review and CR-2 re-review (evidence: roadmap F3/F9-R8 and Demo 0.2) |
 | 9 | Demo 0.3 Results chart groundwork | Strong | Results; demo-03 | `repairs requested` · RV-8 (decode lowering-cache constants once; roadmap Demo 0.2, Codex RV-4 / CR-2 repairs); spatial work deferred |
 
