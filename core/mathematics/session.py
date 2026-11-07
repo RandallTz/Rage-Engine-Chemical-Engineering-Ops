@@ -231,6 +231,19 @@ def replay_operations(source,selected,owners,declared_units,definition,*,require
                 for identity in identities:locations[identity]=locations.get(sources[0],'system')
             else:
                 boundary.declare_condition(graph,key,op,quantities,units,_parse,_dimension,op['family']);blocking=True
+        elif kind in ('declare_fourier_law','expand_spatial_operators'):
+            # PDE-3 (7 November 2026): Fourier closure of the conductive flux and
+            # chart expansion of divergence operators; deduction only, never executed.
+            from . import expansion
+            if kind=='declare_fourier_law':
+                if op['symbol'] not in quantities or op['potential'] not in quantities:raise JournalError('Select the current heat flux and temperature fields.')
+                reasons=[op['reason']] if 'reason' in op else []
+                conductivity=_parse(op['coefficient'],quantities,reasons,units)
+                expansion.declare_fourier_law(graph,key,sources[0],quantities[op['symbol']],quantities[op['potential']],conductivity,units,_dimension,op['family'],tuple(reasons))
+                blocking=True
+            else:
+                _,created=expansion.expand_spatial_operators(graph,key,sources[0],op['domains'][0],op['family'])
+                for created_id in created:locations[created_id]=locations.get(sources[0],'system')
         elif kind in ('multiply','divide'):
             conditions=[];factor=_parse(op['right'],quantities,conditions,units);_dimension(factor,units)
             if factor.is_zero is True:raise JournalError('Scaling by zero would destroy the equation. Select a nonzero factor.')
@@ -378,7 +391,7 @@ def replay_operations(source,selected,owners,declared_units,definition,*,require
             locations[key]=owners.pop() if len(owners)==1 else 'system'
             # Consequences supplement their premises; they do not silently
             # replace a physical law or add independent dynamic states.
-            if kind not in ('zero','declare_relation','declare_condition'):graph.nodes[key].dependent=True
+            if kind not in ('zero','declare_relation','declare_condition','declare_fourier_law'):graph.nodes[key].dependent=True
         created=tuple(id_ for id_ in graph.nodes if id_ not in previous)
         after=tuple((id_,graph.nodes[id_].equation) for id_ in created)
         conditions=tuple(dict.fromkeys(condition for id_ in created for condition in graph.conditions_for(id_)))
