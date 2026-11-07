@@ -358,6 +358,11 @@ def _read_template(m):
                 _check_open_port(exchange, p, r)
             elif b["type"] == "term" and b["id"] == ("calor" if p["kind"] == "heat" else "trabajo_viscoso") and b["id"] in volume.get("terminos", {}):
                 pass
+            elif (b["type"] == "term" and p["kind"] == "heat" and b["id"] == "calor" and volume["balances"].get("energia")
+                    and isinstance(volume["supuestos"].get("energia"), dict) and volume["supuestos"]["energia"].get("adiabatico") is False):
+                # The port names the retained boundary heat-rate term of the energy balance; its value is the
+                # recorded heat law (or datum) of the deduction, never a separate numeric copy.
+                pass
             else:
                 _fallo(r + ".boundary", "Expected an existing heat or work boundary term")
             units = {"power": "W"}

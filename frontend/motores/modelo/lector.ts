@@ -211,7 +211,9 @@ function readTemplate(model:ModeloComun) {
       if(b.type==='exchange'&&p.kind==='heat'){
         const exchange=model.intercambios.find(q=>q.id===b.id);
         if(!exchange)fallo(r+'.boundary','Unknown heat exchange');open(exchange!);
-      }else if(!(b.type==='term'&&b.id===(p.kind==='heat'?'calor':'trabajo_viscoso')&&Object.hasOwn(volume!.terminos??{},b.id as string)))fallo(r+'.boundary','Expected an existing heat or work boundary term');
+      }else if(!(b.type==='term'&&b.id===(p.kind==='heat'?'calor':'trabajo_viscoso')&&Object.hasOwn(volume!.terminos??{},b.id as string))
+        // The port may name the retained boundary heat-rate term of the energy balance (its value is the recorded heat law).
+        &&!(b.type==='term'&&p.kind==='heat'&&b.id==='calor'&&(volume as any)!.balances?.energia===true&&((volume as any)!.supuestos?.energia as any)?.adiabatico===false))fallo(r+'.boundary','Expected an existing heat or work boundary term');
       units={power:'W'};
     }
     const variables=claves(p.variables,r+'.variables',Object.keys(units));
