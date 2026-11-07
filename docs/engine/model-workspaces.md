@@ -88,6 +88,18 @@ New interface code is in `frontend/app/models/`. The existing scientific UI comp
 
 ## Model derivation standard and audit
 
+### Composable unit operations (user decision, 7 November 2026, `dec-composable-operations`)
+
+Every unit operation is deduced once, generically, and assembled; combinations are never deduced as new models. The rule applies to all operations (reactors, separators, heat transfer, pressure change, mixing and splitting), to Claude, Codex and the Gemini research dossiers.
+
+1. **One deduction per operation class.** A class starts from the fundamental component-mass, energy and momentum laws over its control volume. Its variants are recorded assumptions on that one deduction, not separate models. Example: batch (closed boundary), semi-batch (feed only), CSTR (open boundary, perfect mixing) and PFR (axial spatial resolution; deduction only while spatial execution is deferred) are variants of one reacting control volume.
+2. **The operation's own energy balance is intrinsic.** It is always deduced in the same control volume, because thermodynamics is always present. Isothermal operation is an assumption recorded on that balance.
+3. **Services are separate templates.** A jacket, coil, external heat exchanger, electric heater, pump, valve or compressor has its own control volume and its own deduction, and exposes typed ports (`material`, `heat`, `work`). It never becomes part of another operation's deduction.
+4. **Coupling happens only at a shared boundary.** One constitutive relation is declared at the boundary (for example Q = U A (T_service - T_process)). Its flow enters both balances with opposite signs, so the coupling conserves energy or mass by construction. A prescribed service state (for example a known jacket temperature) is the limiting case of that boundary relation, recorded as an assumption.
+5. **Assembly is topology.** Templates are connected port to port in the flowsheet, never wired inside Model.
+
+Current state (7 November 2026): the CSTR of Demo 0.2 uses the limiting case (constitutive U A (T_j - T) with a prescribed jacket temperature, injected through the generic `heat_builder` hook and exposed as a `heat` port). Missing, recorded as Engine findings: a service template with its own control volume (first, a dynamic jacket), and heat or work connections between templates: `core/modelo/flowsheet.py` connects only `material` ports (`flowsheet_port_kind`).
+
 ### Indexed result presentation and preparation reuse (3 November 2026)
 
 Results accepts optional versioned indexed publication metadata with stage-qualified series owners, closure verification references, typed end-port variables and scalar steady profiles over j. Existing x-y charts can plot those profiles using the dimensionless stage axis; no new page, editor, wiring controls or numerical client calculation is introduced. Four Python tests and 39 headless Node checks verify this contract on thermal-chain publications and isolated wire-type fixtures. Indexed drum execution still waits for the recorded discharge relations and end-to-end numerical acceptance. A contract-only publication must not be presented as a solved network capability.
