@@ -23,6 +23,9 @@ export function connectionDiagnostics(diagnostics:Diagnostic[],id:string){
   const path=`flowsheet.connections.${id}`;
   return diagnostics.filter(row=>row.path===path||row.path.startsWith(path+'.'));
 }
+export function unplacedDiagnostics(diagnostics:Diagnostic[],connectionIds:string[]){
+  return diagnostics.filter(diagnostic=>!connectionIds.some(id=>connectionDiagnostics([diagnostic],id).length>0));
+}
 const endpointKey=(p:FlowsheetEndpoint)=>JSON.stringify([p.instance,p.port]);
 
 /** The diagram edits the common topology; all physical admission remains in Python. */
@@ -100,5 +103,6 @@ export default function FlowsheetDiagram({model,initialDiagnostics=[]}:{model:Ho
     <fieldset disabled={busy}><legend>Connect exposed material ports</legend><label>Connection ID <input value={connectionId} onChange={e=>setConnectionId(e.target.value)}/></label><label>Outlet <select value={from} onChange={e=>setFrom(e.target.value)}><option value="">Select outlet</option>{available.filter(p=>p.direction==='outlet').map(p=><option key={p.id} value={endpointKey(p)}>{p.instance}.{p.port}</option>)}</select></label><label>Inlet <select value={to} onChange={e=>setTo(e.target.value)}><option value="">Select inlet</option>{available.filter(p=>p.direction==='inlet').map(p=><option key={p.id} value={endpointKey(p)}>{p.instance}.{p.port}</option>)}</select></label><button disabled={!connectionId||!from||!to} onClick={connect}>Validate and connect</button></fieldset>
     <fieldset disabled={busy}><legend>Add an instance from an embedded template</legend><label>Instance ID <input value={instanceId} onChange={e=>setInstanceId(e.target.value)}/></label><label>Template <select value={template} onChange={e=>setTemplate(e.target.value)}><option value="">Select template</option>{Object.keys(sheet.templates).map(id=><option key={id}>{id}</option>)}</select></label><button disabled={!instanceId||!template} onClick={addInstance}>Validate and add</button></fieldset>
     {busy&&<p role="status">Validating topology in Python…</p>}{message&&<p role="status">{message}</p>}
+    {unplacedDiagnostics(diagnostics,visible.connections.filter(link=>positions[link.from.instance]&&positions[link.to.instance]).map(link=>link.id)).map((diagnostic,index)=><p role="alert" key={`${diagnostic.path}:${index}`}>{diagnostic.code} · {diagnostic.path}: {diagnostic.message}</p>)}
   </details>;
 }
