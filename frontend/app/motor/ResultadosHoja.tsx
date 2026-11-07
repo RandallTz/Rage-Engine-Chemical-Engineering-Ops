@@ -4,6 +4,7 @@ import {ResultEvents} from './ResultEvents';
 import {steadyCSV} from '../../motores/modelo/steadyContract';
 import {validateSavedSteady} from './resultadosMotor';
 import {validateSavedIndexedResult} from '../models/indexedSelection';
+import {readFlowsheetResult} from '../../motores/modelo/flowsheet';
 import { englishLabel } from '../models/english';
 import CompilationSummary from '../models/CompilationSummary';
 import {useEffect,useState} from 'react';
@@ -50,8 +51,9 @@ export default function ResultadosHoja({id}:{id:string}){
   if(r.version===3){
     try{validateSavedIndexedResult(r,id,signature);}catch(failure){return <p role="alert">{(failure as Error).message}</p>;}
     const common=r.commonResult!,network=common.indexedNetwork!;
-    return <div className={styles.page}><NavegacionHoja id={id} actual="resultados"/><h1>Indexed network results</h1>
-      <p>{network.count} stages · {network.mode} · {r.estado}</p>{rejection}<ResultCharts model={h} result={common}/><ResultEvents result={common}/>
+    const flowsheet=common.procedencia.motor==='rage.compilador.flowsheet_network'?readFlowsheetResult(common).compilation:undefined;
+    return <div className={styles.page}><NavegacionHoja id={id} actual="resultados"/><h1>{flowsheet?'Flowsheet results':'Indexed network results'}</h1>
+      <p>{network.count} stages · {network.mode} · {r.estado}</p>{flowsheet&&<p>{flowsheet.stages.map(stage=>`j=${stage.index}: ${stage.instanceId}`).join(' · ')}</p>}{rejection}<ResultCharts model={h} result={common}/><ResultEvents result={common}/>
       {network.mode==='steady'&&<p>Local steady root; global uniqueness and dynamic stability are not proved.</p>}
       <details><summary>Published series and profiles</summary><table><thead><tr><th>Quantity</th><th>SI unit</th><th>Published values</th></tr></thead><tbody>{common.series.map(row=><tr key={row.id}><td>{row.id}</td><td>{row.unidadSI}</td><td>{Array.isArray(row.valores)?row.valores.map(v=>v===null?'Not defined':String(v)).join(', '):row.valores===null?'Not defined':num(row.valores)}</td></tr>)}</tbody></table></details>
       <PublishedChecks checks={common.verificaciones}/>
