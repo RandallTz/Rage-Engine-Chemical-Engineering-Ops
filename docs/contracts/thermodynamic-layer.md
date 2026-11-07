@@ -12,7 +12,7 @@ For a volume of the common model with an equilibrium closure:
 
 | Function | Returns |
 |---|---|
-| `candidatas(modelo, v)` | The package's **fixed** set of candidate phases: `vapor-1`, `liquido-1` and, with activity models (NRTL, UNIFAC) and more than one component, `liquido-2`. An ideal solution does not split into two liquids, so it has no `liquido-2`. Pure water (`agua-iapws95`) has `vapor-1` and `liquido-1` |
+| `candidatas(modelo, v)` | The package's **fixed** set of candidate phases: `vapor-1`, `liquido-1` and, with activity models (NRTL, UNIFAC) and more than one component, `liquido-2`. An ideal solution does not split into two liquids, so it has no `liquido-2`. Pure water (`agua-iapws95`) has `vapor-1` and `liquido-1`. The two cubic equation-of-state packages, Peng–Robinson (`peng-robinson-vdw1f`) and PSRK (`psrk-unifac`: SRK with the UNIFAC PSRK g^E mixing rule), describe both phases with one residual Helmholtz function and have `vapor-1` and `liquido-1`; a third phase is a located rejection, never published |
 | `variables(modelo)` | The state variables of each volume: T, P, V and, for each candidate, its amount, its composition and its tangent-plane distance `tm`. They are the same in any state |
 | `cierre(modelo, v, n, ("PH", P, H) \| ("UV", U, V) \| ("TP", T, P))` | The state with **all** the candidates |
 
