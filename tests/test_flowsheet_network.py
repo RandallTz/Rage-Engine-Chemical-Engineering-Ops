@@ -6,7 +6,9 @@ Network: continuous reactor R1 -> heated liquid drum D1 -> continuous reactor R2
 The independent reference is written here: simultaneous component, energy and
 outlet-momentum balances of the three vessels, with the liquid caloric route of
 core.reactions.PackagePhase (chemical potentials, formation-anchored), solved
-with scipy (DOP853 and a simultaneous root). No compiled expression, bridge,
+with scipy (LSODA, since the outlet-path inertance time is milliseconds, and a
+simultaneous root). Each discharge port is at the next vessel's pressure (the
+network pressure relation), the last one at its declared outlet pressure. No compiled expression, bridge,
 closure runtime or model RHS is used by the reference.
 
     python -m pytest -q tests/test_flowsheet_network.py
@@ -63,6 +65,8 @@ def reference(documents):
     """Independent physics of the chain from the documents' declared numbers."""
     from demo02_cstr import reference_functions, demo_data
     rows = chain_data(*documents)
+    for row, following in zip(rows, rows[1:] + [None]):
+        row['p2'] = following['P'] if following is not None else row['solve.Pout']
     functions = []
     for row in rows:
         data = dict(demo_data(), P=row['P'])
@@ -87,7 +91,7 @@ def reference(documents):
         heat = row['UA'] * (row['Tj'] - T) if 'UA' in row else row['Q']
         source = NU * rate(T, n) if rate is not None else 0.
         derivative = [*(inlet - out + source), inlet_energy - out_energy + heat,
-                      row['solve.pipeArea'] / row['solve.length'] * (pressure - row['solve.Pout'] - loss)]
+                      row['solve.pipeArea'] / row['solve.length'] * (pressure - row['p2'] - loss)]
         return derivative, out, out_energy, T, heat
 
     rates = [functions[0][5], None, functions[2][5]]
@@ -109,7 +113,7 @@ def reference(documents):
 
 def reference_trajectory(ref, times):
     from scipy.integrate import solve_ivp
-    solution = solve_ivp(ref['rhs'], (0., float(times[-1])), ref['initial'], method='DOP853', t_eval=times,
+    solution = solve_ivp(ref['rhs'], (0., float(times[-1])), ref['initial'], method='LSODA', t_eval=times,
                          rtol=2e-10, atol=([1e-11] * 4 + [1e-6, 1e-12]) * 3)
     assert solution.success, solution.message
     return solution
@@ -144,7 +148,7 @@ def reference_steady(ref):
             pressure = row['P'] + mass * row['solve.g'] / row['solve.A']
             loss = row['solve.K'] * F * F / (2 * rho * row['solve.pipeArea'] ** 2)
             return np.concatenate([(inlet - F * n / mass + source) / 1e-6, [(energy - F * H / mass + heat) / 1e-3,
-                                   (pressure - row['solve.Pout'] - loss) / 1e-3]])
+                                   (pressure - row['p2'] - loss) / 1e-3]])
         mass0 = row['solve.A'] / row['solve.g'] * row['solve.K'] * F ** 2 / (2 * 900. * row['solve.pipeArea'] ** 2)
         seed = np.concatenate([z * mass0 / float(z @ masses) / 10.0, [guess_T / 300.0]])
         fit = least_squares(residual, seed, method='lm', xtol=1e-15, ftol=1e-15, gtol=1e-15, max_nfev=4000)
@@ -343,15 +347,26 @@ def test_persistence_layout_invariance_and_stale_sources(model):
     assert caught.value.code == 'stale_flowsheet_execution'
 
 
-def test_pressure_rule_rejects_unequal_connected_pressures(documents):
+def test_connected_discharge_pressure_follows_the_receiving_instance(documents):
+    # Review PR-6/CR-2: the same shared rule as the indexed train. The discharge port of R1 is coupled to
+    # the pressure of the receiving instance D1; a raised D1 pressure decelerates R1's outlet flow by
+    # (A/L) dP exactly, instead of being rejected or silently prescribed at 1 atm.
     from core.compilador.flowsheet_network import FlowsheetDerivedSystem
-    from core.compilador.derived_graph import LoweringError
+    base = FlowsheetDerivedSystem(leer_modelo_comun(flowsheet_model(*documents)))
+    assert [row['connectionId'] for row in base.pressure_couplings] == ['s1', 's2']
     value = flowsheet_model(*documents)
     value['flowsheet']['instances'][1]['data'] = {OWNER + '.pressure': {'texto': '200000.0', 'unidad': 'Pa'}}
-    with pytest.raises(LoweringError) as caught:
-        FlowsheetDerivedSystem(leer_modelo_comun(value))
-    assert caught.value.diagnostics[0]['code'] == 'index_network_pressure_mismatch'
-    assert caught.value.diagnostics[0]['path'] == 'flowsheet.connections.s1'
+    raised = FlowsheetDerivedSystem(leer_modelo_comun(value))
+    # D1's initial enthalpy is evaluated at its own (raised) pressure; compare both RHS at the same state.
+    y = base.initial()
+    np.testing.assert_array_equal(y[:base.offsets[1]], raised.initial()[:base.offsets[1]])
+    flow = base.offsets[0] + 5
+    stage = base.stages[0]
+    rows = chain_data(*documents)[0]
+    expected = -rows['solve.pipeArea'] / rows['solve.length'] * (200000.0 - 101325.0)
+    difference = raised.rhs(0., y)[flow] - base.rhs(0., y)[flow]
+    assert abs(difference - expected) <= 1e-9 * abs(expected)
+    assert stage.state_ids[5] == base.stages[0].state_ids[5]
 
 
 # ---------------------------------------------------------------- execution

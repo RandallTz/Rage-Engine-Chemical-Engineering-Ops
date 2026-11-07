@@ -6,6 +6,7 @@ integration that calls core.mezclas directly; and its steady state, solved throu
 path from the same deduced rows, is the long-time limit of the dynamic run.
 """
 import copy
+import re
 import unittest
 
 import numpy as np
@@ -17,6 +18,21 @@ from test_steady_package_closure import reference_drum_steady, steady_selection
 from core.compilador.derived import DerivedSystem, resolve_system
 from core.compilador.steady import SteadySystem, read_result
 from core.modelo import leer_modelo_comun
+
+
+def recorded_texts(model):
+    """Every recorded assumption text: workbench reasons and sources, journal titles and volume motivos (PR-1)."""
+    texts = []
+    for op in model['motores']['equationWorkbench']['operations']:
+        texts.append(op.get('reason', ''))
+        texts.extend((op.get('source') or {}).values())
+    for name, journal in model['motores'].items():
+        if isinstance(journal, dict) and isinstance(journal.get('volumes'), dict):
+            for entry in journal['volumes'].values():
+                texts.extend(op.get('title', '') for op in entry.get('operations', []) if isinstance(op, dict))
+    for volume in model['volumenes']:
+        texts.append(str(volume.get('termodinamica', {}).get('motivo', '')))
+    return ' '.join(texts).lower()
 
 
 class DemoDrumTemplate(unittest.TestCase):
@@ -48,9 +64,9 @@ class DemoDrumTemplate(unittest.TestCase):
         drum = next(v for v in model['volumenes'] if v['id'] == OWNER)
         self.assertEqual(drum['balances'], {'materia': True, 'energia': True, 'momento': True})
         # No assumption text names a piece of equipment (decision 4 of dec-demo02-dynamic-first).
-        reasons = ' '.join(op.get('reason', '') for op in model['motores']['equationWorkbench']['operations']).lower()
+        reasons = recorded_texts(model)
         for word in ('drum', 'valve', 'vent', 'orifice', 'pump', 'tray', 'distillation column'):
-            self.assertNotIn(word, reasons)
+            self.assertIsNone(re.search(r'\b' + word + r'\b', reasons), word)
 
     def test_dynamic_run_against_direct_package_integration(self):
         self.assertEqual(self.result['estado'], 'resuelto')

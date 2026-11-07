@@ -124,18 +124,46 @@ def test_connection_pressure_is_equal_or_located_rejection(receiving_pressure):
         assert caught.value.diagnostics[0]['path']=='indexSet.connections.transfer'
 
 
-def test_real_stage_pressure_change_cannot_reuse_equal_pressure_admission():
-    from core.compilador.indexed_network import check_connection_pressure
+def test_recorded_discharge_pressure_is_coupled_to_the_receiving_stage():
+    # Review PR-6/CR-2: the discharge-port pressure datum of a hydraulic path is replaced by the
+    # receiving volume's pressure; a changed receiving pressure is read, never a frozen admission.
+    import sympy as sp
+    from core.compilador.indexed_network import check_connection_pressure, COUPLING_PREMISE
     system=network(2)
     connection=system.expansion['connections'][0]
     donor,receiver=system.stages[0],system.stages[1]
     port=next(p for p in donor.model['template']['ports'] if p['id']==connection['from']['portId'])
     closure=receiver.closures[0]
+    datum,_=check_connection_pressure(donor,port,receiver,closure,'indexSet.connections.read')
+    # Stage instances carry namespaced identities; the replaced datum is the stage's discharge-pressure datum.
+    assert str(datum)==str(donor._expand(sp.Function('p2__'+port['volumeId'])(donor.time)))
+    assert system.pressure_couplings==[{'connectionId':connection['id'],'premise':COUPLING_PREMISE,
+        'from':{'stage':1,'quantity':'p2__'+port['volumeId'],'replacedDatum':str(datum)},
+        'to':{'stage':2,'quantity':str(closure.P)}}]
     pressure=receiver._expand(closure.P)
     previous=receiver.parameter_values[pressure]
     try:
         receiver.parameter_values[pressure]=2*previous
+        datum,target=check_connection_pressure(donor,port,receiver,closure,'indexSet.connections.changed')
+        assert datum in donor.parameter_values
+        assert sp.simplify(target.subs(receiver.parameter_values)-2*previous)==0
+        receiver.parameter_values[pressure]=-previous
         with pytest.raises(LoweringError) as caught:
             check_connection_pressure(donor,port,receiver,closure,'indexSet.connections.changed')
         assert caught.value.diagnostics[0]['code']=='index_network_pressure_mismatch'
     finally:receiver.parameter_values[pressure]=previous
+
+
+def test_direct_phase_draw_still_requires_equal_pressures():
+    from types import SimpleNamespace
+    import sympy as sp
+    from core.compilador.indexed_network import check_connection_pressure
+    t=sp.Symbol('t');P=sp.Function('P__receiver')(t);Pd=sp.Function('P__donor')(t)
+    donor=SimpleNamespace(time=t,graph=SimpleNamespace(nodes={}),_expand=lambda q:q,parameter_values={Pd:sp.Integer(101325)})
+    for value,admitted in [(101325,True),(202650,False)]:
+        receiver=SimpleNamespace(_expand=lambda q:q,parameter_values={P:sp.Integer(value)})
+        args=(donor,{'volumeId':'donor'},receiver,SimpleNamespace(P=P),'indexSet.connections.draw')
+        if admitted:assert check_connection_pressure(*args) is None
+        else:
+            with pytest.raises(LoweringError) as caught:check_connection_pressure(*args)
+            assert caught.value.diagnostics[0]['code']=='index_network_pressure_mismatch'

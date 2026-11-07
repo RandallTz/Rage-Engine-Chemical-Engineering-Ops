@@ -12,6 +12,7 @@ import numpy as np
 from scipy.optimize import root
 
 from demo01_flash import DEMO, frozen_model
+from derived_momentum_inputs import total_loss_coefficient
 from core.compilador.steady import SteadySystem
 from core.compilador.derived_graph import LoweringError
 
@@ -73,7 +74,7 @@ def reference_drum_steady(data, momentum=False, guess=None):
                 if momentum:
                     F = y[3]
                     dF = data['pipeArea'] / data['length'] * (data['P'] + rho * data['g'] * level - data['Pout']
-                                                             - data['loss'] * F**2 / (2 * rho * data['pipeArea']**2))
+                                                             - total_loss_coefficient(data) * F**2 / (2 * rho * data['pipeArea']**2))
                     q += F * x * M / phase.M; Hs += F * phase.h / phase.M
                 else:
                     F = data['Cd'] * data['orifice'] * math.sqrt(2 * data['g'] * level) / phase.v
@@ -182,7 +183,7 @@ class MomentumDrumSteady(unittest.TestCase):
         rho = liquid.M / liquid.v
         head = rho * self.data['g'] * liquid.n * liquid.v / self.data['area']
         F = self.root[3]
-        self.assertAlmostEqual(head, self.data['loss'] * F**2 / (2 * rho * self.data['pipeArea']**2), delta=1e-6 * head)
+        self.assertAlmostEqual(head, total_loss_coefficient(self.data) * F**2 / (2 * rho * self.data['pipeArea']**2), delta=1e-6 * head)
 
     def test_momentum_row_is_specialized_not_replaced(self):
         report = self.result['procedencia']['compilation']

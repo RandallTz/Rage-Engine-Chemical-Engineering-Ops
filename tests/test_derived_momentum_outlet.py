@@ -4,12 +4,15 @@ Fresh shared-law author (tests/derived_momentum_inputs.py). The reference is an
 independent DOP853 integration that calls core.mezclas directly.
 """
 import copy
+import math
+import re
 import unittest
 
 import numpy as np
 import sympy as sp
 
 from derived_momentum_inputs import OUTLET, OWNER, PIPE, author_outlet, reference_outlet, select_outlet
+from test_demo02_drum import recorded_texts
 from core.compilador.derived import DerivedSystem, LoweringError, resolve_system
 
 
@@ -35,15 +38,43 @@ class MomentumOutlet(unittest.TestCase):
         s = lambda name: sp.Symbol(name, real=True)
         equation = self.author.result.graph.nodes[self.out['flow']].equation
         F, ML, vL, VL, P = f('liquidMassFlow'), f(f'phase_M__{OWNER}__L'), f(f'phase_v__{OWNER}__L'), f(f'liquid_volume__{OWNER}'), f(f'P__{OWNER}')
-        A, L, K, g, Ad, Pout = s(f'A__{PIPE}'), s(f'L__{PIPE}'), s('lossCoefficient'), s(f'g__{OWNER}'), s('crossSectionArea'), s('outletPressure')
+        A, L, K, g, Ad, Pout = s(f'A__{PIPE}'), s(f'L__{PIPE}'), s(f'K__{PIPE}'), s(f'g__{OWNER}'), s('crossSectionArea'), s('outletPressure')
         rho = ML / vL
-        # The journal's signed Darcy-Weisbach/local-loss law with zero distributed friction (review RM-1).
-        expected = A / L * (P + rho * g * VL / Ad - Pout - K * F * sp.sqrt(F**2) / (2 * rho * A**2))
+        # The journal's own signed Darcy-Weisbach/local-loss node, with the recorded constant Darcy factor and the
+        # circular-section hydraulic diameter (reviews RM-1, PR-2, CR-1).
+        # The relation parser reads pi as the binary64 literal 3.141592653589793 (no exact pi symbol).
+        K = K + s('darcyFriction') * L / sp.sqrt(4 * A / sp.Rational(repr(math.pi)))
+        expected = A / L * (P + rho * g * VL / Ad - Pout - K * F * sp.Abs(F) / (2 * rho * A**2))
         self.assertEqual(equation.lhs, sp.diff(F, t))
         self.assertEqual(sp.simplify(equation.rhs - expected), 0)
         total = self.author.result.graph.nodes[self.out['donorTotal']].equation
         self.assertEqual(sp.simplify(total.lhs - f('q__liquid__1') - f('q__liquid__2')), 0)
         self.assertEqual(total.rhs, F)
+        # PR-2: the loss is the journal's published constitutive node, reached by recorded substitutions.
+        graph = self.author.result.graph
+        ancestry, stack = set(), [self.out['loss']]
+        while stack:
+            key = stack.pop()
+            if key not in ancestry:
+                ancestry.add(key)
+                stack.extend(graph.nodes[key].inputs)
+        self.assertIn(f'momentum.{PIPE}.path.darcy-weisbach', ancestry)
+        self.assertEqual(graph.nodes[f'momentum.{PIPE}.path.darcy-weisbach'].kind, 'constitutive')
+        # The friction coefficient relation carries its recorded validity range.
+        operations = self.author.definition['operations']
+        friction = [op for op in operations if op['kind'] == 'declare_relation' and op['left'] == self.author.quantity(s(f'f__{PIPE}'))]
+        self.assertEqual(len(friction), 1)
+        self.assertEqual(friction[0]['source'], OUTLET['friction']['source'])
+        # PR-4: donor assumptions and basis definitions are separate recorded relations.
+        kinds = {op['reason']: op.get('relationKind') for op in operations if op['kind'] == 'declare_relation'}
+        self.assertEqual(kinds['Phase donor: the stream has the liquid phase composition of this volume'], 'constitutive')
+        self.assertEqual(kinds['Definition of mass fraction from mole fraction, component molar mass and the phase mean molar mass'], 'definition')
+        self.assertEqual(kinds['Definition of component mass flow from component molar flow and molar mass'], 'definition')
+        self.assertEqual(kinds['The outgoing material draws the donor vapour phase at its thermodynamic state'], 'constitutive')
+        # PR-1: no recorded text names a piece of equipment.
+        text = recorded_texts(select_outlet(self.author, self.out))
+        for word in ('drum', 'valve', 'vent', 'orifice', 'pump', 'tray', 'distillation column'):
+            self.assertIsNone(re.search(r'\b' + word + r'\b', text), word)
 
     def test_states_and_floor_pressure_against_direct_package_integration(self):
         from core import mezclas
@@ -59,7 +90,8 @@ class MomentumOutlet(unittest.TestCase):
                 self.assertEqual(result['estado'], 'resuelto')
                 values = _series(result)
                 ids = [row['quantityId'] for row in model['motores']['derivedExecution']['states']]
-                for index, tolerance in [(0, 1e-7), (1, 1e-7), (3, 1e-7)]:
+                # Masses about 100 kg: 2e-7 kg is 2e-9 relative, at the study rtol of 1e-9.
+                for index, tolerance in [(0, 2e-7), (1, 2e-7), (3, 1e-7)]:
                     self.assertLess(np.max(abs(values['campo.' + ids[index]] - self.reference.y[index])), tolerance)
                 self.assertLess(np.max(abs(values['campo.' + ids[2]] - self.reference.y[2])) / abs(self.reference.y[2][0]), 1e-8)
                 T = values['closure.' + OWNER + '.' + system.ids[system.closures[0].T]]
@@ -80,6 +112,25 @@ class MomentumOutlet(unittest.TestCase):
                         for y in self.reference.y.T])
         storage = OUTLET['pipeArea'] * OUTLET['length'] * np.abs(np.gradient(rho, self.times)) / flow
         self.assertLess(storage.max(), 1e-3)
+
+    def test_momentum_admission_gate_reports_its_own_diagnostic(self):
+        # PR-3: the selection above is now rejected earlier (discharge-enthalpy condition), so exercise the
+        # admission gate itself on an admitted system with the path row removed from the selection.
+        system = DerivedSystem(select_outlet(self.author, self.out))
+        selection = system.selection
+        system.selection = {**selection, 'states': [row for row in selection['states'] if row['equationId'] != self.out['flow']]}
+        with self.assertRaises(LoweringError) as caught:
+            system._reduced_momentum_admission()
+        diagnostic = caught.exception.diagnostics[0]
+        self.assertEqual(diagnostic['code'], 'unsupported_momentum_regime')
+        self.assertEqual(diagnostic['equationId'], f'momentum.{PIPE}.path.pressure-form')
+        system.selection = selection
+        system.model = copy.deepcopy(system.model)
+        system.model['motores']['momentumDerivation']['volumes'].pop(PIPE)
+        with self.assertRaises(LoweringError) as caught:
+            system._reduced_momentum_admission()
+        self.assertEqual(caught.exception.diagnostics[0]['code'], 'unsupported_momentum_regime')
+        self.assertIn('Record the momentum journal of ' + PIPE, caught.exception.diagnostics[0]['message'])
 
     def test_vapour_appearance_is_still_a_located_phase_event(self):
         rk45 = [e['valor'] for e in self.runs['rk45'][2]['eventos'] if e['codigo'] == 'aparicion_fase']
