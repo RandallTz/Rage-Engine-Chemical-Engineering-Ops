@@ -75,6 +75,10 @@ class CustomRelationContractTests(unittest.TestCase):
         with self.assertRaisesRegex(MathematicsError, 'quantity must occur'):
             self.replay(bad)
         bad = copy.deepcopy(self.definition)
+        bad['operations'][1]['source']['url'] = 'javascript:alert(1)'
+        with self.assertRaisesRegex(MathematicsError, r'Invalid relation source field: url\.'):
+            read_definition(bad)
+        bad = copy.deepcopy(self.definition)
         del bad['operations'][1]['source']['citation']
         with self.assertRaisesRegex(MathematicsError, 'Relation source'):
             read_definition(bad)
