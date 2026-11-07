@@ -58,6 +58,7 @@ MARGIN_MIN_STEP = 1e-8
 
 
 def _event_state(system, t, y):
+    _check_domain(system, t, y)
     if not hasattr(system, 'event_state'):
         return system.firma(t, y), ()
     signature, margins = system.event_state(t, y)
@@ -93,6 +94,30 @@ class Detencion(Exception):
         self.codigo, self.mensaje = codigo, mensaje
 
 
+class DomainViolation(Detencion):
+    """A trial point failed a declared nonnegative domain margin."""
+    def __init__(self, system, index, t, step=None):
+        name = system.describir_dominio(index) if hasattr(system, 'describir_dominio') else f'domain {index}'
+        self.index, self.time, self.step = index, float(t), step
+        self.variable, self.bound = str(name), 'declared margin >= 0'
+        super().__init__('agotamiento', f'{name}: declared margin >= 0 violated at t = {t:.12g}' +
+                         (f'; step h = {step:.12g}' if step is not None else ''))
+
+
+def _check_domain(system, t, y):
+    outside = _fuera(system, t, y)
+    if outside:
+        raise DomainViolation(system, outside[0], t)
+
+
+def _dense(system, dense):
+    def checked(t):
+        value = dense(t)
+        _check_domain(system, t, value)
+        return value
+    return checked
+
+
 @dataclass
 class Trayectoria:
     tramos: list = field(default_factory=list)          # (t0, t1, dense_output)
@@ -103,26 +128,67 @@ class Trayectoria:
     pasos: int = 0
     rechazos: int = 0
     event_contexts: dict = field(default_factory=dict)
+    _refine: object = field(default=None, repr=False)
 
     def y(self, t):
-        for t0, t1, d in self.tramos:
+        for index, (t0, t1, d) in enumerate(self.tramos):
             if t0 <= t <= t1 + 1e-15 * max(1.0, abs(t1)):
-                return d(min(t, t1))
+                try:
+                    return d(min(t, t1))
+                except DomainViolation as error:
+                    if self._refine is None:
+                        raise
+                    return self._refine(index, t, error)
         if self.y_fin is not None and abs(t - self.t_fin) <= 1e-12 * max(1.0, abs(t)):
             return self.y_fin
         raise ValueError(f"t = {t} fuera de la trayectoria [0, {self.t_fin}]")
 
 
-def _rk(sistema, t0, y0, tf, rtol, atol, max_step, metodo="RK45", first_step=None):
+def _rk(sistema, t0, y0, tf, rtol, atol, max_step, metodo="RK45", first_step=None, domain_jac=False):
     # first_step skips scipy's initial-step probe, which evaluates the right-hand side one guessed step ahead: after
     # a stop raised beyond the current point that probe could land past the same stop.
     extra = {"first_step": min(first_step, tf - t0)} if first_step is not None and tf - t0 > 0 else {}
+    def rhs(t, y):
+        _check_domain(sistema, t, y)
+        return sistema.rhs(t, y)
     if metodo == 'BDF' and callable(getattr(sistema, 'jacobian', None)):
-        extra['jac'] = sistema.jacobian
+        def jacobian(t, y):
+            _check_domain(sistema, t, y)
+            return sistema.jacobian(t, y)
+        extra['jac'] = jacobian
+    elif metodo == 'BDF' and domain_jac:
+        def domain_jacobian(t, y):
+            base = rhs(t, y)
+            result = np.empty((len(y), len(y)))
+            for k in range(len(y)):
+                step = np.sqrt(np.finfo(float).eps) * max(abs(y[k]), 1.)
+                violated = 0
+                for _ in range(20):
+                    for sign in (1., -1.):
+                        trial = y.copy()
+                        trial[k] += sign * step
+                        outside = _fuera(sistema, t, trial)
+                        if outside:
+                            violated = outside[0]
+                        if trial[k] == y[k] or outside:
+                            continue
+                        result[:, k] = (rhs(t, trial) - base) / (trial[k] - y[k])
+                        break
+                    else:
+                        step *= .1
+                        continue
+                    break
+                else:
+                    raise DomainViolation(sistema, violated, t)
+            return result
+        extra['jac'] = domain_jacobian
     try:
-        return METODOS[metodo](sistema.rhs, t0, np.array(y0, dtype=float), tf, rtol=rtol, atol=atol, max_step=max_step,
+        return METODOS[metodo](rhs, t0, np.array(y0, dtype=float), tf, rtol=rtol, atol=atol, max_step=max_step,
                                **extra)
-    except Detencion:
+    except Detencion as error:
+        if (isinstance(error, DomainViolation) and metodo == 'BDF' and not domain_jac
+                and not callable(getattr(sistema, 'jacobian', None)) and error.time == t0):
+            return _rk(sistema, t0, y0, tf, rtol, atol, max_step, metodo, first_step, True)
         if first_step is not None:
             raise
         # SciPy's guessed initial Euler probe can leave a physical domain even
@@ -130,7 +196,7 @@ def _rk(sistema, t0, y0, tf, rtol, atol, max_step, metodo="RK45", first_step=Non
         # Revalidate the real initial RHS, then use a tolerance-scaled first
         # step. Ordinary stage rejection/location still governs that step.
         initial = np.asarray(y0,dtype=float)
-        rate = np.asarray(sistema.rhs(t0,initial),dtype=float)
+        rate = np.asarray(rhs(t0,initial),dtype=float)
         moving = np.abs(rate)>0
         scale = np.abs(initial)+np.asarray(atol,dtype=float)/rtol
         times = np.broadcast_to(scale,rate.shape)[moving]/np.abs(rate[moving])
@@ -154,11 +220,44 @@ def _detener_dominio(sistema, tray, k, t):
     tray.eventos.append(("agotamiento", t, None, None, tray.detenida.mensaje))
 
 
-def integrar(sistema, y0, t_final, rtol=1e-8, atol=1e-10, max_step=np.inf, h_min=1e-10, max_pasos=200000, metodo="RK45"):
+def integrar(sistema, y0, t_final, rtol=1e-8, atol=1e-10, max_step=np.inf, h_min=1e-10, max_pasos=200000, metodo="RK45", *, _start_time=0.0):
     """Retain the accepted prefix if a system-classified failure escapes a probe/restart."""
-    tray = Trayectoria(y_fin=np.array(y0, dtype=float))
+    tray = Trayectoria(t_fin=_start_time, y_fin=np.array(y0, dtype=float))
+
+    def refine(index, requested, failure):
+        start, end, dense = tray.tramos[index]
+        initial = np.array(dense(start), dtype=float)
+        step = (end-start)/2
+        if step < h_min or start + step == start:
+            raise DomainViolation(sistema, failure.index, start, end-start)
+        # A changed endpoint invalidates every later step and event. Rebuild the
+        # entire suffix transactionally, rather than joining incompatible states.
+        replacement = integrar(sistema, initial, t_final, rtol, atol, min(max_step, step),
+                               h_min, max_pasos, metodo, _start_time=start)
+        try:
+            value = replacement.y(requested)
+        except ValueError as error:
+            raise DomainViolation(sistema, failure.index, replacement.t_fin, step) from error
+        old_prefix = tray.tramos[:index]
+        tray.tramos = old_prefix + replacement.tramos
+        tray.eventos = [event for event in tray.eventos if event[1] <= start] + replacement.eventos
+        tray.event_contexts = {t: v for t, v in tray.event_contexts.items() if t <= start}
+        tray.event_contexts.update(replacement.event_contexts)
+        tray.t_fin, tray.y_fin, tray.detenida = replacement.t_fin, replacement.y_fin, replacement.detenida
+        tray.pasos = index + replacement.pasos
+        tray.rechazos += replacement.rechazos + 1
+        return value
+
+    tray._refine = refine
     try:
-        return _integrar(sistema, y0, t_final, rtol, atol, max_step, h_min, max_pasos, metodo, tray)
+        return _integrar(sistema, y0, t_final, rtol, atol, max_step, h_min, max_pasos, metodo, tray, _start_time)
+    except DomainViolation as error:
+        if tray.tramos:
+            _, tray.t_fin, dense = tray.tramos[-1]
+            tray.y_fin = np.array(dense(tray.t_fin), dtype=float)
+        tray.detenida = DomainViolation(sistema, error.index, tray.t_fin, abs(error.time-tray.t_fin))
+        tray.eventos.append((tray.detenida.codigo, tray.t_fin, None, None, tray.detenida.mensaje))
+        return tray
     except Exception as error:
         stop = sistema.stop_from_exception(error) if hasattr(sistema, 'stop_from_exception') else None
         if stop is None:
@@ -172,10 +271,12 @@ def integrar(sistema, y0, t_final, rtol=1e-8, atol=1e-10, max_step=np.inf, h_min
         return tray
 
 
-def _integrar(sistema, y0, t_final, rtol, atol, max_step, h_min, max_pasos, metodo, tray):
+def _integrar(sistema, y0, t_final, rtol, atol, max_step, h_min, max_pasos, metodo, tray, start_time=0.0):
     if metodo not in METODOS:
         raise ValueError(f"método no admitido: {metodo}")
-    t, y = 0.0, np.array(y0, dtype=float)
+    t, y = float(start_time), np.array(y0, dtype=float)
+    if _fuera(sistema, t, y):
+        raise ValueError('Initial state is outside its declared domain.')
     if hasattr(sistema, "validate_accepted"):
         sistema.validate_accepted(t, y)
     try:
@@ -217,6 +318,8 @@ def _integrar(sistema, y0, t_final, rtol, atol, max_step, h_min, max_pasos, meto
                 paso_max = h_try / 4
                 r = _rk(sistema, t_a, y_a, t_final, rtol, atol, paso_max, metodo, first_step=paso_max)
                 continue
+            if isinstance(d, DomainViolation):
+                d = DomainViolation(sistema, d.index, t_a, h_try)
             tray.detenida = d
             tray.eventos.append((d.codigo, t_a, firma, None, d.mensaje))
             tray.t_fin, tray.y_fin = t_a, y_a
@@ -235,10 +338,35 @@ def _integrar(sistema, y0, t_final, rtol, atol, max_step, h_min, max_pasos, meto
         if r.status == "failed":
             tray.detenida = Detencion("no_convergente", "el integrador no pudo avanzar")
             break
+        # Check the accepted endpoint before any model validation or event call.
+        if _fuera(sistema, r.t, r.y):
+            tray.rechazos += 1
+            paso_max = (r.t - t_a) / 4
+            if paso_max < h_min:
+                k = _fuera(sistema, r.t, r.y)[0]
+                tray.detenida = DomainViolation(sistema, k, t_a, r.t - t_a)
+                tray.eventos.append((tray.detenida.codigo, t_a, firma, None, tray.detenida.mensaje))
+                tray.t_fin, tray.y_fin = t_a, y_a
+                return tray
+            r = _rk(sistema, t_a, y_a, t_final, rtol, atol, paso_max, metodo, first_step=paso_max)
+            continue
         if hasattr(sistema, "validate_accepted"):
             sistema.validate_accepted(r.t, r.y)
         tray.pasos += 1
         paso_max = max_step
+        if hasattr(sistema, 'dominio'):
+            margins = sistema.dominio(r.t, r.y)
+            zeros = [k for k, value in enumerate(margins) if value == 0]
+            if zeros:
+                rate = np.asarray(sistema.rhs(r.t, r.y), dtype=float)
+                probe_h = 1e-7 * max(t_final, 1e-300)
+                predicted = sistema.dominio(r.t + probe_h, r.y + probe_h * rate)
+                outward = next((k for k in zeros if predicted[k] < 0), None)
+                if outward is not None:
+                    tray.tramos.append((t_a, r.t, _dense(sistema, r.dense_output())))
+                    tray.t_fin, tray.y_fin = r.t, r.y.copy()
+                    _detener_dominio(sistema, tray, outward, r.t)
+                    return tray
         fuera = _fuera(sistema, r.t, r.y)
         if fuera:
             # Primer instante en que algún valor de dominio se vuelve negativo.
@@ -253,12 +381,12 @@ def _integrar(sistema, y0, t_final, rtol, atol, max_step, h_min, max_pasos, meto
                 else:
                     lo = m
             k = _fuera(sistema, hi, d(hi))
-            tray.tramos.append((t_a, lo, d))
+            tray.tramos.append((t_a, lo, _dense(sistema, d)))
             tray.t_fin, tray.y_fin = lo, d(lo)
             _detener_dominio(sistema, tray, (k or fuera)[0], lo)
             return tray
         try:
-            dense = r.dense_output()
+            dense = _dense(sistema, r.dense_output())
             checks = [t_a+(r.t-t_a)*k/4 for k in (1, 2, 3, 4)] if hasattr(sistema, 'event_state') else [r.t]
             samples = [(t_a, current_margins)]
             changed_at = None
@@ -268,10 +396,20 @@ def _integrar(sistema, y0, t_final, rtol, atol, max_step, h_min, max_pasos, meto
                     changed_at = probe
                     break
                 samples.append((probe, margins))
+        except DomainViolation as d:
+            tray.rechazos += 1
+            paso_max = (r.t - t_a) / 4
+            if paso_max < h_min:
+                tray.detenida = DomainViolation(sistema, d.index, t_a, r.t-t_a)
+                tray.eventos.append((tray.detenida.codigo, t_a, firma, None, tray.detenida.mensaje))
+                tray.t_fin, tray.y_fin = t_a, y_a
+                return tray
+            r = _rk(sistema, t_a, y_a, t_final, rtol, atol, paso_max, metodo, first_step=paso_max)
+            continue
         except Detencion as d:
             tray.detenida = d
             tray.eventos.append((d.codigo, r.t, firma, None, d.mensaje))
-            tray.tramos.append((t_a, r.t, r.dense_output()))
+            tray.tramos.append((t_a, r.t, _dense(sistema, r.dense_output())))
             tray.t_fin, tray.y_fin = r.t, r.y.copy()
             return tray
         if changed_at is None:
@@ -280,41 +418,57 @@ def _integrar(sistema, y0, t_final, rtol, atol, max_step, h_min, max_pasos, meto
                 paso_max = max((r.t-t_a)/4, margin_min_step)
                 r = _rk(sistema, t_a, y_a, t_final, rtol, atol, paso_max, metodo)
                 continue
-            tray.tramos.append((t_a, r.t, r.dense_output()))
+            tray.tramos.append((t_a, r.t, _dense(sistema, r.dense_output())))
             current_margins = samples[-1][1]
             if len(samples) > 1:
                 paso_max = _margin_step(samples[-2], samples[-1], max_step, margin_min_step)
                 r.max_step = min(max_step, paso_max)
             continue
         # Cambio de régimen dentro del paso: bisección sobre la salida densa.
-        d = r.dense_output()
+        d = _dense(sistema, r.dense_output())
         # Bracket the first changed interior check, not the entire accepted
         # step: a closed regime window may already have ended at r.t.
-        lo, hi = samples[-1][0], changed_at
-        for _ in range(200):
-            if hi - lo <= 1e-12 * max(1.0, abs(hi)):
-                break
-            m = 0.5 * (lo + hi)
-            if _event_state(sistema, m, d(m))[0] == firma:
-                lo = m
-            else:
-                hi = m
-        # Re-integración limpia hasta el instante del cambio (lado nuevo) y reinicio.
-        sub = _rk(sistema, t_a, y_a, hi, rtol, atol, max_step, metodo)
-        while sub.status == "running":
-            t_s = sub.t
-            sub.step()
-            tray.tramos.append((t_s, sub.t, sub.dense_output()))
-        y_e = sub.y.copy()
-        nueva, current_margins = _event_state(sistema, hi, y_e)
+        try:
+            lo, hi = samples[-1][0], changed_at
+            for _ in range(200):
+                if hi - lo <= 1e-12 * max(1.0, abs(hi)):
+                    break
+                m = 0.5 * (lo + hi)
+                if _event_state(sistema, m, d(m))[0] == firma:
+                    lo = m
+                else:
+                    hi = m
+            # Keep reintegration segments private until the event is verified.
+            sub = _rk(sistema, t_a, y_a, hi, rtol, atol, max_step, metodo)
+            pending = []
+            while sub.status == "running":
+                t_s = sub.t
+                sub.step()
+                if sub.status == 'failed':
+                    raise Detencion('no_convergente', 'Event reintegration failed.')
+                pending.append((t_s, sub.t, _dense(sistema, sub.dense_output())))
+            y_e = sub.y.copy()
+            nueva, next_margins = _event_state(sistema, hi, y_e)
+        except DomainViolation as error:
+            tray.rechazos += 1
+            attempted = r.t - t_a
+            paso_max = attempted / 4
+            if paso_max < h_min or t_a + paso_max == t_a:
+                tray.detenida = DomainViolation(sistema, error.index, t_a, attempted)
+                tray.eventos.append((tray.detenida.codigo, t_a, firma, None, tray.detenida.mensaje))
+                tray.t_fin, tray.y_fin = t_a, y_a
+                return tray
+            r = _rk(sistema, t_a, y_a, t_final, rtol, atol, paso_max, metodo, first_step=paso_max)
+            continue
         if nueva == firma:
             # Reintegrated dynamics can move the crossing relative to dense
             # output. Retry without publishing a fictitious no-change event.
-            tray.tramos = [segment for segment in tray.tramos if segment[0] < t_a]
             tray.rechazos += 1
             r = _rk(sistema, t_a, y_a, t_final, rtol, atol, max((hi-t_a)/4, h_min), metodo)
             current_margins = _event_state(sistema, t_a, y_a)[1]
             continue
+        tray.tramos.extend(pending)
+        current_margins = next_margins
         tray.eventos.append(("cambio_firma", hi, firma, nueva, ""))
         if hasattr(sistema, 'capture_event_context'):
             tray.event_contexts[hi] = sistema.capture_event_context(hi, y_e)
