@@ -461,5 +461,77 @@ class LocatedRejections(unittest.TestCase):
         self.assertEqual(cm.exception.datos["cause"], "no_ideal_gas_record")
 
 
+
+class LayerPackageEntry(unittest.TestCase):
+    """PSRK through the common thermodynamic layer (`capa`, package id `psrk-unifac`): the layer adds no physics,
+    so every closure equals the package's own operations (psrk.bubble_pressure, cubic_flash) on the same state."""
+
+    @staticmethod
+    def model(a, b):
+        from core.termodinamica import capa
+        return {"componentes": [{"id": "a", "identidadQuimica": {"cas": a}}, {"id": "b", "identidadQuimica": {"cas": b}}],
+                "termodinamica": {"paquetes": [{"id": "p", "modelo": {"id": capa.PSRK}}]},
+                "volumenes": [{"id": "v", "componenteIds": ["a", "b"],
+                               "termodinamica": {"tipo": "equilibrio", "paqueteId": "p"}}]}
+
+    @classmethod
+    def setUpClass(cls):
+        from core.termodinamica import capa, cubic_flash
+        cls.capa = capa
+        # methanol + toluene at 480 K: elevated pressure (about 3 MPa), outside the gamma-phi packages' 5e5 Pa domain
+        cls.T, cls.x = 480.0, np.array([0.4, 0.6])
+        cls.eos = eos_of(MEOH, TOL)
+        cls.bub = psrk.bubble_pressure(cls.eos, cls.T, cls.x)
+        cls.z = (cls.x + cls.bub["y"]) / 2                 # on the tie line: the TP split is (x, y) for any such feed
+        cls.n = {"a": float(cls.z[0]), "b": float(cls.z[1])}
+        cls.tp = capa.cierre(cls.model(MEOH, TOL), "v", cls.n, ("TP", cls.T, cls.bub["P"]))
+        cls.direct = cubic_flash.flash_TP(cls.eos, cls.T, cls.bub["P"], cls.z)
+
+    def test_fixed_candidates(self):
+        self.assertEqual(self.capa.candidatas(self.model(MEOH, TOL), "v"), ["vapor-1", "liquido-1"])
+
+    def test_tp_closure_equals_the_package_bubble_point(self):
+        out = self.tp
+        self.assertGreater(self.bub["P"], 2e6)
+        self.assertEqual(out["presentes"], ["vapor-1", "liquido-1"])
+        f = {k["id"]: k for k in out["fases"]}
+        self.assertLess(abs(f["liquido-1"]["composicion"]["a"] - self.x[0]), 1e-9)
+        self.assertLess(abs(f["vapor-1"]["composicion"]["a"] - float(self.bub["y"][0])), 1e-9)
+        self.assertLess(abs(f["vapor-1"]["n"] + f["liquido-1"]["n"] - 1.0), 1e-12)
+        self.assertEqual(out["complementariedad"], 0.0)
+        self.assertLess(out["verificaciones"]["equilibrio"][0], 1e-10)
+        H = sum(p["n"] * p["h"] for p in self.direct["phases"])
+        V = sum(p["n"] * p["v"] for p in self.direct["phases"])
+        self.assertLess(abs(out["H"] - H), 1e-9 * abs(H))
+        self.assertLess(abs(out["V"] / V - 1), 1e-12)
+
+    def test_ph_inverts_the_tp_closure(self):
+        # UV is not tested here: at this state the default UV window search of cubic_flash probes 266 K at 5e7 Pa,
+        # a liquid-liquid split, and stops (roadmap F8b, PSRK layer entry, finding 2).
+        ph = self.capa.cierre(self.model(MEOH, TOL), "v", self.n, ("PH", self.bub["P"], self.tp["H"]))
+        self.assertLess(abs(ph["T"] - self.T), 1e-8)
+        self.assertEqual(ph["presentes"], ["vapor-1", "liquido-1"])
+
+    def test_one_phase_publishes_the_absent_candidate(self):
+        out = self.capa.cierre(self.model(MEOH, TOL), "v", self.n, ("TP", self.T, 1.2 * self.bub["P"]))
+        self.assertEqual(out["presentes"], ["liquido-1"])
+        vap = next(f for f in out["fases"] if f["id"] == "vapor-1")
+        self.assertGreater(vap["tm"], 0.0)
+        self.assertEqual(out["complementariedad"], 0.0)
+
+    def test_reference_cases_with_co2_are_located_rejections(self):
+        # The CO2 reference cases of this file (mpmath bubble point, ThermoML data) need no caloric record; the layer
+        # always publishes H and U, and CO2 has no ideal-gas cp record in the catalog: a located rejection, no default.
+        with self.assertRaises(self.capa.NoSoportado) as cm:
+            self.capa.cierre(self.model(CO2, ETOH), "v", {"a": 0.3317, "b": 0.6683}, ("TP", 333.15, 6e6))
+        self.assertEqual(cm.exception.datos["cause"], "no_ideal_gas_record")
+        with self.assertRaises(self.capa.NoSoportado) as cm:                   # the package's own temperature gate
+            self.capa.cierre(self.model(CO2, TOL), "v", {"a": 0.2, "b": 0.8}, ("TP", 250.0, 1e6))
+        self.assertEqual(cm.exception.datos["cause"], "alpha_below_fit_range")
+        with self.assertRaises(self.capa.NoSoportado) as cm:
+            self.capa.cierre(self.model(CO2, "74-82-8"), "v", {"a": 0.5, "b": 0.5}, ("TP", 300.0, 1e6))
+        self.assertEqual(cm.exception.datos["cause"], "no_pure_record")
+
+
 if __name__ == "__main__":
     unittest.main()
