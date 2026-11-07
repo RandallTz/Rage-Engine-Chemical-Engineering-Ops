@@ -56,6 +56,8 @@ GRAPHIFY_BACKEND=none graphify cluster-only . --no-label
 
 After code changes, `graphify update .` re-extracts only the changed files (no LLM). Add `--force` after deleting or moving modules, because a rebuild with fewer nodes is otherwise refused. The other agent may have edited files since your last build: refresh before relying on the graph.
 
+**New worktrees** (`dec-graphify-when-code`, 7 November 2026). `graphify-out/` is git-ignored, so a new worktree has none. Its paths are repository-relative, so copy the main checkout's `graphify-out/` into the worktree and run `graphify update .`. Measured on 7 November 2026: 58 s with `GRAPHIFY_BACKEND=none` (13,800 nodes, 35,168 edges), with no model tokens. Use Graphify only for items that touch or review code; documentation-only items skip it.
+
 ## Use
 
 | Question | Command |

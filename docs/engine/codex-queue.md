@@ -17,7 +17,7 @@ The user asked for this queue on 30 October 2026. It lists the work for Codex an
 
 Rules that apply to every run:
 
-- Run `graphify update .` first, and `graphify affected "<path>"` before changing each file.
+- When the item touches code: run `graphify update .` first (in a new worktree, copy the main checkout's `graphify-out/` before), and `graphify affected "<path>"` before changing each code file. Documentation-only items skip Graphify.
 - Claim a board milestone before editing and release the claim when you stop.
 - Never use `git add -A`; commit file by file with `git commit --only`, under `dec-standing-commit-permission` (reviewed and tested work only).
 - Never touch port 8005.

@@ -33,7 +33,7 @@ When a session starts, on either account:
 
 1. Run `node tools/roadmap_board/build_board.mjs --check` and read every claim whose agent is `claude`.
 2. Run `git worktree list` and `git -C <path> status --short` for each `.claude/worktrees/*` entry. Uncommitted work there belongs to an earlier Claude session, possibly the other account's. Resume it only if its claim is labelled with your account; otherwise leave it and ask the user. Never discard or overwrite it.
-3. Run `graphify update .` in your own checkout before relying on the graph.
+3. Only when the work touches or reviews code: run `graphify update .` in your own checkout before relying on the graph. In a new worktree, first copy the main checkout's `graphify-out/` (see AGENTS.md "Shared code graph").
 
 **Board publishing.** The board artifact (URL in `tools/roadmap_board/README.md`) belongs to claude-a. claude-b publishes to that same URL only when the user has shared it with edit access. Never publish a second board. Without that access, update the registries, make the check pass, and report "board refresh pending", as Codex does.
 
