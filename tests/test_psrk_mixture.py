@@ -19,6 +19,8 @@ Package: core/termodinamica/psrk.py and core/termodinamica/psrk_data.py. Every f
     CO2 + toluene bubble pressures and vapour compositions (Naidoo, Ramjugernath and Raal, Fluid Phase Equilib.
     269 (2008) 104, doi:10.1016/j.fluid.2008.05.002), and the critical lines of CO2 + methanol (Liu, Qin, Wang,
     Hou and Wang, J. Chem. Eng. Data 48 (2003) 1610, doi:10.1021/je034127q) and CO2 + ethanol (Sima et al. 2011);
+  - the CO2 ideal-gas caloric record (Poling 5th ed. appendix A) against the NIST-JANAF table C-095 (Chase 1998):
+    cp, H - H(298.15 K) and S - S(298.15 K), and a CO2 + ethanol state closing through the layer (`capa`);
   - located rejections outside the coverage of the published parameters.
 """
 
@@ -67,6 +69,13 @@ NAIDOO_2008_TOL = [
     (0.4972, 353.15, 8435, 0.9828), (0.6816, 353.15, 10649, 0.9697),
     (0.0986, 391.45, 2064, 0.9285), (0.2382, 391.45, 5240, 0.9541), (0.3997, 391.45, 9439, 0.9485),
     (0.5467, 391.45, 12133, 0.9325)]
+# NIST-JANAF thermochemical table C-095, CO2(g), standard state 1 bar (Chase, J. Phys. Chem. Ref. Data Monograph 9,
+# 1998; janaf.nist.gov/tables/C-095.txt): T / K, cp / J/(mol K), S / J/(mol K), H - H(298.15 K) / kJ/mol
+JANAF_CO2 = [
+    (100, 29.208, 179.009, -6.456), (200, 32.359, 199.975, -3.414), (298.15, 37.129, 213.795, 0.0),
+    (300, 37.221, 214.025, 0.069), (400, 41.325, 225.314, 4.003), (500, 44.627, 234.901, 8.305),
+    (600, 47.321, 243.283, 12.907), (700, 49.564, 250.750, 17.754), (800, 51.434, 257.494, 22.806),
+    (900, 52.999, 263.645, 28.030), (1000, 54.308, 269.299, 33.397)]
 # (x_CO2, T_c / K, P_c / kPa)
 LIU_2003_MEOH_CRITICAL = [
     (0.072, 507.2, 8800), (0.169, 494.6, 10330), (0.244, 485.4, 11540), (0.327, 473.2, 12840),
@@ -453,12 +462,55 @@ class LocatedRejections(unittest.TestCase):
         self.assertEqual([p["scale"] for p in cm.exception.datos["probes"]], list(psrk.PROBE_LNK_SCALES))
         self.assertFalse(any(p["converged"] for p in cm.exception.datos["probes"]))
 
-    def test_caloric_properties_need_an_ideal_gas_record(self):
+    def test_caloric_properties_outside_the_ideal_gas_record(self):
         eos = eos_of(CO2, ETOH)
         x = np.array([0.5, 0.5])
+        with self.assertRaises(CubicOutOfScope) as cm:                      # Poling record: 50-1000 K
+            eos.molar_props(1100.0, 1e5, x, eos.phase(1100.0, 1e5, x)["Z"])
+        self.assertEqual(cm.exception.datos["cause"], "outside_ideal_gas_range")
+        self.assertEqual(cm.exception.datos["species"], [CO2])
         with self.assertRaises(CubicOutOfScope) as cm:
-            eos.molar_props(320.0, 5e6, x, eos.phase(320.0, 5e6, x)["Z"])
+            psrk_data.ideal_gas_record(ETOH)                                  # catalog species use their own record
         self.assertEqual(cm.exception.datos["cause"], "no_ideal_gas_record")
+
+
+class IdealGasCalorics(unittest.TestCase):
+    """CO2 ideal-gas caloric record (psrk_data.ideal_gas_record): Poling appendix A against NIST-JANAF C-095."""
+
+    rec = psrk_data.ideal_gas_record(CO2)
+
+    def test_poling_coefficients_and_reference_state(self):
+        # Poling, Prausnitz and O'Connell 5th ed., appendix A, carbon dioxide: cp/R polynomial, 50-1000 K
+        for a, b in zip(self.rec.cp, (3.259, 1.356e-3, 1.502e-5, -2.374e-8, 1.056e-11)):
+            self.assertLess(abs(a / b - 1), 1e-12)
+        self.assertEqual(self.rec.T_cp, (50.0, 1000.0))
+        self.assertEqual(self.rec.h_ig(298.15), 0.0)                        # reference of every mixture package
+        self.assertEqual(self.rec.s_ig0(298.15), 0.0)
+
+    def test_cp_h_s_against_janaf(self):
+        S0 = 213.795
+        for T, cp, S, H in JANAF_CO2:
+            self.assertLess(abs(self.rec.cp_ig(T) / cp - 1), 0.018, T)       # largest: 1.7 % at 200 and 900 K
+            self.assertLess(abs(self.rec.h_ig(T) / 1e3 - H), 0.16, T)        # largest: 0.156 kJ/mol at 1000 K
+            tol = 0.47 if T < 200 else 0.19                                   # 0.469 at 100 K, 0.183 at 1000 K
+            self.assertLess(abs(self.rec.s_ig0(T) - (S - S0)), tol, T)
+            self.assertLess(abs(self.rec.g_ig0(T) - (self.rec.h_ig(T) - T * self.rec.s_ig0(T))), 1e-9)
+
+    def test_integrals_are_consistent_with_cp(self):
+        # central differences, step 1e-3 T: truncation error about 4e-7 relative
+        for T in (250.0, 500.0, 900.0):
+            h = 1e-3 * T
+            self.assertLess(abs((self.rec.h_ig(T + h) - self.rec.h_ig(T - h)) / (2 * h) / self.rec.cp_ig(T) - 1), 1e-6)
+            self.assertLess(abs((self.rec.s_ig0(T + h) - self.rec.s_ig0(T - h)) / (2 * h) * T / self.rec.cp_ig(T) - 1),
+                            1e-6)
+
+    def test_dilute_pure_co2_tends_to_the_janaf_enthalpy(self):
+        # pure CO2 in PSRK at 1 kPa: h - h_ig is the (small) residual, and h_ig is the JANAF H within 0.02 kJ/mol
+        eos = eos_of(CO2, ETOH)
+        x = np.array([1.0, 0.0])
+        for T, H in ((400.0, 4.003), (600.0, 12.907)):
+            pr = eos.molar_props(T, 1e3, x, eos.phase(T, 1e3, x)["Z"])
+            self.assertLess(abs(pr["h"] / 1e3 - H), 0.02, T)
 
 
 
@@ -478,6 +530,7 @@ class LayerPackageEntry(unittest.TestCase):
     def setUpClass(cls):
         from core.termodinamica import capa, cubic_flash
         cls.capa = capa
+        cls.cubic_flash = cubic_flash
         # methanol + toluene at 480 K: elevated pressure (about 3 MPa), outside the gamma-phi packages' 5e5 Pa domain
         cls.T, cls.x = 480.0, np.array([0.4, 0.6])
         cls.eos = eos_of(MEOH, TOL)
@@ -519,12 +572,36 @@ class LayerPackageEntry(unittest.TestCase):
         self.assertGreater(vap["tm"], 0.0)
         self.assertEqual(out["complementariedad"], 0.0)
 
-    def test_reference_cases_with_co2_are_located_rejections(self):
-        # The CO2 reference cases of this file (mpmath bubble point, ThermoML data) need no caloric record; the layer
-        # always publishes H and U, and CO2 has no ideal-gas cp record in the catalog: a located rejection, no default.
+    def test_co2_ethanol_closes_through_the_layer(self):
+        # Sima et al. (2011) state x_CO2 = 0.3317 at 333.15 K (measured 6.06 MPa): with the CO2 caloric record the
+        # layer closes it, on the tie line, equal to the package's bubble point and flash, and publishes H and U.
+        T, x = 333.15, np.array([0.3317, 0.6683])
+        eos = eos_of(CO2, ETOH)
+        bub = psrk.bubble_pressure(eos, T, x)
+        z = (x + bub["y"]) / 2
+        n = {"a": float(z[0]), "b": float(z[1])}
+        tp = self.capa.cierre(self.model(CO2, ETOH), "v", n, ("TP", T, bub["P"]))
+        self.assertEqual(tp["presentes"], ["vapor-1", "liquido-1"])
+        f = {k["id"]: k for k in tp["fases"]}
+        self.assertLess(abs(f["liquido-1"]["composicion"]["a"] - x[0]), 1e-8)
+        self.assertLess(abs(f["vapor-1"]["composicion"]["a"] - float(bub["y"][0])), 1e-8)
+        direct = self.cubic_flash.flash_TP(eos, T, bub["P"], z)
+        H = sum(p["n"] * p["h"] for p in direct["phases"])
+        self.assertLess(abs(tp["H"] - H), 1e-9 * abs(H))
+        V = sum(p["n"] * p["v"] for p in direct["phases"])
+        self.assertLess(abs(tp["U"] - (H - bub["P"] * V)), 1e-9 * abs(H))
+        self.assertEqual(tp["complementariedad"], 0.0)
+        self.assertLess(tp["verificaciones"]["equilibrio"][0], 1e-10)
+        # PH on an explicit bracket inverts the closure. The layer's default bracket starts at the alpha range
+        # (231.26 K), where 7 MPa is a certified CO2-rich liquid + ethanol split: a located rejection of the bracket
+        # end (roadmap F8b, CO2 caloric record, finding 1; same cause as the UV window finding).
+        ph = self.cubic_flash.flash_PH(eos, bub["P"], tp["H"], z, T_bracket=(300.0, 400.0))
+        self.assertLess(abs(ph["T"] - T), 1e-7)
         with self.assertRaises(self.capa.NoSoportado) as cm:
-            self.capa.cierre(self.model(CO2, ETOH), "v", {"a": 0.3317, "b": 0.6683}, ("TP", 333.15, 6e6))
-        self.assertEqual(cm.exception.datos["cause"], "no_ideal_gas_record")
+            self.capa.cierre(self.model(CO2, ETOH), "v", n, ("PH", bub["P"], tp["H"]))
+        self.assertEqual(cm.exception.datos["cause"], "liquid_liquid_split")
+
+    def test_reference_cases_with_co2_are_located_rejections(self):
         with self.assertRaises(self.capa.NoSoportado) as cm:                   # the package's own temperature gate
             self.capa.cierre(self.model(CO2, TOL), "v", {"a": 0.2, "b": 0.8}, ("TP", 250.0, 1e6))
         self.assertEqual(cm.exception.datos["cause"], "alpha_below_fit_range")
