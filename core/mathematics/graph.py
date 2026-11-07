@@ -90,6 +90,11 @@ class EquationGraph:
         equation=self.nodes[source].equation
         if not isinstance(equation,sp.Equality):raise JournalError('Declare a spatial domain on a field equation, not on a condition.')
         absent=[str(c) for c in domain.coordinates if not equation.has(c)]
+        # PDE-3: in a cylindrical or spherical chart a field on the full Cartesian
+        # placeholder (x, y, z) depends on every chart coordinate through the
+        # coordinate map; expand_spatial_operators records its restatement.
+        placeholder={sp.Symbol(n,real=True) for n in ('x','y','z')}
+        if domain.chart!='cartesian' and any(placeholder<=set(f.args) for f in equation.atoms(sp.core.function.AppliedUndef)):absent=[]
         if absent:raise JournalError('The spatial domain coordinates must occur in the selected field equation: '+', '.join(absent)+'.')
         validate_domains([*self.domains.values(),*domain.intervals])
         family=self.nodes[source].family;interval_ids=[]
