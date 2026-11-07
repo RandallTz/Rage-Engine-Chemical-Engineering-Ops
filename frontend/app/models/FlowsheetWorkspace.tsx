@@ -24,7 +24,7 @@ export function FlowsheetTransform({model}:{model:HojaMotor}){
     <button disabled={busy} onClick={()=>void prepare('dynamic')}>Use dynamic formulation</button><button disabled={busy} onClick={()=>void prepare('steady')}>Use steady state (zero accumulation)</button>
     {busy&&<p role="status">Preparing the network…</p>}{error&&<><p role="alert">{error.message}</p><AssessmentText error={error}/></>}
     {model.flowsheetStale&&<p role="alert">stale_flowsheet_execution: The topology or data changed. Prepare the network again.</p>}
-    {selected?<><p>{selected.report.count} instances · {selected.report.selection.mode} · {selected.report.rateRows.length} original rate rows</p><Link href={`/models/${model.id}/solve`}>Continue to Solve →</Link></>:<p>No current flowsheet formulation selected.</p>}
+    {selected?<><p>{selected.count} instances · {selected.selection.mode} · {selected.rateRowCount} original rate rows</p><Link href={`/models/${model.id}/solve`}>Continue to Solve →</Link></>:<p>No current flowsheet formulation selected.</p>}
   </section>;
 }
 
@@ -52,6 +52,6 @@ export function FlowsheetSolve({model}:{model:HojaMotor}){
     {sheet.instances.map(instance=><details key={instance.id}><summary>{instance.id} · {instance.template}</summary>{Object.entries(instance.data).map(([id,value])=><label key={id}>{id} <input key={`${id}:${value.texto}`} defaultValue={value.texto} onBlur={event=>{if(event.target.value!==value.texto)editData(instance.id,id,event.target.value,value.unidad);}}/> {value.unidad}</label>)}</details>)}
     {model.flowsheetStale&&<p role="alert">stale_flowsheet_execution: The topology or data changed. Prepare the network again in Transform.</p>}
     {error&&<><p role="alert">{error.message}</p><AssessmentText error={error}/></>}
-    {selected?<><p>{selected.report.selection.mode} · {selected.report.count} instances</p><button disabled={busy} onClick={()=>void run()}>{busy?'Solving the network…':'Solve network'}</button>{busy&&<button onClick={()=>controller.current?.abort()}>Cancel</button>}</>:<Link href={`/models/${model.id}/transform`}>Prepare the flowsheet in Transform →</Link>}
+    {selected?<><p>{selected.selection.mode} · {selected.count} instances</p><button disabled={busy} onClick={()=>void run()}>{busy?'Solving the network…':'Solve network'}</button>{busy&&<button onClick={()=>controller.current?.abort()}>Cancel</button>}</>:<Link href={`/models/${model.id}/transform`}>Prepare the flowsheet in Transform →</Link>}
   </section>;
 }
