@@ -884,7 +884,7 @@ The user follows overall progress with this table. Every Claude or Codex deliver
 | · F3 equation engine and solution methods | review | 90 |
 | · F9 quality and CI | Push CI green at the tip (core-fast, frontend); slow tier and interface unverified; required checks on main pending | 80 |
 | · F5 reactors and equilibrium | F5-C1, B3 parts 1 and 2 integrated; feed-temperature initialization, rigid and open/multi-extent regions pending | 70 |
-| · F8b remaining thermodynamics | PSRK (SRK + UNIFAC-PSRK g^E rule), elevated-pressure VLE and experimental critical loci reviewed and committed; layer package `psrk-unifac` delivered 7 November; route and view (lane A), CO2 caloric record and better CO2–alcohol parameters pending | 82 |
+| · F8b remaining thermodynamics | PSRK (SRK + UNIFAC-PSRK g^E rule), elevated-pressure VLE and experimental critical loci reviewed and committed; layer package `psrk-unifac` and the CO2 ideal-gas caloric record delivered 7 November (CO2 systems close through the layer); route and view (lane A), a default PH/UV window robust to liquid–liquid probes and better CO2–alcohol parameters pending | 84 |
 | · F4 boundaries and real equipment | template contract in review | 30 |
 | · PDE deduction without spatial execution | PDE-0, PDE-1 and PDE-2 of PDE-0..7 | 38 |
 | · F6 momentum and hydraulic network | planned | 15 |
@@ -2051,11 +2051,11 @@ Diagrams are slices of a model, not new physical laws or calculations that gover
     - CO2 + methanol (Liu et al., JCED 48 (2003) 1610): methanol branch +0.3 to +12 K and +6 to +23 %; CO2 end within 3.2 K and 3 %. For x_CO2 = 0.786–0.893 PSRK has no positive-pressure critical point (located rejection, confirmed by the review's independent scan), while the measured line is continuous.
     - CO2 + ethanol (Sima et al. 2011): x = 0.892–0.931 within 6.8 K and 9.4 %; no PSRK root at 0.83–0.85.
   - Consistency: the 373.15 K CO2 + methanol isotherm stops at x = 0.70868, where the computed critical locus crosses 373.15 K (0.70866).
-- **Located rejections.** `no_pure_record`, `missing_interaction`, `alpha_below_fit_range`, `trivial_solution`, `past_critical_point`, `near_critical_unresolved`, `not_converged` (with probes), `no_critical_point_in_window`, `no_ideal_gas_record`.
+- **Located rejections.** `no_pure_record`, `missing_interaction`, `alpha_below_fit_range`, `trivial_solution`, `past_critical_point`, `near_critical_unresolved`, `not_converged` (with probes), `no_critical_point_in_window`, `no_ideal_gas_record`, `outside_ideal_gas_range`.
 - **Findings.**
   1. The CO2–alcohol accuracy and the interrupted loci are parameter or model limits.
   2. There is no `capa` package, route or Results view.
-  3. Light gases have no caloric record.
+  3. Light gases have no caloric record. Closed for CO2 on 7 November 2026 (below).
   4. A critical point takes about 10 s.
   5. `tests/test_psrk_mixture.py` needs a slow-tier CI assignment.
 - **Independent review (7 November 2026): approve with repairs.** R1 (full data set), R2 (located causes), R3 (English names) and R4 (provenance) were repaired. Commits: 4851958 (psrk_data.py), 02c4611 (psrk.py), f65509d (tests) integrated into fase-a-adopcion as 3f7baf7, a8abf6f, b7500b5.
@@ -2071,6 +2071,13 @@ Diagrams are slices of a model, not new physical laws or calculations that gover
     2. `cubic_flash.flash_UV`'s default temperature-window search aborts at methanol + toluene, 480 K. Its lowest-T, highest-P probe (266 K, 5e7 Pa) is a certified liquid–liquid split, which the search does not treat as a non-evaluable side. This affects both EOS packages. The UV closure is also slow (above).
     3. Request to lane A (frontend and backend, Codex): an HTTP route, a contract revision and a Results view that expose the two EOS packages (`peng-robinson-vdw1f`, `psrk-unifac`): package selection in Model's thermodynamics panel, bubble and dew curves at elevated pressure, isotherms and critical loci. Claude did not edit the frontend.
     4. Request (CI tiers; `tools/ci/test_tiers.json` has uncommitted Codex edits in the main checkout, so it was not edited): assign `tests/test_psrk_mixture.py` to the slow tier. It has 28 tests and takes about 160–250 s.
+- **CO2 ideal-gas caloric record (claude-a, 7 November 2026).** This closes layer finding 1. `core/termodinamica/psrk_data.py` adds `ideal_gas_record(cas)` for the light gases. It takes the same form and source as the catalog species: the cp/R polynomial of Poling, Prausnitz and O'Connell, 5th ed., appendix A (`chemicals` `Cp_data_Poling`). For CO2 this is a = (3.259, 1.356e-3, 1.502e-5, -2.374e-8, 1.056e-11) on 50–1000 K. h, s and g use the catalog's own integrals (`mezclas_datos.Especie`), so every package keeps one reference state (ideal gas at 298.15 K and 1e5 Pa). `PSRKMixture` uses the record for its ideal-gas part. Outside the record's range, a caloric call is the located rejection `outside_ideal_gas_range`.
+  - Evidence: `IdealGasCalorics` (4 tests) and `LayerPackageEntry.test_co2_ethanol_closes_through_the_layer` in `tests/test_psrk_mixture.py`.
+    - Against NIST-JANAF table C-095 (Chase 1998, 1 bar), 100–1000 K: cp within 1.7 % (200 and 900 K), H − H(298.15 K) within 0.156 kJ/mol (1000 K), and S − S(298.15 K) within 0.19 J/(mol K) from 200 K up and 0.47 J/(mol K) at 100 K.
+    - dh/dT = cp and T ds/dT = cp by central differences within 4e-7.
+    - Pure CO2 in PSRK at 1 kPa reproduces the JANAF H within 0.017 kJ/mol at 400 K and 600 K.
+    - CO2 + ethanol at the Sima et al. (2011) state (x_CO2 = 0.3317, 333.15 K) now closes through the layer. PSRK's bubble pressure is 7.011 MPa (measured 6.06 MPa, the known over-prediction). The TP closure on the tie line gives the package's x and y within 4e-15, a fugacity residual of 1.1e-14 and complementarity 0. H and U equal the direct `cubic_flash.flash_TP` values (relative difference 0). A PH flash on the bracket 300–400 K recovers T within 1.5e-12 K.
+  - Finding 1: the layer's PH closure uses the default bracket, which starts at the alpha range (231.26 K). At 7 MPa that end is a certified liquid–liquid split (CO2-rich liquid + ethanol), so the layer's PH is the located rejection `liquid_liquid_split`. The cause is the same as layer finding 2 for UV, and the test records it. The default PH/UV window search of `cubic_flash` should treat a liquid–liquid end as non-evaluable.
 
 ## F9. Cross-cutting quality and reliable use
 
