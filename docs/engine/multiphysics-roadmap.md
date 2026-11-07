@@ -884,7 +884,7 @@ The user follows overall progress with this table. Every Claude or Codex deliver
 | · F3 equation engine and solution methods | review | 90 |
 | · F9 quality and CI | CI green; required checks on main pending | 80 |
 | · F5 reactors and equilibrium | F5-C1, B3 parts 1 and 2 integrated; feed-temperature initialization, rigid and open/multi-extent regions pending | 70 |
-| · F8b remaining thermodynamics | PSRK (SRK + UNIFAC-PSRK g^E rule), elevated-pressure VLE and experimental critical loci reviewed and committed; exposure (capa entry, route and view) and better CO2–alcohol parameters pending | 80 |
+| · F8b remaining thermodynamics | PSRK (SRK + UNIFAC-PSRK g^E rule), elevated-pressure VLE and experimental critical loci reviewed and committed; layer package `psrk-unifac` delivered 7 November; route and view (lane A), CO2 caloric record and better CO2–alcohol parameters pending | 82 |
 | · F4 boundaries and real equipment | template contract in review | 30 |
 | · PDE deduction without spatial execution | PDE-0, PDE-1 and PDE-2 of PDE-0..7 | 38 |
 | · F6 momentum and hydraulic network | planned | 15 |
@@ -2059,6 +2059,18 @@ Diagrams are slices of a model, not new physical laws or calculations that gover
   4. A critical point takes about 10 s.
   5. `tests/test_psrk_mixture.py` needs a slow-tier CI assignment.
 - **Independent review (7 November 2026): approve with repairs.** R1 (full data set), R2 (located causes), R3 (English names) and R4 (provenance) were repaired. Commits: 4851958 (psrk_data.py), 02c4611 (psrk.py), f65509d (tests) integrated into fase-a-adopcion as 3f7baf7, a8abf6f, b7500b5.
+- **Layer package entry (claude-a, 7 November 2026).** This closes finding 2 at the layer level. `core/termodinamica/capa.py` registers PSRK as package `psrk-unifac`. Its closure is the Peng–Robinson one (`_cierre_cubico`), with the EOS chosen by package id, so the package adds no physics. It has the candidates `vapor-1` and `liquido-1`, the same tm scale and complementarity, and TP, PH and UV closures. A TP closure first applies PSRK's own temperature gate (`alpha_below_fit_range`). Missing UNIFAC data and located `CubicOutOfScope` causes become `NoSoportado`, keeping their `datos`. The contract's candidate row names both EOS packages.
+  - Evidence: `LayerPackageEntry` in `tests/test_psrk_mixture.py`, 5 tests, about 13 s.
+    - Methanol + toluene at 480 K: PSRK's bubble pressure at x = 0.4 is 2.96 MPa, outside the γ–φ packages' 5e5 Pa domain. The layer's TP closure on that tie line gives the package's x and y within 7e-15, complementarity 0 and a fugacity residual below 1e-10. H equals the direct `cubic_flash.flash_TP` value within 1e-9 relative, and V within 1e-12.
+    - PH recovers T within 1.1e-12 K.
+    - At 1.2 P_bub there is one liquid with the vapour's tm > 0.
+    - CO2 cases are located rejections: `no_ideal_gas_record` at the mpmath CO2 + ethanol point; `alpha_below_fit_range` and `no_pure_record` come from the package's own gates.
+  - Probe at low pressure (`.tmp/f8b-psrk-capa-probe.py`): methanol + toluene at 333.15 K, ethanol + water at 350 K and methanol + water at 340 K. Layer phases equal the bubble points within 1.7e-14, H is identical, PH recovers T within 2.5e-11 K, and UV recovers T within 2.4e-12 K and P within 1e-13 relative. UV takes 140–240 s per state.
+  - Findings.
+    1. CO2, the gas of every experimental PSRK case, cannot close through the layer until it has an ideal-gas cp record (for example the Span–Wagner ideal-gas part). The layer always publishes H and U, so a CO2 state is a located rejection.
+    2. `cubic_flash.flash_UV`'s default temperature-window search aborts at methanol + toluene, 480 K. Its lowest-T, highest-P probe (266 K, 5e7 Pa) is a certified liquid–liquid split, which the search does not treat as a non-evaluable side. This affects both EOS packages. The UV closure is also slow (above).
+    3. Request to lane A (frontend and backend, Codex): an HTTP route, a contract revision and a Results view that expose the two EOS packages (`peng-robinson-vdw1f`, `psrk-unifac`): package selection in Model's thermodynamics panel, bubble and dew curves at elevated pressure, isotherms and critical loci. Claude did not edit the frontend.
+    4. Request (CI tiers; `tools/ci/test_tiers.json` has uncommitted Codex edits in the main checkout, so it was not edited): assign `tests/test_psrk_mixture.py` to the slow tier. It has 28 tests and takes about 160–250 s.
 
 ## F9. Cross-cutting quality and reliable use
 
