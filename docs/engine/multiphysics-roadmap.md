@@ -1716,6 +1716,41 @@ Unchanged regressions pass (logs in `.tmp/f3-inverse/`): generic Newton **17**, 
 
 *F-1 repaired (Claude, 30 October 2026); independent re-review: **accepted**.* `reachable_scan` now records each failed sample's input and Newton code. `classify_unattainable` returns a verdict only when every forward sample converged, and labels `bound` only when the extremum equals a declared bound of the freed input (otherwise `turning_point`). With any failed sample, `diagnose` re-raises the original Newton failure code and message with `reachability.kind = inconclusive` and the converged samples and failed inputs attached. The generic kernel now passes `nonlinear_multiple_roots` through without scanning, matching the steady adapter. New regressions in `tests/test_f3_inverse_specifications.py`: the reproducer (seed x = 1.9 gives `nonlinear_domain` with an inconclusive scan, 17 failed samples; seed x = 1.2 gives p = -0.284605 exactly); ethanol/water `beta = 1.2` is inconclusive, not `bound`; kernel multiple-roots passthrough. 16/16 pass (46 s), with unchanged worst reference errors; the heater `bound` (Q = 150 W) and `u = b(4-b)` `turning_point` controls still pass. Re-review (Claude review session, 30 October 2026): the changed `reachable_scan`, `classify_unattainable`, `diagnose` and `solve` were re-read; the steady reproducer now raises `nonlinear_domain` with `inconclusive` evidence (16 converged, 17 failed) and seed `x = 1.2` still returns `p = -0.28460498941515416`; ethanol/water `beta = 1.2` raises `nonlinear_domain`, `inconclusive` (4 converged, 29 failed), with no `extremumInput`; the test file passes 16/16 (54 s). No open finding remains for slice 5.
 
+### Performance and native acceleration: analysis (claude-b, 7 November 2026; read-only; user-requested)
+
+The user asked whether to bring Rust in progressively. The goal is to make the engine faster and get it ready for interactive dynamic simulation. Python is not replaced and the core is not rewritten. A read-only analysis profiled `fase-a-adopcion` at 92c0f7d. Its full report is a private page on the claude-b account. This section records its conclusions and is the canonical record. No implementation is authorized until the user schedules it.
+
+**Measured findings.**
+- **Flowsheet Solve (R1 → drum → R2, cProfile):** about 99% of the time is spent in thermodynamic closures.
+  - About 25-33% rebuilds the formation enthalpy on every call (`_shift` → `PackagePhase`, which queries `chemicals` tables through pandas and sqlite). That value is constant during a run.
+  - About 43% re-evaluates closures for event margins at every accepted step, where the results already computed could be reused.
+- **Preparation (373 s):** dominated by SymPy (replay, signatures, `simplify`), plus 61 s of LaTeX rendering. This is algorithmic work. It holds the mathematical traceability and stays in Python.
+- **Expression evaluation:** the closure interpreter is 30-48 times slower than Python code generated from the same AST with common-subexpression elimination. On the n = 40 stage train, BDF fell from 4.95 s to 1.73 s with generated code alone. After that, SciPy BDF overhead is about 94% of the time, so a native RHS would not reduce it.
+- **UNIFAC:** a scalar call costs about 110 µs whether it has 2 or 8 species, because the cost is NumPy dispatch, not arithmetic. Batched evaluation costs 0.4-1 µs per point. One run made 693 thousand calls. This is the clearest native-kernel candidate.
+
+**Decisions it supports.**
+- Python keeps model representation, deduction, transformation, thermodynamic science and orchestration.
+- Native code is considered only where a measured advantage remains after the Python fixes.
+- The existing compiler is evolved, not replaced. One lowered, versioned intermediate representation gets several backends: the current interpreter as the reference, generated Python code, and the Jacobian through the same path, which retires the duplication with `lambdify`.
+- Any native module is optional, with a pure-Python fallback, so Rage runs without Rust.
+- The offline Windows executable must package it (`empaquetado/construir.ps1`), consistent with `dec-distribution-download-first`.
+
+**Gradual roadmap (each stage gated by measurements).**
+- **P0:** Python fixes, plus a benchmark harness covering four problems: a simple ODE, the flowsheet, the stage train at large n, and a standalone discretized-PDE prototype. The harness measures total time, time per step, memory, scaling and latency. The Python fixes are:
+  - cache the formation datum per run;
+  - reuse closure evaluations for event margins;
+  - keep LaTeX rendering off the Solve path.
+- **P1:** the lowered IR with generated-code and Jacobian backends, verified bit for bit or within a stated tolerance against the interpreter.
+- **P2:** an optional PyO3/maturin spike with a measured go/no-go criterion, covering a batched UNIFAC kernel and an IR evaluator. Alternatives were compared: Numba, Cython, JAX/XLA, CasADi-style C code generation, and Cranelift/LLVM.
+- **P3:** batched closure evaluation.
+- **P4:** an interactive runtime. Worker processes run the simulation. A command journal records parameter changes, events and perturbations with consistent simulation time. Results stream to the interface without blocking. Concurrent runs are supported. This is interactive (soft) real time, not hard real time.
+- **P5:** spatial PDE execution, when the user resumes spatial work.
+
+**Limits of the analysis.**
+- The Rust figures are estimates, because no Rust toolchain is installed on this machine.
+- cProfile inflates paths with many small calls, so the flowsheet shares are relative.
+- The cubic EOS and IAPWS-95 inside a network were not profiled.
+
 ## F4. Boundaries and real equipment
 
 - [ ] Packages for condensables + non-condensable gases, parametrized by species and laws; water + air will be a validation case, not the architecture.
