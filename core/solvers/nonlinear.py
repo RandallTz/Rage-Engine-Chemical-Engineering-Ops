@@ -97,10 +97,21 @@ def solve(residual, jacobian, seed, bounds, variable_scales, residual_scales, *,
                 merit = float(np.dot(r, r))
             if not np.isfinite(merit):
                 fail('nonlinear_nonfinite', 'The scaled merit function is not representable.')
+            # Start within the declared box even when the full Newton step
+            # crosses a boundary. Backtracking alone can exhaust its budget
+            # when the admissible interval is much smaller than the step.
+            direction = xs * correction
             factor = 1.
+            for index, delta in enumerate(direction):
+                if delta > 0 and delta > bounds[index, 1] - z[index]:
+                    factor = min(factor, .99 * (bounds[index, 1] - z[index]) / delta)
+                elif delta < 0 and -delta > z[index] - bounds[index, 0]:
+                    factor = min(factor, .99 * (z[index] - bounds[index, 0]) / -delta)
+            if factor <= 0 or not np.isfinite(factor) or np.array_equal(z + factor * direction, z):
+                fail('nonlinear_domain', 'The Newton direction cannot advance inside the declared bounds.')
             last_failure = 'nonlinear_line_search'
             for backtrack in range(max_backtracks):
-                trial = z + factor * xs * correction
+                trial = z + factor * direction
                 if not inside(trial):
                     last_failure = 'nonlinear_domain'
                 else:
