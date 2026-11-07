@@ -26,6 +26,9 @@ let model={id:source.id,nombre:source.nombre,commonModel:source};
 const report=await lifecycle.prepareFlowsheet(model,'steady');
 console.log('Prepared the recorded flowsheet; solving the steady network.');
 model=lifecycle.applyFlowsheet(model,report);
+assert.equal(model.flowsheetSelection.version,2);
+assert.ok(JSON.stringify(model.flowsheetSelection).length<JSON.stringify(report).length/10,'The stored selection must remain compact.');
+assert.deepEqual(lifecycle.currentFlowsheet({...model,flowsheetSelection:{version:1,report}}),lifecycle.currentFlowsheet(model));
 const pin=firmaHoja(model),published=await lifecycle.solveFlowsheet(model);
 const wrapper=lifecycle.flowsheetResult(model,published,pin);
 validateSavedIndexedResult(wrapper,model.id,pin);
@@ -37,14 +40,21 @@ const temperatures=published.indexedNetwork.stages.map(stage=>{
   assert.ok(id,'A temperature must be published for each instance.');return scalar(series.get(id).valores);
 });
 const reference=[335.243964,344.588553,345.642769];
-temperatures.forEach((value,i)=>assert.ok(Math.abs(value-reference[i])<2e-5,`temperature ${i+1}: ${value}`));
+temperatures.forEach((value,i)=>assert.ok(Math.abs(value-reference[i])<1e-6,`temperature ${i+1}: ${value}`));
+const reactor=source.flowsheet.templates.reactor;
+assert.deepEqual(reactor.componentes.map(component=>component.identidadQuimica.cas),['64-17-5','64-19-7','141-78-6','7732-18-5']);
+function stateSeries(stageIndex,datumId){
+  const quantities=Object.entries(reactor.motores.derivedExecution.initialValues).filter(([,id])=>id===datumId).map(([quantity])=>quantity);
+  assert.equal(quantities.length,1,`Expected one state for ${datumId}.`);
+  const ids=published.indexedNetwork.stages[stageIndex].seriesIds.filter(id=>id.endsWith(`.state.${quantities[0]}`));
+  assert.equal(ids.length,1,`Expected one published state for ${datumId}.`);
+  const row=series.get(ids[0]);assert.equal(row.unidadSI,'kg');return scalar(row.valores);
+}
 for(const [stageIndex,expected] of [[0,0.349817],[2,0.543864]]){
-  const ids=published.indexedNetwork.stages[stageIndex].seriesIds;
-  const template=source.flowsheet.templates.reactor;
-  const first=scalar(series.get(ids[0]).valores)/Number(template.datos.molarMass1.declaracion.texto);
-  const third=scalar(series.get(ids[2]).valores)/Number(template.datos.molarMass3.declaracion.texto);
+  const first=stateSeries(stageIndex,'cell.mass')/Number(reactor.datos.molarMass1.declaracion.texto);
+  const third=stateSeries(stageIndex,'cell.mass3')/Number(reactor.datos.molarMass3.declaracion.texto);
   const conversion=1-first/(first+third);
-  assert.ok(Math.abs(conversion-expected)<2e-5,`conversion ${stageIndex+1}: ${conversion}`);
+  assert.ok(Math.abs(conversion-expected)<1e-6,`conversion ${stageIndex+1}: ${conversion}`);
 }
 model={...model,resultado:wrapper,resultadoRef:{firma:pin,estado:wrapper.estado,fecha:'2026-11-06T00:00:00.000Z'}};
 const moved=JSON.parse(JSON.stringify(moveStoredFlowsheetBlock([model],model.id,'D1',[225,70])))[0];
