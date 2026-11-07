@@ -59,7 +59,7 @@ export const physicalExecutionSignature=(h:HojaMotor)=>{
   return h.hydraulicNetwork?JSON.stringify([current,'reduced-hydraulics-equation-operations-3',h.hydraulicNetwork,h.ensamblaje?.volumenes.map(v=>v.balances)]):current;
 };
 export const transformationSourceSignature=(h:HojaMotor)=>physicalExecutionSignature({...h,config:{...h.config,metodo:'rk45',muestras:2,rtol:1e-6,atol:1e-9}});
-export const firmaHoja=(h:HojaMotor)=>h.indexedSelection?JSON.stringify([physicalExecutionSignature(h),'indexed-selection-v1',h.indexedSelection]):h.transformation?JSON.stringify([physicalExecutionSignature(h),'selected-transformation-v1',h.transformation]):physicalExecutionSignature(h);
+export const firmaHoja=(h:HojaMotor)=>h.flowsheetSelection?JSON.stringify([physicalExecutionSignature(h),"flowsheet-selection-v1",h.flowsheetSelection]):h.indexedSelection?JSON.stringify([physicalExecutionSignature(h),'indexed-selection-v1',h.indexedSelection]):h.transformation?JSON.stringify([physicalExecutionSignature(h),'selected-transformation-v1',h.transformation]):physicalExecutionSignature(h);
 export async function resolverHoja(h:HojaMotor,opciones:{signal?:AbortSignal;progreso?:(v:number)=>void}={}){
   if(h.equationWorkbench?.cursor)throw new Error('Equation operations require Python compilation; this legacy browser route is not connected.');
   ensureInventoryExecution(h);
