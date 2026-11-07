@@ -88,6 +88,7 @@ function checkPathList(kind, list) {
 
 // Codex work queue: the numbered rows of the table under "## Queue" in docs/engine/codex-queue.md.
 const QUEUE_FILE = 'docs/engine/codex-queue.md';
+const QUEUE_STATUSES = ['ready', 'in progress', 'review pending', 'repairs requested', 'blocked', 'accepted'];
 function loadQueue() {
   const full = path.join(root, QUEUE_FILE);
   if (!fs.existsSync(full)) return [];
@@ -99,7 +100,11 @@ function loadQueue() {
     if (/^##\s/.test(line)) break;
     const cells = line.split('|').slice(1, -1).map((c) => c.trim());
     if (cells.length < 5 || !/^\d+$/.test(cells[0])) continue;
-    rows.push({ id: `q${cells[0]}`, number: Number(cells[0]), item: cells[1].replace(/`/g, ''), model: cells[2], unblocks: cells[3].replace(/`/g, ''), state: cells[4].replace(/`/g, '') });
+    const state = cells[4].replace(/`/g, '');
+    // Autonomous loops select work by this leading status token (README, "Autonomous loops").
+    const status = QUEUE_STATUSES.find((s) => state === s || state.startsWith(`${s} `) || state.startsWith(`${s}:`) || state.startsWith(`${s} ·`));
+    if (!status) problem(`${QUEUE_FILE}: item ${cells[0]} state must start with one of ${QUEUE_STATUSES.join(', ')}`);
+    rows.push({ id: `q${cells[0]}`, number: Number(cells[0]), item: cells[1].replace(/`/g, ''), model: cells[2], unblocks: cells[3].replace(/`/g, ''), status: status || '', state });
   }
   rows.forEach((r, i) => { if (r.number !== i + 1) problem(`${QUEUE_FILE}: queue numbers must run 1..${rows.length} without gaps`); });
   return rows;

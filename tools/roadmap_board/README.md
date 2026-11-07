@@ -55,6 +55,40 @@ Claude and Codex work at the same time, and either may continue in a new chat or
 5. **Shared files.** Both agents edit the `sharedFiles` (this registry, the Checklist registry and snapshot, the roadmap, the workspace specification, ARCHITECTURE.md, AGENTS.md and the cleanup plan). Never claim them. Re-read them immediately before each edit and change them only by exact replacement of the lines you own. Never reformat, reorder or rewrite a whole file.
 6. **Release.** When the work stops, finished or not, remove the claim in the same edit that records the result. If unfinished, write the exact next step in `nextAction`, so the next session can resume.
 
+## Autonomous loops
+
+User decision `dec-autonomous-loops` (7 November 2026): Claude (either account) and Codex advance the project in repeated runs without the user pasting prompts or relaying messages. The goal is the most useful work per token, not less use. The repository is the only channel: this board, the claims, [the Codex queue](../../docs/engine/codex-queue.md), [the Claude mailbox](../../docs/engine/claude-mailbox.md) and git on `fase-a-adopcion`. The loop runner scripts are not built yet; until they are, a user starts a run by giving the generic prompt below to a fresh session.
+
+**One run, one item.** Each run starts in a fresh session with a clean context, from an up-to-date worktree of `fase-a-adopcion`, and does one item end to end:
+
+1. Follow "When a session starts" (CLAUDE.md for Claude; AGENTS.md for Codex), then run the board check.
+2. Pick one item, in this order:
+   - **Claude:** a mailbox entry addressed to its account; then the first queue item in `review pending`; then the first unclaimed board milestone owned by `claude` whose `dependsOn` are done; then the claude-a or claude-b lane items in the roadmap.
+   - **Codex:** the first queue item in `repairs requested`, then the first in `ready`.
+3. Claim it (milestone and files), set the queue State to `in progress` when it is a queue item, and read only the documents and sources that item names. Use `graphify` to locate code instead of reading whole files.
+4. Do it. Acceptance is the item's named command or test passing, plus the formula rule of AGENTS.md (each formula checked numerically against a reference). Claude routes inside the run by tier (CLAUDE.md "Model tiers"): Opus for review, deduction and gates; Sonnet for already decided edits; Haiku for lookups.
+5. Record the result once, in its canonical place: evidence in the roadmap section, capability changes in the Checklist, status in the board, and a one-line State in the queue. Release the claim.
+6. Commit file by file and push under `dec-standing-commit-permission`: `git pull --rebase` first, then `git commit --only <paths>`. A conflict in a shared file stops the run; never resolve it by rewriting the file.
+7. End with one last line: `RUN_DONE <item>`, `NEEDS_USER <decision id>`, `BLOCKED <reason>` or `QUEUE_EMPTY`.
+
+**Review cycle.** Claude reviews a `review pending` item. It records findings in the item's roadmap section and sets the State to `repairs requested` (findings named, for example `R1-R3`) or `accepted`. Codex repairs and returns the item to `review pending`. Between the two Claude accounts, the same cycle runs through the mailbox. One reviewer per item; the acceptance command is the judge, and full re-audits are only for the gates.
+
+**The user's inbox.** A decision only the user can take (scope outside M1, a new UI, an equation the shared tools cannot express, anything under `/motor`) becomes a board decision with `status: "open"` and `owner: "user"`. The run then ends with `NEEDS_USER <id>`, and the next run takes another item. The agent never guesses the answer.
+
+**Stopping.** A runner stops when the agent reports `QUEUE_EMPTY` or when the account's usage is nearly exhausted. It also stops after the same acceptance check fails in two runs; that item is set to `blocked`. Only one Claude account runs a loop at a time on the same claims.
+
+**Generic prompt (Claude):**
+
+```
+Run one autonomous-loop item for this repository, following "Autonomous loops" in tools/roadmap_board/README.md exactly. You are <claude-a|claude-b>. Work in a fresh worktree of fase-a-adopcion. End with the single status line the procedure defines.
+```
+
+**Generic prompt (Codex):**
+
+```
+Run one autonomous-loop item for this repository, following "Autonomous loops" in tools/roadmap_board/README.md exactly, as Codex. Take the first codex-queue item in "repairs requested", else the first in "ready". End with the single status line the procedure defines and the report "board refresh pending".
+```
+
 ## Refreshing the board (Claude sessions)
 
 1. Run `node tools/roadmap_board/build_board.mjs`. It writes `tools/roadmap_board/out/{capabilities,milestones,gates,decisions,risks,reviews,ownership,queue}.json` (git-ignored).
@@ -84,6 +118,6 @@ Claude and Codex work at the same time, and either may continue in a new chat or
 - `decisions[]`: `id`, `date`, `status` (`taken` or `open`), `owner`, `title`, `detail`, `source`.
 - `risks[]`: `id`, `severity` (`high`, `medium`, `low`), `owner`, `title`, `mitigation`, `status` (`open` or `closed`).
 
-Generated datasets beyond the registry collections: `queue` (one row per numbered item of the `docs/engine/codex-queue.md` queue table), `reviews` (one row per registry with its review date: `reviewDate` here and `capabilityReviewDate` in `datos.ts`) and `ownership` (one row per `ownership` or `sharedFiles` path, with its agent). Milestone rows carry `owner_code`, the registry's owner value, and `waiting_on` (codes), `codex_queue` (item numbers) and `remaining` from the optional fields.
+Generated datasets beyond the registry collections: `queue` (one row per numbered item of the `docs/engine/codex-queue.md` queue table, with `status`, the leading State token that "Autonomous loops" defines, and the full `state` text), `reviews` (one row per registry with its review date: `reviewDate` here and `capabilityReviewDate` in `datos.ts`) and `ownership` (one row per `ownership` or `sharedFiles` path, with its agent). Milestone rows carry `owner_code`, the registry's owner value, and `waiting_on` (codes), `codex_queue` (item numbers) and `remaining` from the optional fields.
 
 A new field or status value needs the generator, the board page and this document updated together. Registry text is English. The board page translates statuses and owners for the user.

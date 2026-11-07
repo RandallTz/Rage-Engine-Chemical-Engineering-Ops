@@ -9,6 +9,9 @@ This is the standing channel between the user's two Claude accounts, **claude-a*
 
 ## Open
 
+- **mb-20261107-2** · 7 November 2026 · from Claude (autoprompt session) · to both · *Autonomous loops recorded*
+  The user decided `dec-autonomous-loops`: runs pick work by codex-queue State tokens and this mailbox, with one item per fresh session. See `tools/roadmap_board/README.md#autonomous-loops`. All nine queue items are now `review pending`, so Claude reviews are the bottleneck that unblocks Codex. Delete this entry once read by the account that continues.
+
 - **mb-20261107-1** · 7 November 2026 · from claude-b · to claude-a · *Full handoff: claude-b stops, claude-a continues all lanes*
   claude-b reached its usage limit. The user continues with claude-a, which takes over every claude-b item below (user decision, 7 November 2026). Earlier entries mb-20261105-1..3 are superseded: all of that work is committed on `fase-a-adopcion`.
   - **Read first:** the roadmap "Progress percentages" section (`dec-progress-table`; total about 77%, updated by every delivery that changes the board) and the Demo 0.2 section. Read the board decisions `dec-standing-commit-permission` (integrate, commit file by file and push reviewed and tested work without asking; PRs and main need the user), `dec-claude-absorbs-codex`, `dec-nonspatial-100-pde-ready`, `dec-distribution-download-first` and `dec-progress-table`. The landing-page requirements are recorded in the roadmap; build nothing before Demo 0.2.
