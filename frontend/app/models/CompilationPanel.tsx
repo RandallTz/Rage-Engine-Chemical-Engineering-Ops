@@ -13,6 +13,7 @@ import { modelRequest } from './modelRequest';
 import CompilationSummary from './CompilationSummary';
 import { modelUrl } from './workflow';
 import styles from './workspace.module.css';
+import {currentFlowsheet} from './flowsheetLifecycle';
 
 export default function CompilationPanel({ id }: { id: string }) {
   const model = useHojasMotor().find(item => item.id === id);
@@ -20,7 +21,7 @@ export default function CompilationPanel({ id }: { id: string }) {
   const [result, setResult] = useState<{ signature: string; report: CompilationReport;assessment?:ModelAssessment } | null>(null);
   const [failure, setFailure] = useState<{ signature: string; error:Error } | null>(null), [attempt, setAttempt] = useState(0);
   let body = '', preparationError = '';
-  if (model) try { body = JSON.stringify(modelRequest(model, true)); } catch (error) { preparationError = (error as Error).message; }
+  if (model && !model.commonModel?.flowsheet) try { body = JSON.stringify(modelRequest(model, true)); } catch (error) { preparationError = (error as Error).message; }
   useEffect(() => {
     if (!body) return;
     const controller = new AbortController();
@@ -35,6 +36,13 @@ export default function CompilationPanel({ id }: { id: string }) {
     return () => controller.abort();
   }, [body, signature, attempt,id]);
   if (!model) return null;
+  if (model.commonModel?.flowsheet) {
+    const selected=currentFlowsheet(model);
+    return <section className={styles.executionSelection} aria-label="Formulation entering Solve"><span className={styles.kicker}>Transform → Solve</span><h2>Formulation entering Solve</h2>
+      {selected?<p>{selected.selection.mode} flowsheet · {selected.count} instances · {selected.rateRowCount} original rate rows</p>:<p role="alert">{model.flowsheetStale?'stale_flowsheet_execution: The topology or data changed.':'No flowsheet formulation is selected.'} Prepare the network in Transform.</p>}
+      <Link href={modelUrl(id,'transform')}>Review Transform →</Link>
+    </section>;
+  }
   const selected = model.transformation;
   const outdated = selected && selected.sourceSignature !== transformationSourceSignature(model);
   const current = result?.signature === signature ? result.report : null;
