@@ -41,8 +41,9 @@ export const engineCapabilities = [
       'Located reduced-hydraulic physical admission requirements, separate from numerical data/initialization checks in Solve; display-label edits preserve flat-assembly execution identity.',
       'Strict material, first-law and thermodynamic operation journals, with Python replay and comparison against the compiled model.',
       'Dynamic Model inventories: retained conservation laws, explicit permanent constraints, dependent-flow roles and units, physical domains, operation history and legacy-accumulation review in the same assumptions panel.',
-      'Optional versioned equipment-template metadata references existing deduction journals and typed open material/heat/work boundaries; strict Python/TypeScript readers and read-only ports in the canonical Model panel. Equipment recipes require non-null matter, energy and momentum journals plus thermodynamics for package closures; the provenance audit flags incomplete equipment. Equipment fixtures and flowsheet wiring remain pending.',
+      'Optional versioned equipment-template metadata references existing deduction journals and typed open material/heat/work boundaries; strict Python/TypeScript readers and ports in the canonical Model panel. Equipment recipes require non-null matter, energy and momentum journals plus thermodynamics for package closures; the provenance audit flags incomplete equipment.',
       'New instance from this template replays signed common physical journals/workbench operations in Python, verifies equation signatures under fresh model/volume/stream/port identities and retains editable defaults plus versioned provenance. Stale recipes reject atomically; ports remain unconnected. Additional mathematical/scaling/hydraulic identity adapters remain pending.',
+      'The shared Model panel edits rage.flowsheet v1 instances and material connections, with Python topology validation and identity-located diagnostics. Transform prepares dynamic or steady selections; Solve uses the Python resolver; Results consumes the indexed publication. A real R1–drum–R2 steady HTTP check verifies reference temperatures and conversions, layout-only JSON round trips and stale-source rejection; independent review and live browser acceptance remain pending.',
       'Blank model creation starts at fundamental laws. New examples are created on request through the same assumption tools; the previous product examples and template loader are retired.',
       'Recoverable removal clears active and archived models from the library without altering scientific data; internal regression inputs are not product templates.',
       'One canonical Model worksheet for every family, blank or legacy document, ordinary/coupled model and network example: development on the left, assumptions and physical configuration on the right; alternate editors removed.',
@@ -53,6 +54,7 @@ export const engineCapabilities = [
       'The multiphysics battery records solved cases, intentional diagnostics and unsupported spatial cases separately.',
     ],
     pending:[
+      'Independent review and live browser acceptance of the flowsheet workspace handoff; phase-compatible vapour connections, executed recycles and the column stage remain pending.',
       'Hierarchical multiphysics model instances with pinned revisions, independent state and typed physical interfaces; the current flat-region assembly is not this capability.',
       'Complete auxiliary wall and unused storage/passage provenance bridges beyond the verified workbench path; the M1 wall remains an explicit constitutive premise with no fundamental-law projection claimed.',
       'Explicitly rebuild legacy saved models that lack operation history; no invented retrospective derivations.',
