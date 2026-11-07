@@ -24,6 +24,7 @@ Workspace: Shared · below multiphysics
 - [x] Graph replay preserves unevaluated equations and independent node metadata, including an impossible real equality that must not collapse into a boolean while copied.
 - [x] Independent D1 verification approved all five criteria for the frozen M1-A/B/C suite on 23 October 2026; this does not certify general symbolic completeness or U1 usability.
 - [ ] General implication/enforcement of validity predicates and migration of legacy free-text physical premises remain pending after the independent audit.
+- [ ] Custom empirical relations: Python authoring and replay are independently reviewed and committed; the Model controls and strict reader are reviewed with repairs. Runtime enforcement and a reversible edit of an earlier source with dependent history remain pending.
 - [ ] Extend beyond bounded rational intervals and explicit singleton cases: arbitrary typed-literal authoring, affine references, nonrational conversions, unbounded or symbolic bounds, general inequalities, exhaustive parameter partitions, coalescing regimes, higher degrees and nonpolynomial inversions.
 - [ ] Chronological physical-control-to-proof mapping for unused adapters and remaining wall/passage bridges; the M1 energy dependency proof retains separately verified operation commutation.
 - [ ] General residual/DAE numerical lowering and adapters for additional disciplines; symbolic kernel references do not certify new product solver families.
