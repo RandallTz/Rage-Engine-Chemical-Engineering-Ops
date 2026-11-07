@@ -354,18 +354,6 @@
       "ruta": "solve.A"
      }
     },
-    "solve.Dh": {
-     "declaracion": {
-      "texto": "0.029854106607209233",
-      "unidad": "m"
-     },
-     "funcion": "parametro",
-     "magnitud": "solve.Dh",
-     "origen": {
-      "propietarioId": "estudio",
-      "ruta": "solve.Dh"
-     }
-    },
     "solve.F": {
      "declaracion": {
       "texto": "0.5",
@@ -424,6 +412,18 @@
      "origen": {
       "propietarioId": "estudio",
       "ruta": "solve.Q"
+     }
+    },
+    "solve.fD": {
+     "declaracion": {
+      "texto": "0.024",
+      "unidad": "1"
+     },
+     "funcion": "parametro",
+     "magnitud": "solve.fD",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "solve.fD"
      }
     },
     "solve.g": {
@@ -533,13 +533,13 @@
      "parameters": {
       "x0edfa2e8d6": "solve.z0",
       "x0fe3bf5bee": "solve.Pout",
-      "x1900d8b930": "solve.K",
+      "x222dc3af22": "solve.fD",
+      "x311e8b4001": "solve.K",
       "x3de726b7e2": "solve.kV",
       "x3e6d7a98c6": "solve.g",
       "x47862c6696": "solve.Q",
       "x517d953ee1": "solve.length",
       "x653a981626": "drum.pressure",
-      "x6c624f4df2": "solve.Dh",
       "x7f010c31c7": "solve.A",
       "x89a6587e76": "solve.pipeArea",
       "xe11e049caa": "solve.F",
@@ -559,7 +559,7 @@
        "quantityId": "xee4bf2eabe"
       },
       {
-       "equationId": "operation.64",
+       "equationId": "operation.78",
        "quantityId": "x5972b4a097"
       },
       {
@@ -575,50 +575,66 @@
        "quantityId": "x2c5bcf92a4"
       },
       {
-       "equationId": "operation.17",
+       "equationId": "operation.21",
        "quantityId": "xce206d9154"
       },
       {
-       "equationId": "operation.27",
+       "equationId": "operation.37",
        "quantityId": "x886188c4f6"
       },
       {
-       "equationId": "operation.90",
+       "equationId": "operation.106",
        "quantityId": "xcaf80d1207"
       },
       {
-       "equationId": "operation.93",
+       "equationId": "operation.109",
        "quantityId": "x904f7c0589"
       },
       {
-       "equationId": "operation.53",
+       "equationId": "operation.15",
+       "quantityId": "x033efeb824"
+      },
+      {
+       "equationId": "operation.31",
+       "quantityId": "x55d4e7a4a6"
+      },
+      {
+       "equationId": "operation.61",
+       "quantityId": "x02d9409ccc"
+      },
+      {
+       "equationId": "operation.88",
+       "quantityId": "x08b6932918"
+      },
+      {
+       "equationId": "operation.67",
        "quantityId": "x1fbbee4aa2"
       },
       {
-       "equationId": "operation.100",
+       "equationId": "operation.116",
        "quantityId": "x224953c4b2"
       },
       {
-       "equationId": "operation.59",
+       "equationId": "operation.73",
        "quantityId": "x00a2c4ad58"
       }
      ],
-     "sourceSignature": "363a42a4c7554a963b11232ad71ed0d6b1b4902545c74d7d7d13681dacca377e",
+     "sourceSignature": "8a2b41f3d54dd5fb10ee452a0be35734ed57d4b27ce6b6a2c46734df7f2e24c0",
      "states": [
       {
-       "equationId": "operation.22",
+       "equationId": "operation.26",
        "quantityId": "x196f512ed9"
       },
       {
-       "equationId": "operation.32",
+       "equationId": "operation.42",
        "quantityId": "x25a958217f"
       },
       {
-       "equationId": "operation.56",
+       "equationId": "operation.70",
        "quantityId": "x2a595ce244"
       },
       {
-       "equationId": "operation.82",
+       "equationId": "operation.98",
        "quantityId": "x50f6ad1a09"
       }
      ],
@@ -803,7 +819,7 @@
      }
     },
     "equationWorkbench": {
-     "cursor": 100,
+     "cursor": 116,
      "format": "rage.equation-workbench",
      "operations": [
       {
@@ -845,20 +861,8 @@
       {
        "family": "matter",
        "kind": "declare_symbol",
-       "name": "lossCoefficient",
-       "unit": "1"
-      },
-      {
-       "family": "matter",
-       "kind": "declare_symbol",
        "name": "darcyFriction",
        "unit": "1"
-      },
-      {
-       "family": "matter",
-       "kind": "declare_symbol",
-       "name": "hydraulicDiameter",
-       "unit": "m"
       },
       {
        "dependencies": [
@@ -895,12 +899,42 @@
        "right": "feedRate*x79d4e4767a"
       },
       {
+       "dependencies": [
+        "x8a44e00a1e"
+       ],
+       "family": "matter",
+       "kind": "declare_function",
+       "name": "vapourComponentMolarFlow_1",
+       "unit": "mol/s"
+      },
+      {
+       "family": "matter",
+       "kind": "declare_relation",
+       "left": "vapourComponentMolarFlow_1",
+       "reason": "Phase donor: the vapour withdrawal draws the vapour phase of this volume (zero when the vapour is absent)",
+       "relationKind": "constitutive",
+       "right": "vapourMolarOutflow*x79f1e51f70*xc57d2faec5"
+      },
+      {
        "family": "matter",
        "kind": "declare_relation",
        "left": "x033efeb824",
-       "reason": "Phase donor: the vapour withdrawal draws the vapour phase of this volume (zero when the vapour is absent)",
-       "relationKind": "constitutive",
-       "right": "vapourMolarOutflow*x79f1e51f70*xc57d2faec5*x2f82d805f2"
+       "reason": "Definition of component mass flow from component molar flow and molar mass",
+       "relationKind": "definition",
+       "right": "vapourComponentMolarFlow_1*x2f82d805f2"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "operation.13",
+       "sourceSignatures": {
+        "operation.13": "1b60a94146dea28e7d2ad5e2cf9867c21f9b88a88d7a2aeae7ffd02a8430c387",
+        "operation.14": "2e13c540e22a0942ba15d1eac67071843a026c1c4feaa0da9c43ed802ddb4488"
+       },
+       "sources": [
+        "operation.14"
+       ],
+       "symbol": "x8c2a5f8694"
       },
       {
        "dependencies": [
@@ -912,21 +946,51 @@
        "unit": "1"
       },
       {
+       "dependencies": [
+        "x8a44e00a1e"
+       ],
+       "family": "matter",
+       "kind": "declare_function",
+       "name": "liquidMoleFraction_1",
+       "unit": "1"
+      },
+      {
+       "family": "matter",
+       "kind": "declare_relation",
+       "left": "liquidMoleFraction_1",
+       "reason": "Phase donor: the stream has the liquid phase composition of this volume",
+       "relationKind": "constitutive",
+       "right": "x613f0d6e8a"
+      },
+      {
        "family": "matter",
        "kind": "declare_relation",
        "left": "liquidMassFraction_1*x0de64b97a6",
-       "reason": "Phase donor: the stream has the liquid phase composition; convert its component mole fraction to mass fraction using the phase mean molar mass",
-       "relationKind": "constitutive",
-       "right": "x613f0d6e8a*x2f82d805f2"
+       "reason": "Definition of mass fraction from mole fraction, component molar mass and the phase mean molar mass",
+       "relationKind": "definition",
+       "right": "liquidMoleFraction_1*x2f82d805f2"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "operation.18",
+       "sourceSignatures": {
+        "operation.18": "a7af4f7bda830e6165295e20a0cebaed56d97c00b7aadb26906543abfe057f0a",
+        "operation.19": "3b3fdcde8296318393ac33e5356941f0f0be13932be3aac2a76c02d563e54613"
+       },
+       "sources": [
+        "operation.19"
+       ],
+       "symbol": "x5a314b2bda"
       },
       {
        "family": "matter",
        "kind": "isolate",
        "sourceSignatures": {
-        "operation.16": "a280d2e305269971b00b7d6d70ec9eb6a53900460d000cec6ee295477bfb84fc"
+        "operation.20": "b19e535dcf88eadc25ea1fafb8e8e4c756ac6c616a077a9bc12070bef3ce4dea"
        },
        "sources": [
-        "operation.16"
+        "operation.20"
        ],
        "symbol": "liquidMassFraction_1"
       },
@@ -941,23 +1005,23 @@
       {
        "family": "matter",
        "kind": "substitute",
-       "relation": "operation.17",
+       "relation": "operation.21",
        "sourceSignatures": {
-        "operation.17": "cf7c8f7a5bc35e9ee3ed4af407d270322367be5c2c72fb46444468cd7f7b5ff3",
-        "operation.18": "9c65c7a44dd6ee2e748835fd7b24965a658b384cf62d726a09c936071a3814a7"
+        "operation.21": "16119d50643f557b73beab8143519237c9288d776af2630422961b7a6bc2f30c",
+        "operation.22": "9c65c7a44dd6ee2e748835fd7b24965a658b384cf62d726a09c936071a3814a7"
        },
        "sources": [
-        "operation.18"
+        "operation.22"
        ],
        "symbol": "xce206d9154"
       },
       {
        "family": "matter",
        "kind": "substitute",
-       "relation": "operation.13",
+       "relation": "operation.11",
        "sourceSignatures": {
         "matter.drum.1.closed": "22bbd2be16f5ab44a789a737c63f4d4ab925b01f56827e7cf8d474a0ad641bbb",
-        "operation.13": "e54f74924425e012b13b60fdd54be5ecb2a29600c849cabfad74cfe0d1db3979"
+        "operation.11": "e54f74924425e012b13b60fdd54be5ecb2a29600c849cabfad74cfe0d1db3979"
        },
        "sources": [
         "matter.drum.1.closed"
@@ -967,26 +1031,26 @@
       {
        "family": "matter",
        "kind": "substitute",
-       "relation": "operation.14",
+       "relation": "operation.15",
        "sourceSignatures": {
-        "operation.14": "b1126de91bce02cce24472d3b82f00c9d586df0f98ed994a12d2b6938cb6b8da",
-        "operation.20": "f92a8f536a13bf129c0c5eb0f73c27412a2d19e83ff366b049f373862435afbf"
+        "operation.15": "d4c9f5de52b38b8cd3ba4f7a6481e1f77d876849053903f194f7f08fc8ae82ff",
+        "operation.24": "f92a8f536a13bf129c0c5eb0f73c27412a2d19e83ff366b049f373862435afbf"
        },
        "sources": [
-        "operation.20"
+        "operation.24"
        ],
        "symbol": "x033efeb824"
       },
       {
        "family": "matter",
        "kind": "substitute",
-       "relation": "operation.19",
+       "relation": "operation.23",
        "sourceSignatures": {
-        "operation.19": "a8c3fe5d89c1477ac8c10281cd956e935bbdc96135b823ba5af7ca2cf51d944a",
-        "operation.21": "4a76b977efcc43809d38bb3349d0053d60908a7e1a6b76786f23be9000f78f35"
+        "operation.23": "3b31a2749505469587a126c102f5bafb9cae6cb05adfda448553e4f0ea977dab",
+        "operation.25": "7840a962445354f21ea73b75b42ebc4fbbfade70c470798e175dc51472fe5dab"
        },
        "sources": [
-        "operation.21"
+        "operation.25"
        ],
        "symbol": "x11b26c8f8d"
       },
@@ -999,12 +1063,42 @@
        "right": "feedRate*x5d6fe42efb"
       },
       {
+       "dependencies": [
+        "x8a44e00a1e"
+       ],
+       "family": "matter",
+       "kind": "declare_function",
+       "name": "vapourComponentMolarFlow_2",
+       "unit": "mol/s"
+      },
+      {
+       "family": "matter",
+       "kind": "declare_relation",
+       "left": "vapourComponentMolarFlow_2",
+       "reason": "Phase donor: the vapour withdrawal draws the vapour phase of this volume (zero when the vapour is absent)",
+       "relationKind": "constitutive",
+       "right": "vapourMolarOutflow*x79f1e51f70*xed5aea298e"
+      },
+      {
        "family": "matter",
        "kind": "declare_relation",
        "left": "x55d4e7a4a6",
-       "reason": "Phase donor: the vapour withdrawal draws the vapour phase of this volume (zero when the vapour is absent)",
-       "relationKind": "constitutive",
-       "right": "vapourMolarOutflow*x79f1e51f70*xed5aea298e*x47787b801e"
+       "reason": "Definition of component mass flow from component molar flow and molar mass",
+       "relationKind": "definition",
+       "right": "vapourComponentMolarFlow_2*x47787b801e"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "operation.29",
+       "sourceSignatures": {
+        "operation.29": "72b3d21cea2e216fec80e44f5b7299b4706cdc8f6f0a484d4d45488c2ba610bd",
+        "operation.30": "efa5791ecf968d9b0b8d3b7d7e15e57f54964f7ec2712dd5e36fa352496f7fb5"
+       },
+       "sources": [
+        "operation.30"
+       ],
+       "symbol": "xa34cbee0b1"
       },
       {
        "dependencies": [
@@ -1016,21 +1110,51 @@
        "unit": "1"
       },
       {
+       "dependencies": [
+        "x8a44e00a1e"
+       ],
+       "family": "matter",
+       "kind": "declare_function",
+       "name": "liquidMoleFraction_2",
+       "unit": "1"
+      },
+      {
+       "family": "matter",
+       "kind": "declare_relation",
+       "left": "liquidMoleFraction_2",
+       "reason": "Phase donor: the stream has the liquid phase composition of this volume",
+       "relationKind": "constitutive",
+       "right": "x55182387d9"
+      },
+      {
        "family": "matter",
        "kind": "declare_relation",
        "left": "liquidMassFraction_2*x0de64b97a6",
-       "reason": "Phase donor: the stream has the liquid phase composition; convert its component mole fraction to mass fraction using the phase mean molar mass",
-       "relationKind": "constitutive",
-       "right": "x55182387d9*x47787b801e"
+       "reason": "Definition of mass fraction from mole fraction, component molar mass and the phase mean molar mass",
+       "relationKind": "definition",
+       "right": "liquidMoleFraction_2*x47787b801e"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "operation.34",
+       "sourceSignatures": {
+        "operation.34": "d0933327e2ac3733cf1cf6e210d4dd4b43f28c53a7007a87fcde4b94ae53b0ce",
+        "operation.35": "b4a0c32a464ddd5d40fc98f6a5fd853ded26843a6152e911ecb19aef455255b8"
+       },
+       "sources": [
+        "operation.35"
+       ],
+       "symbol": "xbf0cf8580c"
       },
       {
        "family": "matter",
        "kind": "isolate",
        "sourceSignatures": {
-        "operation.26": "4d99765836d48f9fc2b3721b409d8f483baf47e7632b83e8877b35750f7f3c8c"
+        "operation.36": "572d70768916aa547f5643d1d272eca446d416f47fa55da7044584d23d3ae6ca"
        },
        "sources": [
-        "operation.26"
+        "operation.36"
        ],
        "symbol": "liquidMassFraction_2"
       },
@@ -1045,23 +1169,23 @@
       {
        "family": "matter",
        "kind": "substitute",
-       "relation": "operation.27",
+       "relation": "operation.37",
        "sourceSignatures": {
-        "operation.27": "efa2f92a5ba796f395123e9b18b4e8c1705f942e20f82df90ded632485f34a21",
-        "operation.28": "fbf0d64dcdf8adeb66212a6384c2644d8448752d3d8f4f988e033c100efe1317"
+        "operation.37": "51391b2dd54d7748424df13d7b8cdaac52e6a87b343d81db7a4330294ea3647b",
+        "operation.38": "fbf0d64dcdf8adeb66212a6384c2644d8448752d3d8f4f988e033c100efe1317"
        },
        "sources": [
-        "operation.28"
+        "operation.38"
        ],
        "symbol": "x886188c4f6"
       },
       {
        "family": "matter",
        "kind": "substitute",
-       "relation": "operation.23",
+       "relation": "operation.27",
        "sourceSignatures": {
         "matter.drum.2.closed": "e72c5744a0eeb7ba55d2213b92d906153f0ee6088d413ade7aa0fbc98003583f",
-        "operation.23": "2ca02ebd9ae5948a3667258fdf4e4faf07c3fb2583e0ecb3ce7b9f0be7a23ab1"
+        "operation.27": "2ca02ebd9ae5948a3667258fdf4e4faf07c3fb2583e0ecb3ce7b9f0be7a23ab1"
        },
        "sources": [
         "matter.drum.2.closed"
@@ -1071,26 +1195,26 @@
       {
        "family": "matter",
        "kind": "substitute",
-       "relation": "operation.24",
+       "relation": "operation.31",
        "sourceSignatures": {
-        "operation.24": "d5cf487a738f2e46e27220efc52f1be210da19e15999ab28377e28859ce3f203",
-        "operation.30": "f4d657798dbb69c5cdd6217925ce7c42482535718f7033821bc6d90e7fc7c615"
+        "operation.31": "86f3603d7bb37072184824947362658a6027679d81037fdd7774a5af24a1484f",
+        "operation.40": "f4d657798dbb69c5cdd6217925ce7c42482535718f7033821bc6d90e7fc7c615"
        },
        "sources": [
-        "operation.30"
+        "operation.40"
        ],
        "symbol": "x55d4e7a4a6"
       },
       {
        "family": "matter",
        "kind": "substitute",
-       "relation": "operation.29",
+       "relation": "operation.39",
        "sourceSignatures": {
-        "operation.29": "bdde4725d8b4d489dfcd6411e859a65ea48ce1a67342988e5d06a6f7cf1098d8",
-        "operation.31": "a63729ca6949a077ce194bbbdfddf6d9e1ae6c3682f98ae18c6d826c62c4e7a4"
+        "operation.39": "4d44d7f6c6982157ed57ab287558e21a098d7fd4592e38bcaac66fe88dbd5510",
+        "operation.41": "272aec2ea9225c015480c49c16e0e9e52c47170da7e91f086defbc4df26b955a"
        },
        "sources": [
-        "operation.31"
+        "operation.41"
        ],
        "symbol": "xec2fc31592"
       },
@@ -1098,12 +1222,12 @@
        "family": "matter",
        "kind": "combine",
        "sourceSignatures": {
-        "operation.19": "a8c3fe5d89c1477ac8c10281cd956e935bbdc96135b823ba5af7ca2cf51d944a",
-        "operation.29": "bdde4725d8b4d489dfcd6411e859a65ea48ce1a67342988e5d06a6f7cf1098d8"
+        "operation.23": "3b31a2749505469587a126c102f5bafb9cae6cb05adfda448553e4f0ea977dab",
+        "operation.39": "4d44d7f6c6982157ed57ab287558e21a098d7fd4592e38bcaac66fe88dbd5510"
        },
        "sources": [
-        "operation.19",
-        "operation.29"
+        "operation.23",
+        "operation.39"
        ]
       },
       {
@@ -1111,11 +1235,11 @@
        "kind": "substitute",
        "relation": "thermodynamics.drum.phase-molar-mass-L",
        "sourceSignatures": {
-        "operation.33": "bf75afa2f779bc37d94d37f111d35eec1d95af21621e0bb0ecd882d5a7eae73e",
+        "operation.43": "a9fa560ce86bf4764cf4eca39bcbe7791e893daf5e7c70e1b7518d18d91c912f",
         "thermodynamics.drum.phase-molar-mass-L": "8b8b39499f945f2b2e75bf03131632293fa105dff48e663d206955c7162dae51"
        },
        "sources": [
-        "operation.33"
+        "operation.43"
        ],
        "symbol": "x0de64b97a6"
       },
@@ -1123,20 +1247,20 @@
        "family": "matter",
        "kind": "factor",
        "sourceSignatures": {
-        "operation.34": "60066442849101c90384f79e99db13caeeefbc42ebd95b78ee3a3436bbabc407"
+        "operation.44": "18c4fca44cf698a940153ac86fd8d8dc54c36d6f2dbc8b83f59eaeeec2486dcf"
        },
        "sources": [
-        "operation.34"
+        "operation.44"
        ]
       },
       {
        "family": "matter",
        "kind": "isolate",
        "sourceSignatures": {
-        "operation.35": "e362963095a6752695fbc466c2ac9874181fb5bb8bba105f27b02b182ef3b596"
+        "operation.45": "83c0ea62bdaed882472d82d287b0b2566b085ef5df12105bfec17fbb60f3a219"
        },
        "sources": [
-        "operation.35"
+        "operation.45"
        ],
        "symbol": "x11b26c8f8d"
       },
@@ -1144,10 +1268,10 @@
        "family": "matter",
        "kind": "differentiate",
        "sourceSignatures": {
-        "operation.35": "e362963095a6752695fbc466c2ac9874181fb5bb8bba105f27b02b182ef3b596"
+        "operation.45": "83c0ea62bdaed882472d82d287b0b2566b085ef5df12105bfec17fbb60f3a219"
        },
        "sources": [
-        "operation.35"
+        "operation.45"
        ],
        "symbol": "x8a44e00a1e"
       },
@@ -1155,20 +1279,20 @@
        "family": "matter",
        "kind": "isolate",
        "sourceSignatures": {
-        "operation.37": "d5d55f21575b0996cf8a03d47fb7c2ba2a50225551ed4b9ce7fca3ab9dff1019"
+        "operation.47": "83e985626c9fb05e0518ca130245c944b25a4b50d6e69ea0403e677a7b341dd0"
        },
        "sources": [
-        "operation.37"
+        "operation.47"
        ],
        "symbol": "xae7177aa0b"
       },
       {
        "family": "energy",
        "kind": "substitute",
-       "relation": "operation.13",
+       "relation": "operation.11",
        "sourceSignatures": {
         "energy.drum.enthalpy-balance": "322620e27098831b11196b00f0212db4dcd88aee624dd5d3f217ba6995416723",
-        "operation.13": "e54f74924425e012b13b60fdd54be5ecb2a29600c849cabfad74cfe0d1db3979"
+        "operation.11": "e54f74924425e012b13b60fdd54be5ecb2a29600c849cabfad74cfe0d1db3979"
        },
        "sources": [
         "energy.drum.enthalpy-balance"
@@ -1178,65 +1302,65 @@
       {
        "family": "energy",
        "kind": "substitute",
-       "relation": "operation.23",
+       "relation": "operation.27",
        "sourceSignatures": {
-        "operation.23": "2ca02ebd9ae5948a3667258fdf4e4faf07c3fb2583e0ecb3ce7b9f0be7a23ab1",
-        "operation.39": "d32e21630e16838613d809dd827c76d241a1065f09e3fe6e4156d7e6db9da939"
+        "operation.27": "2ca02ebd9ae5948a3667258fdf4e4faf07c3fb2583e0ecb3ce7b9f0be7a23ab1",
+        "operation.49": "d32e21630e16838613d809dd827c76d241a1065f09e3fe6e4156d7e6db9da939"
        },
        "sources": [
-        "operation.39"
+        "operation.49"
        ],
        "symbol": "xbf958d5f8e"
       },
       {
        "family": "energy",
        "kind": "substitute",
-       "relation": "operation.14",
+       "relation": "operation.15",
        "sourceSignatures": {
-        "operation.14": "b1126de91bce02cce24472d3b82f00c9d586df0f98ed994a12d2b6938cb6b8da",
-        "operation.40": "94a1334b396d6d632f1fc027b268c8342be76e43a9ecef4be79a71941f1eaee1"
+        "operation.15": "d4c9f5de52b38b8cd3ba4f7a6481e1f77d876849053903f194f7f08fc8ae82ff",
+        "operation.50": "94a1334b396d6d632f1fc027b268c8342be76e43a9ecef4be79a71941f1eaee1"
        },
        "sources": [
-        "operation.40"
+        "operation.50"
        ],
        "symbol": "x033efeb824"
       },
       {
        "family": "energy",
        "kind": "substitute",
-       "relation": "operation.24",
+       "relation": "operation.31",
        "sourceSignatures": {
-        "operation.24": "d5cf487a738f2e46e27220efc52f1be210da19e15999ab28377e28859ce3f203",
-        "operation.41": "2f57be853f98c16ea07416e02ece39e2920f5fe6c34d082df9c3bf2f41dba762"
+        "operation.31": "86f3603d7bb37072184824947362658a6027679d81037fdd7774a5af24a1484f",
+        "operation.51": "07db0ea56da17e7834ebf4d8cc485b358853a32d709a3491f1f029c64dbc0db6"
        },
        "sources": [
-        "operation.41"
+        "operation.51"
        ],
        "symbol": "x55d4e7a4a6"
       },
       {
        "family": "energy",
        "kind": "substitute",
-       "relation": "operation.19",
+       "relation": "operation.23",
        "sourceSignatures": {
-        "operation.19": "a8c3fe5d89c1477ac8c10281cd956e935bbdc96135b823ba5af7ca2cf51d944a",
-        "operation.42": "a199b7d97cc1a573ad6d52a1d42deb41a72a9ca24e41c07bd5cd5c8183679963"
+        "operation.23": "3b31a2749505469587a126c102f5bafb9cae6cb05adfda448553e4f0ea977dab",
+        "operation.52": "e3cae477990f1d0e77a683b8dd61ebe13193c37c1547cc4c50016986807d2401"
        },
        "sources": [
-        "operation.42"
+        "operation.52"
        ],
        "symbol": "x11b26c8f8d"
       },
       {
        "family": "energy",
        "kind": "substitute",
-       "relation": "operation.29",
+       "relation": "operation.39",
        "sourceSignatures": {
-        "operation.29": "bdde4725d8b4d489dfcd6411e859a65ea48ce1a67342988e5d06a6f7cf1098d8",
-        "operation.43": "0d4d72c267092dc586f743208bf21a09b584b024fcf5c25daf7c91ed600cb86e"
+        "operation.39": "4d44d7f6c6982157ed57ab287558e21a098d7fd4592e38bcaac66fe88dbd5510",
+        "operation.53": "e1efc86bf936145006915d512611606313342e1e6f02f10eec5c5628bafbb36d"
        },
        "sources": [
-        "operation.43"
+        "operation.53"
        ],
        "symbol": "xec2fc31592"
       },
@@ -1244,41 +1368,82 @@
        "family": "energy",
        "kind": "declare_relation",
        "left": "x6c67e1dead",
-       "reason": "Stream specific enthalpy from the package (donor phase or declared inlet)",
+       "reason": "Inlet stream specific enthalpy at its declared exterior state (package)",
        "relationKind": "constitutive",
        "right": "x85db98be3f"
       },
       {
        "family": "energy",
        "kind": "substitute",
-       "relation": "operation.45",
+       "relation": "operation.55",
        "sourceSignatures": {
-        "operation.44": "73dd764426b9c08e09c0e0c876eebbe19839f5e0d00f769790c61f9e7b25733a",
-        "operation.45": "e89ba0691be5a1bddf75f3449d5b742a587e9a951deadae3c0c37adaf08c4e23"
+        "operation.54": "7246ea665506b111b7170057599ecfe2e62d672476d700c23615da744aca6999",
+        "operation.55": "44c0eea9dde0b32c6e7728735b6cc2ca59923e962d53238ed271e259f5e122da"
        },
        "sources": [
-        "operation.44"
+        "operation.54"
        ],
        "symbol": "x6c67e1dead"
       },
       {
+       "dependencies": [
+        "x8a44e00a1e"
+       ],
+       "family": "energy",
+       "kind": "declare_function",
+       "name": "vapourMolarEnthalpy",
+       "unit": "J/mol"
+      },
+      {
        "family": "energy",
        "kind": "declare_relation",
-       "left": "x02d9409ccc",
-       "reason": "Stream specific enthalpy from the package (donor phase or declared inlet)",
+       "left": "vapourMolarEnthalpy",
+       "reason": "The outgoing material draws the donor vapour phase at its thermodynamic state",
        "relationKind": "constitutive",
-       "right": "xd846967e67/xdd678beaaa"
+       "right": "xd846967e67"
+      },
+      {
+       "family": "energy",
+       "kind": "declare_relation",
+       "left": "x02d9409ccc*xdd678beaaa",
+       "reason": "Definition of molar enthalpy from mass-specific enthalpy and the mean molar mass",
+       "relationKind": "definition",
+       "right": "vapourMolarEnthalpy"
       },
       {
        "family": "energy",
        "kind": "substitute",
-       "relation": "operation.47",
+       "relation": "operation.58",
        "sourceSignatures": {
-        "operation.46": "629a8f631acfbe8ac1acc2a924636243ae142280b82400f18987d458c692dbbc",
-        "operation.47": "c2686553da3016c2453ed83d21b992f5cefdfceae2868a2a937b511ab42272ba"
+        "operation.58": "67a64ea18a046b4ccae970c86e0aa367708474ad4f14b1ff98ba02a7dc39a803",
+        "operation.59": "9d9066d1ad6ea9b75c95e1819a407064f7a0969bec5a79598a5c1214db0e45ee"
        },
        "sources": [
-        "operation.46"
+        "operation.59"
+       ],
+       "symbol": "x3de44a14af"
+      },
+      {
+       "family": "energy",
+       "kind": "isolate",
+       "sourceSignatures": {
+        "operation.60": "efc41ea680ce9ab0962085abca31b980474d5d573486972afe43fdb09cfe5842"
+       },
+       "sources": [
+        "operation.60"
+       ],
+       "symbol": "x02d9409ccc"
+      },
+      {
+       "family": "energy",
+       "kind": "substitute",
+       "relation": "operation.61",
+       "sourceSignatures": {
+        "operation.56": "c17fc7b7ca22ec0acb758010bf38c217e7c443029f0f9afe688f4c3a06f5bcd3",
+        "operation.61": "a6bb35b5136790d167caf3de246168b28de34e44e82691708c23c37dce0183db"
+       },
+       "sources": [
+        "operation.56"
        ],
        "symbol": "x02d9409ccc"
       },
@@ -1295,7 +1460,7 @@
        "family": "energy",
        "kind": "declare_relation",
        "left": "liquidMolarEnthalpy",
-       "reason": "The outgoing material draws the donor liquid phase at its thermodynamic state",
+       "reason": "The outgoing material draws the donor liquid phase at its thermodynamic state, evaluated at the uniform pressure of the volume. Premises: negligible stream kinetic energy; the frictional dissipation of the path stays in the stream; the pressure dependence of the liquid enthalpy over the path pressure change is neglected",
        "relationKind": "constitutive",
        "right": "x3b7ee88bbd"
       },
@@ -1310,13 +1475,13 @@
       {
        "family": "energy",
        "kind": "substitute",
-       "relation": "operation.50",
+       "relation": "operation.64",
        "sourceSignatures": {
-        "operation.50": "7e14e49680ebb4ed03d9c6dbf7d69eebbacefdaac57f9e9bbe267a3d12a1d3dd",
-        "operation.51": "2837998b66971ae0c2b8295c12aeabf4a48ca6134929782def26f0d595a7e928"
+        "operation.64": "6fe733ec2d2320baedcb1db3aa25f324a7ef21cf5e3d6bb57a7dff43c2c1cc04",
+        "operation.65": "2837998b66971ae0c2b8295c12aeabf4a48ca6134929782def26f0d595a7e928"
        },
        "sources": [
-        "operation.51"
+        "operation.65"
        ],
        "symbol": "x30a1bd91f7"
       },
@@ -1324,23 +1489,23 @@
        "family": "energy",
        "kind": "isolate",
        "sourceSignatures": {
-        "operation.52": "de6c8fdadac944b69d05b14353a90d2a420058022b3c2ddabdb61284c183ac78"
+        "operation.66": "d9dfeeac6d0f8d4d8ebfd788a3eace4149602ebd92379b7f4ac48ec8ff86bebc"
        },
        "sources": [
-        "operation.52"
+        "operation.66"
        ],
        "symbol": "x1fbbee4aa2"
       },
       {
        "family": "energy",
        "kind": "substitute",
-       "relation": "operation.53",
+       "relation": "operation.67",
        "sourceSignatures": {
-        "operation.48": "5b99e3e136130ab01072b8fb9f2d08e4f611074afdc1c75dd62f56918c090fb4",
-        "operation.53": "e75c46c0b8550519d52192b7f61f08220731a2ba099e3287a553fc51cb5c4807"
+        "operation.62": "6632d1feb78932d5fbd021438811a7a7931045222faa6b926b8e431c33e783a5",
+        "operation.67": "5f7337075c08d9685bcffcf14b7527d58b8e8b7a9e7f9c7243f9afb7c1891804"
        },
        "sources": [
-        "operation.48"
+        "operation.62"
        ],
        "symbol": "x1fbbee4aa2"
       },
@@ -1355,13 +1520,13 @@
       {
        "family": "energy",
        "kind": "substitute",
-       "relation": "operation.55",
+       "relation": "operation.69",
        "sourceSignatures": {
-        "operation.54": "2946d28ce6dc69eac0b9225e3c3c30af4a79a706d494b96508a23c16dcde5d3e",
-        "operation.55": "99b81241249535f83fe46a850780fc3ccc40e1bbd4bc1e9be58cfdf35a30a53b"
+        "operation.68": "6a296fb7d5d78ac4808ec11b5f3d1c8972ead0bc0439098c9f1faddb2901ce9b",
+        "operation.69": "99b81241249535f83fe46a850780fc3ccc40e1bbd4bc1e9be58cfdf35a30a53b"
        },
        "sources": [
-        "operation.54"
+        "operation.68"
        ],
        "symbol": "x4465204014"
       },
@@ -1376,10 +1541,10 @@
       {
        "family": "momentum",
        "kind": "substitute",
-       "relation": "operation.57",
+       "relation": "operation.71",
        "sourceSignatures": {
         "momentum.drum.storage.pressure": "c27373c4db2840a556b35bdf09a36c3d50ee2ba3eef87114deabe84f3a269164",
-        "operation.57": "38d4f21421c7e92807bb58e5207015eaf07ba34944bec0e530c9ded283fd6e7b"
+        "operation.71": "38d4f21421c7e92807bb58e5207015eaf07ba34944bec0e530c9ded283fd6e7b"
        },
        "sources": [
         "momentum.drum.storage.pressure"
@@ -1397,13 +1562,13 @@
       {
        "family": "momentum",
        "kind": "substitute",
-       "relation": "operation.59",
+       "relation": "operation.73",
        "sourceSignatures": {
-        "operation.58": "82411b7f744d6fe54f03fc193c4d1110dff5c87238d5101169b5592e2d22835f",
-        "operation.59": "7cedfa3d4c0c90297891548879d1c456bf9b656566e44159094ff4c654999667"
+        "operation.72": "82411b7f744d6fe54f03fc193c4d1110dff5c87238d5101169b5592e2d22835f",
+        "operation.73": "7cedfa3d4c0c90297891548879d1c456bf9b656566e44159094ff4c654999667"
        },
        "sources": [
-        "operation.58"
+        "operation.72"
        ],
        "symbol": "x00a2c4ad58"
       },
@@ -1418,13 +1583,13 @@
       {
        "family": "momentum",
        "kind": "substitute",
-       "relation": "operation.61",
+       "relation": "operation.75",
        "sourceSignatures": {
-        "operation.60": "5f6da4a20112f3e6de3a4fe859b84d3387ead54ce873759e8c2b56509d5a719b",
-        "operation.61": "2267a953161ef9e94049f22f57b5bae05b681b44f22b9822e7e1549a24332c10"
+        "operation.74": "5f6da4a20112f3e6de3a4fe859b84d3387ead54ce873759e8c2b56509d5a719b",
+        "operation.75": "2267a953161ef9e94049f22f57b5bae05b681b44f22b9822e7e1549a24332c10"
        },
        "sources": [
-        "operation.60"
+        "operation.74"
        ],
        "symbol": "xc0394dfbab"
       },
@@ -1439,13 +1604,13 @@
       {
        "family": "momentum",
        "kind": "substitute",
-       "relation": "operation.63",
+       "relation": "operation.77",
        "sourceSignatures": {
-        "operation.62": "3103be7d318099b87cfad1d01ebbcb01c1d3b985e01e7a8a253d230331e82702",
-        "operation.63": "25593364ce6ce3ba310bd70b4202d06b511b6ea1327d8c2067171731010587db"
+        "operation.76": "3103be7d318099b87cfad1d01ebbcb01c1d3b985e01e7a8a253d230331e82702",
+        "operation.77": "25593364ce6ce3ba310bd70b4202d06b511b6ea1327d8c2067171731010587db"
        },
        "sources": [
-        "operation.62"
+        "operation.76"
        ],
        "symbol": "x52c231c5bf"
       },
@@ -1455,20 +1620,20 @@
        "kind": "declare_domain",
        "reason": "The drawn liquid phase is present: positive liquid volume",
        "sourceSignatures": {
-        "operation.64": "b5b274973542b70b52946b28d40cd88c79b48b994372ba6ddf82b4ad6e6798d4"
+        "operation.78": "b5b274973542b70b52946b28d40cd88c79b48b994372ba6ddf82b4ad6e6798d4"
        },
        "sources": [
-        "operation.64"
+        "operation.78"
        ],
        "symbol": "xe6f61beed3"
       },
       {
        "family": "momentum",
        "kind": "substitute",
-       "relation": "operation.38",
+       "relation": "operation.48",
        "sourceSignatures": {
         "momentum.pipe.path.pressure-form": "b85ca3880bc97fd53e7aee12afc05102d8cc4afbd7292fe7974223443b699b20",
-        "operation.38": "d87533248ed18eb030063d4061d70456c95e23dc865dfa7c78bb59abafa2a770"
+        "operation.48": "ea993dc035a8685ef247caa2f5554ae64c52b6c9b61d9cf8d2d5cf9e9eaff3d7"
        },
        "sources": [
         "momentum.pipe.path.pressure-form"
@@ -1486,28 +1651,101 @@
       {
        "family": "momentum",
        "kind": "substitute",
-       "relation": "operation.67",
+       "relation": "operation.81",
        "sourceSignatures": {
-        "operation.66": "5f70c79af347b128d00078045c60afd3ea4e74945b846ba2e0111775d82772de",
-        "operation.67": "8fb5e76cef0ec948c0c6206b16299f406b4f6096292613548dbe10c87ceb31be"
+        "operation.80": "a1e1d1dcf8edd7d830359866d3462a77e13c98237927065b6c21ae701d300ba0",
+        "operation.81": "8fb5e76cef0ec948c0c6206b16299f406b4f6096292613548dbe10c87ceb31be"
        },
        "sources": [
-        "operation.66"
+        "operation.80"
        ],
        "symbol": "xba1636b258"
       },
       {
        "family": "momentum",
        "kind": "substitute",
-       "relation": "operation.64",
+       "relation": "operation.78",
        "sourceSignatures": {
-        "operation.64": "b5b274973542b70b52946b28d40cd88c79b48b994372ba6ddf82b4ad6e6798d4",
-        "operation.68": "8ab220aa26bdc41830d529c334c362c1053e548cb4d080ecd957b10108fbea16"
+        "operation.78": "b5b274973542b70b52946b28d40cd88c79b48b994372ba6ddf82b4ad6e6798d4",
+        "operation.82": "357fbadb87e90e9e566904a878b1c09b04cb2656f53c315d57be47ea6721cd21"
        },
        "sources": [
-        "operation.68"
+        "operation.82"
        ],
        "symbol": "x5972b4a097"
+      },
+      {
+       "family": "momentum",
+       "kind": "substitute",
+       "relation": "operation.46",
+       "sourceSignatures": {
+        "momentum.pipe.path.darcy-weisbach": "b1333266961d2a9c4862cf4a1674178cfdb851ec2cde460f19322e0a1cb77cc8",
+        "operation.46": "7f2c34b835ae1ae81cb7b812c45ef1fcc5fa6f4ef3b4e1ed0fd7cc2de7ebb8b8"
+       },
+       "sources": [
+        "momentum.pipe.path.darcy-weisbach"
+       ],
+       "symbol": "x11b26c8f8d"
+      },
+      {
+       "family": "momentum",
+       "kind": "declare_relation",
+       "left": "x82ab543c7b",
+       "reason": "Definition: hydraulic diameter of the declared circular section",
+       "relationKind": "definition",
+       "right": "(4*x89a6587e76/pi)^(1/2)"
+      },
+      {
+       "family": "momentum",
+       "kind": "substitute",
+       "relation": "operation.85",
+       "sourceSignatures": {
+        "operation.84": "77f4cd7639a66f6932b4e9d69f5580b60ae2d9318fc3e435de07ae9daf04b991",
+        "operation.85": "29149b8898a3d175c3e0f1d89a6d7a0d7d8576fff0261806312298c3cdda2b64"
+       },
+       "sources": [
+        "operation.84"
+       ],
+       "symbol": "x82ab543c7b"
+      },
+      {
+       "family": "momentum",
+       "kind": "declare_relation",
+       "left": "x867521b3f7",
+       "reason": "Distributed wall friction with a constant Darcy factor over the operating range",
+       "relationKind": "constitutive",
+       "right": "darcyFriction",
+       "source": {
+        "citation": "Blasius smooth-pipe law f_D = 0.316 Re^(-1/4), evaluated at the geometric-mean Reynolds number of the run",
+        "kind": "empirical correlation",
+        "validRange": "Hydraulically smooth circular section, 4e3 <= Re <= 1e5. Over the run F = 0.40-0.48 kg/s and the liquid viscosity (about 0.32-1.3 mPa s between 300 K and 365 K, estimate) give Re about 1.3e4-6.3e4, so f_D varies 0.020-0.030; holding 0.024 changes the total loss coefficient by at most about 8 %."
+       }
+      },
+      {
+       "family": "momentum",
+       "kind": "substitute",
+       "relation": "operation.87",
+       "sourceSignatures": {
+        "operation.86": "016366274bcf8d0ed0584c5d08a797d2d3bb0fdaa8f7bf835206753153d5f8ac",
+        "operation.87": "2611d193267b7d2f741a40d1a008579e7b75a225b034a4ce1882cd1fb272411e"
+       },
+       "sources": [
+        "operation.86"
+       ],
+       "symbol": "x867521b3f7"
+      },
+      {
+       "family": "momentum",
+       "kind": "substitute",
+       "relation": "operation.88",
+       "sourceSignatures": {
+        "operation.83": "6c14694563d0716e048a5f07fe0da4799542ebae41ebcaf9aab4d30b53ddc092",
+        "operation.88": "c0931fb7804c38a09e9761af4c8cb1ccafead33dfe8bdf5f9acf75b9b624c265"
+       },
+       "sources": [
+        "operation.83"
+       ],
+       "symbol": "x08b6932918"
       },
       {
        "family": "momentum",
@@ -1520,13 +1758,13 @@
       {
        "family": "momentum",
        "kind": "substitute",
-       "relation": "operation.70",
+       "relation": "operation.90",
        "sourceSignatures": {
-        "operation.69": "e160edbdbbbe01b8b3f7b8491a25a5c3803875eeb86c6eb628ebcd2243a7475b",
-        "operation.70": "b8f0c345b2b0b2615f70a45997e6381ca098bd8af9f285edb7170ce8d53306e1"
+        "operation.89": "1df6f71126eb2b7c3beb7c0d9544569b73f54d7b1ee41dd9cb60a49abc958334",
+        "operation.90": "b8f0c345b2b0b2615f70a45997e6381ca098bd8af9f285edb7170ce8d53306e1"
        },
        "sources": [
-        "operation.69"
+        "operation.89"
        ],
        "symbol": "xfb439985c6"
       },
@@ -1541,57 +1779,15 @@
       {
        "family": "momentum",
        "kind": "substitute",
-       "relation": "operation.72",
+       "relation": "operation.92",
        "sourceSignatures": {
-        "operation.71": "7ba53aa7574d3b4cbbda4a0a83f8877aa5a8bb949c5cd61b834259fca366efe1",
-        "operation.72": "ef9c2f6c6a78d4322bf0d28b9f383f0610f7f473dcfad1c0825ff1881e3c5ef1"
+        "operation.91": "0d872a78c75ee55d97a04f9723342d07ff759d9f7f5d901016a4c48b27aa25ed",
+        "operation.92": "ef9c2f6c6a78d4322bf0d28b9f383f0610f7f473dcfad1c0825ff1881e3c5ef1"
        },
        "sources": [
-        "operation.71"
+        "operation.91"
        ],
        "symbol": "x4635f3498f"
-      },
-      {
-       "family": "momentum",
-       "kind": "declare_relation",
-       "left": "x08b6932918",
-       "reason": "Darcy-Weisbach and local-loss closure recorded in the path momentum journal: signed irreversible pressure loss",
-       "relationKind": "constitutive",
-       "right": "(darcyFriction*x517d953ee1/hydraulicDiameter+lossCoefficient)*liquidMassFlow*(liquidMassFlow^2)^(1/2)/(2*x9bdfc4b972*x89a6587e76^2)"
-      },
-      {
-       "family": "momentum",
-       "kind": "substitute",
-       "relation": "operation.74",
-       "sourceSignatures": {
-        "operation.73": "c23af2509e13bd6a7f57774ffcd783f9ff3d760c5404a9cc75e1feaaafdbfd70",
-        "operation.74": "fdb44fd5688bdf7daae445d5f1e64fb2a88607b1d15e626e4f1b289e76bb8fe7"
-       },
-       "sources": [
-        "operation.73"
-       ],
-       "symbol": "x08b6932918"
-      },
-      {
-       "family": "momentum",
-       "kind": "declare_relation",
-       "left": "darcyFriction",
-       "reason": "No distributed wall friction: the irreversible loss is lumped in the local-loss coefficient",
-       "relationKind": "constitutive",
-       "right": "0"
-      },
-      {
-       "family": "momentum",
-       "kind": "substitute",
-       "relation": "operation.76",
-       "sourceSignatures": {
-        "operation.75": "6ecf8d7178a799d82c95173c28cdcdda8d7c5928f6116ce263eeec266834716e",
-        "operation.76": "b291c3281b3990d105dfbb2b845b5cb95740832bcff05e2ca133872de9eb3ebd"
-       },
-       "sources": [
-        "operation.75"
-       ],
-       "symbol": "x222dc3af22"
       },
       {
        "family": "momentum",
@@ -1604,13 +1800,13 @@
       {
        "family": "momentum",
        "kind": "substitute",
-       "relation": "operation.78",
+       "relation": "operation.94",
        "sourceSignatures": {
-        "operation.77": "7d6b147e3fa23a24c5c9ca3e6e4d47726ba74b6734d21adfb4a8d1a09f4d61dd",
-        "operation.78": "b0c740d44074739e6a90403986e660e45b1f11cf8feb8a7aba7d5fa1c32a0354"
+        "operation.93": "99e1521f810b4575197b69e5fa71e8ddb1fd5a8b0c846705240f987fb9e96e91",
+        "operation.94": "b0c740d44074739e6a90403986e660e45b1f11cf8feb8a7aba7d5fa1c32a0354"
        },
        "sources": [
-        "operation.77"
+        "operation.93"
        ],
        "symbol": "x9bdfc4b972"
       },
@@ -1625,13 +1821,13 @@
       {
        "family": "momentum",
        "kind": "substitute",
-       "relation": "operation.80",
+       "relation": "operation.96",
        "sourceSignatures": {
-        "operation.79": "2cbba694f8bbb332d68442c4297caf9d0027e2c443514194f4c45b07d23514de",
-        "operation.80": "1a9d82a35a7d7428f9960588d8694a30f7deb9838e0eeb5addcc575159a3225b"
+        "operation.95": "22f63d5014d5f9b03535ce8d5f8cf878dc2659a1f3cf8e14ff45d20307a466b1",
+        "operation.96": "1a9d82a35a7d7428f9960588d8694a30f7deb9838e0eeb5addcc575159a3225b"
        },
        "sources": [
-        "operation.79"
+        "operation.95"
        ],
        "symbol": "x6778fb906f"
       },
@@ -1639,10 +1835,10 @@
        "family": "momentum",
        "kind": "isolate",
        "sourceSignatures": {
-        "operation.81": "f31a524343b239319ca2cb7e441f6fd05ace33046297dae8f6ce9e35686711b0"
+        "operation.97": "e4e56bd754e6f84182d5d7a3300b95703933e7af2e7cad2f8d11cc6564ea9e03"
        },
        "sources": [
-        "operation.81"
+        "operation.97"
        ],
        "symbol": "xce68eee1f7"
       },
@@ -1652,10 +1848,10 @@
        "kind": "declare_domain",
        "reason": "Forward-flow regime of the loss closure and of the donor orientation",
        "sourceSignatures": {
-        "operation.74": "fdb44fd5688bdf7daae445d5f1e64fb2a88607b1d15e626e4f1b289e76bb8fe7"
+        "operation.88": "c0931fb7804c38a09e9761af4c8cb1ccafead33dfe8bdf5f9acf75b9b624c265"
        },
        "sources": [
-        "operation.74"
+        "operation.88"
        ],
        "symbol": "liquidMassFlow"
       },
@@ -1665,10 +1861,10 @@
        "kind": "declare_domain",
        "reason": "Positive geometry and loss coefficient",
        "sourceSignatures": {
-        "operation.82": "1b9624e05dc26ab9a6a41213ef64c803155d1f10ae50ba1f97939b207a8327d3"
+        "operation.98": "fab8c55e548974ac0244d25d8700d3dc7aed91f49c0f2dcfb7b9968e65013231"
        },
        "sources": [
-        "operation.82"
+        "operation.98"
        ],
        "symbol": "crossSectionArea"
       },
@@ -1678,12 +1874,12 @@
        "kind": "declare_domain",
        "reason": "Positive geometry and loss coefficient",
        "sourceSignatures": {
-        "operation.82": "1b9624e05dc26ab9a6a41213ef64c803155d1f10ae50ba1f97939b207a8327d3"
+        "operation.98": "fab8c55e548974ac0244d25d8700d3dc7aed91f49c0f2dcfb7b9968e65013231"
        },
        "sources": [
-        "operation.82"
+        "operation.98"
        ],
-       "symbol": "lossCoefficient"
+       "symbol": "x311e8b4001"
       },
       {
        "domain": "positive",
@@ -1691,10 +1887,10 @@
        "kind": "declare_domain",
        "reason": "Positive path geometry",
        "sourceSignatures": {
-        "operation.82": "1b9624e05dc26ab9a6a41213ef64c803155d1f10ae50ba1f97939b207a8327d3"
+        "operation.98": "fab8c55e548974ac0244d25d8700d3dc7aed91f49c0f2dcfb7b9968e65013231"
        },
        "sources": [
-        "operation.82"
+        "operation.98"
        ],
        "symbol": "x89a6587e76"
       },
@@ -1704,10 +1900,10 @@
        "kind": "declare_domain",
        "reason": "Positive path geometry",
        "sourceSignatures": {
-        "operation.82": "1b9624e05dc26ab9a6a41213ef64c803155d1f10ae50ba1f97939b207a8327d3"
+        "operation.98": "fab8c55e548974ac0244d25d8700d3dc7aed91f49c0f2dcfb7b9968e65013231"
        },
        "sources": [
-        "operation.82"
+        "operation.98"
        ],
        "symbol": "x517d953ee1"
       },
@@ -1728,23 +1924,23 @@
        "family": "matter",
        "kind": "isolate",
        "sourceSignatures": {
-        "operation.88": "e410f49ddb607f89c6bfb9cfd56cd1d658bd0dd79110b48be4d94ed4bb40104f"
+        "operation.104": "e410f49ddb607f89c6bfb9cfd56cd1d658bd0dd79110b48be4d94ed4bb40104f"
        },
        "sources": [
-        "operation.88"
+        "operation.104"
        ],
        "symbol": "xcaf80d1207"
       },
       {
        "family": "matter",
        "kind": "substitute",
-       "relation": "operation.19",
+       "relation": "operation.23",
        "sourceSignatures": {
-        "operation.19": "a8c3fe5d89c1477ac8c10281cd956e935bbdc96135b823ba5af7ca2cf51d944a",
-        "operation.89": "0a510ad5cc6a886385b9f5b6fe6065a35a2b4d9f1ed2bb61d1830e0ed5d50e1a"
+        "operation.105": "0a510ad5cc6a886385b9f5b6fe6065a35a2b4d9f1ed2bb61d1830e0ed5d50e1a",
+        "operation.23": "3b31a2749505469587a126c102f5bafb9cae6cb05adfda448553e4f0ea977dab"
        },
        "sources": [
-        "operation.89"
+        "operation.105"
        ],
        "symbol": "x11b26c8f8d"
       },
@@ -1765,23 +1961,23 @@
        "family": "matter",
        "kind": "isolate",
        "sourceSignatures": {
-        "operation.91": "d7cfae5e63e8748d131c4b213f36e9acd7903cadddf60a4214d7ac0aa282ddcc"
+        "operation.107": "d7cfae5e63e8748d131c4b213f36e9acd7903cadddf60a4214d7ac0aa282ddcc"
        },
        "sources": [
-        "operation.91"
+        "operation.107"
        ],
        "symbol": "x904f7c0589"
       },
       {
        "family": "matter",
        "kind": "substitute",
-       "relation": "operation.29",
+       "relation": "operation.39",
        "sourceSignatures": {
-        "operation.29": "bdde4725d8b4d489dfcd6411e859a65ea48ce1a67342988e5d06a6f7cf1098d8",
-        "operation.92": "fc776c018f23420cbb0a4fdcaedbd442a0a06aecbb4d643cd0027f6594baa1de"
+        "operation.108": "fc776c018f23420cbb0a4fdcaedbd442a0a06aecbb4d643cd0027f6594baa1de",
+        "operation.39": "4d44d7f6c6982157ed57ab287558e21a098d7fd4592e38bcaac66fe88dbd5510"
        },
        "sources": [
-        "operation.92"
+        "operation.108"
        ],
        "symbol": "xec2fc31592"
       },
@@ -1801,65 +1997,65 @@
       {
        "family": "energy",
        "kind": "substitute",
-       "relation": "operation.19",
+       "relation": "operation.23",
        "sourceSignatures": {
-        "operation.19": "a8c3fe5d89c1477ac8c10281cd956e935bbdc96135b823ba5af7ca2cf51d944a",
-        "operation.94": "c43fb31485bd667a13a41e9ed7ff000681dc02360056921c93b12d6674f610ea"
+        "operation.110": "c43fb31485bd667a13a41e9ed7ff000681dc02360056921c93b12d6674f610ea",
+        "operation.23": "3b31a2749505469587a126c102f5bafb9cae6cb05adfda448553e4f0ea977dab"
        },
        "sources": [
-        "operation.94"
+        "operation.110"
        ],
        "symbol": "x11b26c8f8d"
       },
       {
        "family": "energy",
        "kind": "substitute",
-       "relation": "operation.90",
+       "relation": "operation.106",
        "sourceSignatures": {
-        "operation.90": "d308edfc7e52de1243cddbe8e25fa279797f06396d388043ab7dccfcba50c211",
-        "operation.95": "08f3e2244058bbdd7e9e4e231763e754415fdcc58cd37265bda402c9a6c7a408"
+        "operation.106": "5ae86e2948cac4b27bf5ac132a7406fa63f1d5ce2e76dd2d13052d710c9b3e77",
+        "operation.111": "b2f04f822db8047238db895682bbc78c8610cc66c94f5066e87b26ce028721eb"
        },
        "sources": [
-        "operation.95"
+        "operation.111"
        ],
        "symbol": "xcaf80d1207"
       },
       {
        "family": "energy",
        "kind": "substitute",
-       "relation": "operation.29",
+       "relation": "operation.39",
        "sourceSignatures": {
-        "operation.29": "bdde4725d8b4d489dfcd6411e859a65ea48ce1a67342988e5d06a6f7cf1098d8",
-        "operation.96": "ef22796d3da06869e0ef93673947a8c25cd6b7e284da7c525bca7c2617b57b57"
+        "operation.112": "83f7baebc04968d2b5a7b1d8db0417e9497638459730c5353ee6f89591d010ad",
+        "operation.39": "4d44d7f6c6982157ed57ab287558e21a098d7fd4592e38bcaac66fe88dbd5510"
        },
        "sources": [
-        "operation.96"
+        "operation.112"
        ],
        "symbol": "xec2fc31592"
       },
       {
        "family": "energy",
        "kind": "substitute",
-       "relation": "operation.93",
+       "relation": "operation.109",
        "sourceSignatures": {
-        "operation.93": "6b2fa19ba8144ff0b1b534e60c774564c628c5261b6705c1f0cd56502885fcbf",
-        "operation.97": "ffa7f10df1917f8495a6e1a1716abcfb9e73ffbaaa4ce92188fa4d5b972e68b4"
+        "operation.109": "4ce007bd1762cc90e4741e4370f8d0c426e61bee5045d17c21bbda99fc3e525b",
+        "operation.113": "9ff26376ba38b88951eec304e74b4009f4cb45bdebdddc8d585a3453d7bd57e4"
        },
        "sources": [
-        "operation.97"
+        "operation.113"
        ],
        "symbol": "x904f7c0589"
       },
       {
        "family": "energy",
        "kind": "substitute",
-       "relation": "operation.53",
+       "relation": "operation.67",
        "sourceSignatures": {
-        "operation.53": "e75c46c0b8550519d52192b7f61f08220731a2ba099e3287a553fc51cb5c4807",
-        "operation.98": "aa45cb5cd2955bbfc497f0095639a8dc4782dadc0ee4bf74035033607d8f7750"
+        "operation.114": "1e347fa85bd149b1c00a0efbdd33cff24996fd2fd2b516b824f2af7ac08d0280",
+        "operation.67": "5f7337075c08d9685bcffcf14b7527d58b8e8b7a9e7f9c7243f9afb7c1891804"
        },
        "sources": [
-        "operation.98"
+        "operation.114"
        ],
        "symbol": "x1fbbee4aa2"
       },
@@ -1867,10 +2063,10 @@
        "family": "energy",
        "kind": "isolate",
        "sourceSignatures": {
-        "operation.99": "77e1d4eda584565093f401a342577b5f363b67c5ea9dc332af90488964a8ff69"
+        "operation.115": "1743a1509e01a111f85b8228966d77f7645fc03648e92d52c75fabc9dfed8c51"
        },
        "sources": [
-        "operation.99"
+        "operation.115"
        ],
        "symbol": "x224953c4b2"
       }
@@ -2482,7 +2678,7 @@
       }
      },
      "termodinamica": {
-      "motivo": "The path carries the drawn liquid of the drum; its state is that donor phase (no separate closure)",
+      "motivo": "The path carries the donor liquid phase of the upstream volume; its state is that donor phase (no separate closure)",
       "supuesto": "fase_no_evaluada",
       "tipo": "supuesto"
      }
