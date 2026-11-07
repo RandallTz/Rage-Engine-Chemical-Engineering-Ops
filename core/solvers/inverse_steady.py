@@ -47,6 +47,14 @@ class InverseSteadySystem(SteadySystem):
         return super()._equation(key)
 
     def _augment(self, specification):
+        if self.closures:
+            # F3H-3: the augmented block below is rebuilt without the closure symbols, so a package-closure
+            # model would fail later with a misleading arithmetic diagnostic. Reject it here, by name.
+            volumes = sorted({c.owner for c in self.closures.closures})
+            raise inverse_spec.InverseError('inverse_package_closure_unsupported',
+                'Inverse specifications are not yet lowered over package thermodynamic closures (volume(s) '
+                +', '.join(volumes)+'). The forward steady solve supports this model; solve it without an inverse '
+                'specification.', volumeIds=volumes)
         selection = self.selection
         forward_ids = list(selection['unknowns'])
         self.forward_formulation_signature = self.report['formulationSignature']
