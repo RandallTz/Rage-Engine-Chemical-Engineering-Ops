@@ -12,6 +12,7 @@ import ModelReadiness from './ModelReadiness';
 import {ModelAssessmentText} from './AssessmentText';
 import ui from './equationWorkbench.module.css';
 import {TemplatePorts,IndexedStages} from '../motor/ModelAssumptions';
+import FlowsheetDiagram from './FlowsheetDiagram';
 
 const ConfigurationContext=createContext<{open:boolean;content:ReactNode}|null>(null);
 export function ModelConfigurationProvider({open,content,children}:{open:boolean;content:ReactNode;children:ReactNode}){
@@ -36,22 +37,24 @@ export default function ModelWorksheet({family,label,assumptions,variables,setti
 }){
   const configuration=useContext(ConfigurationContext);
   const physicalModel=usePhysicalModel();
+  const flowsheet=physicalModel?.commonModel?.flowsheet;
   const typed=!!physicalModel;
   const equationFamily=family==='materia'?'matter':family==='momento'?'momentum':family==='energia'?'energy':'thermodynamics';
   const aria=family==='materia'?'Equation assumptions':family==='energia'?'Energy assumptions':family==='termodinamica'?'Thermodynamic assumptions':'Momentum assumptions';
   return <EquationWorkbenchProvider family={equationFamily}><div className={styles.layout} data-model-worksheet="canonical" data-family={family}>
-    <section className={styles.equations} aria-label={label}>{physicalModel&&<ModelAssessmentText model={physicalModel}/>} {typed?<EquationSystemDevelopment/>:children}{!typed&&<><MomentumCoupling family={family}/><DynamicInventoryDevelopment family={family}/></>}</section>
+    <section className={styles.equations} aria-label={label}>{flowsheet?<><h2>Recorded equipment formulations</h2><p>Each instance retains the recorded equations and assumptions of its referenced template. Python prepares their connected formulation in Transform.</p><ul>{flowsheet.instances.map(instance=><li key={instance.id}>{instance.id} · {instance.template}</li>)}</ul></>:<>{physicalModel&&<ModelAssessmentText model={physicalModel}/>} {typed?<EquationSystemDevelopment/>:children}{!typed&&<><MomentumCoupling family={family}/><DynamicInventoryDevelopment family={family}/></>}</>}</section>
     <aside className={`${styles.assumptions} ${styles.operationsPanel}`} aria-label={aria}>
       <header><div><h2>Assumptions</h2><p className={styles.groupHint}>{physicalModel?.ensamblaje?.volumenes.find(v=>v.id===(physicalModel.volumenActivo??physicalModel.ensamblaje?.volumenes[0]?.id))?.nombre??'Selected physical region'} · {equationFamily}</p><p className={styles.groupHint}>Changes apply to this region and family. Viewing equations does not change the model.</p></div></header>
-      <ModelReadiness/>
+      {!flowsheet&&<ModelReadiness/>}
       <TemplatePorts template={physicalModel?.commonModel?.template}/>
       <IndexedStages model={physicalModel?.commonModel}/>
-      <div className={family==='materia'||family==='momento'?undefined:`${balanceStyles.supuestos} ${balanceStyles.operacionesEnergia} ${styles.assumptionBody}`}>{assumptions}</div>
-      {typed&&<EquationOperationControls/>}
-      <ModelDomainControls/>
+      {physicalModel?.commonModel?.flowsheet&&<FlowsheetDiagram model={physicalModel}/>}
+      {!flowsheet&&<div className={family==='materia'||family==='momento'?undefined:`${balanceStyles.supuestos} ${balanceStyles.operacionesEnergia} ${styles.assumptionBody}`}>{assumptions}</div>}
+      {typed&&!flowsheet&&<EquationOperationControls/>}
+      {!flowsheet&&<ModelDomainControls/>}
       {configuration&&<ConfigurationControls key={String(configuration.open)} initiallyOpen={configuration.open}>{configuration.content}</ConfigurationControls>}
       {settings&&<div className={styles.configurationContent}>{settings}</div>}
-      <DynamicInventoryControls family={family}/>
+      {!flowsheet&&<DynamicInventoryControls family={family}/>}
     </aside>
     {!typed&&variables}
   </div></EquationWorkbenchProvider>;
