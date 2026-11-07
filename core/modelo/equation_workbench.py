@@ -177,6 +177,10 @@ def _source_graph(model,*,unbound=False):
                                  if key in local.nodes and (key!='storage.pressure' or 'storage.port-pressure' not in local.nodes))
         parts=[local]
         if state['form']=='hydraulic':parts.append(canonical_path_graph())
+        if state['form']=='hydraulic' and state['darcyWeisbach']:
+            from core.balances.momentum_reductions import darcy_reduction
+            symbols,_,names=momentum.reduced_relations()
+            parts.append(darcy_reduction(symbols,names,state))
         wall,_,storage,_=reduction_graphs(state);parts.append(wall)
         if storage_result is None:parts.append(storage)
         for part in parts:
@@ -234,7 +238,7 @@ def _source_graph(model,*,unbound=False):
     return graph,final,locations,units
 
 
-UNIT_NAMES={'rho':'kg/m3','mu':'Pa*s','L':'m','A':'m2','D':'m','g':'m/s2','z1':'m','z2':'m','massFlow':'kg/s','massFlowRate':'kg/s2','p1':'Pa','p2':'Pa','drive':'Pa','loss':'Pa','r':'m','R':'m','z':'m','z_r':'m','z_0':'m','z_surface':'m','z_floor':'m','h':'m','A_v':'m2','m_v':'kg','p_r':'Pa','p_surface':'Pa','Q':'m3/s','t':'s','v':'m/s','v_b':'m/s'}
+UNIT_NAMES={'rho':'kg/m3','mu':'Pa*s','L':'m','A':'m2','D':'m','f':'1','K':'1','g':'m/s2','z1':'m','z2':'m','massFlow':'kg/s','massFlowRate':'kg/s2','p1':'Pa','p2':'Pa','drive':'Pa','loss':'Pa','r':'m','R':'m','z':'m','z_r':'m','z_0':'m','z_surface':'m','z_floor':'m','h':'m','A_v':'m2','m_v':'kg','p_r':'Pa','p_surface':'Pa','Q':'m3/s','t':'s','v':'m/s','v_b':'m/s'}
 
 
 def _known_unit(expression,units):
@@ -311,7 +315,7 @@ def _source_findings(model):
         if state['form'] in ('ports','hydraulic') and (not state.get('inletStreamId') or not state.get('outletStreamId')):
             findings.append({'ownerId':owner,'family':'momentum','message':'Port averages are symbolic. Bind both ports to common material streams before claiming material/momentum flow coupling.'})
         if state['darcyWeisbach']:
-            findings.append({'ownerId':owner,'family':'momentum','message':'The general Darcy wall-loss constitutive graph is not lowered here. The admitted numerical specialization requires the individually derived laminar circular wall closure.'})
+            findings.append({'ownerId':owner,'family':'momentum','message':'The Darcy-Weisbach/local-loss closure is a declared constitutive premise (path.darcy-weisbach). Record its coefficients and validity range (flow regime, constant f_D and K) before relying on it; a hydraulic network still requires the individually derived laminar circular wall closure.'})
     return findings
 
 

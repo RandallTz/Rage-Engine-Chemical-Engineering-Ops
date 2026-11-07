@@ -53,6 +53,27 @@ def path_reduction(symbols,names):
     return graph,graph.nodes['path.pressure-form'].equation
 
 
+def darcy_reduction(symbols,names,state):
+    """The recorded Darcy-Weisbach/local-loss wall closure as one constitutive graph node.
+
+    Published only after the journal records the hydraulic reduction and the
+    closure, so authors substitute the journal's own relation instead of
+    retyping it. Its validity (regime, constant coefficients) is recorded by
+    the author on the coefficient relations; this node claims no ancestry
+    from conservation.
+    """
+    graph=EquationGraph(names)
+    if not (state.get('darcyWeisbach') and state.get('form')=='hydraulic'):return graph
+    from .momentum_derivation import reduced_relations
+    _,relations,_=reduced_relations()
+    lhs,rhs=relations['loss']
+    graph.add('path.darcy-weisbach',lhs,rhs,
+              'Declared Darcy-Weisbach distributed friction plus local-loss constitutive closure (signed irreversible pressure loss)',
+              'constitutive_premise',assumptions=('Empirical wall and fitting closure; f_D and K are declared coefficients with a recorded validity range',
+              'No fundamental-law ancestry is claimed for this constitutive premise'),kind='constitutive')
+    return graph
+
+
 REDUCTION_FLAGS=WALL_FLAGS+STORAGE_FLAGS+('negligibleConvection','negligibleViscousStress','zeroLocalAccumulation','referenceDensity','uniformGravity')
 
 
