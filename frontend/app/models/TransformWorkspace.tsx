@@ -38,7 +38,7 @@ export default function TransformWorkspace({ id }: { id: string }) {
     return () => { active = false; controller.current?.abort(); };
   }, [document, signature]);
   if (!model) return null;
-  if(model.commonModel)return <><DeducedModelSummary model={model}/><DerivedExecution model={model}/></>;
+  if(model.commonModel)return <>{!model.commonModel.flowsheet&&<DeducedModelSummary model={model}/>}<DerivedExecution model={model}/></>;
   const analysis = model.redTermodinamica||model.hydraulicNetwork ? null : analizarHoja(model);
   const spatial = analysis?.modo === '1d' && analysis.bloqueos.length === 0;
   const result = calculation?.signature === signature ? calculation : null;
