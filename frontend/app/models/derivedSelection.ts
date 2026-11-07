@@ -1,4 +1,5 @@
 import {readInverseSolve,type InverseSolve} from '../../motores/modelo/inverseSpecification';
+import {flowsheetSourceSignature} from './flowsheetLifecycle';
 import {currentIndexed,readSavedIndexed} from './indexedSelection';
 /** Versioned graph selection and lifecycle only; no browser algebra. */
 import type {HojaMotor} from '../motor/hojasMotor';
@@ -28,6 +29,7 @@ export function commonSource(model:HojaMotor):ModeloComun {
 }
 export function derivedSourceIdentity(common:ModeloComun):string {
   const source=structuredClone(common);source.nombre='';source.estudio=null;
+  delete source.flowsheetLayout;
   delete source.motores.derivedExecution;
   // Display labels never identify scientific content; datum IDs/units/values do.
   source.componentes=source.componentes.map(component=>({...component,nombre:''}));
@@ -52,6 +54,12 @@ export function selectedDerivedModel(model:HojaMotor):ModeloComun {
 }
 export function reconcileDerived(previous:HojaMotor|undefined,next:HojaMotor):HojaMotor {
   if(!next.commonModel)return next;
+  if(next.commonModel.flowsheet){
+    const changed=!!previous?.commonModel?.flowsheet&&flowsheetSourceSignature(previous)!==flowsheetSourceSignature(next);
+    if(changed)return {...next,flowsheetSelection:undefined,flowsheetStale:!!(previous?.flowsheetSelection||previous?.resultado||previous?.resultadoRef||previous?.flowsheetStale),derivedSelection:undefined,transformation:undefined,resultado:undefined,resultadoRef:undefined,chartReference:undefined};
+    if(JSON.stringify(previous?.flowsheetSelection)!==JSON.stringify(next.flowsheetSelection))return {...next,resultado:undefined,resultadoRef:undefined,chartReference:undefined};
+    return next;
+  }
   if(next.indexedSelection)readSavedIndexed(next.indexedSelection);
   if(next.commonModel.indexSet){
     const sourceChanged=!!previous&&JSON.stringify(previous.commonModel)!==JSON.stringify(next.commonModel);
