@@ -835,7 +835,9 @@ Work on the landing page starts after Demo 0.2. Until then these requirements co
 - **First audience.** Students and teachers of chemical engineering are the suggested starting point: the pain is clear, they share within communities and they do not require industrial certification. Industry and researchers (a Python package of the engine) come later.
 - **Later monetization**, which leaves the free base unchanged: courses, advanced tutorials, support or professional features.
 
-### Research dossiers (planned; Gemini not yet in use)
+### Research dossiers (Gemini; workspace set up 7 November 2026)
+
+Gemini works outside this repository, in the research workspace `C:\Users\randa\Desktop\gemini-research` (its `GEMINI.md` holds the role and rules; `reference/` is a snapshot of the engine contract and recorded examples, refreshed with `python refresh_reference.py`). Every dossier follows `dec-composable-operations` and ends in a deduction script in the engine's operation vocabulary. A replay tool that runs those scripts through the engine, so that each failing step becomes a located Engine finding, is pending. Accepted dossiers are copied into `docs/references/<topic>.md`.
 
 When the user brings Gemini in, it acts as a researcher and never writes code. Before an equipment item or a physics is deduced, it delivers one dossier per topic in `docs/references/<topic>.md`, with fixed sections:
 
