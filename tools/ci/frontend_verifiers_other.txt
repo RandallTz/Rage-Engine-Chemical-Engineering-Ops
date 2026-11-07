@@ -7,3 +7,6 @@ verificar_index1_dae.mjs                # needs .tmp/f3-index1/publication.json;
 verificar_nonlinear_algebraic.mjs       # same: .tmp/f3-nonlinear/publication.json not produced by tests/test_f3_nonlinear_algebraic.py
 verificar_todo.mjs                      # legacy runner: treats every verifier not in its stale table as needing a browser and live servers
 verificar_flowsheet_contract.mjs        # needs .tmp/flowsheet/accepted.json from tests/test_flowsheet_network.py (~30 min with its DOP853 reference); pair when slow pytest tiers land
+app/models/verify_flowsheet_http.mjs    # requires tests/prepare_flowsheet_http.py and an isolated HTTP backend; uncached drum authoring and steady solve are slow
+motores/resultados/verificar_indexed_charts.mjs # helper requires an explicit published-results JSON argument
+verify_multicomponent_diagrams.mjs     # requires a Python runtime and service fixture; awaiting CI classification
