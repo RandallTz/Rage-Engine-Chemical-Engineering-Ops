@@ -54,7 +54,7 @@ def read_definition(value):
             try:keys(source,['kind','citation','validRange'],['url','table'])
             except JournalError as error:raise JournalError('Relation source: '+str(error)) from error
             for field in source:
-                if not isinstance(source[field],str) or not source[field].strip() or len(source[field])>1000:raise JournalError('Invalid relation source field: '+field+'.')
+                if not isinstance(source[field],str) or not source[field].strip() or len(source[field])>1000 or field=='url' and not re.fullmatch(r'https?://[^\s/\\?#]+(?:[/?#][^\s\\]*)?',source[field],flags=re.IGNORECASE):raise JournalError('Invalid relation source field: '+field+'.')
         if 'domain' in op and (op['kind']!='declare_domain' or op['domain'] not in ('real','positive','nonnegative','negative','nonpositive','nonzero','zero','interval')):raise JournalError('Select a supported real domain.')
         bounds=('lower','upper','lowerOpen','upperOpen')
         if op.get('domain')=='interval':
