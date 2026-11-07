@@ -28,7 +28,7 @@ Rules that apply to every run:
 | # | Item | Model | Unblocks | State |
 |---|---|---|---|---|
 | 1 | `demo-02-contract`: equipment template marker and typed ports in the common model | Strong (Astra) | Every Demo 0.2 equipment; F4 boundaries | `repairs requested` · RC-8 to RC-11 (roadmap Demo 0.2, item 1 re-check); RC-8 first |
-| 2 | Results: list phase events of derived models; describe `package_closure` in the compilation summary | Light | Demo 0.1/0.2 presentation | `in progress` · claude-a re-check of the events, closure summary and RC-6 |
+| 2 | Results: list phase events of derived models; describe `package_closure` in the compilation summary | Light | Demo 0.1/0.2 presentation | `repairs requested` · RE-1 to RE-4 (roadmap Demo 0.2, item 2 re-check); all low, presentation |
 | 3 | F3 slice 5 inverse specifications over HTTP, contracts, strict readers and Solve/Results | Light | F3; sizing (Demo after 0.3) | `repairs requested` · F3H-1, F3H-2 (roadmap F3 fifth slice, item 3 review); F3H-3 is Claude's |
 | 4 | F5-C1 equilibrium-reaction constraint in Model/compiler | Strong (Astra) | F5; the reactive stage of `demo-02-column` | `repairs requested` · RA-1 (Python reader accepts Unicode digits; roadmap F5 claude-a re-review), RA-2 doc update with it |
 | 5 | Steady state as a one-step Transform technique over the current dynamic selection | Light | `demo-02-steady` (UI half) | `repairs requested` · RT-6, RT-7 (roadmap Demo 0.2, item 5 review of 7 November); RT-7 first |
