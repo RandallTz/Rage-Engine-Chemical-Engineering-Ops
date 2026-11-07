@@ -27,7 +27,7 @@ Rules that apply to every run:
 
 | # | Item | Model | Unblocks | State |
 |---|---|---|---|---|
-| 1 | `demo-02-contract`: equipment template marker and typed ports in the common model | Strong (Astra) | Every Demo 0.2 equipment; F4 boundaries | `review pending` · re-check of the item 7 repairs |
+| 1 | `demo-02-contract`: equipment template marker and typed ports in the common model | Strong (Astra) | Every Demo 0.2 equipment; F4 boundaries | `in progress` · claude-a re-check of the item 7 repairs |
 | 2 | Results: list phase events of derived models; describe `package_closure` in the compilation summary | Light | Demo 0.1/0.2 presentation | `review pending` · re-check of the item 7 repairs |
 | 3 | F3 slice 5 inverse specifications over HTTP, contracts, strict readers and Solve/Results | Light | F3; sizing (Demo after 0.3) | `review pending` · independent review (roadmap F3 fifth slice) |
 | 4 | F5-C1 equilibrium-reaction constraint in Model/compiler | Strong (Astra) | F5; the reactive stage of `demo-02-column` | `review pending` · re-review of repairs F1-F6; liquid/thermal/steady integration is roadmap F5 work |
