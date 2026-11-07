@@ -27,9 +27,21 @@ from derived_momentum_inputs import author_outlet, select_outlet, PIPE
 from demo01_reactor import DEMO as BATCH, detailed_balance
 from demo02_drum import MATERIAL
 
+# Outlet path (review CR-1): a short circular section whose irreversible loss is
+# dominated by a local contraction loss. K/A^2 = 8e12 m^-4 is the value of the
+# earlier 5 m, 1 mm^2 path, so the steady holdups and conversions are unchanged,
+# while the laminar distributed friction f_D L/D_h = 16 pi mu L/F is now at most
+# 1.3 % of K (it was 100-150 against K = 8). The path volume stays 5e-6 m3.
+PATH_SOURCE = {
+    'kind': 'order-of-magnitude bound',
+    'citation': 'Laminar circular-section friction f_D = 64/Re (Hagen-Poiseuille), hence f_D L/D_h = 16 pi mu L/F',
+    'validRange': 'F about 1e-3 kg/s, L = 0.4 m, D_h = 3.99 mm and a liquid viscosity of at most 0.8 mPa s (estimate, 320-345 K) give '
+                  'Re <= 800 and f_D L/D_h <= 16, at most 1.3 % of K = 1250. The quadratic local loss is a contraction loss whose '
+                  'throat Reynolds number (throat about 0.9 mm) is about 2.5e3-4e3.'}
 DEMO = dict(BATCH, feed=1e-3, TF=320., PF=101325., zF=(.5,.5,0.,0.),
-            area=.003, pipeArea=1e-6, length=5., loss=8., floor=0.,
-            Pout=101325., F0=1e-3, g=9.80665, vent=0., Q=0., tf=60000.)
+            area=.003, pipeArea=1.25e-5, length=.4, loss=1250., floor=0.,
+            Pout=101325., F0=1e-3, g=9.80665, vent=0., Q=0., tf=60000.,
+            friction={'source':PATH_SOURCE})
 FIXTURE = ROOT / 'frontend/testing/demo02/continuousReactor.ts'
 
 
@@ -91,10 +103,31 @@ def jacket(author, owner):
 
 
 def prepare(model, data):
-    model['volumenes'][0]['terminos'] = {'calor':_datum(model,'jacket.initialHeat',data['UA']*(data['Tj']-data['T0']),'W','inicial')}
+    # The jacket port names the retained heat-rate term of the energy balance; its value is the recorded
+    # conductance law, so no numeric copy of the initial heat rate is stored (review CR-3).
+    model['volumenes'][0].pop('terminos', None)
     path = next(v for v in model['volumenes'] if v['id']==PIPE)
     path['termodinamica']['motivo'] = 'The path transports the drawn liquid phase without separate storage or a separate thermodynamic closure.'
     next(s for s in model['corrientes'] if s['id']=='discharge')['extraccion'] = {PIPE:{'tipo':'fase','fase':'liquido'}}
+
+
+def record_premises(author, out):
+    """Review CR-4: the validity premises of the liquid control volume, attached to the quantities they restrict.
+
+    Domain 'real' records a premise that is not monitored at run time; it adds no guard.
+    """
+    q = author.quantity
+    for row,symbol,domain,reason in [
+            (out['energy'],sp.Function('T__'+OWNER)(T),'real',
+             'Liquid-only premise of the thermodynamic journal: the temperature must stay below the bubble temperature of the '
+             'liquid at the volume pressure. Not monitored at run time; the lowest-boiling azeotrope of the four species is near 343 K at 101.3 kPa'),
+            (out['flow'],sp.Function('P__'+OWNER)(T),'positive',
+             'Uniform-pressure premise: energy, closure and kinetics use the uniform vapour-space pressure; the hydrostatic increase in '
+             'the liquid (a few kPa, about 2e-3 K on the caloric state) is neglected'),
+            (out['flow'],sp.Function('phase_v__'+OWNER+'__L')(T),'positive',
+             'Constant-molar-volume premise of the package: pure-component liquid molar volumes at 298.15 K with ideal mixing; about 4-5 % '
+             'density error at 335-340 K in the control volume, concentrations and holdup')]:
+        author.append('declare_domain','energy' if row==out['energy'] else 'momentum',sources=[row],symbol=q(symbol),domain=domain,reason=reason)
 
 
 def template():
@@ -113,6 +146,7 @@ def author_demo_cstr(data=None, method='bdf'):
     for i in (1,2,3,4):
         out[f'reactionAmount.{i}'] = author.append('isolate',sources=[f'reaction.{OWNER}.amount.{i}'],
             symbol=author.quantity(sp.Function(f'amount_{i}__{OWNER}')(T)))
+    record_premises(author,out)
     author.model['template'] = template()
     model = select_outlet(author,out,data,method,owner=OWNER)
     replayed = build(model)
@@ -131,16 +165,36 @@ def frozen_model():
     return json.loads(text[text.index(' = ')+3:text.rindex(';')])
 
 
-def train_model(source, count):
+def train_model(source, count, pressures=None):
+    """Indexed train of the same recorded template.
+
+    pressures (optional, Pa, one per stage) declares stage variants that differ
+    only in the prescribed volume-pressure datum; each discharge port is then
+    coupled to the next stage's pressure by the network relation.
+    """
     model = copy.deepcopy(source)
     model.update(id='demo-0.2-reactor-train',nombre='Demo 0.2 · Indexed continuous liquid reactor train')
     _datum(model,'solve.stageCount',count,'1','estudio')
+    templates,variants = {'generic':copy.deepcopy(source)},[]
+    for j,pressure in enumerate(pressures or [],1):
+        if float(pressure) == float(source['datos'][OWNER+'.pressure']['declaracion']['texto']):
+            continue
+        variant = copy.deepcopy(source)
+        variant['datos'][OWNER+'.pressure']['declaracion']['texto'] = repr(float(pressure))
+        templates['pressure'+str(j)] = variant
+        variants.append({'at':j,'template':'pressure'+str(j)})
     model['indexSet'] = {'format':'rage.index-set','version':1,'id':'reactorTrain','index':'j',
-        'countDataId':'solve.stageCount','templates':{'generic':copy.deepcopy(source)},'genericStage':'generic','variants':[],
+        'countDataId':'solve.stageCount','templates':templates,'genericStage':'generic','variants':variants,
         'connections':[{'outlet':'product','inlet':'feed','offset':1}],
         'exposures':[{'id':'feed','port':'feed','at':'first'},{'id':'product','port':'product','at':'last'},
                      {'id':'jacket','port':'jacket','at':'each'}]}
     return model
+
+
+def stage_pressures(count, data, pressures=None):
+    """Volume pressures and discharge-port pressures: p2[j] = P[j+1] (network relation), p2[n] = Pout."""
+    volume = [float(p) for p in pressures] if pressures is not None else [data['P']]*count
+    return volume, volume[1:]+[data['Pout']]
 
 
 def reference_functions(data=None):
@@ -182,10 +236,18 @@ def reference_functions(data=None):
     return data,masses,molar_volumes,enthalpy,temperature,rate
 
 
-def reference_train(times, count=1, data=None):
-    """Independent DOP853 for a cascade of the same physical control volume."""
+def reference_train(times, count=1, data=None, pressures=None):
+    """Independent stiff-switching (LSODA) integration of a cascade of the same physical control volume.
+
+    Each stage's caloric functions use its own volume pressure; its discharge
+    port pressure is the next stage's pressure (last: Pout). The path inertance
+    time L A rho/(K F) is about 4 ms; SciPy Radau and BDF needed about 800 LU factorizations per simulated second here, LSODA about 30.
+    """
     from scipy.integrate import solve_ivp
-    data,masses,volumes,enthalpy,temperature,rate = reference_functions(data)
+    data,masses,volumes,_,_,_ = reference_functions(data)
+    volume_pressure,port_pressure = stage_pressures(count,data,pressures)
+    stages = [reference_functions(dict(data,P=pressure)) for pressure in volume_pressure]
+    enthalpy = stages[0][3]
     feed = np.asarray(data['zF']);feed_mass = float(feed@masses)
     feed_molar = data['feed']*feed/feed_mass
     feed_energy = data['feed']*enthalpy(data['TF'],feed)/feed_mass
@@ -193,22 +255,63 @@ def reference_train(times, count=1, data=None):
     def rhs(time, values):
         inlet,inlet_energy = feed_molar,feed_energy
         derivatives = []
-        for row in np.asarray(values).reshape(count,6):
+        for row,functions,P,p2 in zip(np.asarray(values).reshape(count,6),stages,volume_pressure,port_pressure):
             n,H,flow = row[:4],row[4],row[5]
+            temperature,rate = functions[4],functions[5]
             mass = float(n@masses);volume = float(n@volumes);rho = mass/volume
             temp = temperature(H,n)
             outlet = flow*n/mass;outlet_energy = flow*H/mass
-            pressure = data['P']+mass*data['g']/data['area']
+            pressure = P+mass*data['g']/data['area']
             loss = data['loss']*flow*abs(flow)/(2*rho*data['pipeArea']**2)
             derivatives.extend([*(inlet-outlet+nu*rate(temp,n)),
                 inlet_energy-outlet_energy+data['UA']*(data['Tj']-temp),
-                data['pipeArea']/data['length']*(pressure-data['Pout']-loss)])
+                data['pipeArea']/data['length']*(pressure-p2-loss)])
             inlet,inlet_energy = outlet,outlet_energy
         return derivatives
-    initial = [*data['n0'],enthalpy(data['T0'],data['n0']),data['F0']]*count
-    solution = solve_ivp(rhs,(0,float(times[-1])),initial,method='DOP853',t_eval=times,
-        rtol=2e-10,atol=[1e-11]*4+[1e-6,1e-12] if count==1 else ([1e-11]*4+[1e-6,1e-12])*count)
-    return solution,np.asarray([[temperature(row[4],row[:4]) for row in y.reshape(count,6)] for y in solution.y.T])
+    initial = [value for functions in stages for value in [*data['n0'],functions[3](data['T0'],data['n0']),data['F0']]]
+    solution = solve_ivp(rhs,(0,float(times[-1])),initial,method='LSODA',t_eval=times,
+        rtol=1e-10,atol=([1e-11]*4+[1e-6,1e-12])*count)
+    return solution,np.asarray([[functions[4](row[4],row[:4]) for row,functions in zip(y.reshape(count,6),stages)] for y in solution.y.T])
+
+
+def simultaneous_steady_reference(count, data=None, pressures=None, guess=None):
+    """Independent stationary balances of all stages solved together.
+
+    Unknowns per stage: the four amounts, T and the outlet flow F. Rows: four
+    component balances, the energy balance and the outlet momentum balance with
+    p2[j] = P[j+1]. No equal-feed or one-parameter composition shortcut is used.
+    """
+    from scipy.optimize import root
+    data,masses,volumes,_,_,_ = reference_functions(data)
+    volume_pressure,port_pressure = stage_pressures(count,data,pressures)
+    stages = [reference_functions(dict(data,P=pressure)) for pressure in volume_pressure]
+    feed = np.asarray(data['zF']);feed_mass = float(feed@masses)
+    feed_molar = data['feed']*feed/feed_mass
+    feed_energy = data['feed']*stages[0][3](data['TF'],feed)/feed_mass
+    nu = np.array([-1.,-1.,1.,1.])
+    scale = np.array([1.,1.,1.,1.,300.,1e-3])
+    def residual(x):
+        inlet,inlet_energy = feed_molar,feed_energy
+        rows = []
+        for value,functions,P,p2 in zip(np.asarray(x).reshape(count,6)*scale,stages,volume_pressure,port_pressure):
+            n,temp,flow = value[:4],value[4],value[5]
+            enthalpy,rate = functions[3],functions[5]
+            mass = float(n@masses);rho = mass/float(n@volumes);H = enthalpy(temp,n)
+            outlet,outlet_energy = flow*n/mass,flow*H/mass
+            loss = data['loss']*flow*abs(flow)/(2*rho*data['pipeArea']**2)
+            rows.extend([*((inlet-outlet+nu*rate(temp,n))/feed_molar.sum()),
+                         (inlet_energy-outlet_energy+data['UA']*(data['Tj']-temp))/data['UA']/10.,
+                         (P+mass*data['g']/data['area']-p2-loss)/1e3])
+            inlet,inlet_energy = outlet,outlet_energy
+        return rows
+    if guess is None:
+        guess = [v for row in sequential_steady_reference(count,data) for v in [*row['amounts'],row['temperature'],row['flow']]]
+    solution = root(residual,np.asarray(guess)/np.tile(scale,count),method='hybr',options={'xtol':1e-13})
+    if not solution.success:
+        raise RuntimeError(solution.message)
+    values = solution.x.reshape(count,6)*scale
+    return [{'amounts':row[:4],'temperature':row[4],'flow':row[5],'conversion':1-2*row[0]/sum(row[:4]),
+             'residual':float(np.max(np.abs(residual(solution.x))))} for row in values]
 
 
 def sequential_steady_reference(count, data=None):

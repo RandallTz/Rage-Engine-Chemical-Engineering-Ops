@@ -5,8 +5,11 @@ is the Demo 0.1 package-closure volume with a hydrostatic storage momentum
 journal; the liquid leaves through a separate straight hydraulic path whose
 momentum journal is reduced from Cauchy conservation. The path density, the
 port pressures and the link to the phase donors are recorded relations; the
-irreversible loss is the journal's Darcy-Weisbach/local-loss closure, specialised by recorded operations, with a
-forward-flow regime.
+irreversible loss is the journal's own Darcy-Weisbach/local-loss closure node
+(momentum.<path>.path.darcy-weisbach), substituted by recorded operations, with a
+forward-flow regime. Its coefficients carry a recorded validity range: either a
+declared distributed-friction factor, or a recorded premise that distributed
+friction is negligible against the local loss (data['friction']).
 """
 import copy
 import math
@@ -25,7 +28,25 @@ from core.compilador.derived import source_signature
 from derived_closure_inputs import DRUM, ETHANOL, OWNER, PACKAGE_ID, T, WATER, _datum, drum_source
 
 PIPE = 'pipe'
-OUTLET = dict(DRUM, length=5.0, pipeArea=7e-4, loss=8.0, floor=0.0, Pout=101325.0, F0=0.4, area=0.5, tf=400.0)
+# Turbulent outlet path (Re about 1.3e4-6.3e4): distributed wall friction is recorded with a constant Darcy factor.
+OUTLET = dict(DRUM, length=5.0, pipeArea=7e-4, loss=8.0, floor=0.0, Pout=101325.0, F0=0.4, area=0.5, tf=400.0,
+              friction={'darcyFriction': 0.024, 'source': {
+                  'kind': 'empirical correlation',
+                  'citation': 'Blasius smooth-pipe law f_D = 0.316 Re^(-1/4), evaluated at the geometric-mean Reynolds number of the run',
+                  'validRange': 'Hydraulically smooth circular section, 4e3 <= Re <= 1e5. Over the run F = 0.40-0.48 kg/s and the liquid viscosity '
+                                '(about 0.32-1.3 mPa s between 300 K and 365 K, estimate) give Re about 1.3e4-6.3e4, so f_D varies 0.020-0.030; '
+                                'holding 0.024 changes the total loss coefficient by at most about 8 %.'}})
+
+
+def hydraulic_diameter(data):
+    """Hydraulic diameter of the declared circular section (reference helper; the model records the same definition)."""
+    return math.sqrt(4 * data['pipeArea'] / math.pi)
+
+
+def total_loss_coefficient(data):
+    """K + f_D L / D_h from the declared data, for independent references."""
+    friction = data['friction'].get('darcyFriction', 0.0)
+    return data['loss'] + friction * data['length'] / hydraulic_diameter(data)
 
 STORAGE_FLAGS = ('pressureStress', 'negligibleConvection', 'negligibleViscousStress', 'zeroLocalAccumulation',
                  'uniformGravity', 'referenceDensity', 'verticalGravity', 'pressureReference')
@@ -45,7 +66,7 @@ def outlet_source(data=OUTLET, prepare=None, *, source_factory=drum_source, owne
     pipe.update(id=PIPE, componenteIds=list(drum['componenteIds']))
     pipe['balances'] = {'materia': False, 'energia': False, 'momento': True}
     pipe['termodinamica'] = {'tipo': 'supuesto', 'supuesto': 'fase_no_evaluada',
-                             'motivo': 'The path carries the drawn liquid of the drum; its state is that donor phase (no separate closure)'}
+                             'motivo': 'The path carries the donor liquid phase of the upstream volume; its state is that donor phase (no separate closure)'}
     pipe['frontera'] = {'tipo': 'rigida', 'datoId': _datum(model,'path.volume',data['pipeArea']*data['length'],'m3','frontera')}
     model['volumenes'].append(pipe)
     liquid = next(s for s in model['corrientes'] if s['id'] == 'liquid')
@@ -87,9 +108,10 @@ def author_outlet(data=OUTLET, prepare=None, *, source_factory=drum_source, owne
     f = lambda name: sp.Function(name)(T)
     m = [f(f'm__{o}__{i}') for i in components]
     H = f('H__' + o)
+    friction = data['friction']
     for name, unit in [('feedRate', 'kg/s'), ('withdrawalCoefficient', '1/s'), ('heatDuty', 'W'), ('crossSectionArea', 'm2'),
-                       ('floorElevation', 'm'), ('outletPressure', 'Pa'), ('lossCoefficient', '1'),
-                       ('darcyFriction', '1'), ('hydraulicDiameter', 'm')]:
+                       ('floorElevation', 'm'), ('outletPressure', 'Pa'),
+                       *([('darcyFriction', '1')] if 'darcyFriction' in friction else [])]:
         add('declare_symbol', name=name, unit=unit)
     add('declare_function', name='vapourMolarOutflow', unit='mol/s', dependencies=[q(T)])
     add('declare_function', name='liquidMassFlow', unit='kg/s', dependencies=[q(T)])
@@ -105,12 +127,21 @@ def author_outlet(data=OUTLET, prepare=None, *, source_factory=drum_source, owne
         feed = author.relation(q(f(f'q__feed__{i}')), f"feedRate*{q(f(f'inlet_mass_fraction_{i}__feed'))}",
             'Prescribed feed rate with the package composition of the declared inlet', kind='constitutive')
         if vapour:
-            vapour_row = author.relation(q(f(f'q__vapour__{i}')), f"vapourMolarOutflow*{q(f(f'phase_present__{o}__V'))}*{q(f(f'phase_x_{i}__{o}__V'))}*{M}",
+            molar = f'vapourComponentMolarFlow_{i}'
+            add('declare_function', name=molar, unit='mol/s', dependencies=[q(T)])
+            donor_flow = author.relation(molar, f"vapourMolarOutflow*{q(f(f'phase_present__{o}__V'))}*{q(f(f'phase_x_{i}__{o}__V'))}",
                 'Phase donor: the vapour withdrawal draws the vapour phase of this volume (zero when the vapour is absent)', kind='constitutive')
-        fraction = f'liquidMassFraction_{i}'
+            vapour_row = author.relation(q(f(f'q__vapour__{i}')), f'{molar}*{M}',
+                'Definition of component mass flow from component molar flow and molar mass', kind='definition')
+            vapour_row = author.substitute(vapour_row, donor_flow, f(molar))
+        fraction, mole = f'liquidMassFraction_{i}', f'liquidMoleFraction_{i}'
         add('declare_function',name=fraction,unit='1',dependencies=[q(T)])
-        mass_basis = author.relation(f'{fraction}*{ML}',f"{q(f(f'phase_x_{i}__{o}__L'))}*{M}",
-            'Phase donor: the stream has the liquid phase composition; convert its component mole fraction to mass fraction using the phase mean molar mass',kind='constitutive')
+        add('declare_function',name=mole,unit='1',dependencies=[q(T)])
+        donor_fraction = author.relation(mole, q(f(f'phase_x_{i}__{o}__L')),
+            'Phase donor: the stream has the liquid phase composition of this volume', kind='constitutive')
+        mass_basis = author.relation(f'{fraction}*{ML}', f'{mole}*{M}',
+            'Definition of mass fraction from mole fraction, component molar mass and the phase mean molar mass', kind='definition')
+        mass_basis = author.substitute(mass_basis, donor_fraction, f(mole))
         mass_basis = add('isolate',sources=[mass_basis],symbol=fraction)
         out[f'liquidMassFraction.{i}'] = mass_basis
         transport = author.relation(q(f(f'q__liquid__{i}')),f'liquidMassFlow*{fraction}',
@@ -142,16 +173,22 @@ def author_outlet(data=OUTLET, prepare=None, *, source_factory=drum_source, owne
                           *([('vapour', f"{q(f(f'phase_h__{o}__V'))}/{q(f(f'phase_M__{o}__V'))}")] if vapour else []),
                           ('liquid', f"{q(f(f'phase_h__{o}__L'))}/{ML}")]:
         average = f('energy_average_0__' + stream)
-        if stream == 'liquid':
-            add('declare_function','energy',name='liquidMolarEnthalpy',unit='J/mol',dependencies=[q(T)])
-            donor = author.relation('liquidMolarEnthalpy',q(f(f'phase_h__{o}__L')),
-                'The outgoing material draws the donor liquid phase at its thermodynamic state','energy','constitutive')
-            basis = author.relation(f'{q(average)}*{ML}','liquidMolarEnthalpy',
+        if stream in ('liquid', 'vapour'):
+            phase, mean = ('L', ML) if stream == 'liquid' else ('V', q(f(f'phase_M__{o}__V')))
+            name = stream + 'MolarEnthalpy'
+            add('declare_function','energy',name=name,unit='J/mol',dependencies=[q(T)])
+            reason = ('The outgoing material draws the donor liquid phase at its thermodynamic state, evaluated at the uniform '
+                      'pressure of the volume. Premises: negligible stream kinetic energy; the frictional dissipation of the path '
+                      'stays in the stream; the pressure dependence of the liquid enthalpy over the path pressure change is neglected'
+                      if stream == 'liquid' else
+                      'The outgoing material draws the donor vapour phase at its thermodynamic state')
+            donor = author.relation(name,q(f(f'phase_h__{o}__{phase}')),reason,'energy','constitutive')
+            basis = author.relation(f'{q(average)}*{mean}',name,
                 'Definition of molar enthalpy from mass-specific enthalpy and the mean molar mass','energy','definition')
-            basis = author.substitute(basis,donor,f('liquidMolarEnthalpy'),'energy')
+            basis = author.substitute(basis,donor,f(name),'energy')
             relation = add('isolate','energy',sources=[basis],symbol=q(average))
         else:
-            relation = author.relation(q(average), right, 'Stream specific enthalpy from the package (donor phase or declared inlet)', 'energy', 'constitutive')
+            relation = author.relation(q(average), right, 'Inlet stream specific enthalpy at its declared exterior state (package)', 'energy', 'constitutive')
         out['enthalpy.'+stream] = relation
         current = author.substitute(current, relation, average, 'energy')
     heat = (heat_builder(author, o) if heat_builder else
@@ -183,26 +220,37 @@ def author_outlet(data=OUTLET, prepare=None, *, source_factory=drum_source, owne
     current = author.substitute(current, pressure, field, 'momentum')
     rhop = sp.Symbol('rho__' + p, real=True)
     A, L = sp.Symbol('A__' + p, real=True), sp.Symbol('L__' + p, real=True)
+    D, fD, K = (sp.Symbol(name + '__' + p, real=True) for name in ('D', 'f', 'K'))
     z1, z2 = sp.Symbol('z1__' + p, real=True), sp.Symbol('z2__' + p, real=True)
+    # The irreversible loss is the journal's own Darcy-Weisbach/local-loss closure node. Its flow variable is the
+    # summed donor component flow, which the donor total identifies with the declared liquid mass flow.
+    loss = author.substitute(f'momentum.{p}.path.darcy-weisbach', split, f('q__liquid__1'), 'momentum')
+    diameter = author.relation(q(D), f'(4*{q(A)}/pi)^(1/2)',
+        'Definition: hydraulic diameter of the declared circular section', 'momentum', 'definition')
+    loss = author.substitute(loss, diameter, D, 'momentum')
+    if 'darcyFriction' in friction:
+        coefficient = author.append('declare_relation', 'momentum', left=q(fD), right='darcyFriction', relationKind='constitutive',
+            reason='Distributed wall friction with a constant Darcy factor over the operating range', source=friction['source'])
+    else:
+        coefficient = author.append('declare_relation', 'momentum', left=q(fD), right='0', relationKind='constitutive',
+            reason='Distributed wall friction is negligible against the local loss; the irreversible loss is the local-loss term',
+            source=friction['source'])
+    loss = author.substitute(loss, coefficient, fD, 'momentum')
+    out['loss'] = loss
+    current = author.substitute(current, loss, f('loss__' + p), 'momentum')
     for symbol, right, reason, kind in [
             (f('p2__' + p), 'outletPressure', 'Prescribed exterior pressure at the discharge port', 'constitutive'),
             (f('drive__' + p), '0', 'No applied pressure drive or shaft work on the path', 'constitutive'),
-            (f('loss__' + p), f"(darcyFriction*{q(L)}/hydraulicDiameter+lossCoefficient)*liquidMassFlow*(liquidMassFlow^2)^(1/2)/(2*{q(rhop)}*{q(A)}^2)",
-             'Darcy-Weisbach and local-loss closure recorded in the path momentum journal: signed irreversible pressure loss', 'constitutive'),
-            (sp.Symbol('darcyFriction', real=True), '0', 'No distributed wall friction: the irreversible loss is lumped in the local-loss coefficient', 'constitutive'),
             (rhop, f'{ML}/{vL}', 'The path carries the drawn liquid phase: its reference density is the donor liquid density. '
              'Quasi-constant density: the path mass storage A L |d rho/dt| / F is neglected (monitored below 1e-3)', 'constitutive'),
             (z2, q(z1), 'Horizontal discharge path: equal endpoint elevations', 'definition')]:
-        target = q(symbol) if not isinstance(symbol, sp.Symbol) or str(symbol) not in ('darcyFriction',) else 'darcyFriction'
-        relation = author.relation(target, right, reason, 'momentum', kind)
-        if symbol == f('loss__' + p):
-            out['loss'] = relation
+        relation = author.relation(q(symbol), right, reason, 'momentum', kind)
         current = author.substitute(current, relation, symbol, 'momentum')
     out['flow'] = add('isolate', 'momentum', sources=[current], symbol=q(sp.diff(f('liquidMassFlow'), T)))
     add('declare_domain', 'momentum', sources=[out['loss']], symbol='liquidMassFlow', domain='positive',
         reason='Forward-flow regime of the loss closure and of the donor orientation')
-    for name in ('crossSectionArea', 'lossCoefficient'):
-        add('declare_domain', 'momentum', sources=[out['flow']], symbol=name, domain='positive', reason='Positive geometry and loss coefficient')
+    for symbol in ('crossSectionArea', q(K)):
+        add('declare_domain', 'momentum', sources=[out['flow']], symbol=symbol, domain='positive', reason='Positive geometry and loss coefficient')
     for symbol in (A, L):
         add('declare_domain', 'momentum', sources=[out['flow']], symbol=q(symbol), domain='positive', reason='Positive path geometry')
     # The same component laws are reduced with explicit negligible storage.
@@ -259,6 +307,9 @@ def select_outlet(author, out, data=OUTLET, method='rk45', *, owner=OWNER):
     for quantity,row in [*out.get('pathRates',[]),
             *[(sp.Function(f'liquidMassFraction_{i}')(T),out[f'liquidMassFraction.{i}']) for i in components],
             *[(sp.Function(f'q__discharge__{i}')(T),out[f'discharge.{i}']) for i in components],
+            *[(sp.Function(f'q__vapour__{i}')(T),out[f'vapour.{i}']) for i in components if f'vapour.{i}' in out],
+            *([(sp.Function('energy_average_0__vapour')(T),out['enthalpy.vapour'])] if 'enthalpy.vapour' in out else []),
+            (sp.Function('loss__'+p)(T),out['loss']),
             *[(sp.Function(f'amount_{i}__{o}')(T),out[f'reactionAmount.{i}']) for i in components if f'reactionAmount.{i}' in out],
             (sp.Function('energy_average_0__liquid')(T),out['enthalpy.liquid']),
             (sp.Function('energy_average_0__discharge')(T),out['enthalpy.discharge'])]:
@@ -267,8 +318,8 @@ def select_outlet(author, out, data=OUTLET, method='rk45', *, owner=OWNER):
     for name, key, value, unit in [(f'P__{o}(t)', o + '.pressure', None, None), ('feedRate', 'solve.F', data['feed'], 'kg/s'),
                                    ('withdrawalCoefficient', 'solve.kV', data['vent'], '1/s'), ('heatDuty', 'solve.Q', data['Q'], 'W'),
                                    ('crossSectionArea', 'solve.A', data['area'], 'm2'), ('floorElevation', 'solve.z0', data['floor'], 'm'),
-                                   ('outletPressure', 'solve.Pout', data['Pout'], 'Pa'), ('lossCoefficient', 'solve.K', data['loss'], '1'),
-                                   ('hydraulicDiameter', 'solve.Dh', math.sqrt(4 * data['pipeArea'] / math.pi), 'm'),
+                                   ('outletPressure', 'solve.Pout', data['Pout'], 'Pa'), (f'K__{p}', 'solve.K', data['loss'], '1'),
+                                   *([('darcyFriction', 'solve.fD', data['friction']['darcyFriction'], '1')] if 'darcyFriction' in data['friction'] else []),
                                    (f'A__{p}', 'solve.pipeArea', data['pipeArea'], 'm2'), (f'L__{p}', 'solve.length', data['length'], 'm'),
                                    (f'g__{o}', 'solve.g', data['g'], 'm/s2'), (f'g__{p}', 'solve.g', None, None)]:
         sel['parameters'][named(name)] = key if value is None else _datum(model, key, value, unit)
@@ -314,7 +365,7 @@ def reference_outlet(times, data=OUTLET):
         rho = liquid.M / liquid.v
         level = liquid.n * liquid.v / data['area']
         p1 = data['P'] + rho * data['g'] * level
-        loss = data['loss'] * F**2 / (2 * rho * data['pipeArea']**2)
+        loss = total_loss_coefficient(data) * F**2 / (2 * rho * data['pipeArea']**2)
         dF = data['pipeArea'] / data['length'] * (p1 - data['Pout'] - loss)
         return [*(data['feed'] * wF - q), data['feed'] * hF_mass - Hs + data['Q'], dF]
 

@@ -5,6 +5,7 @@ from scipy.integrate import solve_ivp
 from core import mezclas
 from demo02_drum import DEMO
 from derived_closure_inputs import PACKAGE_ID, ETHANOL, WATER
+from derived_momentum_inputs import total_loss_coefficient
 
 
 def reference_network(count, times, data=DEMO):
@@ -24,7 +25,9 @@ def reference_network(count, times, data=DEMO):
         rows = np.asarray(values).reshape(count, 4)
         incoming_components, incoming_energy = feed_components, feed_energy
         rates = []
-        for row, equilibrium in zip(rows, states(values)):
+        # Every stage is at data['P']; a discharge port is at the receiving stage pressure, the last one at Pout.
+        discharge = [data['P']] * (count - 1) + [data['Pout']]
+        for row, equilibrium, port in zip(rows, states(values), discharge):
             flow = row[3]
             liquid = next(phase for phase in equilibrium.fases if phase.tipo != 'vapor')
             liquid_components = flow * np.asarray(liquid.x) * masses / liquid.M
@@ -39,10 +42,10 @@ def reference_network(count, times, data=DEMO):
             density = liquid.M / liquid.v
             level = liquid.n * liquid.v / data['area']
             pressure = data['P'] + density * data['g'] * level
-            loss = data['loss'] * flow**2 / (2 * density * data['pipeArea']**2)
+            loss = total_loss_coefficient(data) * flow**2 / (2 * density * data['pipeArea']**2)
             rates.extend([*(incoming_components - outgoing_components),
                           incoming_energy - outgoing_energy + data['Q'],
-                          data['pipeArea'] / data['length'] * (pressure - data['Pout'] - loss)])
+                          data['pipeArea'] / data['length'] * (pressure - port - loss)])
             incoming_components, incoming_energy = liquid_components, liquid_energy
         return rates
 

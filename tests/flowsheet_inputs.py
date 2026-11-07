@@ -34,11 +34,14 @@ from derived_momentum_inputs import PIPE, author_outlet, select_outlet  # noqa: 
 
 NAMES = ('ethanol', 'acetic acid', 'ethyl acetate', 'water')
 # Small heated drum sized for the reactor product (1e-3 kg/s), with the
-# reactor's own outlet hydraulics. Initial holdup: a liquid close to the
+# reactor's own outlet hydraulics (the same local-loss-dominated path and its
+# recorded friction premise, review CR-1). Initial holdup: a liquid close to the
 # reactor product.
+from demo02_cstr import DEMO as _REACTOR_DATA  # noqa: E402
 DRUM4 = {'P': 101325.0, 'm0': (0.12, 0.15, 0.12, 0.025), 'T0': 335.0, 'feed': 1e-3,
          'zF': (0.33, 0.33, 0.17, 0.17), 'TF': 335.0, 'PF': 101325.0, 'Q': 25.0, 'vent': 0.0,
-         'area': 0.003, 'length': 5.0, 'pipeArea': 1e-6, 'loss': 8.0, 'floor': 0.0,
+         'area': 0.003, 'length': _REACTOR_DATA['length'], 'pipeArea': _REACTOR_DATA['pipeArea'],
+         'loss': _REACTOR_DATA['loss'], 'friction': _REACTOR_DATA['friction'], 'floor': 0.0,
          'Pout': 101325.0, 'F0': 1e-3, 'g': 9.80665, 'tf': 20000.0}
 
 
@@ -150,7 +153,7 @@ def drum4_model():
     if 'drum' not in _AUTHORED:
         import hashlib
         sources = [ROOT / 'tests' / name for name in ('flowsheet_inputs.py', 'derived_momentum_inputs.py',
-                   'derived_closure_inputs.py', 'derived_reactor_inputs.py', 'm1_acceptance.py', 'demo02_drum.py')]
+                   'derived_closure_inputs.py', 'derived_reactor_inputs.py', 'm1_acceptance.py', 'demo02_drum.py', 'demo02_cstr.py')]
         key = hashlib.sha256(b''.join(p.read_bytes() for p in sources)).hexdigest()[:16]
         path = CACHE / f'drum4-{key}.json'
         if path.exists():
