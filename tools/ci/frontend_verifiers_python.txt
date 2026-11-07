@@ -30,3 +30,4 @@ verificar_indexed_execution.mjs :: ../tests/test_indexed_execution_contract.py
 verificar_index_sets.mjs :: ../tests/test_index_sets.py
 verificar_indexed_results.mjs :: ../tests/test_indexed_results.py
 verificar_template_instance.mjs :: ../tests/test_template_instance.py
+verify_custom_relations.mjs           # approximately 15 seconds; Python ASGI, no server
