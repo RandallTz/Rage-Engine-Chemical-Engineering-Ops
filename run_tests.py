@@ -50,6 +50,8 @@ def main():
             print(f"{'slow' if suite.name in slow | pytest_slow else 'fast'}  {suite.name}")
         return 0
     known = {k: v for k, v in tiers.get("known_failing", {}).items() if not k.startswith("_")}
+    # Several suites write under the git-ignored .tmp/ folder, absent from a clean clone.
+    (ROOT / ".tmp").mkdir(exist_ok=True)
     env = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}
     failures, quarantined = [], []
     started = time.monotonic()
