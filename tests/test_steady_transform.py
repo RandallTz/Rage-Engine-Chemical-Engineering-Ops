@@ -115,16 +115,18 @@ class SteadyTransformTests(unittest.TestCase):
                 'declaracion': {'texto': text, 'unidad': unit}, 'origen': {'propietarioId': 'estudio', 'ruta': key}}
         self.assertEqual(scales(prepare_steady_transform(padded)), scales(reference))
         # RT-7: the root does not depend on the initial holdup.
-        light = copy.deepcopy(base)
-        light['datos']['drum.mass']['declaracion']['texto'] = '1.0'
-        light['datos']['drum.mass2']['declaracion']['texto'] = '4.0'
-        response = prepare_steady_transform(light)
-        system = SteadySystem(response['model']); result = system.solve(); read_result(result)
-        self.assertEqual(result['estado'], 'resuelto')
-        closure = system.closures.closures[0]
-        temperature_id = next(k for k, q in system.quantities.items() if q == closure.T)
-        actual = next(row['valores'] for row in result['series'] if row['id'] == 'closure.' + temperature_id)
-        self.assertAlmostEqual(actual, 362.5404885146, delta=1e-5)
+        for first, second in [('1.0', '4.0'), ('0.001', '0.004')]:
+            with self.subTest(holdups=(first, second)):
+                light = copy.deepcopy(base)
+                light['datos']['drum.mass']['declaracion']['texto'] = first
+                light['datos']['drum.mass2']['declaracion']['texto'] = second
+                response = prepare_steady_transform(light)
+                system = SteadySystem(response['model']); result = system.solve(); read_result(result)
+                self.assertEqual(result['estado'], 'resuelto')
+                closure = system.closures.closures[0]
+                temperature_id = next(k for k, q in system.quantities.items() if q == closure.T)
+                actual = next(row['valores'] for row in result['series'] if row['id'] == 'closure.' + temperature_id)
+                self.assertAlmostEqual(actual, 362.5404885146, delta=1e-5)
 
     def test_http_rejection_is_preserved(self):
         from backend.api_modelo import steady_transform
