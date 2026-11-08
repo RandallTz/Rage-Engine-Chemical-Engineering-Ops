@@ -559,11 +559,21 @@ class LayerPackageEntry(unittest.TestCase):
         self.assertLess(abs(out["V"] / V - 1), 1e-12)
 
     def test_ph_inverts_the_tp_closure(self):
-        # UV is not tested here: at this state the default UV window search of cubic_flash probes 266 K at 5e7 Pa,
-        # a liquid-liquid split, and stops (roadmap F8b, PSRK layer entry, finding 2).
         ph = self.capa.cierre(self.model(MEOH, TOL), "v", self.n, ("PH", self.bub["P"], self.tp["H"]))
         self.assertLess(abs(ph["T"] - self.T), 1e-8)
         self.assertEqual(ph["presentes"], ["vapor-1", "liquido-1"])
+
+    def test_uv_inverts_the_tp_closure(self):
+        # The default UV window search probes 266.31 K at 5e7 Pa, a certified liquid-liquid split of compressed
+        # liquids, and near 2.5 kPa a vapour + liquid split destabilized by a third phase. Both are non-evaluable
+        # sides of the search, not failures (roadmap F8b, liquid-liquid bracket ends). Negative control: before
+        # that repair this closure raised liquid_liquid_split at 266.31 K, 5e7 Pa.
+        uv = self.capa.cierre(self.model(MEOH, TOL), "v", self.n, ("UV", self.tp["U"], self.tp["V"]))
+        self.assertLess(abs(uv["T"] - self.T), 1e-8)
+        self.assertLess(abs(uv["P"] / self.bub["P"] - 1), 1e-10)
+        self.assertEqual(uv["presentes"], ["vapor-1", "liquido-1"])
+        f = {k["id"]: k for k in uv["fases"]}
+        self.assertLess(abs(f["liquido-1"]["composicion"]["a"] - self.x[0]), 1e-8)
 
     def test_one_phase_publishes_the_absent_candidate(self):
         out = self.capa.cierre(self.model(MEOH, TOL), "v", self.n, ("TP", self.T, 1.2 * self.bub["P"]))
@@ -592,14 +602,22 @@ class LayerPackageEntry(unittest.TestCase):
         self.assertLess(abs(tp["U"] - (H - bub["P"] * V)), 1e-9 * abs(H))
         self.assertEqual(tp["complementariedad"], 0.0)
         self.assertLess(tp["verificaciones"]["equilibrio"][0], 1e-10)
-        # PH on an explicit bracket inverts the closure. The layer's default bracket starts at the alpha range
-        # (231.26 K), where 7 MPa is a certified CO2-rich liquid + ethanol split: a located rejection of the bracket
-        # end (roadmap F8b, CO2 caloric record, finding 1; same cause as the UV window finding).
+        # PH on an explicit bracket inverts the closure, and so does the layer's default bracket: it starts at the
+        # alpha range (231.26 K), where 7 MPa is a certified CO2-rich liquid + ethanol split, a non-evaluable side
+        # of the window search (roadmap F8b, liquid-liquid bracket ends). Negative control: before that repair
+        # the layer's PH raised liquid_liquid_split at 231.26 K.
         ph = self.cubic_flash.flash_PH(eos, bub["P"], tp["H"], z, T_bracket=(300.0, 400.0))
         self.assertLess(abs(ph["T"] - T), 1e-7)
+        ph = self.capa.cierre(self.model(CO2, ETOH), "v", n, ("PH", bub["P"], tp["H"]))
+        self.assertLess(abs(ph["T"] - T), 1e-8)
+        self.assertEqual(ph["presentes"], ["vapor-1", "liquido-1"])
+        self.assertLess(abs(ph["H"] - tp["H"]), 1e-9 * abs(tp["H"]))
+        # Where the true state is the liquid-liquid split, it stays a located rejection: 8 kJ/mol below the
+        # one-liquid edge of the window (between 263 and 295 K) the enthalpy lies on the liquid-liquid side.
         with self.assertRaises(self.capa.NoSoportado) as cm:
-            self.capa.cierre(self.model(CO2, ETOH), "v", n, ("PH", bub["P"], tp["H"]))
+            self.capa.cierre(self.model(CO2, ETOH), "v", n, ("PH", bub["P"], tp["H"] - 8000.0))
         self.assertEqual(cm.exception.datos["cause"], "liquid_liquid_split")
+        self.assertTrue(263.0 < cm.exception.datos["T_edge"] < 296.0)
 
     def test_reference_cases_with_co2_are_located_rejections(self):
         with self.assertRaises(self.capa.NoSoportado) as cm:                   # the package's own temperature gate
