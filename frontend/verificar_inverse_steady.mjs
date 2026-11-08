@@ -64,12 +64,16 @@ for(const [id,value] of [
  assert.throws(()=>leerResultados(bad),`Re-signed ${id} edit must be rejected`);checks++;
 }
 check(Math.abs(declaredInverseSI({texto:'25.2',unidad:'kmol/h'},'mol/s')-7)<1e-12,'Existing unit catalog validates molar conversions');
+// F3H-1: the client admits the constant grammar Python admits (`pi`, unary plus), in direct and published form.
+check(Math.abs(declaredInverseSI({texto:'pi/6',unidad:'1'},'1')-Math.PI/6)<1e-15&&declaredInverseSI({texto:'+0.6',unidad:'1'},'1')===.6&&declaredInverseSI({texto:'-pi',unidad:'1'},'1')===-Math.PI,'Client admits pi and unary plus');
+for(const [text,variant] of Object.entries(live.variants)){check(leerResultados(variant.result)===variant.result,`HTTP result with target ${text} accepted`);check(readCompilationReport(variant.report)!==undefined,`HTTP compilation with target ${text} accepted`);}
+check(Math.abs(live.variants['pi/6'].result.series.find(s=>s.id==='steady.residual.specification.outlet-fraction').valores)<1e-12,'pi/6 target solved over HTTP');
 assert.throws(()=>declaredInverseSI({texto:'300',unidad:'degC'},'K'));checks++;
 const source=structuredClone(live.model),data=Object.fromEntries(inverseDataIds(live.record).map(id=>[id,source.datos[id].declaracion]));
 for(const id of Object.keys(data))delete source.datos[id];
 const inverseSolve=readInverseSolve({version:1,record:live.record,data});
 const {nuevaHoja,guardarHoja,leerHojas}=load(path.join(here,'app/motor/hojasMotor'));
-const {commonSource,derivedSourceIdentity,selectedDerivedModel,reconcileDerived}=load(path.join(here,'app/models/derivedSelection'));
+const {commonSource,derivedSourceIdentity,selectedDerivedModel,reconcileDerived,carryInverseSolve}=load(path.join(here,'app/models/derivedSelection'));
 const {firmaHoja}=load(path.join(here,'app/motor/modeloHojaMotor'));
 const model={...nuevaHoja(live.model.nombre),id:live.model.id,commonModel:source};
 model.derivedSelection={version:1,sourceSignature:derivedSourceIdentity(commonSource(model)),selection:source.motores.derivedExecution,inverseSolve};
@@ -78,6 +82,19 @@ const changed=structuredClone(model);changed.derivedSelection.inverseSolve.data[
 check(firmaHoja(changed)!==firmaHoja(model),'Specification changes invalidate run signature');
 check(derivedSourceIdentity(commonSource(changed))===derivedSourceIdentity(commonSource(model)),'Specification edits preserve Model source');
 assert.deepEqual(changed.derivedSelection.selection,model.derivedSelection.selection);checks++;
+// F3H-2: a Transform re-pin keeps the Solve record while it still reads against the new selection; otherwise it is dropped with a notice.
+{const selection=model.derivedSelection.selection,common=commonSource(model);
+ check(carryInverseSolve(model.derivedSelection,selection,common).inverseSolve===inverseSolve,'Re-pin keeps a compatible inverse Solve record');
+ check(!Object.keys(carryInverseSolve(undefined,selection,common)).length,'No record, nothing carried');
+ const noTarget=structuredClone(selection);noTarget.unknowns=noTarget.unknowns.filter(id=>id!==live.record.specifications[0].quantityId);noTarget.reconstructions=noTarget.reconstructions.filter(r=>r.quantityId!==live.record.specifications[0].quantityId);
+ const a=carryInverseSolve(model.derivedSelection,noTarget,common);check(!a.inverseSolve&&a.inverseNotice.includes('no longer an unknown'),'Re-pin drops with notice when a target is no longer an output');
+ const noInput=structuredClone(selection);delete noInput.parameters[live.record.freedInputs[0].quantityId];
+ const b=carryInverseSolve(model.derivedSelection,noInput,common);check(!b.inverseSolve&&b.inverseNotice.includes('no longer a parameter'),'Re-pin drops with notice when a freed input is no longer a parameter');
+ const stale=structuredClone(common);stale.datos[live.record.specifications[0].targetDataId]=structuredClone(live.model.datos[live.record.specifications[0].targetDataId]);
+ check(carryInverseSolve(model.derivedSelection,selection,stale).inverseNotice.includes('no longer fresh'),'Re-pin drops with notice when data identities collide');
+ const {applySteadyTransformResult}=load(path.join(here,'app/models/derivedSelection'));
+ const pinned=applySteadyTransformResult(model,{model:structuredClone(source),dynamicSelection:structuredClone(selection),dynamicSignature:'x',report:{selection,rows:[]}});
+ check(pinned.derivedSelection.inverseSolve===inverseSolve||JSON.stringify(pinned.derivedSelection.inverseSolve)===JSON.stringify(inverseSolve),'applySteadyTransformResult keeps the Solve record');}
 const storage=new Map();globalThis.localStorage={getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,v)};globalThis.window={dispatchEvent:()=>true};
 guardarHoja(model);assert.deepEqual(leerHojas().find(m=>m.id===model.id).derivedSelection.inverseSolve,inverseSolve);checks++;
 const saved={...model,resultadoRef:{firma:firmaHoja(model),estado:'resuelto',fecha:new Date().toISOString()}};
@@ -100,6 +117,10 @@ const React=require('react'),{renderToStaticMarkup}=require('react-dom/server');
 const {InverseControls}=load(path.join(here,'app/models/DerivedSolve'));
 const quantities=Object.entries(live.names).map(([name,id])=>({id,name,input:name,latex:name,unit:name==='x3'?'1':'mol/s',coordinate:false}));
 const controls=renderToStaticMarkup(React.createElement(InverseControls,{model,quantities,disabled:false,change(){}}));
+const closed=renderToStaticMarkup(React.createElement(InverseControls,{model,quantities,disabled:false,change(){},closureVolumeIds:['drum']}));
+check(closed.includes('not yet lowered over package thermodynamic closures')&&closed.includes('drum')&&!closed.includes('Add output target')&&!closed.includes('Target quantity 1'),'Solve withholds inverse controls for package-closure models and says why');
+const noticed=renderToStaticMarkup(React.createElement(InverseControls,{model:{...model,derivedSelection:{...model.derivedSelection,inverseSolve:undefined,inverseNotice:'The inverse specifications entered in Solve were discarded because test.'}},quantities,disabled:false,change(){}}));
+check(noticed.includes('were discarded because test.'),'Solve shows the discard notice');
 for(const text of ['Target quantity 1','Input to free 1','Target value 1','Freed input seed 1','Freed input lower bound 1','Freed input upper bound 1','Specification residual scale 1','1 specifications','1 freed inputs'])check(controls.includes(text),'Existing Solve renders '+text);
 displayedModel={...model,resultado:wrapped};
 const {default:Results,PublishedChecks}=load(path.join(here,'app/motor/ResultadosHoja'));

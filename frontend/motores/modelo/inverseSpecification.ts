@@ -36,10 +36,10 @@ export function readInverseSolve(value:unknown):InverseSolve{
 /** Constant declaration validation only, sharing the existing compatible unit catalog.
  * Python remains authoritative for dimensional admission and all scientific evaluation. */
 export function declaredInverseSI(declaration:{texto:string;unidad:string},unit:string):number{
-  const tokens=declaration.texto.match(/(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?|sqrt|exp|log|[()+*/^\-]/g)??[];
+  const tokens=declaration.texto.match(/(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?|sqrt|exp|log|pi|[()+*/^\-]/g)??[];
   if(tokens.join('')!==declaration.texto.replace(/\s/g,'')||tokens.length>500)throw new Error('Invalid inverse constant expression.');
   let i=0;
-  function atom():number{const t=tokens[i++];if(t==='-')return -power();if(t==='('){const v=sum();if(tokens[i++]!==')')throw new Error('Unclosed constant.');return v;}if(['sqrt','exp','log'].includes(t)){if(tokens[i++]!=='(')throw new Error('Expected constant function argument.');const v=sum();if(tokens[i++]!==')')throw new Error('Unclosed constant function.');return t==='sqrt'?Math.sqrt(v):t==='exp'?Math.exp(v):Math.log(v);}if(t===undefined||!/^\d|^\./.test(t))throw new Error('Expected a constant number.');return Number(t);}
+  function atom():number{const t=tokens[i++];if(t==='-')return -power();if(t==='+')return power();if(t==='pi')return Math.PI;if(t==='('){const v=sum();if(tokens[i++]!==')')throw new Error('Unclosed constant.');return v;}if(['sqrt','exp','log'].includes(t)){if(tokens[i++]!=='(')throw new Error('Expected constant function argument.');const v=sum();if(tokens[i++]!==')')throw new Error('Unclosed constant function.');return t==='sqrt'?Math.sqrt(v):t==='exp'?Math.exp(v):Math.log(v);}if(t===undefined||!/^\d|^\./.test(t))throw new Error('Expected a constant number.');return Number(t);}
   function power():number{const v=atom();if(tokens[i]==='^'){i++;return v**power();}return v;}
   function product():number{let v=power();while(tokens[i]==='*'||tokens[i]==='/'){const op=tokens[i++],w=power();v=op==='*'?v*w:v/w;}return v;}
   function sum():number{let v=product();while(tokens[i]==='+'||tokens[i]==='-'){const op=tokens[i++],w=product();v=op==='+'?v+w:v-w;}return v;}
