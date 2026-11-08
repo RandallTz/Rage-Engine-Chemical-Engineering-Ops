@@ -93,11 +93,11 @@ Run one autonomous-loop item for this repository, following "Autonomous loops" i
 
 ## Refreshing the board (Claude sessions)
 
-1. Run `node tools/roadmap_board/build_board.mjs`. It writes `tools/roadmap_board/out/{capabilities,milestones,gates,decisions,risks,reviews,ownership,queue}.json` (git-ignored).
+1. Run `node tools/roadmap_board/build_board.mjs`. It writes `tools/roadmap_board/out/{capabilities,milestones,gates,decisions,risks,reviews,ownership,queue,progress}.json` (git-ignored).
 2. For each changed file, upload it as an asset of the board (Artifact tool, `url` = the board, `asset: true`, `file_path` = the file), one call per JSON file.
 3. Read `datasets/<id>` with ArtifactData. Then `update` its `source.url` with the new `/_blob/...` url and `source.name`, and set `updated: {at, by}`. Pin each write with `if_version` and use one batch.
 4. Read `data/users/me/check` until it is no longer `checking`. No document means the page passed.
-5. The page source is `tools/roadmap_board/page.html`, which the generator also packs as `out/page.json`. Change it only for layout or new sections. Then write `files/index.html` from `out/page.json`, pinned with `if_version`. The dataset ids are `capabilities`, `milestones`, `gates`, `decisions`, `risks`, `reviews`, `ownership` and `queue`. Follow the dashboard type's own instructions for marks.
+5. The page source is `tools/roadmap_board/page.html`, which the generator also packs as `out/page.json`. Change it only for layout or new sections. Then write `files/index.html` from `out/page.json`, pinned with `if_version`. The dataset ids are `capabilities`, `milestones`, `gates`, `decisions`, `risks`, `reviews`, `ownership`, `queue` and `progress`. Follow the dashboard type's own instructions for marks.
 
 ## Schema of `docs/engine/project-board.json`
 
@@ -120,6 +120,6 @@ Run one autonomous-loop item for this repository, following "Autonomous loops" i
 - `decisions[]`: `id`, `date`, `status` (`taken` or `open`), `owner`, `title`, `detail`, `source`.
 - `risks[]`: `id`, `severity` (`high`, `medium`, `low`), `owner`, `title`, `mitigation`, `status` (`open` or `closed`).
 
-Generated datasets beyond the registry collections: `queue` (one row per numbered item of the `docs/engine/codex-queue.md` queue table, with `status`, the leading State token that "Autonomous loops" defines, and the full `state` text), `reviews` (one row per registry with its review date: `reviewDate` here and `capabilityReviewDate` in `datos.ts`) and `ownership` (one row per `ownership` or `sharedFiles` path, with its agent). Milestone rows carry `owner_code`, the registry's owner value, and `waiting_on` (codes), `codex_queue` (item numbers) and `remaining` from the optional fields.
+Generated datasets beyond the registry collections: `queue` (one row per numbered item of the `docs/engine/codex-queue.md` queue table, with `status`, the leading State token that "Autonomous loops" defines, and the full `state` text), `reviews` (one row per registry with its review date: `reviewDate` here and `capabilityReviewDate` in `datos.ts`) and `ownership` (one row per `ownership` or `sharedFiles` path, with its agent). `progress` is parsed from the roadmap table "Progress percentages" (`dec-progress-table`), which stays the only registry of those numbers. The first row is the weighted `total` (`level: "total"`, with the weighting formula in `state`); the others follow the table in order as `block` or `sub` (a `· ` row, with its `parent`), each with `name`, `state`, `percent` (0-100), `estimate` (`~` or `≈` in the table) and `group` (bold row). The check fails when a row has no number between 0 and 100 or the "Project total" row is missing. Milestone rows carry `owner_code`, the registry's owner value, and `waiting_on` (codes), `codex_queue` (item numbers) and `remaining` from the optional fields.
 
 A new field or status value needs the generator, the board page and this document updated together. Registry text is English. The board page translates statuses and owners for the user.
