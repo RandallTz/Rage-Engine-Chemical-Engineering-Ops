@@ -2,6 +2,7 @@
 import math
 import numpy as np
 import sympy as sp
+from core.mathematics.numeric_lowering import lambdify_numeric
 from core.mathematics.constants import si_magnitude
 from core.reactions import chemical_equilibrium as chemistry
 from core.solvers.nonlinear import NonlinearError
@@ -142,13 +143,13 @@ class ReactionBlock(NonlinearBlock):
         # Reuse the common settings, damped Newton, guards and diagnostics.
         super().__init__(system,[sp.S.Zero]*len(residuals))
         self.forcing=residuals
-        self.n_function=sp.lambdify(self.arguments,self.amounts,'numpy')
-        self.ref_function=sp.lambdify(self.arguments,self.references,'numpy')
+        self.n_function=lambdify_numeric(self.arguments,self.amounts,'numpy')
+        self.ref_function=lambdify_numeric(self.arguments,self.references,'numpy')
         self.residual=lambda *args: np.asarray(self.state(args)['affinity_RT'])[self.independent]
         self.jacobian=self._jacobian
         self.last_certificate=None
         if self.closure is not None:
-            self.energy_function=sp.lambdify(self.arguments,si_magnitude(system._expand(self.closure.energy)).subs(system.parameter_values),'numpy')
+            self.energy_function=lambdify_numeric(self.arguments,si_magnitude(system._expand(self.closure.energy)).subs(system.parameter_values),'numpy')
 
     def _jacobian(self, *args):
         """dg/dxi = (dg/dn) N, plus at fixed H and P the temperature path
