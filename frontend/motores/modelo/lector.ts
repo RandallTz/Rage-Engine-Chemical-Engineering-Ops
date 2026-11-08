@@ -23,8 +23,18 @@ const CLAVES = ["formato", "version", "id", "nombre", "componentes", "termodinam
 export class ErrorModelo extends Error {
   constructor(public ruta: string, public motivo: string) { super(`${ruta}: ${motivo}`); }
 }
+/** True for empty or whitespace-only text as Python `str.strip` sees it (U+FEFF is not whitespace there). */
+const blank = (v: string): boolean => !v.replace(/\uFEFF/g, "\u0000").trim();
 const fallo = (ruta: string, motivo: string): never => { throw new ErrorModelo(ruta, motivo); };
 type Obj = Record<string, unknown>;
+/** Locate a plain Error from a delegated reader at `ruta` (or at the `indexSet.<path>:` prefix it carries). */
+function located<T>(ruta: string, read: () => T): T {
+  try { return read(); } catch (error) {
+    if (error instanceof ErrorModelo || !(error instanceof Error)) throw error;
+    const prefixed = /^(indexSet\.[^:\s]*): ([\s\S]*)$/.exec(error.message);
+    throw new ErrorModelo(prefixed ? prefixed[1] : ruta, prefixed ? prefixed[2] : error.message);
+  }
+}
 const obj = (v: unknown, ruta: string): Obj => (v && typeof v === "object" && !Array.isArray(v) ? v as Obj : fallo(ruta, "se esperaba un objeto"));
 const lista = (v: unknown, ruta: string): unknown[] => (Array.isArray(v) ? v : fallo(ruta, "se esperaba una lista"));
 function claves(v: unknown, ruta: string, obligatorias: string[], opcionales: string[] = []): Obj {
@@ -67,7 +77,7 @@ export function leerModeloComun(dato: unknown): ModeloComun {
     const t = o.termodinamica as Obj | null;
     if (!t || typeof t !== "object" || !("tipo" in t)) fallo(r + ".termodinamica", "todo volumen declara su cierre termodinámico (equilibrio con un paquete, o un supuesto explícito con su motivo)");
     if (t!.tipo === "equilibrio") { claves(t, r + ".termodinamica", ["tipo", "paqueteId", "politica"]); ref(t!.paqueteId, paqs, r + ".termodinamica.paqueteId", "paquete"); }
-    else if (t!.tipo === "supuesto") { const s = claves(t, r + ".termodinamica", ["tipo", "supuesto", "motivo"], ["parametros"]); if (typeof s.motivo !== "string" || !s.motivo.trim()) fallo(r + ".termodinamica.motivo", "texto requerido"); }
+    else if (t!.tipo === "supuesto") { const s = claves(t, r + ".termodinamica", ["tipo", "supuesto", "motivo"], ["parametros"]); if (typeof s.motivo !== "string" || blank(s.motivo)) fallo(r + ".termodinamica.motivo", "texto requerido"); }
     else fallo(r + ".termodinamica.tipo", "valor no admitido");
   });
   lista(m.corrientes, "corrientes").forEach((c, i) => {
@@ -78,6 +88,7 @@ export function leerModeloComun(dato: unknown): ModeloComun {
     if (mat.modo === "por_componente") Object.values(obj(mat.caudalIds, r + ".materia.caudalIds")).forEach(d => dato_(d, r + ".materia.caudalIds"));
     else if (mat.modo === "total_desde_donante") dato_(mat.caudalId, r + ".materia.caudalId");
     else fallo(r + ".materia.modo", "valor no admitido");
+    if (!["masica", "molar", "volumetrica"].includes(mat.base as string)) fallo(r + ".materia.base", "valor no admitido");
     if ('extraccion' in o) for (const key of Object.keys(obj(o.extraccion,r+'.extraccion'))) ref(key,vols,r+'.extraccion.'+key,'volume');
     if ('estadoExterior' in o) dato_(obj(o.estadoExterior,r+'.estadoExterior').temperaturaId,r+'.estadoExterior.temperaturaId');
   });
@@ -110,19 +121,19 @@ export function leerModeloComun(dato: unknown): ModeloComun {
   }
   obj(m.motores, "motores");
   if ('template' in m) readTemplate(m as unknown as ModeloComun);
-  if ('indexSet' in m) readIndexSet(m as unknown as ModeloComun,leerModeloComun);
+  if ('indexSet' in m) located('indexSet',()=>readIndexSet(m as unknown as ModeloComun,leerModeloComun));
   if ('flowsheet' in m) readFlowsheet(m as unknown as ModeloComun,leerModeloComun);
   if ('flowsheetLayout' in m) readFlowsheetLayout(m as unknown as ModeloComun);
   for (const k of Object.keys(obj(m.motores, "motores"))) if (!['adimensionalizacion', 'materialDerivation', 'energyDerivation', 'thermodynamicDerivation', 'dynamicDefinition', 'momentumDerivation','hydraulicNetwork','equationWorkbench','derivedExecution','kineticReactions','equilibriumReactions'].includes(k)) fallo(`motores.${k}`, "motor desconocido");
-  if((m.motores as Obj).equilibriumReactions!==undefined)readEquilibriumReactions((m.motores as Obj).equilibriumReactions,m as unknown as ModeloComun);
-  if((m.motores as Obj).kineticReactions!==undefined)readKineticReactions((m.motores as Obj).kineticReactions,m as unknown as ModeloComun);
-  if((m.motores as Obj).derivedExecution!==undefined)readDerivedExecution((m.motores as Obj).derivedExecution,m.datos as Record<string,unknown>);
-  if((m.motores as Obj).equationWorkbench!==undefined)readEquationWorkbench((m.motores as Obj).equationWorkbench);
-  if((m.motores as Obj).hydraulicNetwork!==undefined)readHydraulicNetwork((m.motores as Obj).hydraulicNetwork,m as unknown as ModeloComun);
-  if ((m.motores as Obj).momentumDerivation !== undefined) readMomentumJournal((m.motores as Obj).momentumDerivation, m as unknown as ModeloComun);
-  if ((m.motores as Obj).dynamicDefinition !== undefined) readDynamicDefinition((m.motores as Obj).dynamicDefinition, m as unknown as ModeloComun);
+  if((m.motores as Obj).equilibriumReactions!==undefined)located('motores.equilibriumReactions',()=>readEquilibriumReactions((m.motores as Obj).equilibriumReactions,m as unknown as ModeloComun));
+  if((m.motores as Obj).kineticReactions!==undefined)located('motores.kineticReactions',()=>readKineticReactions((m.motores as Obj).kineticReactions,m as unknown as ModeloComun));
+  if((m.motores as Obj).derivedExecution!==undefined)located('motores.derivedExecution',()=>readDerivedExecution((m.motores as Obj).derivedExecution,m.datos as Record<string,unknown>));
+  if((m.motores as Obj).equationWorkbench!==undefined)located('motores.equationWorkbench',()=>readEquationWorkbench((m.motores as Obj).equationWorkbench));
+  if((m.motores as Obj).hydraulicNetwork!==undefined)located('motores.hydraulicNetwork',()=>readHydraulicNetwork((m.motores as Obj).hydraulicNetwork,m as unknown as ModeloComun));
+  if ((m.motores as Obj).momentumDerivation !== undefined) located('motores.momentumDerivation',()=>readMomentumJournal((m.motores as Obj).momentumDerivation, m as unknown as ModeloComun));
+  if ((m.motores as Obj).dynamicDefinition !== undefined) located('motores.dynamicDefinition',()=>readDynamicDefinition((m.motores as Obj).dynamicDefinition, m as unknown as ModeloComun));
   if ((m.motores as Obj).thermodynamicDerivation !== undefined) {
-    const model=m as unknown as ModeloComun,journal=readThermodynamicJournal((m.motores as Obj).thermodynamicDerivation);
+    const model=m as unknown as ModeloComun,journal=located('motores.thermodynamicDerivation',()=>readThermodynamicJournal((m.motores as Obj).thermodynamicDerivation));
     for(const [id,entry] of Object.entries(journal.volumes)){
       const volume=model.volumenes.find(v=>v.id===id),thermo=volume?.termodinamica;
       const selected=thermo?.tipo==='equilibrio'?model.termodinamica.paquetes.find(p=>p.id===thermo.paqueteId):undefined;
@@ -131,14 +142,14 @@ export function leerModeloComun(dato: unknown): ModeloComun {
     }
   }
   if ((m.motores as Obj).energyDerivation !== undefined) {
-    const journal = readEnergyJournal((m.motores as Obj).energyDerivation);
+    const journal = located('motores.energyDerivation',()=>readEnergyJournal((m.motores as Obj).energyDerivation));
     for (const [id,entry] of Object.entries(journal.volumes)) {
       const volume = (m as unknown as ModeloComun).volumenes.find(v=>v.id===id);
       if(!volume?.supuestos.energia||!energyJournalMatches(entry,volume.supuestos.energia))fallo('motores.energyDerivation','The energy journal does not produce the effective first law.');
     }
   }
   if ((m.motores as Obj).materialDerivation !== undefined) {
-    const journal = readMaterialJournal((m.motores as Obj).materialDerivation);
+    const journal = located('motores.materialDerivation',()=>readMaterialJournal((m.motores as Obj).materialDerivation));
     for (const [owner, entry] of Object.entries(journal.volumes)) {
       const volume = (m.volumenes as ModeloComun['volumenes']).find(volume => volume.id === owner);
       if (!volume || !journalMatches(entry, volume.supuestos.materia)) fallo('motores.materialDerivation', 'The material journal does not produce the formulation being compiled.');
@@ -149,7 +160,7 @@ export function leerModeloComun(dato: unknown): ModeloComun {
     const execution = claves((scaling as Obj).execution, 'execution', ['version', 'objectives', 'freeScales']);
     if (execution.version !== 1) fallo('execution.version', 'Expected execution version 1.');
     const objectives = lista(execution.objectives, 'execution.objectives');
-    if (objectives.some(id => typeof id !== 'string' || !id.trim()) || new Set(objectives).size !== objectives.length) fallo('execution.objectives', 'Expected unique term identifiers.');
+    if (objectives.some(id => typeof id !== 'string' || blank(id)) || new Set(objectives).size !== objectives.length) fallo('execution.objectives', 'Expected unique term identifiers.');
     for (const [id, value] of Object.entries(obj(execution.freeScales, 'execution.freeScales'))) {
       const quantity = claves(value, 'execution.freeScales.' + id, ['value', 'unit']);
       if (typeof quantity.value !== 'number' || !Number.isFinite(quantity.value) || quantity.value <= 0 || typeof quantity.unit !== 'string') fallo('execution.freeScales.' + id, 'Expected a positive finite scale with a unit.');
@@ -166,8 +177,31 @@ export function requiredEquipmentJournals(model:ModeloComun):PhysicalJournalName
   return required;
 }
 
+/** Equipment must be deduced: each family active somewhere and every active volume recorded with operations. */
+export function equipmentDeductionGaps(model:ModeloComun):{path:string;message:string;family:'matter'|'energy'|'momentum'|'thermodynamics';owner:string}[] {
+  const gaps:{path:string;message:string;family:'matter'|'energy'|'momentum'|'thermodynamics';owner:string}[]=[];
+  const families=[['materia','materialDerivation','matter'],['energia','energyDerivation','energy'],['momento','momentumDerivation','momentum']] as const;
+  const entries=(journal:string)=>{const j=(model.motores as Obj)[journal];const v=j&&typeof j==='object'&&!Array.isArray(j)?(j as Obj).volumes:undefined;return v&&typeof v==='object'&&!Array.isArray(v)?v as Obj:{} as Obj;};
+  for(const [flag,journal,family] of families){
+    const active=model.volumenes.filter(v=>(v.balances as unknown as Obj)?.[flag]===true);
+    if(!active.length)gaps.push({path:'template.equipment',message:`Equipment requires the ${flag} balance active in at least one volume`,family,owner:'model'});
+    const recorded=entries(journal);
+    for(const v of active){
+      const entry=Object.hasOwn(recorded,v.id)?recorded[v.id] as Obj:undefined;
+      const ops=entry&&typeof entry==='object'?entry.operations:undefined;
+      if(!Array.isArray(ops)||!ops.length)gaps.push({path:`motores.${journal}.volumes.${v.id}`,message:`Equipment volume with an active ${flag} balance requires a journal entry with at least one operation`,family,owner:v.id});
+    }
+  }
+  const thermo=entries('thermodynamicDerivation');
+  for(const v of model.volumenes)if(v.termodinamica.tipo==='equilibrio'){
+    const entry=Object.hasOwn(thermo,v.id)?thermo[v.id]:undefined;
+    if(!entry||typeof entry!=='object'||Array.isArray(entry))gaps.push({path:`motores.thermodynamicDerivation.volumes.${v.id}`,message:'Equipment volume with an equilibrium closure requires a thermodynamic journal entry',family:'thermodynamics',owner:v.id});
+  }
+  return gaps;
+}
+
 function readTemplate(model:ModeloComun) {
-  const text=(v:unknown,r:string)=>{if(typeof v!=='string'||!v.trim())fallo(r,'Nonempty text required');};
+  const text=(v:unknown,r:string)=>{if(typeof v!=='string'||blank(v))fallo(r,'Nonempty text required');};
   const t=claves(model.template,'template',['format','version','id','templateVersion','equipment','recipe','ports']);
   if(t.format!=='rage.model-template'||t.version!==1)fallo('template','Expected rage.model-template version 1');
   text(t.id,'template.id');text(t.templateVersion,'template.templateVersion');
@@ -177,6 +211,7 @@ function readTemplate(model:ModeloComun) {
   if(!journals.length||new Set(journals).size!==journals.length||journals.some(j=>typeof j!=='string'||!allowed.includes(j)||!Object.hasOwn(model.motores,j)))fallo('template.recipe.journals','Expected unique references to existing deduction journals');
   for(const journal of journals) obj((model.motores as Obj)[journal as string],'motores.'+journal);
   if(t.equipment&&requiredEquipmentJournals(model).some(journal=>!journals.includes(journal)))fallo('template.recipe.journals','Equipment requires recorded matter, energy and momentum journals, plus thermodynamics for package closures');
+  if(t.equipment)for(const f of equipmentDeductionGaps(model))fallo(f.path,f.message);
   const ports=lista(t.ports,'template.ports'),seen=new Set(),boundaries=new Set();
   if(t.equipment&&!ports.length)fallo('template.ports','Equipment requires at least one port');
   ports.forEach((value,i)=>{
