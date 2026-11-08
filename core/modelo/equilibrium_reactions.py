@@ -52,7 +52,7 @@ def read_definition(value, model):
             if not isinstance(row['equationId'],str) or not row['equationId']:
                 raise ValueError('Select the recorded equilibrium equation.')
             stoich=row['stoichiometry']
-            if not isinstance(stoich,list) or len(stoich)!=len(species) or any(not isinstance(v,str) or not re.fullmatch(r'(?:0|-?[1-9]\d*)(?:/[1-9]\d*)?',v) for v in stoich):
+            if not isinstance(stoich,list) or len(stoich)!=len(species) or any(not isinstance(v,str) or not re.fullmatch(r'(?:0|-?[1-9][0-9]*)(?:/[1-9][0-9]*)?',v) for v in stoich):
                 raise ValueError('Stoichiometry uses exact rational strings in species order.')
             coefficients=[sp.Rational(v) for v in stoich]
             if any(not v.is_finite for v in coefficients) or not any(v<0 for v in coefficients) or not any(v>0 for v in coefficients):
