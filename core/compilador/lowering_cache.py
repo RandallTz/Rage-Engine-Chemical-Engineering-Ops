@@ -30,9 +30,11 @@ def _generic(recipe):
 @lru_cache(maxsize=16384)
 def _instance(recipe, identity_map):
     generic = _generic(recipe)
+    # Decode the exact hex constants once, here, not on every evaluation.
+    slots = tuple((kind=='state',value if kind=='state' else float.fromhex(value))
+                  for _,kind,value in identity_map)
     def evaluate(time,state):
-        values = [state[value] if kind=='state' else float.fromhex(value) for _,kind,value in identity_map]
-        return generic(time,values)
+        return generic(time,[state[value] if is_state else value for is_state,value in slots])
     return evaluate
 
 
