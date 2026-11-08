@@ -10,3 +10,4 @@ verificar_flowsheet_contract.mjs        # needs .tmp/flowsheet/accepted.json fro
 app/models/verify_flowsheet_http.mjs    # requires tests/prepare_flowsheet_http.py and an isolated HTTP backend; uncached drum authoring and steady solve are slow
 motores/resultados/verificar_indexed_charts.mjs # helper requires an explicit published-results JSON argument
 verify_multicomponent_diagrams.mjs     # requires a Python runtime and service fixture; awaiting CI classification
+verify_demo02_walkthrough.mjs # Requires isolated frontend and Python backend, Playwright Chromium and prepared flowsheet fixture.

@@ -28,13 +28,6 @@ Rules that apply to every run:
 
 | # | Item | Model | Unblocks | State |
 |---|---|---|---|---|
-| 1 | `demo-02-contract`: equipment template marker and typed ports in the common model | Strong (Astra) | Every Demo 0.2 equipment; F4 boundaries | `repairs requested` · RC-8 to RC-11 (roadmap Demo 0.2, item 1 re-check); RC-8 first |
-| 2 | Results: list phase events of derived models; describe `package_closure` in the compilation summary | Light | Demo 0.1/0.2 presentation | `repairs requested` · RE-1 to RE-4 (roadmap Demo 0.2, item 2 re-check); all low, presentation |
-| 3 | F3 slice 5 inverse specifications over HTTP, contracts, strict readers and Solve/Results | Light | F3; sizing (Demo after 0.3) | `repairs requested` · F3H-1, F3H-2 (roadmap F3 fifth slice, item 3 review); F3H-3 is Claude's |
-| 4 | F5-C1 equilibrium-reaction constraint in Model/compiler | Strong (Astra) | F5; the reactive stage of `demo-02-column` | `repairs requested` · RA-1 (Python reader accepts Unicode digits; roadmap F5 claude-a re-review), RA-2 doc update with it |
-| 5 | Steady state as a one-step Transform technique over the current dynamic selection | Light | `demo-02-steady` (UI half) | `repairs requested` · RT-6, RT-7 (roadmap Demo 0.2, item 5 review of 7 November); RT-7 first |
-| 6 | Template instances: replay a template's recorded recipe into a new connectable model | Strong (Astra) | `demo-02-drum` onward (F4) | `repairs requested` · RI-1, RI-2 (roadmap Codex queue item 6, re-review of 7 November); RI-1 first; RC-8 repaired with item 1 |
-| 7 | `demo-02-stages`: one generic template, Solve count, expansion and network execution | Strong (Astra) | F4 + F3; Codex under dec-demo02-codex-numerics and dec-demo02-codex-physics | `repairs requested` · S8-1 (Codex: `.tmp/` creation and named producers in the CSTR test and indexed verifiers); CR-2 closed; acceptance also waits for claude-b's CR-1 repair and regenerated CSTR/train numbers (claude-a review, 7 November 2026; roadmap Demo 0.2) |
-| 8 | Demo 0.3 Results chart groundwork | Strong | Results; demo-03 | `repairs requested` · RV-8 (decode lowering-cache constants once; roadmap Demo 0.2, Codex RV-4 / CR-2 repairs); spatial work deferred |
+| 1 | Steady state as a one-step Transform technique over the current dynamic selection | Light | `demo-02-steady` (UI half) | `repairs requested` · RT-13 (roadmap Demo 0.2, fourth re-review of 8 November: the default scales change when a state row is multiplied by a constant, and a model with no mass-budget check keeps the seed fallback); RT-12 confirmed; branch claude/steady-rt6-rt7 not merged |
 
 Delivery evidence, counts and timings for these items are in the roadmap (Demo 0.2, F3/F9-R8 and F5 sections). The earlier per-item prompts were removed on 7 November 2026: items 1-9 are delivered, and new work uses the generic prompt.

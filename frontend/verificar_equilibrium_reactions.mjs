@@ -37,7 +37,7 @@ const mutations=[
   r=>r.volumes.gas.species.reverse(),r=>r.volumes.gas.phaseId='solid',
   r=>r.volumes.gas.anchor='none',r=>r.volumes.gas.standardState='custom',
   r=>r.volumes.gas.amountIds.pop(),r=>r.volumes.gas.extentIds=[],
-  ...['1/0','01','-01','1/01','-0'].map(value=>r=>r.volumes.gas.reactions[0].stoichiometry[0]=value),
+  ...['1/0','01','-01','1/01','-0','1٣','1/٣','１'].map(value=>r=>r.volumes.gas.reactions[0].stoichiometry[0]=value),
   r=>r.volumes.gas.reactions.push(structuredClone(r.volumes.gas.reactions[0])),
 ];
 for(const mutate of mutations){const bad=structuredClone(model);mutate(bad.motores.equilibriumReactions);assert.throws(()=>leerModeloComun(bad));checks++;}

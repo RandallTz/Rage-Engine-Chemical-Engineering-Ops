@@ -35,6 +35,27 @@ for(const key of ['materialDerivation','energyDerivation','momentumDerivation','
   const audit=auditModelDerivation({commonModel});
   check(audit.status==='needs_review'&&audit.findings.some(f=>f.code==='equipment_recipe'),'Audit rejects missing equipment recipe '+key);
 }
+for(const [label,edit]of [
+  ['empty momentum journal',m=>{m.motores.momentumDerivation.volumes={};}],
+  ['momentum entry without operations',m=>{m.motores.momentumDerivation.volumes.drum.operations=[];}],
+  ['no energy entry',m=>{delete m.motores.energyDerivation.volumes.drum;}],
+  ['no thermodynamic entry',m=>{delete m.motores.thermodynamicDerivation.volumes.drum;}],
+  ['no momentum balance',m=>{m.volumenes[0].balances.momento=false;}],
+]){
+  const commonModel=structuredClone(rows[0][2]);edit(commonModel);
+  const audit=auditModelDerivation({commonModel});
+  check(audit.status==='needs_review'&&audit.findings.some(f=>f.code==='equipment_deduction'),'Audit rejects '+label);
+}
+check(auditModelDerivation({commonModel:rows[0][2]}).status==='recorded','Audit accepts the corpus equipment case');
+for(const file of ['flash-drum.rage-model.json','continuous-reactor.rage-model.json','column.index-set.json']){
+  const document=JSON.parse(fs.readFileSync(path.join(root,'docs/ejemplos/demo-0.2',file),'utf8'));
+  const inner=document.model??document,model=inner.commonModel??inner;
+  check(leerModeloComun(model)===model,'Published equipment document reads: '+file);
+  if(model.indexSet){
+    const mutant=structuredClone(model);mutant.indexSet.genericStage='missing';
+    assert.throws(()=>leerModeloComun(mutant),error=>error instanceof ErrorModelo&&error.ruta==='indexSet.genericStage','Index-set error is located');checks++;
+  }
+}
 const {TemplatePorts}=load(path.join(directory,'app/motor/ModelAssumptions'));
 const html=renderToStaticMarkup(require('react').createElement(TemplatePorts,{template:rows[0][2].template}));
 check(html.includes('Equipment')&&html.includes('feed')&&html.includes('kg/s')&&html.includes('estadoExterior'),'Read-only ports expose boundary and SI metadata');

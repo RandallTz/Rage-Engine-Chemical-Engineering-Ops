@@ -1,4 +1,4 @@
-import {requiredEquipmentJournals} from '../../motores/modelo/lector';
+import {requiredEquipmentJournals,equipmentDeductionGaps} from '../../motores/modelo/lector';
 import { energyJournalInRequest, energyJournalMatches, energyJournalFromHistory, thermodynamicJournalInRequest, thermodynamicJournalMatches, thermodynamicJournalFromHistory, configuredClosure } from '../motor/physicalDerivation';
 /** Read-only provenance audit. This checks stored evidence, never reconstructs a
  * supposed historical deduction from the final flags or certifies its physics. */
@@ -32,6 +32,7 @@ export function auditModelDerivation(model: HojaMotor): ModelDerivationAudit {
       .map(key=>({code:'equipment_recipe',severity:'gap',ownerId:'model',
         family:key==='materialDerivation'?'matter':key==='energyDerivation'?'energy':key==='momentumDerivation'?'momentum':'thermodynamics',
         message:`Equipment requires ${key} in its recorded recipe.`})):[];
+    if(common.template?.equipment)for(const gap of equipmentDeductionGaps(common))findings.push({code:'equipment_deduction',severity:'gap',ownerId:gap.owner,family:gap.family,message:gap.message});
     return {status:findings.length||!counts?'needs_review':'recorded',recordedSteps:counts,findings};
   }
   const findings: DerivationFinding[] = [];

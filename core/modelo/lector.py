@@ -307,6 +307,7 @@ def _read_template(m):
             required.append("thermodynamicDerivation")
         if any(journal not in journals for journal in required):
             _fallo("template.recipe.journals", "Equipment requires recorded matter, energy and momentum journals, plus thermodynamics for package closures")
+        _check_equipment_deduction(m)
     ports = _lista(t["ports"], "template.ports")
     if t["equipment"] and not ports:
         _fallo("template.ports", "Equipment requires at least one port")
@@ -371,6 +372,28 @@ def _read_template(m):
             v = _claves(variables[key], r + ".variables." + key, ["unitSI"])
             if v["unitSI"] != unit:
                 _fallo(r + ".variables." + key, "Expected SI unit " + unit)
+
+
+def _check_equipment_deduction(m):
+    """Equipment must be deduced: each family active somewhere, and every active volume recorded with operations."""
+    families = [("materia", "materialDerivation"), ("energia", "energyDerivation"), ("momento", "momentumDerivation")]
+    for flag, journal in families:
+        active = [v for v in m["volumenes"] if v["balances"].get(flag) is True]
+        if not active:
+            _fallo("template.equipment", f"Equipment requires the {flag} balance active in at least one volume")
+        entries = m["motores"][journal].get("volumes")
+        entries = entries if isinstance(entries, dict) else {}
+        for v in active:
+            entry = entries.get(v["id"])
+            operations = entry.get("operations") if isinstance(entry, dict) else None
+            if not isinstance(operations, list) or not operations:
+                _fallo("motores." + journal + ".volumes." + v["id"], f"Equipment volume with an active {flag} balance requires a journal entry with at least one operation")
+    thermo = m["motores"].get("thermodynamicDerivation")
+    entries = thermo.get("volumes") if isinstance(thermo, dict) else None
+    entries = entries if isinstance(entries, dict) else {}
+    for v in m["volumenes"]:
+        if v["termodinamica"]["tipo"] == "equilibrio" and not isinstance(entries.get(v["id"]), dict):
+            _fallo("motores.thermodynamicDerivation.volumes." + v["id"], "Equipment volume with an equilibrium closure requires a thermodynamic journal entry")
 
 
 def _check_open_port(boundary, port, path):

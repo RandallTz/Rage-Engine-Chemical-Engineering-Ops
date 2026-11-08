@@ -9,15 +9,28 @@ import {readDerivedExecution,type DerivedExecution} from '../../motores/modelo/d
 import {steadySignature} from '../../motores/modelo/steadyContract';
 import type {SteadyTransform} from '../../motores/modelo/steadyTransform';
 
-export type DerivedSelection={version:1;sourceSignature:string;selection:DerivedExecution;inverseSolve?:InverseSolve;steadyTransform?:{version:1;dynamicSignature:string;rows:SteadyTransform['report']['rows']}};
+export type DerivedSelection={version:1;sourceSignature:string;selection:DerivedExecution;inverseSolve?:InverseSolve;inverseNotice?:string;steadyTransform?:{version:1;dynamicSignature:string;rows:SteadyTransform['report']['rows']}};
 
+/** F3H-2: the inverse Solve record is Solve-owned, so a Transform re-pin keeps it when it still reads
+ * against the new selection and otherwise drops it with a notice Solve shows. Python re-checks units. */
+export function carryInverseSolve(previous:DerivedSelection|undefined,selection:DerivedExecution,common:ModeloComun):Pick<DerivedSelection,'inverseSolve'|'inverseNotice'>{
+  const stored=previous?.inverseSolve;if(!stored)return {};
+  try{
+    if(selection.version!==5)throw new Error('the new selection is not a steady Transform.');
+    const solve=readInverseSolve(stored),outputs=new Set([...selection.unknowns,...selection.reconstructions.map(row=>row.quantityId)]),inputs=new Set(Object.keys(selection.parameters));
+    for(const row of solve.record.specifications)if(!outputs.has(row.quantityId))throw new Error(`target quantity ${row.quantityId} is no longer an unknown or a reconstruction.`);
+    for(const row of solve.record.freedInputs)if(!inputs.has(row.quantityId))throw new Error(`freed input ${row.quantityId} is no longer a parameter.`);
+    if(Object.keys(solve.data).some(id=>Object.hasOwn(common.datos,id)))throw new Error('its data identities are no longer fresh.');
+    return {inverseSolve:solve};
+  }catch(failure){return {inverseNotice:`The inverse specifications entered in Solve were discarded because ${(failure as Error).message.replace(/\.$/,'')}. Enter them again.`};}
+}
 export function applySteadyTransformResult(model:HojaMotor,response:SteadyTransform):HojaMotor{
   const common=structuredClone(response.model);
   // Keep the dynamic formulation and time study as the source of this Transform.
   common.motores.derivedExecution=structuredClone(response.dynamicSelection);
   common.estudio=structuredClone(model.commonModel!.estudio);
   const next={...model,commonModel:common,transformation:undefined,resultado:undefined,resultadoRef:undefined};
-  return {...next,derivedSelection:{version:1,sourceSignature:derivedSourceIdentity(commonSource(next)),selection:response.report.selection,
+  return {...next,derivedSelection:{version:1,sourceSignature:derivedSourceIdentity(commonSource(next)),selection:response.report.selection,...carryInverseSolve(model.derivedSelection,response.report.selection,common),
     steadyTransform:{version:1,dynamicSignature:response.dynamicSignature,rows:response.report.rows}}};
 }
 const canonical=(value:unknown):unknown=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).sort(([a],[b])=>a.localeCompare(b)).map(([key,item])=>[key,canonical(item)])):value;
