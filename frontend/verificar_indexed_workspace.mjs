@@ -23,10 +23,11 @@ const common=structuredClone(source);common.id='indexed-stage-test';
 common.datos['solve.stageCount']={magnitud:'stageCount',funcion:'estudio',declaracion:{texto:'2',unidad:'1'},origen:{propietarioId:'estudio',ruta:'stageCount'}};
 common.indexSet={format:'rage.index-set',version:1,id:'cascade',index:'j',countDataId:'solve.stageCount',templates:{generic:source},genericStage:'generic',variants:[],connections:[{outlet:'liquid',inlet:'feed',offset:1}],exposures:[{id:'feed',port:'feed',at:'first'},{id:'liquid',port:'liquid',at:'last'},{id:'vapour',port:'vapour',at:'each'},{id:'heat',port:'heat',at:'each'}]};
 for(const doc of [common,source]){doc.datos[doc.estudio.tiempoId].declaracion.texto='1';doc.estudio.muestras=3;doc.estudio.metodoSolicitado='bdf';}
+function readProduced(file,producer){if(!fs.existsSync(file))throw new Error(`Missing ${path.relative(process.cwd(),file)}: produced by ${producer}; run it first.`);return JSON.parse(fs.readFileSync(file,'utf8'));}
 let model=guardarHoja({...nuevaHoja(common.nombre),id:common.id,commonModel:common}),checks=0;
 const base=structuredClone(model),signatures=[];
 for(const mode of ['dynamic','steady']){
-  const result=JSON.parse(fs.readFileSync(path.join(root,`.tmp/indexed-http-${mode}.json`),'utf8'));
+  const result=readProduced(path.join(root,`.tmp/indexed-http-${mode}.json`),'tests/test_indexed_execution_http.py (live HTTP run)');
   model=guardarHoja(applyIndexed(model,result.procedencia.indexedCompilation));
   assert.ok(currentIndexed(guardarHoja(structuredClone(model))));checks++;
   assert.equal(leerHojas().find(row=>row.id===model.id).indexedSelection.report.selection.mode,mode);checks++;
