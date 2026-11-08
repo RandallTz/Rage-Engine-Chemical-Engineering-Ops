@@ -12,4 +12,4 @@ export function intervaloNoCertificado(a:Trayectoria):[number,number]|null{
   const c=a.certificacion;if(c?.estado!=='no_cumple')return null;
   return [c.ultimaMuestraCertificada===null?a.tiempos[0]:a.tiempos[c.ultimaMuestraCertificada],a.tiempos.at(-1)!];
 }
-export const nombreEventoRed=(codigo:string)=>({aparicion_fase:'Phase appearance',desaparicion_fase:'Phase disappearance',sustitucion_fase:'Phase substitution',cambio_denominacion:'Label change · no first-order transition'} as Record<string,string>)[codigo]??codigo;
+export const nombreEventoRed=(codigo:string)=>({aparicion_fase:'Phase appearance',desaparicion_fase:'Phase disappearance',sustitucion_fase:'Phase substitution',cambio_denominacion:'Label change · no first-order transition',derived_validity:'Derived validity limit reached'} as Record<string,string>)[codigo]??codigo;
