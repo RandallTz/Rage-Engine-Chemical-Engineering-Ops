@@ -14,7 +14,8 @@ function load(file){
 }
 const {readIndexedCompilation,readIndexedSelection,readIndexedResult}=load(path.join(here,'motores/modelo/indexedExecution'));
 const {steadySignature}=load(path.join(here,'motores/modelo/steadyContract'));
-const data=JSON.parse(fs.readFileSync(path.resolve(here,'../.tmp/indexed-execution-contract.json'),'utf8'));
+function readProduced(file,producer){if(!fs.existsSync(file))throw new Error(`Missing ${path.relative(process.cwd(),file)}: produced by ${producer}; run it first.`);return JSON.parse(fs.readFileSync(file,'utf8'));}
+const data=readProduced(path.resolve(here,'../.tmp/indexed-execution-contract.json'),'tests/test_indexed_execution_contract.py');
 let checks=0;
 for(const report of Object.values(data.valid)){
   assert.deepEqual(readIndexedCompilation(report),report);checks++;
@@ -33,7 +34,7 @@ console.log(`Indexed execution contract: ${checks} checks passed.`);
 if(process.argv.includes('--http')){
   let resultChecks=0;
   for(const mode of ['dynamic','steady']){
-    const result=JSON.parse(fs.readFileSync(path.resolve(here,`../.tmp/indexed-http-${mode}.json`),'utf8'));
+    const result=readProduced(path.resolve(here,`../.tmp/indexed-http-${mode}.json`),'tests/test_indexed_execution_http.py (live HTTP run)');
     const selection=result.procedencia.indexedCompilation.selection;
     assert.deepEqual(readIndexedResult(result,selection),result);resultChecks++;
     const changed=structuredClone(result);changed.series[0].valores=mode==='steady'?999:changed.series[0].valores.map(()=>999);

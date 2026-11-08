@@ -14,7 +14,8 @@ function load(file){
 }
 const {leerResultados}=load(path.join(here,'motores/resultados/lector'));
 const {readChartLayout}=load(path.join(here,'motores/resultados/chartSpecification'));
-const data=JSON.parse(fs.readFileSync(path.resolve(here,'../.tmp/indexed-results.json'),'utf8'));
+function readProduced(file,producer){if(!fs.existsSync(file))throw new Error(`Missing ${path.relative(process.cwd(),file)}: produced by ${producer}; run it first.`);return JSON.parse(fs.readFileSync(file,'utf8'));}
+const data=readProduced(path.resolve(here,'../.tmp/indexed-results.json'),'tests/test_indexed_results.py');
 let checks=0;
 for(const result of Object.values(data.valid)){assert.deepEqual(leerResultados(result),result);checks++;}
 for(const test of data.invalid){assert.throws(()=>leerResultados(test.result),Error,test.name);checks++;}
@@ -29,7 +30,7 @@ console.log(`Indexed publication: ${checks} checks passed, including the existin
 if(process.argv.includes('--connected')){
   let connectedChecks=0;
   for(const mode of ['dynamic','steady']){
-    const result=JSON.parse(fs.readFileSync(path.resolve(here,`../.tmp/indexed-${mode}-result.json`),'utf8'));
+    const result=readProduced(path.resolve(here,`../.tmp/indexed-${mode}-result.json`),'tests/test_indexed_publication.py');
     assert.deepEqual(leerResultados(result),result);connectedChecks++;
     assert.equal(result.indexedNetwork.mode,mode);connectedChecks++;
     assert.ok(result.verificaciones.every(row=>row.valor<=row.tolerancia));connectedChecks++;
