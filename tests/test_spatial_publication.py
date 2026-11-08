@@ -29,6 +29,7 @@ import sympy as sp
 from core.adimensionalizacion.dimensional import analizar_modelo
 from core.adimensionalizacion.lector import leer_modelo
 from core.mathematics.graph import EquationGraph
+from core.mathematics.operators import BoundaryTrace, Divergence, Gradient, NormalDerivative
 from core.mathematics.publication import PublicationError, _number, spatial_publication, terminal_rows, to_matematico
 from core.modelo.equation_workbench import build, describe, edit
 from test_boundary_conditions import Session, symbols
@@ -471,6 +472,68 @@ class RepairTest(unittest.TestCase):
         with self.assertRaises(PublicationError) as raised:
             to_matematico(result.graph, ['operation.1.missing'], result.units)
         self.assertEqual(raised.exception.finding()['code'], 'no_spatial_content')
+
+    def test_p49_a_temperature_argument_is_never_taken_as_time(self):
+        # Steady slab from recorded operations only: kap(x, T_s) with T_s in kelvin, T restated on x alone.
+        s = Session(source())
+        symbols(s, T_s='K')
+        s.append(kind='declare_function', name='kap', unit='W/(m*K)', dependencies=[s.id('x'), s.id('T_s')])
+        _, pde = heat_pde(s, s.id('kap(x, T_s)'))
+        region = slab(s, pde)
+        key = s.append(kind='expand_spatial_operators', sources=[pde], domains=[region])
+        s.append(kind='change_dependencies', sources=[key], symbol=s.id('T(x, t)'), dependencies=[s.id('x')], reason='Steady state')
+        _, block = self.published(s)
+        self.assertEqual(block['adapterFindings'], [])
+        model = block['matematico']
+        roles = {item['id']: item['rol'] for item in model['simbolos']}
+        self.assertNotIn('tiempo', roles.values())
+        self.assertEqual((roles['T_s'], roles['T']), ('parametro', 'campo'))
+        self.assertEqual([f['id'] for f in model['funciones']], ['kap'])
+        self.assertEqual([d for d in analizar_modelo(model)['diagnosticos'] if d['severidad'] == 'error'], [])
+        # Reference: T = 300 + 40 x^2 and kap = 3 + x + T_s/100 with T_s = 50 give d/dx(kap T_x) = (3.5 + x) 80 + 80 x = 280 + 160 x.
+        fields = {'T': (lambda x: 300 + 40 * x ** 2, ['x']), 'kap': (lambda x, value: 3 + x + value / 100, None)}
+        self.assertEqual(len(model['ecuaciones']), 1)
+        equation = model['ecuaciones'][0]
+        x = mp.mpf('0.04')
+        self.assertLess(abs(evaluate(equation['derecha'], {'x': x, 'T_s': mp.mpf(50)}, fields) - (280 + 160 * x)), 1e-18)
+        self.assertLess(abs(evaluate(equation['izquierda'], {'x': x, 'T_s': mp.mpf(50), 'c': 1, 'rho_mixture__v1': 1}, fields)), 1e-18)
+
+    def test_p410_a_divergence_needs_a_gradient_in_every_term(self):
+        s = Session(source())
+        _, pde = heat_pde(s)
+        domain(s, pde, 'cartesian', ['x', 'y', 'z'], lower='0')
+        result = s.result()
+        x, y, z, t = sp.symbols('x y z t', real=True)
+        T, w = (sp.Function(n)(x, y, z, t) for n in ('T', 'w'))
+        k = sp.Symbol('k', real=True)
+        graph = copy.deepcopy(result.graph)
+        graph.add('bad', sp.Symbol('a'), Divergence(w + k * Gradient(T)), 'Divergence of a vector plus a flux', 'declared_law', (pde,), (), 'energy')
+        with self.assertRaises(PublicationError) as raised:
+            to_matematico(graph, ['bad'], result.units)
+        self.assertEqual((raised.exception.code, raised.exception.equation_id), ('unclosed_flux', 'bad'))
+
+    def test_p411_a_traced_coefficient_is_not_a_value_of_the_unknown(self):
+        s = Session(source())
+        _, pde = heat_pde(s)
+        region = slab(s, pde)
+        result = s.result()
+        x, t = sp.symbols('x t', real=True)
+        T, kap = sp.Function('T')(x, t), sp.Function('kap')(x)
+        q_w = sp.Symbol('q_w', real=True)
+        wall = sp.Rational(1, 10)
+        graph = copy.deepcopy(result.graph)
+        graph.add('flux', -BoundaryTrace(kap, x, wall) * NormalDerivative(T, x, wall, 1), q_w, 'Prescribed flux with k(x) at the wall', 'boundary_condition',
+                  (pde, region), ('Prescribed heat flux',), 'energy', kind='constraint')
+        units = dict(result.units)
+        units.update({kap: 'W/(m*K)', q_w: 'W/m2'})
+        model = to_matematico(graph, ['flux'], units)
+        self.assertEqual([(c['tipo'], c['ubicacion']['extremo']) for c in model['condiciones']], [('flujo', 'hasta')])
+        # Control: a value trace of the differentiated field itself still makes the condition mixed (Robin).
+        h = sp.Symbol('h', real=True)
+        graph.add('robin', -kap * NormalDerivative(T, x, wall, 1), h * BoundaryTrace(T, x, wall), 'Robin', 'boundary_condition',
+                  (pde, region), ('Newton cooling',), 'energy', kind='constraint')
+        units[h] = 'W/(m2*K)'
+        self.assertEqual([c['tipo'] for c in to_matematico(graph, ['robin'], units)['condiciones']], ['mixta'])
 
     def test_decimal_constants_stay_exact(self):
         for text in ('1.4142135623730951', '2.718281828459045', '0.1'):

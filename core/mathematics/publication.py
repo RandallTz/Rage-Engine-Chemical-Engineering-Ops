@@ -74,6 +74,7 @@ class _Translator:
         self.declared = declared
         self.locations = []
         self.kinds = set()
+        self.traces = []
         self.calls = {}
         self.divergence = []
 
@@ -130,8 +131,8 @@ class _Translator:
                 self.fail('the ' + name + ' over (' + ', '.join(ordered) + ') is published only for a declared Cartesian domain on exactly those coordinates; '
                           'expand the spatial operators in the declared chart (expand_spatial_operators) before publishing.', 'non_cartesian_operator')
             if isinstance(e, Divergence):
-                if not inner.has(Gradient):
-                    self.fail('the divergence does not act on a gradient flux; close the flux with its recorded constitutive law (declare_fourier_law) before publishing.', 'unclosed_flux')
+                if not all(term.has(Gradient) for term in (inner.args if inner.is_Add else (inner,))):
+                    self.fail('the divergence does not act on a gradient flux in every term; close the flux with its recorded constitutive law (declare_fourier_law) before publishing.', 'unclosed_flux')
                 self.divergence.append(ordered)
                 try:
                     inside = self.tree(inner)
@@ -146,12 +147,17 @@ class _Translator:
         if isinstance(e, BoundaryTrace):
             inner, coordinate, point = e.args
             self.locations.append((coordinate, point))
-            self.kinds.add('DerivativeTrace' if any(coordinate in d.variables for d in inner.atoms(sp.Derivative)) else 'ValueTrace')
+            derivatives = [d for d in inner.atoms(sp.Derivative) if coordinate in d.variables]
+            kind = 'DerivativeTrace' if derivatives else 'ValueTrace'
+            self.kinds.add(kind)
+            fields = inner if not derivatives else sp.Add(*(d.expr for d in derivatives))
+            self.traces.append((kind, {a.func for a in fields.atoms(AppliedUndef)}))
             return self.tree(inner)
         if isinstance(e, NormalDerivative):
             inner, coordinate, point, sign = e.args
             self.locations.append((coordinate, point))
             self.kinds.add('NormalDerivative')
+            self.traces.append(('NormalDerivative', {a.func for a in inner.atoms(AppliedUndef)}))
             derivative = {'tipo': 'derivada', 'expresion': self.tree(inner), 'respecto': str(coordinate), 'orden': 1}
             if sign == 1:
                 return derivative
@@ -185,7 +191,7 @@ def _time_symbol(graph, rows, units, time):
         for row in rows:
             for field in graph.nodes[row].equation.atoms(AppliedUndef):
                 if any(is_coordinate(a, None, axes) for a in field.args):
-                    candidates.update(a for a in field.args if isinstance(a, sp.Symbol) and a not in axes and not is_coordinate(a))
+                    candidates.update(a for a in field.args if isinstance(a, sp.Symbol) and a not in axes and not is_coordinate(a) and _dimension(a, units) is None)
     if len(candidates) > 1:
         raise PublicationError('Several time-like arguments occur (' + ', '.join(sorted(map(str, candidates))) + '); select the time symbol.', 'ambiguous_time')
     return next(iter(candidates), None)
@@ -351,7 +357,10 @@ def to_matematico(graph, rows, units, time=None, model_id='spatial-model', revis
             if end is None:
                 raise PublicationError(row + ': the boundary location ' + str(coordinate) + ' = ' + str(point) + ' is not an end of its declared interval.', 'boundary_not_end', row)
             if translator.kinds & {'NormalDerivative', 'DerivativeTrace'}:
-                kind = 'mixta' if 'ValueTrace' in translator.kinds else 'flujo'
+                # A value trace makes the condition mixed only when it restricts the differentiated field itself
+                # (a position-dependent coefficient traced at the wall is not a value of the unknown).
+                differentiated = set().union(*(f for k, f in translator.traces if k != 'ValueTrace'))
+                kind = 'mixta' if any(k == 'ValueTrace' and f & differentiated for k, f in translator.traces) else 'flujo'
             else:
                 kind = 'dirichlet'
         conditions.append({'id': row + '.condition', 'tipo': kind, 'dominioId': domain_key, 'ecuacion': sides,
