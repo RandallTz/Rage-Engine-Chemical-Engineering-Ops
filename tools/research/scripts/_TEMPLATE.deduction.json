@@ -1,7 +1,7 @@
 {
   "format": "rage.deduction-script",
   "version": 1,
-  "note": "Format v1. The engineer replays it with tools/research/replay_deduction_script.py: assumptions through the family journals, steps through the equation workbench. Write readable names only; hashed ids and input signatures come from the engine. A step the engine refuses is reported with its message, and steps that use it are skipped. Rules: docs/engine/multiphysics-roadmap.md, section Research dossiers.",
+  "note": "Format v1. The engineer replays it with tools/research/replay_deduction_script.py: assumptions through the family journals, steps through the equation workbench. Write readable names only; hashed ids and input signatures come from the engine. In a generic script q__<stream>__i(t) is the component flow of the material balance and q__<stream>__sum(t) the stream's total flow in the enthalpy balance (two engine quantities). A step the engine refuses is reported with its message, and steps that use it are skipped. Rules: docs/engine/multiphysics-roadmap.md, section Research dossiers.",
   "operation": "<op>",
   "dossier": "dossiers/<op>.md",
   "title": "<one line>",

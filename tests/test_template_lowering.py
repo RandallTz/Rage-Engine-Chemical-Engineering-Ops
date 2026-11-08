@@ -65,6 +65,7 @@ def test_generic_plan_matches_fresh_instance_and_has_independent_closure_state()
     assert bound.states == reference.states
     assert bound.rates == reference.rates
     assert bound.checks == reference.checks
+    Path('.tmp').mkdir(exist_ok=True)
     Path('.tmp/bound-lowered.json').write_text(json.dumps(bound.lowered,indent=2),encoding='utf-8')
     Path('.tmp/reference-lowered.json').write_text(json.dumps(reference.lowered,indent=2),encoding='utf-8')
     def canonical(tree):
@@ -156,3 +157,21 @@ def test_lowering_constant_keys_preserve_signed_zero_and_adjacent_floats():
     for value in (0.0,-0.0,1.0,math.nextafter(1.0,2.0)):
         assert compiled(value)(0,[]).hex()==value.hex()
         assert compiled(value) is compiled(value)
+
+
+def test_lowering_cache_decodes_constants_once_not_per_evaluation(monkeypatch):
+    from types import SimpleNamespace
+    from core.compilador import lowering_cache
+    lowering_cache.clear()
+    expression={'tipo':'suma','argumentos':[{'tipo':'simbolo','id':'a'},{'tipo':'simbolo','id':'b'},{'tipo':'simbolo','id':'x'}]}
+    evaluator=SimpleNamespace(tiempo='t',indice={'x':0},valores={'a':1.5,'b':-0.0})
+    compiled=lowering_cache.compile_ast(evaluator,expression,'decode once')
+    calls=[]
+    class CountingFloat(float):
+        @staticmethod
+        def fromhex(text):
+            calls.append(text); return float.fromhex(text)
+    monkeypatch.setattr(lowering_cache,'float',CountingFloat,raising=False)
+    for _ in range(50):
+        assert compiled(0,[2.0])==3.5
+    assert calls==[]

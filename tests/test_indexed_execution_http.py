@@ -36,6 +36,7 @@ def test_connected_http_result(mode):
     assert result['estado'] == 'resuelto'
     assert result['indexedNetwork']['count'] == 2
     assert all(v['valor'] <= v['tolerancia'] for v in result['verificaciones'])
+    Path('.tmp').mkdir(exist_ok=True)
     Path(f'.tmp/indexed-http-{mode}.json').write_text(json.dumps(result), encoding='utf-8')
 
 

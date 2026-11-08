@@ -132,7 +132,8 @@ def test_strict_declaration_unknown_keys_and_old_models_unchanged(model):
     old=thermal_source();assert leer_modelo_comun(old)==old
 
 
-@pytest.mark.parametrize('coefficient',['1/0','01','-01','1/01','-0'])
+# '1٣' (Arabic-Indic three): both readers accept ASCII digits only (RA-1).
+@pytest.mark.parametrize('coefficient',['1/0','01','-01','1/01','-0','1٣','1/٣','１'])
 def test_stoichiometry_rejections_have_common_model_location(model,coefficient):
     from core.modelo.lector import ErrorModelo
     changed=copy.deepcopy(model)

@@ -31,7 +31,7 @@ export function readEquilibriumReactions(value:unknown,model:ModeloComun):Equili
       const reaction=object(item,['id','stoichiometry','equationId']);
       if(typeof reaction.id!=='string'||!/^[A-Za-z][A-Za-z0-9_]{0,39}$/.test(reaction.id)||names.has(reaction.id)||!identity(reaction.equationId))throw new Error('Invalid reaction identity.');
       names.add(reaction.id);const nu=reaction.stoichiometry;
-      if(!Array.isArray(nu)||nu.length!==species.length||nu.some(v=>typeof v!=='string'||!/^(?:0|-?[1-9]\d*)(?:\/[1-9]\d*)?$/.test(v)))throw new Error('Invalid exact rational stoichiometry.');
+      if(!Array.isArray(nu)||nu.length!==species.length||nu.some(v=>typeof v!=='string'||!/^(?:0|-?[1-9][0-9]*)(?:\/[1-9][0-9]*)?$/.test(v)))throw new Error('Invalid exact rational stoichiometry.');
       if(!nu.some(v=>/^-[1-9]/.test(v))||!nu.some(v=>/^[1-9]/.test(v)))throw new Error('Both reactants and products are required.');
     }
   }

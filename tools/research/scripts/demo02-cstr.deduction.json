@@ -1964,6 +1964,40 @@
     "relative": 1e-12
    },
    "cite": "Independent hand formula of the outlet momentum balance with negligible distributed friction (f_D = 0) and the local loss K = 1250; closure values are inputs, not package evaluations"
+  },
+  {
+   "case": "V2",
+   "equation": "s86",
+   "solveFor": "T__cell(t)",
+   "inputs": {
+    "Derivative(H__cell(t), t)": 0.0,
+    "Derivative(P__cell(t), t)": 0.0,
+    "V__cell(t)": 0.00065,
+    "feedRate": 0.001,
+    "inlet_specific_enthalpy__feed(t)": -7530000.0,
+    "liquidMassFlow(t)": 0.001,
+    "phase_h__cell__L(t)": -400000.0,
+    "phase_M__cell__L(t)": 0.053062,
+    "jacketConductance": 50.0,
+    "jacketTemperature": 330.0,
+    "molar_mass_1__cell": 0.04607,
+    "phase_x_1__cell__L(t)": 0.3,
+    "inlet_mass_fraction_1__feed(t)": 0.5,
+    "molar_mass_2__cell": 0.06005,
+    "phase_x_2__cell__L(t)": 0.3,
+    "inlet_mass_fraction_2__feed(t)": 0.5,
+    "molar_mass_3__cell": 0.08811,
+    "phase_x_3__cell__L(t)": 0.2,
+    "inlet_mass_fraction_3__feed(t)": 0.0,
+    "molar_mass_4__cell": 0.01802,
+    "phase_x_4__cell__L(t)": 0.2,
+    "inlet_mass_fraction_4__feed(t)": 0.0
+   },
+   "expected": 330.16702725114015,
+   "tolerance": {
+    "relative": 1e-12
+   },
+   "cite": "Independent hand formula: steady first law of the well-mixed liquid volume with the jacket conductance law (dH/dt = 0, dP/dt = 0), solved for the volume temperature, which is the outlet temperature; closure values are inputs, not package evaluations"
   }
  ]
 }

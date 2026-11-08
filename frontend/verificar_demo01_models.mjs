@@ -81,6 +81,8 @@ const markers=commonEventMarkers({commonResult:common},{tipo:'tiempo',x:'t'},'K'
 assert.deepEqual(markers.map(marker=>marker.props.x),[12.25,20.5]);checks++;
 check(markers.every(marker=>marker.props.yAxisId==='K'&&marker.props.label.value.includes('volumen:drum')),'Event markers use the actual chart axis and owner');
 check(markers.every(marker=>marker.props.label.content.type===EventMarkerLabel),'Event labels use the measured plot-bounded renderer');
+check(markers.every(marker=>marker.props.label.value.includes('·')&&!marker.props.label.value.includes('�')),'Marker text uses the UTF-8 separator');
+for(const file of ['app/models/CompilationSummary.tsx','app/motor/ResultCharts.tsx','app/motor/TableroMotor.tsx','app/motor/ResultEvents.tsx'])check(!require('fs').readFileSync(path.join(directory,file),'utf8').includes('�'),'No replacement character in '+file);
 check(commonEventMarkers({commonResult:common},{tipo:'perfil',x:'t'},'K').length===0,'No markers on spatial profiles');
 check(commonEventMarkers({commonResult:common},{tipo:'tiempo',x:'T'},'K').length===0,'No time markers on phase plots');
 check(commonEventMarkers({commonResult:common},{tipo:'tiempo',x:'t'},undefined).length===0,'No markers without a plotted y axis');

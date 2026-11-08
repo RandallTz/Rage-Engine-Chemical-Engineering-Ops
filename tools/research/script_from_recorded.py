@@ -214,7 +214,30 @@ def cstr_validation(script):
          'inputs': inputs, 'expected': expected, 'tolerance': {'relative': 1e-12},
          'cite': 'Independent hand formula of the outlet momentum balance with negligible distributed friction (f_D = 0) and the '
                  'local loss K = 1250; closure values are inputs, not package evaluations'},
+        cstr_steady_temperature(script),
     ]
+
+
+def cstr_steady_temperature(script):
+    """Steady first law of the well-mixed reactor solved for its temperature (the outlet temperature).
+
+    Hand formula: 0 = F sum(w_F) h_F + UA (T_j - T) - F_L h_L sum(M_i x_i)/M_L^2, so
+    T = T_j + (F sum(w_F) h_F - F_L h_L sum(M_i x_i)/M_L^2)/UA.
+    """
+    masses, fractions, feed = (0.04607, 0.06005, 0.08811, 0.01802), (0.3, 0.3, 0.2, 0.2), (0.5, 0.5, 0.0, 0.0)
+    mean = sum(m * x for m, x in zip(masses, fractions))
+    F, FL, hF, hL, UA, Tj = 1e-3, 1e-3, -7.53e6, -4.0e5, 50.0, 330.0
+    inputs = {'Derivative(H__cell(t), t)': 0.0, 'Derivative(P__cell(t), t)': 0.0, 'V__cell(t)': 6.5e-4, 'feedRate': F,
+              'inlet_specific_enthalpy__feed(t)': hF, 'liquidMassFlow(t)': FL, 'phase_h__cell__L(t)': hL,
+              'phase_M__cell__L(t)': mean, 'jacketConductance': UA, 'jacketTemperature': Tj}
+    for i, (m, x, w) in enumerate(zip(masses, fractions, feed), 1):
+        inputs.update({'molar_mass_%d__cell' % i: m, 'phase_x_%d__cell__L(t)' % i: x, 'inlet_mass_fraction_%d__feed(t)' % i: w})
+    expected = Tj + (F * sum(feed) * hF - FL * hL * sum(m * x for m, x in zip(masses, fractions)) / mean ** 2) / UA
+    return {'case': 'V2', 'equation': _state_step(script, 'H__cell(t)'), 'solveFor': 'T__cell(t)', 'inputs': inputs,
+            'expected': expected, 'tolerance': {'relative': 1e-12},
+            'cite': 'Independent hand formula: steady first law of the well-mixed liquid volume with the jacket conductance law '
+                    '(dH/dt = 0, dP/dt = 0), solved for the volume temperature, which is the outlet temperature; '
+                    'closure values are inputs, not package evaluations'}
 
 
 VALIDATION = {'drum': drum_validation, 'cstr': cstr_validation}
