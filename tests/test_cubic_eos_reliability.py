@@ -302,5 +302,44 @@ class R3DefaultBracketUV(unittest.TestCase):
             self.assertEqual(sorted(uv["presentes"]), sorted(present))
 
 
+class LiquidLiquidBracketEnds(unittest.TestCase):
+    """F8b (7 November 2026): the default PH window treats a bracket end whose state is a certified liquid-liquid
+    split as a non-evaluable side, not a failure. Benzene + water 0.5/0.5 at 1 bar is a liquid-liquid split
+    from the bracket's low end (150 K) up to its heteroazeotrope near 345 K. Negative control: before the repair
+    the default PH raised liquid_liquid_split at 150 K for every state. Where the specified enthalpy lies on the
+    liquid-liquid side the true state is that split, and it stays a located rejection."""
+
+    def setUp(self):
+        self.eos = PengRobinsonMixture((BZ, W))
+        self.z = np.array([0.5, 0.5])
+
+    def test_ph_recovers_the_tp_state_above_the_liquid_liquid_region(self):
+        for T in (350.0, 380.0):
+            tp = cf.flash_TP(self.eos, T, 1e5, self.z)
+            H = sum(p["n"] * p["h"] for p in tp["phases"])
+            ph = cf.flash_PH(self.eos, 1e5, H, self.z)
+            self.assertLess(abs(ph["T"] - T), 1e-9)
+            self.assertEqual([p["kind"] for p in ph["phases"]], [p["kind"] for p in tp["phases"]])
+            for a, b in zip(ph["phases"], tp["phases"]):
+                self.assertLess(float(np.max(np.abs(a["x"] - b["x"]))), 1e-9)
+
+    def test_enthalpy_on_the_liquid_liquid_side_is_rejected(self):
+        tp = cf.flash_TP(self.eos, 350.0, 1e5, self.z)
+        H = sum(p["n"] * p["h"] for p in tp["phases"]) - 40000.0
+        with self.assertRaises(CubicOutOfScope) as cm:
+            cf.flash_PH(self.eos, 1e5, H, self.z)
+        d = cm.exception.datos
+        self.assertEqual(d["cause"], "liquid_liquid_split")
+        self.assertTrue(340.0 < d["T_edge"] < 346.0)
+        # Just below the edge the TP flash finds a vapour + liquid split that a liquid destabilizes (third_phase);
+        # further down it certifies the liquid-liquid split. Neither is published.
+        with self.assertRaises(CubicOutOfScope) as cm:
+            cf.flash_TP(self.eos, d["T_edge"] - 1e-3, 1e5, self.z)
+        self.assertIn(cm.exception.datos["cause"], ("third_phase", "liquid_liquid_split"))
+        with self.assertRaises(CubicOutOfScope) as cm:
+            cf.flash_TP(self.eos, 340.0, 1e5, self.z)
+        self.assertEqual(cm.exception.datos["cause"], "liquid_liquid_split")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
