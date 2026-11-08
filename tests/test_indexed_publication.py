@@ -29,6 +29,7 @@ def test_connected_dynamic_publication_has_stage_certificates_and_exposed_ports(
     assert all(row['valor'] <= row['tolerancia'] for row in result['verificaciones'])
     assert result['procedencia']['networkEvidence']['unresolvedPortSeries'] == [
         'cascade.stage.3.port.liquid.3.temperature','cascade.stage.3.port.liquid.3.pressure']
+    Path('.tmp').mkdir(exist_ok=True)
     Path('.tmp/indexed-dynamic-result.json').write_text(json.dumps(result),encoding='utf-8')
 
 
@@ -47,4 +48,5 @@ def test_connected_steady_publication_has_profiles_from_actual_stage_roots():
     for profile in metadata['profiles']:
         assert by_id[profile['seriesId']]['valores'] == [by_id[key]['valores'] for key in profile['stageSeriesIds']]
     assert any(by_id[row['seriesId']]['unidadSI'] == 'K' for row in metadata['profiles'])
+    Path('.tmp').mkdir(exist_ok=True)
     Path('.tmp/indexed-steady-result.json').write_text(json.dumps(result),encoding='utf-8')
