@@ -92,6 +92,14 @@ class SteadyTransformTests(unittest.TestCase):
                 # Independently established long-time dynamic/package reference,
                 # shared by both withdrawal models (their holdups differ).
                 self.assertAlmostEqual(actual,362.5404885146,delta=1e-5)
+                from core import unidades
+                variables = response['model']['motores']['derivedExecution']['nonlinear']['variables']
+                for qid, entry in variables.items():
+                    dimensions = {key: unidades.interpretar(response['model']['datos'][entry[key]]['declaracion']['unidad'])['dimension']
+                                  for key in ('seedDataId', 'lowerDataId', 'upperDataId', 'scaleDataId')}
+                    self.assertEqual(len(set(map(str, dimensions.values()))), 1, (qid, dimensions))
+                    self.assertLessEqual(float(response['model']['datos'][entry['lowerDataId']]['declaracion']['texto']),
+                                         float(response['model']['datos'][entry['seedDataId']]['declaracion']['texto']))
                 for variable in response['report']['variables']:
                     if variable['unit']=='kg':self.assertGreater(variable['boundsSI'][0],0)
                 repeated=copy.deepcopy(source);repeated['datos']=response['model']['datos']
@@ -129,6 +137,20 @@ class SteadyTransformTests(unittest.TestCase):
                 temperature_id = next(k for k, q in system.quantities.items() if q == closure.T)
                 actual = next(row['valores'] for row in result['series'] if row['id'] == 'closure.' + temperature_id)
                 self.assertAlmostEqual(actual, 362.5404885146, delta=1e-5)
+
+    def test_generated_cstr_scales_keep_their_dimension_and_admit_the_seed(self):
+        # RT-12: a flow state must not take residual scale x residence time.
+        from demo02_cstr import frozen_model
+        from core import unidades
+        model = prepare_steady_transform(frozen_model())['model']
+        data = model['datos']
+        for qid, entry in model['motores']['derivedExecution']['nonlinear']['variables'].items():
+            declared = {k: data[entry[k]]['declaracion'] for k in ('seedDataId', 'lowerDataId', 'upperDataId', 'scaleDataId')}
+            self.assertEqual(len({str(unidades.interpretar(d['unidad'])['dimension']) for d in declared.values()}), 1, qid)
+            seed = float(declared['seedDataId']['texto'])
+            self.assertLessEqual(float(declared['lowerDataId']['texto']), seed, qid)
+            if declared['seedDataId']['unidad'] == 'kg/s':
+                self.assertLessEqual(float(declared['scaleDataId']['texto']), 1e3*max(abs(seed), 1.), qid)
 
     def test_http_rejection_is_preserved(self):
         from backend.api_modelo import steady_transform

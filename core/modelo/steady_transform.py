@@ -80,6 +80,10 @@ def prepare_steady_transform(model):
 
     mass_dimension = unidades.interpretar('kg')['dimension']
     mass_flow_dimension = unidades.interpretar('kg/s')['dimension']
+    energy_dimension = unidades.interpretar('J')['dimension']
+    # Residence-time scaling applies to extensive inventories (mass, energy) only: the
+    # relaxation time of a flow or pressure state is not the residence time (RT-12).
+    inventory_dimensions = (mass_dimension, energy_dimension)
     characteristic = {}
 
     def characteristic_time():
@@ -106,10 +110,27 @@ def prepare_steady_transform(model):
         return characteristic['tau']
 
     def variable_scale(q, equation, fallback):
+        # The row is c * dq/dt = (fluxes); an inventory scales as residual scale / |c|
+        # times tau. Other states (flows, pressures) and rows with no finite nonzero c
+        # take the state's own occurring data;
+        # algebraic variables and models without a mass-budget check keep the
+        # seed-based fallback max(|seed|, 1).
         tau = characteristic_time()
-        # A state scale is its row's residual scale times the characteristic time;
-        # without declared inventory or flow the seed-based fallback remains.
-        return residual_scale(equation)*tau if tau else fallback
+        residual = equation.lhs-equation.rhs
+        expanded = dynamic._expand(residual)
+        coefficient = None
+        try:
+            c = si_magnitude(sp.diff(expanded, sp.Derivative(q, dynamic.time))).subs(
+                {**dynamic.parameter_values, **dynamic.initial_values,
+                 **getattr(dynamic, 'initial_algebraic', {}), **dynamic.initial_closure, dynamic.time: 0})
+            if c.is_number and c.is_real and c.is_finite and c != 0:
+                coefficient = abs(float(c))
+        except (ValueError, LoweringError, TypeError):
+            pass
+        if tau and coefficient and dynamic._dim(q) in inventory_dimensions:
+            return residual_scale(equation)/coefficient*tau
+        own = occurring_magnitudes(expanded, dynamic._dim(q))
+        return max(own) if own and max(own) > 0 else fallback
 
     def numerical_bounds(q, seed, scale, equation):
         # The reach never comes from the initial state (RT-7, RT-9): the root of a
@@ -134,10 +155,17 @@ def prepare_steady_transform(model):
             allowed = premise.allowed
             if isinstance(allowed, sp.Interval):
                 factor = float(si_magnitude(premise.scale))
+                # An open-interval margin never excludes a valid seed (RT-12).
                 if allowed.start.is_finite:
-                    lower = max(lower, float(allowed.start)*factor + (scale*1e-8 if allowed.left_open else 0.))
+                    edge = float(allowed.start)*factor
+                    margin = scale*1e-8 if allowed.left_open else 0.
+                    if seed > edge: margin = min(margin, (seed-edge)/2)
+                    lower = max(lower, edge + margin)
                 if allowed.end.is_finite:
-                    upper = min(upper, float(allowed.end)*factor - (scale*1e-8 if allowed.right_open else 0.))
+                    edge = float(allowed.end)*factor
+                    margin = scale*1e-8 if allowed.right_open else 0.
+                    if seed < edge: margin = min(margin, (edge-seed)/2)
+                    upper = min(upper, edge - margin)
         return lower, upper
 
     for row in selection['states']:
