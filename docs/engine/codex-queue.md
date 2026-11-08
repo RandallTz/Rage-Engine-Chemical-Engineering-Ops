@@ -30,7 +30,7 @@ Rules that apply to every run:
 |---|---|---|---|---|
 | 1 | `demo-02-contract`: equipment template marker and typed ports in the common model | Strong (Astra) | Every Demo 0.2 equipment; F4 boundaries | `repairs requested` · RC-8 to RC-11 (roadmap Demo 0.2, item 1 re-check); RC-8 first |
 | 2 | Results: list phase events of derived models; describe `package_closure` in the compilation summary | Light | Demo 0.1/0.2 presentation | `review pending` · RE-1 to RE-4 repaired on branch claude/keen-nobel-0f362b |
-| 3 | F3 slice 5 inverse specifications over HTTP, contracts, strict readers and Solve/Results | Light | F3; sizing (Demo after 0.3) | `repairs requested` · F3H-1, F3H-2 (roadmap F3 fifth slice, item 3 review); F3H-3 is Claude's |
+| 3 | F3 slice 5 inverse specifications over HTTP, contracts, strict readers and Solve/Results | Light | F3; sizing (Demo after 0.3) | `review pending` · F3H-1, F3H-2 repaired on branch claude/practical-williams-1dd260 (F3H-3 and the Solve closure request done by Claude) |
 | 4 | F5-C1 equilibrium-reaction constraint in Model/compiler | Strong (Astra) | F5; the reactive stage of `demo-02-column` | `repairs requested` · RA-1 (Python reader accepts Unicode digits; roadmap F5 claude-a re-review), RA-2 doc update with it |
 | 5 | Steady state as a one-step Transform technique over the current dynamic selection | Light | `demo-02-steady` (UI half) | `repairs requested` · RT-6, RT-7 (roadmap Demo 0.2, item 5 review of 7 November); RT-7 first |
 | 6 | Template instances: replay a template's recorded recipe into a new connectable model | Strong (Astra) | `demo-02-drum` onward (F4) | `repairs requested` · RI-1, RI-2 (roadmap Codex queue item 6, re-review of 7 November); RI-1 first; RC-8 repaired with item 1 |
