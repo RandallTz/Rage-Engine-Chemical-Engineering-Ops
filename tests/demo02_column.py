@@ -62,9 +62,21 @@ RATES = {'feed': 'feedRate', 'liquidIn': 'liquidInletRate', 'vapourIn': 'vapourI
 # Generic stage defaults: an adiabatic stage without external feed whose internal inlets are
 # replaced by the network. Mass in kg, flows in kg/s, molar compositions. The initial holdup is
 # equimolar liquid just above its bubble point (365.35 K at 1 atm), so the vapour holdup starts small.
+# Downcomer friction (review CR-1 replay). The downcomer is turbulent, so its distributed wall friction is recorded
+# with a constant Darcy factor rather than neglected: f_D L/D_h = 0.028 * 1 m / 23.12 mm = 1.21, 15 % of the earlier
+# lumped loss coefficient 8. The earlier lumped totals (8 generic, 150 reboiler) are kept by splitting them into the
+# distributed part and the local-loss datum K, so the steady and dynamic results do not change beyond the rounding of K.
+PATH_SOURCE = {
+    'kind': 'empirical correlation',
+    'citation': 'Blasius smooth-pipe law f_D = 0.316 Re^(-1/4), evaluated near the geometric-mean Reynolds number of the column',
+    'validRange': 'Hydraulically smooth circular section, 4e3 <= Re <= 1e5. The steady liquid flows of the five-stage reference are '
+                  '0.041-0.169 kg/s (0.04-0.17 on the dynamic start-up) and the liquid viscosity is about 0.22-0.32 mPa s (estimate, '
+                  '355-380 K), so Re = 4F/(pi D_h mu) is about 7e3-4e4 and f_D varies 0.022-0.034; holding 0.028 changes the '
+                  'total loss coefficient of a generic stage (8) by at most about 8 %, and of the reboiler (150) by under 0.5 %.'}
 DEMO = dict(P=101325.0, m0=(1.0, 1.18), T0=365.6, feed=0.0, zF=(0.5, 0.5), TF=350.0, PF=101325.0,
-            Q=0.0, vent=1.0, area=0.05, pipeArea=4.2e-4, length=1.0, loss=8.0, floor=0.0,
+            Q=0.0, vent=1.0, area=0.05, pipeArea=4.2e-4, length=1.0, loss=6.79, floor=0.0,
             Pout=101325.0, F0=0.085, g=9.80665, tf=20000.0,
+            friction={'darcyFriction': 0.028, 'source': PATH_SOURCE},
             liquidIn=dict(rate=0.0, T=340.0, P=101325.0, z=(0.5, 0.5)),
             vapourIn=dict(rate=0.0, T=400.0, P=101325.0, z=(0.5, 0.5)))
 # Variant data (stage boundary values only; the recorded deduction is the same).
@@ -72,7 +84,7 @@ CONDENSER_Q = -3.0e4
 REBOILER_Q = 5.0e4
 # The reboiler sump: a larger initial holdup and a bottoms valve with a larger local loss, so the
 # boil-up does not dry the sump while the stage levels above it fill during start-up.
-REBOILER = dict(loss=150.0, m0=(3.0, 3.54))
+REBOILER = dict(loss=148.79, m0=(3.0, 3.54))
 FEED = dict(feed=0.0843, TF=350.0, zF=(0.5, 0.5))
 
 

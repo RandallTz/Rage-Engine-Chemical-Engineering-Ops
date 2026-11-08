@@ -296,7 +296,9 @@ def test_unequal_stage_pressure_is_a_located_rejection(stage):
         IndexedDerivedSystem(model)
     diagnostic = error.value.diagnostics[0]
     assert diagnostic['code'] == 'index_network_pressure_mismatch'
-    assert diagnostic['path'] == 'indexSet.connections.column.connection.4'
+    # CR-2: a liquid discharge port is coupled to the receiving stage pressure, so the liquid connection 4 (stage 4 -> 5) is
+    # accepted; the vapour connection 8 (stage 5 -> 4) draws a phase directly and stays fail-closed at the located connection.
+    assert diagnostic['path'] == 'indexSet.connections.column.connection.8'
 
 
 @pytest.mark.parametrize('mutation,path', [
