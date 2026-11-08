@@ -11,8 +11,7 @@
   "known_failing": {
     "_comment": "Run in the assigned tier and report failures without failing the job. Each entry needs a reason; review it when the suite passes again.",
     "validar_motor_balances.py": "29 of 30 checks pass; 'the solve path turns the rejection into NoSoportado with its reason' fails: Balance engine: volume v1 keeps the generation.1 term and has no data. Observed 5 Nov 2026 on 82c8688.",
-    "test_demo02_app_prerequisites.py": "Requires a running isolated backend; the local run failed with connection refused at 127.0.0.1:8018 (6 Nov 2026).",
-    "test_demo02_column.py": "4 failed, 6 passed, 2 errors at 63dd4c8 (7 Nov 2026, Windows): 'The selected Transform graph changed', stale template source selection, KeyError 'friction' and stale_formulation instead of index_network closure mismatch; the column fixture was not replayed after the Demo 0.2 physics repairs (4ca735b)."
+    "test_demo02_app_prerequisites.py": "Requires a running isolated backend; the local run failed with connection refused at 127.0.0.1:8018 (6 Nov 2026)."
   },
   "measured_seconds": {
     "validar_api_adimensionalizacion.py": 2,
