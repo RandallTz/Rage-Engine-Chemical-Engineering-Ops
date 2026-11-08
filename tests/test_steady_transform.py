@@ -115,9 +115,11 @@ class SteadyTransformTests(unittest.TestCase):
                 'declaracion': {'texto': text, 'unidad': unit}, 'origen': {'propietarioId': 'estudio', 'ruta': key}}
         self.assertEqual(scales(prepare_steady_transform(padded)), scales(reference))
         # RT-7: the root does not depend on the initial holdup.
-        for first, second in [('1.0', '4.0'), ('0.001', '0.004')]:
-            with self.subTest(holdups=(first, second)):
+        for first, second, factor in [('1.0', '4.0', 1), ('0.001', '0.004', 1), ('0.001', '0.004', 100), ('2000.0', '8000.0', 100)]:
+            with self.subTest(holdups=(first, second), size=factor):
                 light = copy.deepcopy(base)
+                for key in ('drum.volume', 'solve.A', 'solve.Ao', 'solve.F', 'solve.Q', 'scale.mass'):
+                    declaration = light['datos'][key]['declaracion']; declaration['texto'] = str(float(declaration['texto'])*factor)
                 light['datos']['drum.mass']['declaracion']['texto'] = first
                 light['datos']['drum.mass2']['declaracion']['texto'] = second
                 response = prepare_steady_transform(light)

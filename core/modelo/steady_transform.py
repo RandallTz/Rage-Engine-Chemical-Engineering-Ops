@@ -98,7 +98,10 @@ def prepare_steady_transform(model):
             for state_row in selection['states']:
                 equation = dynamic._equation(state_row['equationId']).equation
                 if dynamic._dim(equation.lhs-equation.rhs) == mass_flow_dimension:
-                    flows.append(residual_scale(equation))
+                    try:
+                        flows.append(residual_scale(equation))
+                    except LoweringError:
+                        continue  # a conserved or zero-rate row has no characteristic flow
             characteristic['tau'] = max(inventories)/max(flows) if inventories and flows and max(inventories) > 0 else None
         return characteristic['tau']
 
