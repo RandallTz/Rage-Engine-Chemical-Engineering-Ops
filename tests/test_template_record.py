@@ -11,7 +11,8 @@ from core.modelo.lector import leer_modelo_comun, leer_modelo_inspeccion, ErrorM
 
 def cases():
     model = frozen_model()
-    model['motores']['momentumDerivation'] = dict(format='rage.momentum-derivation', version=1, volumes={'drum': dict(origin='recorded', operations=[])})
+    model['motores']['momentumDerivation'] = dict(format='rage.momentum-derivation', version=1, volumes={'drum': dict(origin='recorded', operations=[dict(id='stress', title='Retain pressure stress', changes=dict(pressureStress=True))])})
+    model['volumenes'][0]['balances']['momento'] = True
     units = dict(flow='kg/s', composition='1', temperature='K', pressure='Pa', specificEnthalpy='J/kg')
     port = dict(id='feed', volumeId='drum', direction='inlet', kind='material',
                 boundary=dict(type='stream', id='feed'), exteriorState='estadoExterior',
@@ -41,13 +42,28 @@ def cases():
     for path,value in [(root+['format'],'other'),(root+['version'],2),(root+['version'],True),(root+['id'],''),(root+['templateVersion'],1),(root+['equipment'],1),(root+['recipe','journals'],[]),(root+['recipe','journals'],['equationWorkbench','equationWorkbench']),(root+['recipe','journals'],['derivedExecution']),(root+['recipe','journals'],['momentumDerivation']),(root+['ports'],[]),(pr+['id'],''),(pr+['volumeId'],'missing'),(pr+['kind'],'other'),(pr+['direction'],'other'),(pr+['direction'],'outlet'),(pr+['boundary','id'],'missing'),(pr+['boundary','type'],'term'),(pr+['donorPhase'],None),(pr+['exteriorState'],'other'),(pr+['variables','flow','unitSI'],'g/s'),(pr+['variables','specificEnthalpy','unitSI'],'J/mol')]:
         variant('invalid '+str(path)+repr(value),False,set_path(path,value))
     for journal in model['template']['recipe']['journals']:
-        for value in [None, [], 'journal', 1]:
+        for value in [None, [], 'journal', 1, {}]:
             variant('invalid journal '+journal+repr(value),False,set_path(['motores',journal],value))
         variant('equipment missing recipe '+journal,journal=='equationWorkbench',lambda m,j=journal:m['template']['recipe']['journals'].remove(j))
     for value in [None, [], 'state', {'temperaturaId':'missing'}, {}]:
         variant('invalid exterior '+repr(value),False,set_path(['corrientes',0,'estadoExterior'],value))
     for value in [None, [], 'extraction', {'missing':{}}]:
         variant('invalid extraction '+repr(value),False,set_path(['corrientes',1,'extraccion'],value))
+    for journal in ['materialDerivation','energyDerivation','momentumDerivation','thermodynamicDerivation']:
+        variant('equipment empty journal '+journal,False,set_path(['motores',journal,'volumes'],{}))
+        variant('equipment missing entry '+journal,False,delete_path(['motores',journal,'volumes','drum']))
+        if journal!='thermodynamicDerivation':
+            variant('equipment no operations '+journal,False,set_path(['motores',journal,'volumes','drum','operations'],[]))
+    for flag in ['materia','energia','momento']:
+        variant('equipment inactive balance '+flag,False,set_path(['volumenes',0,'balances',flag],False))
+    def pipe(m):
+        v=copy.deepcopy(m['volumenes'][0]);v['id']='pipe';v['balances']=dict(materia=False,energia=False,momento=True);v['termodinamica']=dict(motivo='Donor phase state; no separate closure',supuesto='fase_no_evaluada',tipo='supuesto')
+        m['volumenes'].append(v)
+        m['motores']['momentumDerivation']['volumes']['pipe']=copy.deepcopy(m['motores']['momentumDerivation']['volumes']['drum'])
+    variant('equipment momentum-only pipe volume',True,pipe)
+    variant('invalid stream base',False,set_path(['corrientes',0,'materia','base'],'x'))
+    variant('invalid stream base without template',False,lambda m:(m.pop('template'),m['corrientes'][0]['materia'].update(base='x')))
+    variant('byte-order-mark template id is text',True,set_path(['template','id'],'﻿'))
     variant('no exterior state',False,delete_path(['corrientes',0,'estadoExterior']))
     variant('duplicate port',False,lambda m:m['template']['ports'].append(copy.deepcopy(m['template']['ports'][0])))
     def duplicate_boundary(m):
@@ -72,7 +88,7 @@ def cases():
     for kind in ['heat','work']:
         variant(kind+' term',True,lambda m,k=kind:term(m,k))
         variant(kind+' outlet term',True,lambda m,k=kind:(term(m,k),m['template']['ports'][0].update(direction='outlet')))
-        variant(kind+' missing term',False,lambda m,k=kind:(term(m,k),m['volumenes'][0].pop('terminos')))
+        variant(kind+' missing term',kind=='heat',lambda m,k=kind:(term(m,k),m['volumenes'][0].pop('terminos')))
         variant(kind+' invalid material field',False,lambda m,k=kind:(term(m,k),m['template']['ports'][0].update(donorPhase=None)))
         variant(kind+' wrong unit',False,lambda m,k=kind:(term(m,k),m['template']['ports'][0]['variables']['power'].update(unitSI='J')))
     def exchange(m):
