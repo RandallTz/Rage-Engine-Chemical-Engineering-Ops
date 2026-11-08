@@ -95,6 +95,17 @@ class NewtonTests(unittest.TestCase):
     def test_stagnation(self):
         self.rejection('nonlinear_stagnation', lambda z: [z[0]**2-2], lambda z: [[2*z[0]]], step_tolerance=1.)
 
+    def test_jacobian_domain_error_rejects_the_trial_step(self):
+        # The full Newton step from 0.5 lands at 4.25, where the Jacobian is not
+        # evaluable; that trial is backtracked like a residual-domain error.
+        def j(z):
+            if z[0] > 3.:
+                raise ValueError('outside the Jacobian domain')
+            return np.array([[2*z[0]]])
+        z, evidence = self.run_problem(lambda z: np.array([z[0]**2-4]), j, seed=(0.5,), bounds=((0.1, 10.),))
+        np.testing.assert_allclose(z, [2.], atol=1e-10)
+        self.assertGreater(evidence['backtracks'], 0)
+
     def test_line_search_limit(self):
         self.rejection('nonlinear_line_search', lambda z: [z[0]**3-2*z[0]+2],
                        lambda z: [[3*z[0]**2-2]], seed=(1.,), bounds=((-3.,3.),), max_backtracks=1)
