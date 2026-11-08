@@ -330,22 +330,32 @@ class SteadySystem(DerivedGraph):
         def jacobian(values):
             values = np.asarray(values, dtype=float); columns = []
             base = None
-            for j, scale in enumerate(self.scales):
-                step = 1e-6*max(abs(values[j]), scale)
+            def column_for(j, step):
+                nonlocal base
                 up, down = values.copy(), values.copy()
                 lower, upper = self.bounds[j]
                 if values[j]-step >= lower and values[j]+step <= upper:
                     up[j] += step; down[j] -= step
-                    column = (residual(up)-residual(down))/(2*step)
-                else:
-                    direction = 1 if upper-values[j] >= values[j]-lower else -1
-                    room = upper-values[j] if direction == 1 else values[j]-lower
-                    step = min(step,room/2)
-                    if step<=0 or values[j]+direction*step==values[j]:
-                        raise ValueError('No representable Jacobian perturbation inside the declared bounds.')
-                    if base is None:base=residual(values)
-                    up[j] += direction*step;down[j] += direction*2*step
-                    column = direction*(-3*base+4*residual(up)-residual(down))/(2*step)
+                    return (residual(up)-residual(down))/(2*step)
+                direction = 1 if upper-values[j] >= values[j]-lower else -1
+                room = upper-values[j] if direction == 1 else values[j]-lower
+                step = min(step,room/2)
+                if step<=0 or values[j]+direction*step==values[j]:
+                    raise ValueError('No representable Jacobian perturbation inside the declared bounds.')
+                if base is None:base=residual(values)
+                up[j] += direction*step;down[j] += direction*2*step
+                return direction*(-3*base+4*residual(up)-residual(down))/(2*step)
+            for j, scale in enumerate(self.scales):
+                step = 1e-6*max(abs(values[j]), scale)
+                # A perturbation of the declared scale can leave a recorded domain
+                # when the state is far smaller than its scale (RT-11): shrink it
+                # until the residual is evaluable, and fail only if none is.
+                for attempt in range(60):
+                    try:
+                        column = column_for(j, step); break
+                    except (ArithmeticError, ValueError):
+                        if attempt == 59: raise
+                        step /= 2
                 columns.append(column)
             return np.column_stack(columns)
         return residual, jacobian

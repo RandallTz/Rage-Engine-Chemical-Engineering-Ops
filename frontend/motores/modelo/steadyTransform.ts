@@ -5,11 +5,11 @@ import {readCompilationReport} from './compilation';
 import {steadySignature,type SteadyReport} from './steadyContract';
 import {responseError} from './assessment';
 
-export type SteadyTransform={format:'rage.steady-transform';version:1;model:ModeloComun;dynamicSelection:TemporalDerivedExecution;dynamicSignature:string;report:SteadyReport};
+export type SteadyTransform={format:'rage.steady-transform';version:1;model:ModeloComun;dynamicSelection:TemporalDerivedExecution;dynamicSignature:string;report:SteadyReport;scaleBasis:{quantityId:string;basis:'residence-time'|'own-data'|'seed'}[]};
 export function readSteadyTransform(value:unknown,source:ModeloComun):SteadyTransform{
   const v=value as SteadyTransform;
-  const fields=['format','version','model','dynamicSelection','dynamicSignature','report'];
-  if(!v||typeof v!=='object'||Object.keys(v).length!==fields.length||fields.some(k=>!Object.hasOwn(v,k))||v.format!=='rage.steady-transform'||v.version!==1)throw new Error('Invalid steady Transform response.');
+  const fields=['format','version','model','dynamicSelection','dynamicSignature','report','scaleBasis'];
+  if(!v||typeof v!=='object'||Object.keys(v).length!==fields.length||fields.some(k=>!Object.hasOwn(v,k))||v.format!=='rage.steady-transform'||v.version!==1||!Array.isArray(v.scaleBasis)||v.scaleBasis.some(r=>!r||typeof r!=='object'||Object.keys(r).length!==2||typeof r.quantityId!=='string'||!['residence-time','own-data','seed'].includes(r.basis)))throw new Error('Invalid steady Transform response.');
   const model=leerModeloComun(v.model),report=readCompilationReport(v.report),dynamic=source.motores.derivedExecution;
   if(!dynamic||dynamic.version===5||steadySignature(v.dynamicSelection)!==steadySignature(dynamic)||v.dynamicSignature!==steadySignature(dynamic)||report.version!==2||model.id!==source.id||report.sourceModelId!==source.id||steadySignature(model.motores.derivedExecution)!==steadySignature(report.selection))throw new Error('The steady Transform does not match its dynamic source.');
   for(const key of ['states','parameters','reconstructions','timeId','sourceSignature'] as const)if(steadySignature(report.selection[key])!==steadySignature(dynamic[key]))throw new Error('The steady Transform changed an original selected row or binding.');

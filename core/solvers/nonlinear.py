@@ -58,6 +58,7 @@ def solve(residual, jacobian, seed, bounds, variable_scales, residual_scales, *,
             except (ArithmeticError, ValueError) as error:
                 fail('nonlinear_nonfinite', str(error))
 
+        cached = (None, None)
         z = np.array(start, copy=True)
         if not inside(z):
             fail('nonlinear_invalid_seed', 'The declared seed is outside the admitted domain.')
@@ -67,7 +68,8 @@ def solve(residual, jacobian, seed, bounds, variable_scales, residual_scales, *,
             evidence['residualNorm'] = float(np.linalg.norm(r, ord=np.inf))
             try:
                 from .sparse_blocks import factor_step
-                correction, condition, smallest = factor_step(jacobian(z), r, xs, rs, linear_solver)
+                matrix = cached[1] if cached[0] is not None and np.array_equal(cached[0], z) else jacobian(z)
+                correction, condition, smallest = factor_step(matrix, r, xs, rs, linear_solver)
                 evidence['conditionInfinity'] = condition if np.isfinite(condition) else None
                 if not np.isfinite(condition):
                     fail('nonlinear_singular_jacobian', 'The scaled algebraic Jacobian is singular.')
@@ -124,8 +126,16 @@ def solve(residual, jacobian, seed, bounds, variable_scales, residual_scales, *,
                     else:
                         last_failure = 'nonlinear_line_search'
                         if float(np.dot(candidate, candidate)) <= (1 - 2e-4 * factor) * merit:
-                            z, r = trial, candidate
-                            break
+                            # An iterate is admitted only where the Jacobian is also
+                            # evaluable; a domain error there rejects this trial like
+                            # a residual-domain error (RT-11).
+                            try:
+                                cached = (trial, jacobian(trial))
+                            except (ArithmeticError, ValueError):
+                                last_failure = 'nonlinear_nonfinite'
+                            else:
+                                z, r = trial, candidate
+                                break
                 evidence['backtracks'] += 1
                 factor *= .5
             else:
