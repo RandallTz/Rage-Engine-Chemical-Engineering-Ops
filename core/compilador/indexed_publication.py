@@ -1,6 +1,7 @@
 """Publish connected samples without substituting independent stage solutions."""
 import numpy as np
 import sympy as sp
+from core.mathematics.numeric_lowering import lambdify_numeric
 
 from core.resultados import conjunto, eje, evento, serie, leer_resultados
 from core.solvers import integrar
@@ -52,7 +53,7 @@ def _publish(system, times, samples, mode, *, events=(), status='resuelto', evid
         admitted = set(system.variables+system.outputs+[system.time])
         if expression.atoms(sp.core.function.AppliedUndef) or expression.free_symbols-admitted:
             return None
-        function = sp.lambdify([system.time,system.variables,system.outputs],expression,modules='numpy',cse=True)
+        function = lambdify_numeric([system.time,system.variables,system.outputs],expression,modules='numpy',cse=True)
         with np.errstate(divide='ignore',invalid='ignore'):
             values = [float(function(t,y,c)) for t,y,c in zip(times,samples,output_vectors)]
         return [v if np.isfinite(v) else None for v in values]

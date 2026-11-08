@@ -10,6 +10,7 @@ publication path.
 """
 import numpy as np
 import sympy as sp
+from core.mathematics.numeric_lowering import lambdify_numeric
 
 from core.mathematics.constants import si_magnitude
 from core.modelo.index_sets import expand_index_set, read_index_set
@@ -233,8 +234,8 @@ class IndexedDerivedSystem:
                 blocks.append(([self.maps[j][q] for q in closure.outputs],indices,evaluate))
         self.expressions = expressions
         self.blocks = blocks
-        self.function = sp.lambdify([self.time,self.variables,self.outputs],expressions,modules='numpy',cse=True)
-        self.guard_function = sp.lambdify([self.time,self.variables,self.outputs],[e for e,_,_,_ in self.guards],modules='numpy',cse=True)
+        self.function = lambdify_numeric([self.time,self.variables,self.outputs],expressions,modules='numpy',cse=True)
+        self.guard_function = lambdify_numeric([self.time,self.variables,self.outputs],[e for e,_,_,_ in self.guards],modules='numpy',cse=True)
         self.atol = np.concatenate([s.numeric.atol for s in self.stages])
         self.block_jacobian = ExpressionJacobian(expressions,self.variables,self.time,
             np.maximum(np.abs(self.initial()),self.atol),blocks,requested=linear_solver)

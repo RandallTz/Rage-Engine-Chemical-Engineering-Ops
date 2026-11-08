@@ -13,6 +13,7 @@ from types import SimpleNamespace
 
 import numpy as np
 import sympy as sp
+from core.mathematics.numeric_lowering import lambdify_numeric
 
 from core.compilador.steady import (LoweringError, SteadySystem, locate, signature,
                                     steady_result_signature)
@@ -128,8 +129,8 @@ class InverseSteadySystem(SteadySystem):
             raise inverse_spec.InverseError('inverse_target_unattainable',
                 'The specification contradicts the steady equations for every value of the freed input(s); the target is not clipped.')
         self.jacobian_expression = sp.Matrix(expressions).jacobian(self.symbols)
-        self.residual = sp.lambdify([self.symbols], expressions, modules='numpy', cse=True)
-        self.jacobian = sp.lambdify([self.symbols], self.jacobian_expression, modules='numpy', cse=True)
+        self.residual = lambdify_numeric([self.symbols], expressions, modules='numpy', cse=True)
+        self.jacobian = lambdify_numeric([self.symbols], self.jacobian_expression, modules='numpy', cse=True)
         # Guards, consequences and checks are re-derived with the inputs released.
         self.extra_checks = []; self.conditions = []; self.proof_conditions = []
         self.audit_graph()
