@@ -1,0 +1,1636 @@
+{
+ "format": "rage.deduction-script",
+ "version": 1,
+ "operation": "demo02-drum",
+ "title": "Demo 0.2 heated flash drum with outlet momentum (recorded equipment)",
+ "note": "Converted by tools/research/script_from_recorded.py from demo02_drum.author_demo_drum. The system document is the recorded fixture with every deduction removed (journals, workbench, Solve selection); the replay rebuilds them.",
+ "system": {
+  "document": "frontend/testing/demo02/flashDrum.ts",
+  "base": "repository"
+ },
+ "fundamentalAssumptions": [
+  {
+   "id": "A1",
+   "family": "matter",
+   "volume": "drum",
+   "action": "start",
+   "reason": "Fundamental law of the control volume"
+  },
+  {
+   "id": "A2",
+   "family": "matter",
+   "volume": "drum",
+   "action": "no_reaction",
+   "reason": "No chemical generation or consumption"
+  },
+  {
+   "id": "A3",
+   "family": "matter",
+   "volume": "drum",
+   "action": "integrate",
+   "reason": "Integrate over the control volume · Gauss and Reynolds"
+  },
+  {
+   "id": "A4",
+   "family": "matter",
+   "volume": "drum",
+   "action": "total",
+   "reason": "Define component inventories and partition the boundary into streams"
+  },
+  {
+   "id": "A5",
+   "family": "matter",
+   "volume": "drum",
+   "action": "impermeable_remainder",
+   "reason": "Impermeable boundary outside the declared streams"
+  },
+  {
+   "id": "A6",
+   "family": "energy",
+   "volume": "drum",
+   "action": "start",
+   "reason": "Fundamental law of the control volume"
+  },
+  {
+   "id": "A7",
+   "family": "energy",
+   "volume": "drum",
+   "action": "pressure_stress",
+   "reason": "Separate pressure and viscous stress"
+  },
+  {
+   "id": "A8",
+   "family": "energy",
+   "volume": "drum",
+   "action": "no_kinetic",
+   "reason": "Negligible kinetic energy"
+  },
+  {
+   "id": "A9",
+   "family": "energy",
+   "volume": "drum",
+   "action": "no_viscous_work",
+   "reason": "Negligible viscous work"
+  },
+  {
+   "id": "A10",
+   "family": "energy",
+   "volume": "drum",
+   "action": "no_body_work",
+   "reason": "No body-force work"
+  },
+  {
+   "id": "A11",
+   "family": "energy",
+   "volume": "drum",
+   "action": "no_volume_source",
+   "reason": "No volumetric energy source"
+  },
+  {
+   "id": "A12",
+   "family": "energy",
+   "volume": "drum",
+   "action": "integrate",
+   "reason": "Integrate the local first law and apply Gauss"
+  },
+  {
+   "id": "A13",
+   "family": "energy",
+   "volume": "drum",
+   "action": "reynolds",
+   "reason": "Apply Reynolds transport theorem"
+  },
+  {
+   "id": "A14",
+   "family": "energy",
+   "volume": "drum",
+   "action": "total",
+   "reason": "Define total energy and oriented stream contributions"
+  },
+  {
+   "id": "A15",
+   "family": "energy",
+   "volume": "drum",
+   "action": "enthalpy",
+   "reason": "Collect flow work into enthalpy"
+  },
+  {
+   "id": "A16",
+   "family": "energy",
+   "volume": "drum",
+   "action": "uniform_state",
+   "reason": "Uniform temperature and specific internal energy"
+  },
+  {
+   "id": "A17",
+   "family": "energy",
+   "volume": "drum",
+   "action": "uniform_pressure",
+   "reason": "Spatially uniform pressure"
+  },
+  {
+   "id": "A18",
+   "family": "energy",
+   "volume": "drum",
+   "action": "prescribed_pressure",
+   "reason": "Prescribed pressure"
+  },
+  {
+   "id": "A19",
+   "family": "thermodynamics",
+   "volume": "drum",
+   "action": "start",
+   "reason": "Fundamental law of the control volume"
+  },
+  {
+   "id": "A20",
+   "family": "thermodynamics",
+   "volume": "drum",
+   "action": "select_closure",
+   "reason": "Select the configured equilibrium package and declared phase policy"
+  },
+  {
+   "id": "A21",
+   "family": "momentum",
+   "volume": "drum",
+   "action": "start",
+   "reason": "Fundamental law of the control volume"
+  },
+  {
+   "id": "A22",
+   "family": "momentum",
+   "volume": "drum",
+   "action": "set_assumption",
+   "name": "pressureStress",
+   "value": true,
+   "reason": "Apply: Separate pressure and viscous stress"
+  },
+  {
+   "id": "A23",
+   "family": "momentum",
+   "volume": "drum",
+   "action": "set_assumption",
+   "name": "negligibleConvection",
+   "value": true,
+   "reason": "Apply: Negligible convective momentum transport"
+  },
+  {
+   "id": "A24",
+   "family": "momentum",
+   "volume": "drum",
+   "action": "set_assumption",
+   "name": "negligibleViscousStress",
+   "value": true,
+   "reason": "Apply: Negligible viscous stress"
+  },
+  {
+   "id": "A25",
+   "family": "momentum",
+   "volume": "drum",
+   "action": "set_assumption",
+   "name": "zeroLocalAccumulation",
+   "value": true,
+   "reason": "Apply: No local momentum accumulation"
+  },
+  {
+   "id": "A26",
+   "family": "momentum",
+   "volume": "drum",
+   "action": "set_assumption",
+   "name": "uniformGravity",
+   "value": true,
+   "reason": "Apply: Uniform conservative gravity"
+  },
+  {
+   "id": "A27",
+   "family": "momentum",
+   "volume": "drum",
+   "action": "set_assumption",
+   "name": "referenceDensity",
+   "value": true,
+   "reason": "Apply: Constant reference density"
+  },
+  {
+   "id": "A28",
+   "family": "momentum",
+   "volume": "drum",
+   "action": "set_assumption",
+   "name": "verticalGravity",
+   "value": true,
+   "reason": "Apply: Gravity acts in the negative vertical direction"
+  },
+  {
+   "id": "A29",
+   "family": "momentum",
+   "volume": "drum",
+   "action": "set_assumption",
+   "name": "pressureReference",
+   "value": true,
+   "reason": "Apply: Integrate pressure from a declared surface reference"
+  },
+  {
+   "id": "A30",
+   "family": "momentum",
+   "volume": "pipe",
+   "action": "start",
+   "reason": "Fundamental law of the control volume"
+  },
+  {
+   "id": "A31",
+   "family": "momentum",
+   "volume": "pipe",
+   "action": "pressure_stress",
+   "reason": "Decompose Cauchy stress into pressure and viscous stress"
+  },
+  {
+   "id": "A32",
+   "family": "momentum",
+   "volume": "pipe",
+   "action": "integrate",
+   "reason": "Integrate momentum conservation · Gauss and Reynolds transport"
+  },
+  {
+   "id": "A33",
+   "family": "momentum",
+   "volume": "pipe",
+   "action": "fixed_boundary",
+   "reason": "Fixed control-volume boundary"
+  },
+  {
+   "id": "A34",
+   "family": "momentum",
+   "volume": "pipe",
+   "action": "uniform_sections",
+   "reason": "Section averages · uniform local velocity components and pressure"
+  },
+  {
+   "id": "A35",
+   "family": "momentum",
+   "volume": "pipe",
+   "action": "impermeable_wall",
+   "reason": "No material flux through walls · two-port mass boundary"
+  },
+  {
+   "id": "A36",
+   "family": "momentum",
+   "volume": "pipe",
+   "action": "ports",
+   "reason": "Resolve inlet, outlet and wall momentum contributions"
+  },
+  {
+   "id": "A37",
+   "family": "momentum",
+   "volume": "pipe",
+   "action": "constant_area",
+   "reason": "Straight constant-area flow path · equal port areas"
+  },
+  {
+   "id": "A38",
+   "family": "momentum",
+   "volume": "pipe",
+   "action": "reference_density",
+   "reason": "Constant reference density over this reduced flow path"
+  },
+  {
+   "id": "A39",
+   "family": "momentum",
+   "volume": "pipe",
+   "action": "uniform_gravity",
+   "reason": "Uniform conservative gravity · declared elevation difference"
+  },
+  {
+   "id": "A40",
+   "family": "momentum",
+   "volume": "pipe",
+   "action": "hydraulic",
+   "reason": "Project onto the flow direction · retain hydraulic inertance"
+  },
+  {
+   "id": "A41",
+   "family": "momentum",
+   "volume": "pipe",
+   "action": "darcy_weisbach",
+   "reason": "Declare Darcy–Weisbach and local-loss constitutive closure"
+  },
+  {
+   "id": "A42",
+   "family": "momentum",
+   "volume": "pipe",
+   "action": "bind_ports",
+   "inletStreamId": "liquid",
+   "outletStreamId": "discharge",
+   "reason": "Bind momentum ports to existing material streams"
+  },
+  {
+   "id": "A43",
+   "family": "matter",
+   "volume": "pipe",
+   "action": "start",
+   "reason": "Fundamental law of the control volume"
+  },
+  {
+   "id": "A44",
+   "family": "matter",
+   "volume": "pipe",
+   "action": "no_reaction",
+   "reason": "No chemical generation or consumption"
+  },
+  {
+   "id": "A45",
+   "family": "matter",
+   "volume": "pipe",
+   "action": "fixed_boundary",
+   "reason": "Fixed control-volume boundary"
+  },
+  {
+   "id": "A46",
+   "family": "matter",
+   "volume": "pipe",
+   "action": "integrate",
+   "reason": "Integrate over the control volume · Gauss and Reynolds"
+  },
+  {
+   "id": "A47",
+   "family": "matter",
+   "volume": "pipe",
+   "action": "total",
+   "reason": "Define component inventories and partition the boundary into streams"
+  },
+  {
+   "id": "A48",
+   "family": "matter",
+   "volume": "pipe",
+   "action": "impermeable_remainder",
+   "reason": "Impermeable boundary outside the declared streams"
+  },
+  {
+   "id": "A49",
+   "family": "matter",
+   "volume": "pipe",
+   "action": "no_accumulation",
+   "reason": "Zero total accumulation · algebraic balance"
+  },
+  {
+   "id": "A50",
+   "family": "energy",
+   "volume": "pipe",
+   "action": "start",
+   "reason": "Fundamental law of the control volume"
+  },
+  {
+   "id": "A51",
+   "family": "energy",
+   "volume": "pipe",
+   "action": "pressure_stress",
+   "reason": "Separate pressure and viscous stress"
+  },
+  {
+   "id": "A52",
+   "family": "energy",
+   "volume": "pipe",
+   "action": "no_kinetic",
+   "reason": "Negligible kinetic energy"
+  },
+  {
+   "id": "A53",
+   "family": "energy",
+   "volume": "pipe",
+   "action": "no_viscous_work",
+   "reason": "Negligible viscous work"
+  },
+  {
+   "id": "A54",
+   "family": "energy",
+   "volume": "pipe",
+   "action": "no_body_work",
+   "reason": "No body-force work"
+  },
+  {
+   "id": "A55",
+   "family": "energy",
+   "volume": "pipe",
+   "action": "no_volume_source",
+   "reason": "No volumetric energy source"
+  },
+  {
+   "id": "A56",
+   "family": "energy",
+   "volume": "pipe",
+   "action": "integrate",
+   "reason": "Integrate the local first law and apply Gauss"
+  },
+  {
+   "id": "A57",
+   "family": "energy",
+   "volume": "pipe",
+   "action": "reynolds",
+   "reason": "Apply Reynolds transport theorem"
+  },
+  {
+   "id": "A58",
+   "family": "energy",
+   "volume": "pipe",
+   "action": "total",
+   "reason": "Define total energy and oriented stream contributions"
+  },
+  {
+   "id": "A59",
+   "family": "energy",
+   "volume": "pipe",
+   "action": "enthalpy",
+   "reason": "Collect flow work into enthalpy"
+  },
+  {
+   "id": "A60",
+   "family": "energy",
+   "volume": "pipe",
+   "action": "adiabatic",
+   "reason": "Adiabatic boundary"
+  },
+  {
+   "id": "A61",
+   "family": "energy",
+   "volume": "pipe",
+   "action": "no_accumulation",
+   "reason": "Zero total energy accumulation · algebraic constraint"
+  }
+ ],
+ "steps": [
+  {
+   "id": "s1",
+   "kind": "declare_symbol",
+   "family": "matter",
+   "name": "feedRate",
+   "unit": "kg/s"
+  },
+  {
+   "id": "s2",
+   "kind": "declare_symbol",
+   "family": "matter",
+   "name": "withdrawalCoefficient",
+   "unit": "1/s"
+  },
+  {
+   "id": "s3",
+   "kind": "declare_symbol",
+   "family": "matter",
+   "name": "heatDuty",
+   "unit": "W"
+  },
+  {
+   "id": "s4",
+   "kind": "declare_symbol",
+   "family": "matter",
+   "name": "crossSectionArea",
+   "unit": "m2"
+  },
+  {
+   "id": "s5",
+   "kind": "declare_symbol",
+   "family": "matter",
+   "name": "floorElevation",
+   "unit": "m"
+  },
+  {
+   "id": "s6",
+   "kind": "declare_symbol",
+   "family": "matter",
+   "name": "outletPressure",
+   "unit": "Pa"
+  },
+  {
+   "id": "s7",
+   "kind": "declare_symbol",
+   "family": "matter",
+   "name": "darcyFriction",
+   "unit": "1"
+  },
+  {
+   "id": "s8",
+   "kind": "declare_function",
+   "family": "matter",
+   "name": "vapourMolarOutflow",
+   "unit": "mol/s",
+   "dependencies": [
+    "t"
+   ]
+  },
+  {
+   "id": "s9",
+   "kind": "declare_function",
+   "family": "matter",
+   "name": "liquidMassFlow",
+   "unit": "kg/s",
+   "dependencies": [
+    "t"
+   ]
+  },
+  {
+   "id": "s10",
+   "kind": "declare_relation",
+   "family": "matter",
+   "left": "vapourMolarOutflow",
+   "right": "withdrawalCoefficient*phase_amount__drum__V(t)",
+   "relationKind": "constitutive",
+   "reason": "Vapour withdrawal proportional to the vapour holdup"
+  },
+  {
+   "id": "s11",
+   "kind": "declare_relation",
+   "family": "matter",
+   "left": "q__feed__1(t)",
+   "right": "feedRate*inlet_mass_fraction_1__feed(t)",
+   "relationKind": "constitutive",
+   "reason": "Prescribed feed rate with the package composition of the declared inlet"
+  },
+  {
+   "id": "s12",
+   "kind": "declare_function",
+   "family": "matter",
+   "name": "vapourComponentMolarFlow_1",
+   "unit": "mol/s",
+   "dependencies": [
+    "t"
+   ]
+  },
+  {
+   "id": "s13",
+   "kind": "declare_relation",
+   "family": "matter",
+   "left": "vapourComponentMolarFlow_1",
+   "right": "vapourMolarOutflow*phase_present__drum__V(t)*phase_x_1__drum__V(t)",
+   "relationKind": "constitutive",
+   "reason": "Phase donor: the vapour withdrawal draws the vapour phase of this volume (zero when the vapour is absent)"
+  },
+  {
+   "id": "s14",
+   "kind": "declare_relation",
+   "family": "matter",
+   "left": "q__vapour__1(t)",
+   "right": "vapourComponentMolarFlow_1*molar_mass_1__drum",
+   "relationKind": "definition",
+   "reason": "Definition of component mass flow from component molar flow and molar mass"
+  },
+  {
+   "id": "s15",
+   "kind": "substitute",
+   "family": "matter",
+   "sources": [
+    "s14"
+   ],
+   "relation": "s13",
+   "symbol": "vapourComponentMolarFlow_1(t)"
+  },
+  {
+   "id": "s16",
+   "kind": "declare_function",
+   "family": "matter",
+   "name": "liquidMassFraction_1",
+   "unit": "1",
+   "dependencies": [
+    "t"
+   ]
+  },
+  {
+   "id": "s17",
+   "kind": "declare_function",
+   "family": "matter",
+   "name": "liquidMoleFraction_1",
+   "unit": "1",
+   "dependencies": [
+    "t"
+   ]
+  },
+  {
+   "id": "s18",
+   "kind": "declare_relation",
+   "family": "matter",
+   "left": "liquidMoleFraction_1",
+   "right": "phase_x_1__drum__L(t)",
+   "relationKind": "constitutive",
+   "reason": "Phase donor: the stream has the liquid phase composition of this volume"
+  },
+  {
+   "id": "s19",
+   "kind": "declare_relation",
+   "family": "matter",
+   "left": "liquidMassFraction_1*phase_M__drum__L(t)",
+   "right": "liquidMoleFraction_1*molar_mass_1__drum",
+   "relationKind": "definition",
+   "reason": "Definition of mass fraction from mole fraction, component molar mass and the phase mean molar mass"
+  },
+  {
+   "id": "s20",
+   "kind": "substitute",
+   "family": "matter",
+   "sources": [
+    "s19"
+   ],
+   "relation": "s18",
+   "symbol": "liquidMoleFraction_1(t)"
+  },
+  {
+   "id": "s21",
+   "kind": "isolate",
+   "family": "matter",
+   "sources": [
+    "s20"
+   ],
+   "symbol": "liquidMassFraction_1"
+  },
+  {
+   "id": "s22",
+   "kind": "declare_relation",
+   "family": "matter",
+   "left": "q__liquid__1(t)",
+   "right": "liquidMassFlow*liquidMassFraction_1",
+   "relationKind": "definition",
+   "reason": "Definition of component mass flow for a common convective stream velocity"
+  },
+  {
+   "id": "s23",
+   "kind": "substitute",
+   "family": "matter",
+   "sources": [
+    "s22"
+   ],
+   "relation": "s21",
+   "symbol": "liquidMassFraction_1(t)"
+  },
+  {
+   "id": "s24",
+   "kind": "substitute",
+   "family": "matter",
+   "sources": [
+    "balance:matter.drum:m__drum__1(t)"
+   ],
+   "relation": "s11",
+   "symbol": "q__feed__1(t)"
+  },
+  {
+   "id": "s25",
+   "kind": "substitute",
+   "family": "matter",
+   "sources": [
+    "s24"
+   ],
+   "relation": "s15",
+   "symbol": "q__vapour__1(t)"
+  },
+  {
+   "id": "s26",
+   "kind": "substitute",
+   "family": "matter",
+   "sources": [
+    "s25"
+   ],
+   "relation": "s23",
+   "symbol": "q__liquid__1(t)"
+  },
+  {
+   "id": "s27",
+   "kind": "declare_relation",
+   "family": "matter",
+   "left": "q__feed__2(t)",
+   "right": "feedRate*inlet_mass_fraction_2__feed(t)",
+   "relationKind": "constitutive",
+   "reason": "Prescribed feed rate with the package composition of the declared inlet"
+  },
+  {
+   "id": "s28",
+   "kind": "declare_function",
+   "family": "matter",
+   "name": "vapourComponentMolarFlow_2",
+   "unit": "mol/s",
+   "dependencies": [
+    "t"
+   ]
+  },
+  {
+   "id": "s29",
+   "kind": "declare_relation",
+   "family": "matter",
+   "left": "vapourComponentMolarFlow_2",
+   "right": "vapourMolarOutflow*phase_present__drum__V(t)*phase_x_2__drum__V(t)",
+   "relationKind": "constitutive",
+   "reason": "Phase donor: the vapour withdrawal draws the vapour phase of this volume (zero when the vapour is absent)"
+  },
+  {
+   "id": "s30",
+   "kind": "declare_relation",
+   "family": "matter",
+   "left": "q__vapour__2(t)",
+   "right": "vapourComponentMolarFlow_2*molar_mass_2__drum",
+   "relationKind": "definition",
+   "reason": "Definition of component mass flow from component molar flow and molar mass"
+  },
+  {
+   "id": "s31",
+   "kind": "substitute",
+   "family": "matter",
+   "sources": [
+    "s30"
+   ],
+   "relation": "s29",
+   "symbol": "vapourComponentMolarFlow_2(t)"
+  },
+  {
+   "id": "s32",
+   "kind": "declare_function",
+   "family": "matter",
+   "name": "liquidMassFraction_2",
+   "unit": "1",
+   "dependencies": [
+    "t"
+   ]
+  },
+  {
+   "id": "s33",
+   "kind": "declare_function",
+   "family": "matter",
+   "name": "liquidMoleFraction_2",
+   "unit": "1",
+   "dependencies": [
+    "t"
+   ]
+  },
+  {
+   "id": "s34",
+   "kind": "declare_relation",
+   "family": "matter",
+   "left": "liquidMoleFraction_2",
+   "right": "phase_x_2__drum__L(t)",
+   "relationKind": "constitutive",
+   "reason": "Phase donor: the stream has the liquid phase composition of this volume"
+  },
+  {
+   "id": "s35",
+   "kind": "declare_relation",
+   "family": "matter",
+   "left": "liquidMassFraction_2*phase_M__drum__L(t)",
+   "right": "liquidMoleFraction_2*molar_mass_2__drum",
+   "relationKind": "definition",
+   "reason": "Definition of mass fraction from mole fraction, component molar mass and the phase mean molar mass"
+  },
+  {
+   "id": "s36",
+   "kind": "substitute",
+   "family": "matter",
+   "sources": [
+    "s35"
+   ],
+   "relation": "s34",
+   "symbol": "liquidMoleFraction_2(t)"
+  },
+  {
+   "id": "s37",
+   "kind": "isolate",
+   "family": "matter",
+   "sources": [
+    "s36"
+   ],
+   "symbol": "liquidMassFraction_2"
+  },
+  {
+   "id": "s38",
+   "kind": "declare_relation",
+   "family": "matter",
+   "left": "q__liquid__2(t)",
+   "right": "liquidMassFlow*liquidMassFraction_2",
+   "relationKind": "definition",
+   "reason": "Definition of component mass flow for a common convective stream velocity"
+  },
+  {
+   "id": "s39",
+   "kind": "substitute",
+   "family": "matter",
+   "sources": [
+    "s38"
+   ],
+   "relation": "s37",
+   "symbol": "liquidMassFraction_2(t)"
+  },
+  {
+   "id": "s40",
+   "kind": "substitute",
+   "family": "matter",
+   "sources": [
+    "balance:matter.drum:m__drum__2(t)"
+   ],
+   "relation": "s27",
+   "symbol": "q__feed__2(t)"
+  },
+  {
+   "id": "s41",
+   "kind": "substitute",
+   "family": "matter",
+   "sources": [
+    "s40"
+   ],
+   "relation": "s31",
+   "symbol": "q__vapour__2(t)"
+  },
+  {
+   "id": "s42",
+   "kind": "substitute",
+   "family": "matter",
+   "sources": [
+    "s41"
+   ],
+   "relation": "s39",
+   "symbol": "q__liquid__2(t)"
+  },
+  {
+   "id": "s43",
+   "kind": "combine",
+   "family": "matter",
+   "sources": [
+    "s23",
+    "s39"
+   ]
+  },
+  {
+   "id": "s44",
+   "kind": "substitute",
+   "family": "matter",
+   "sources": [
+    "s43"
+   ],
+   "relation": "eq:thermodynamics.drum.phase-molar-mass-L",
+   "symbol": "phase_M__drum__L(t)"
+  },
+  {
+   "id": "s45",
+   "kind": "factor",
+   "family": "matter",
+   "sources": [
+    "s44"
+   ]
+  },
+  {
+   "id": "s46",
+   "kind": "isolate",
+   "family": "matter",
+   "sources": [
+    "s45"
+   ],
+   "symbol": "q__liquid__1(t)"
+  },
+  {
+   "id": "s47",
+   "kind": "differentiate",
+   "family": "matter",
+   "sources": [
+    "s45"
+   ],
+   "symbol": "t"
+  },
+  {
+   "id": "s48",
+   "kind": "isolate",
+   "family": "matter",
+   "sources": [
+    "s47"
+   ],
+   "symbol": "Derivative(q__liquid__1(t), t)"
+  },
+  {
+   "id": "s49",
+   "kind": "substitute",
+   "family": "energy",
+   "sources": [
+    "balance:energy.drum:H__drum(t)"
+   ],
+   "relation": "s11",
+   "symbol": "q__feed__1(t)"
+  },
+  {
+   "id": "s50",
+   "kind": "substitute",
+   "family": "energy",
+   "sources": [
+    "s49"
+   ],
+   "relation": "s27",
+   "symbol": "q__feed__2(t)"
+  },
+  {
+   "id": "s51",
+   "kind": "substitute",
+   "family": "energy",
+   "sources": [
+    "s50"
+   ],
+   "relation": "s15",
+   "symbol": "q__vapour__1(t)"
+  },
+  {
+   "id": "s52",
+   "kind": "substitute",
+   "family": "energy",
+   "sources": [
+    "s51"
+   ],
+   "relation": "s31",
+   "symbol": "q__vapour__2(t)"
+  },
+  {
+   "id": "s53",
+   "kind": "substitute",
+   "family": "energy",
+   "sources": [
+    "s52"
+   ],
+   "relation": "s23",
+   "symbol": "q__liquid__1(t)"
+  },
+  {
+   "id": "s54",
+   "kind": "substitute",
+   "family": "energy",
+   "sources": [
+    "s53"
+   ],
+   "relation": "s39",
+   "symbol": "q__liquid__2(t)"
+  },
+  {
+   "id": "s55",
+   "kind": "declare_relation",
+   "family": "energy",
+   "left": "energy_average_0__feed(t)",
+   "right": "inlet_specific_enthalpy__feed(t)",
+   "relationKind": "constitutive",
+   "reason": "Inlet stream specific enthalpy at its declared exterior state (package)"
+  },
+  {
+   "id": "s56",
+   "kind": "substitute",
+   "family": "energy",
+   "sources": [
+    "s54"
+   ],
+   "relation": "s55",
+   "symbol": "energy_average_0__feed(t)"
+  },
+  {
+   "id": "s57",
+   "kind": "declare_function",
+   "family": "energy",
+   "name": "vapourMolarEnthalpy",
+   "unit": "J/mol",
+   "dependencies": [
+    "t"
+   ]
+  },
+  {
+   "id": "s58",
+   "kind": "declare_relation",
+   "family": "energy",
+   "left": "vapourMolarEnthalpy",
+   "right": "phase_h__drum__V(t)",
+   "relationKind": "constitutive",
+   "reason": "The outgoing material draws the donor vapour phase at its thermodynamic state"
+  },
+  {
+   "id": "s59",
+   "kind": "declare_relation",
+   "family": "energy",
+   "left": "energy_average_0__vapour(t)*phase_M__drum__V(t)",
+   "right": "vapourMolarEnthalpy",
+   "relationKind": "definition",
+   "reason": "Definition of molar enthalpy from mass-specific enthalpy and the mean molar mass"
+  },
+  {
+   "id": "s60",
+   "kind": "substitute",
+   "family": "energy",
+   "sources": [
+    "s59"
+   ],
+   "relation": "s58",
+   "symbol": "vapourMolarEnthalpy(t)"
+  },
+  {
+   "id": "s61",
+   "kind": "isolate",
+   "family": "energy",
+   "sources": [
+    "s60"
+   ],
+   "symbol": "energy_average_0__vapour(t)"
+  },
+  {
+   "id": "s62",
+   "kind": "substitute",
+   "family": "energy",
+   "sources": [
+    "s56"
+   ],
+   "relation": "s61",
+   "symbol": "energy_average_0__vapour(t)"
+  },
+  {
+   "id": "s63",
+   "kind": "declare_function",
+   "family": "energy",
+   "name": "liquidMolarEnthalpy",
+   "unit": "J/mol",
+   "dependencies": [
+    "t"
+   ]
+  },
+  {
+   "id": "s64",
+   "kind": "declare_relation",
+   "family": "energy",
+   "left": "liquidMolarEnthalpy",
+   "right": "phase_h__drum__L(t)",
+   "relationKind": "constitutive",
+   "reason": "The outgoing material draws the donor liquid phase at its thermodynamic state, evaluated at the uniform pressure of the volume. Premises: negligible stream kinetic energy; the frictional dissipation of the path stays in the stream; the pressure dependence of the liquid enthalpy over the path pressure change is neglected"
+  },
+  {
+   "id": "s65",
+   "kind": "declare_relation",
+   "family": "energy",
+   "left": "energy_average_0__liquid(t)*phase_M__drum__L(t)",
+   "right": "liquidMolarEnthalpy",
+   "relationKind": "definition",
+   "reason": "Definition of molar enthalpy from mass-specific enthalpy and the mean molar mass"
+  },
+  {
+   "id": "s66",
+   "kind": "substitute",
+   "family": "energy",
+   "sources": [
+    "s65"
+   ],
+   "relation": "s64",
+   "symbol": "liquidMolarEnthalpy(t)"
+  },
+  {
+   "id": "s67",
+   "kind": "isolate",
+   "family": "energy",
+   "sources": [
+    "s66"
+   ],
+   "symbol": "energy_average_0__liquid(t)"
+  },
+  {
+   "id": "s68",
+   "kind": "substitute",
+   "family": "energy",
+   "sources": [
+    "s62"
+   ],
+   "relation": "s67",
+   "symbol": "energy_average_0__liquid(t)"
+  },
+  {
+   "id": "s69",
+   "kind": "declare_relation",
+   "family": "energy",
+   "left": "energy_heat_rate__drum(t)",
+   "right": "heatDuty",
+   "relationKind": "constraint",
+   "reason": "Prescribed heat duty"
+  },
+  {
+   "id": "s70",
+   "kind": "substitute",
+   "family": "energy",
+   "sources": [
+    "s68"
+   ],
+   "relation": "s69",
+   "symbol": "energy_heat_rate__drum(t)"
+  },
+  {
+   "id": "s71",
+   "kind": "declare_relation",
+   "family": "momentum",
+   "left": "z__drum",
+   "right": "floorElevation",
+   "relationKind": "definition",
+   "reason": "The outlet port is at the lowest point of the liquid region"
+  },
+  {
+   "id": "s72",
+   "kind": "substitute",
+   "family": "momentum",
+   "sources": [
+    "eq:momentum.drum.storage.pressure"
+   ],
+   "relation": "s71",
+   "symbol": "z__drum"
+  },
+  {
+   "id": "s73",
+   "kind": "declare_relation",
+   "family": "momentum",
+   "left": "z_r__drum(t)",
+   "right": "floorElevation+liquid_volume__drum(t)/crossSectionArea",
+   "relationKind": "definition",
+   "reason": "The pressure reference is the liquid free surface of a vertical prismatic liquid region"
+  },
+  {
+   "id": "s74",
+   "kind": "substitute",
+   "family": "momentum",
+   "sources": [
+    "s72"
+   ],
+   "relation": "s73",
+   "symbol": "z_r__drum(t)"
+  },
+  {
+   "id": "s75",
+   "kind": "declare_relation",
+   "family": "momentum",
+   "left": "p_r__drum(t)",
+   "right": "P__drum(t)",
+   "relationKind": "constitutive",
+   "reason": "The uniform vapour-space pressure of the volume acts on the free surface"
+  },
+  {
+   "id": "s76",
+   "kind": "substitute",
+   "family": "momentum",
+   "sources": [
+    "s74"
+   ],
+   "relation": "s75",
+   "symbol": "p_r__drum(t)"
+  },
+  {
+   "id": "s77",
+   "kind": "declare_relation",
+   "family": "momentum",
+   "left": "rho__drum",
+   "right": "phase_M__drum__L(t)/phase_v__drum__L(t)",
+   "relationKind": "constitutive",
+   "reason": "The hydrostatic column is the liquid phase of the package closure"
+  },
+  {
+   "id": "s78",
+   "kind": "substitute",
+   "family": "momentum",
+   "sources": [
+    "s76"
+   ],
+   "relation": "s77",
+   "symbol": "rho__drum"
+  },
+  {
+   "id": "s79",
+   "kind": "declare_domain",
+   "family": "momentum",
+   "sources": [
+    "s78"
+   ],
+   "symbol": "liquid_volume__drum(t)",
+   "domain": "positive",
+   "reason": "The drawn liquid phase is present: positive liquid volume"
+  },
+  {
+   "id": "s80",
+   "kind": "substitute",
+   "family": "momentum",
+   "sources": [
+    "eq:momentum.pipe.path.pressure-form"
+   ],
+   "relation": "s48",
+   "symbol": "Derivative(q__liquid__1(t), t)"
+  },
+  {
+   "id": "s81",
+   "kind": "declare_relation",
+   "family": "momentum",
+   "left": "p1__pipe(t)",
+   "right": "p__drum(floorElevation, t)",
+   "relationKind": "constraint",
+   "reason": "Continuous pressure at the shared material port"
+  },
+  {
+   "id": "s82",
+   "kind": "substitute",
+   "family": "momentum",
+   "sources": [
+    "s80"
+   ],
+   "relation": "s81",
+   "symbol": "p1__pipe(t)"
+  },
+  {
+   "id": "s83",
+   "kind": "substitute",
+   "family": "momentum",
+   "sources": [
+    "s82"
+   ],
+   "relation": "s78",
+   "symbol": "p__drum(floorElevation, t)"
+  },
+  {
+   "id": "s84",
+   "kind": "substitute",
+   "family": "momentum",
+   "sources": [
+    "eq:momentum.pipe.path.darcy-weisbach"
+   ],
+   "relation": "s46",
+   "symbol": "q__liquid__1(t)"
+  },
+  {
+   "id": "s85",
+   "kind": "declare_relation",
+   "family": "momentum",
+   "left": "D__pipe",
+   "right": "(4*A__pipe/pi)^(1/2)",
+   "relationKind": "definition",
+   "reason": "Definition: hydraulic diameter of the declared circular section"
+  },
+  {
+   "id": "s86",
+   "kind": "substitute",
+   "family": "momentum",
+   "sources": [
+    "s84"
+   ],
+   "relation": "s85",
+   "symbol": "D__pipe"
+  },
+  {
+   "id": "s87",
+   "kind": "declare_relation",
+   "family": "momentum",
+   "left": "f__pipe",
+   "right": "darcyFriction",
+   "relationKind": "constitutive",
+   "reason": "Distributed wall friction with a constant Darcy factor over the operating range",
+   "source": {
+    "kind": "empirical correlation",
+    "citation": "Blasius smooth-pipe law f_D = 0.316 Re^(-1/4), evaluated at the geometric-mean Reynolds number of the run",
+    "validRange": "Hydraulically smooth circular section, 4e3 <= Re <= 1e5. Over the run F = 0.40-0.48 kg/s and the liquid viscosity (about 0.32-1.3 mPa s between 300 K and 365 K, estimate) give Re about 1.3e4-6.3e4, so f_D varies 0.020-0.030; holding 0.024 changes the total loss coefficient by at most about 8 %."
+   }
+  },
+  {
+   "id": "s88",
+   "kind": "substitute",
+   "family": "momentum",
+   "sources": [
+    "s86"
+   ],
+   "relation": "s87",
+   "symbol": "f__pipe"
+  },
+  {
+   "id": "s89",
+   "kind": "substitute",
+   "family": "momentum",
+   "sources": [
+    "s83"
+   ],
+   "relation": "s88",
+   "symbol": "loss__pipe(t)"
+  },
+  {
+   "id": "s90",
+   "kind": "declare_relation",
+   "family": "momentum",
+   "left": "p2__pipe(t)",
+   "right": "outletPressure",
+   "relationKind": "constitutive",
+   "reason": "Prescribed exterior pressure at the discharge port"
+  },
+  {
+   "id": "s91",
+   "kind": "substitute",
+   "family": "momentum",
+   "sources": [
+    "s89"
+   ],
+   "relation": "s90",
+   "symbol": "p2__pipe(t)"
+  },
+  {
+   "id": "s92",
+   "kind": "declare_relation",
+   "family": "momentum",
+   "left": "drive__pipe(t)",
+   "right": "0",
+   "relationKind": "constitutive",
+   "reason": "No applied pressure drive or shaft work on the path"
+  },
+  {
+   "id": "s93",
+   "kind": "substitute",
+   "family": "momentum",
+   "sources": [
+    "s91"
+   ],
+   "relation": "s92",
+   "symbol": "drive__pipe(t)"
+  },
+  {
+   "id": "s94",
+   "kind": "declare_relation",
+   "family": "momentum",
+   "left": "rho__pipe",
+   "right": "phase_M__drum__L(t)/phase_v__drum__L(t)",
+   "relationKind": "constitutive",
+   "reason": "The path carries the drawn liquid phase: its reference density is the donor liquid density. Quasi-constant density: the path mass storage A L |d rho/dt| / F is neglected (monitored below 1e-3)"
+  },
+  {
+   "id": "s95",
+   "kind": "substitute",
+   "family": "momentum",
+   "sources": [
+    "s93"
+   ],
+   "relation": "s94",
+   "symbol": "rho__pipe"
+  },
+  {
+   "id": "s96",
+   "kind": "declare_relation",
+   "family": "momentum",
+   "left": "z2__pipe",
+   "right": "z1__pipe",
+   "relationKind": "definition",
+   "reason": "Horizontal discharge path: equal endpoint elevations"
+  },
+  {
+   "id": "s97",
+   "kind": "substitute",
+   "family": "momentum",
+   "sources": [
+    "s95"
+   ],
+   "relation": "s96",
+   "symbol": "z2__pipe"
+  },
+  {
+   "id": "s98",
+   "kind": "isolate",
+   "family": "momentum",
+   "sources": [
+    "s97"
+   ],
+   "symbol": "Derivative(liquidMassFlow(t), t)"
+  },
+  {
+   "id": "s99",
+   "kind": "declare_domain",
+   "family": "momentum",
+   "sources": [
+    "s88"
+   ],
+   "symbol": "liquidMassFlow",
+   "domain": "positive",
+   "reason": "Forward-flow regime of the loss closure and of the donor orientation"
+  },
+  {
+   "id": "s100",
+   "kind": "declare_domain",
+   "family": "momentum",
+   "sources": [
+    "s98"
+   ],
+   "symbol": "crossSectionArea",
+   "domain": "positive",
+   "reason": "Positive geometry and loss coefficient"
+  },
+  {
+   "id": "s101",
+   "kind": "declare_domain",
+   "family": "momentum",
+   "sources": [
+    "s98"
+   ],
+   "symbol": "K__pipe",
+   "domain": "positive",
+   "reason": "Positive geometry and loss coefficient"
+  },
+  {
+   "id": "s102",
+   "kind": "declare_domain",
+   "family": "momentum",
+   "sources": [
+    "s98"
+   ],
+   "symbol": "A__pipe",
+   "domain": "positive",
+   "reason": "Positive path geometry"
+  },
+  {
+   "id": "s103",
+   "kind": "declare_domain",
+   "family": "momentum",
+   "sources": [
+    "s98"
+   ],
+   "symbol": "L__pipe",
+   "domain": "positive",
+   "reason": "Positive path geometry"
+  },
+  {
+   "id": "s104",
+   "kind": "substitute",
+   "family": "matter",
+   "sources": [
+    "balance:matter.pipe:m__pipe__1(t)"
+   ],
+   "relation": "eq:matter.pipe.1.stationary",
+   "symbol": "Derivative(m__pipe__1(t), t)"
+  },
+  {
+   "id": "s105",
+   "kind": "isolate",
+   "family": "matter",
+   "sources": [
+    "s104"
+   ],
+   "symbol": "q__discharge__1(t)"
+  },
+  {
+   "id": "s106",
+   "kind": "substitute",
+   "family": "matter",
+   "sources": [
+    "s105"
+   ],
+   "relation": "s23",
+   "symbol": "q__liquid__1(t)"
+  },
+  {
+   "id": "s107",
+   "kind": "substitute",
+   "family": "matter",
+   "sources": [
+    "balance:matter.pipe:m__pipe__2(t)"
+   ],
+   "relation": "eq:matter.pipe.2.stationary",
+   "symbol": "Derivative(m__pipe__2(t), t)"
+  },
+  {
+   "id": "s108",
+   "kind": "isolate",
+   "family": "matter",
+   "sources": [
+    "s107"
+   ],
+   "symbol": "q__discharge__2(t)"
+  },
+  {
+   "id": "s109",
+   "kind": "substitute",
+   "family": "matter",
+   "sources": [
+    "s108"
+   ],
+   "relation": "s39",
+   "symbol": "q__liquid__2(t)"
+  },
+  {
+   "id": "s110",
+   "kind": "substitute",
+   "family": "energy",
+   "sources": [
+    "balance:energy.pipe:U__pipe(t)"
+   ],
+   "relation": "eq:energy.pipe.zero-total-rate",
+   "symbol": "Derivative(U__pipe(t), t)"
+  },
+  {
+   "id": "s111",
+   "kind": "substitute",
+   "family": "energy",
+   "sources": [
+    "s110"
+   ],
+   "relation": "s23",
+   "symbol": "q__liquid__1(t)"
+  },
+  {
+   "id": "s112",
+   "kind": "substitute",
+   "family": "energy",
+   "sources": [
+    "s111"
+   ],
+   "relation": "s106",
+   "symbol": "q__discharge__1(t)"
+  },
+  {
+   "id": "s113",
+   "kind": "substitute",
+   "family": "energy",
+   "sources": [
+    "s112"
+   ],
+   "relation": "s39",
+   "symbol": "q__liquid__2(t)"
+  },
+  {
+   "id": "s114",
+   "kind": "substitute",
+   "family": "energy",
+   "sources": [
+    "s113"
+   ],
+   "relation": "s109",
+   "symbol": "q__discharge__2(t)"
+  },
+  {
+   "id": "s115",
+   "kind": "substitute",
+   "family": "energy",
+   "sources": [
+    "s114"
+   ],
+   "relation": "s67",
+   "symbol": "energy_average_0__liquid(t)"
+  },
+  {
+   "id": "s116",
+   "kind": "isolate",
+   "family": "energy",
+   "sources": [
+    "s115"
+   ],
+   "symbol": "energy_average_0__discharge(t)"
+  }
+ ],
+ "results": [
+  {
+   "id": "r1",
+   "fromStep": "s26",
+   "statement": "State equation of m__drum__1(t)"
+  },
+  {
+   "id": "r2",
+   "fromStep": "s42",
+   "statement": "State equation of m__drum__2(t)"
+  },
+  {
+   "id": "r3",
+   "fromStep": "s70",
+   "statement": "State equation of H__drum(t)"
+  },
+  {
+   "id": "r4",
+   "fromStep": "s98",
+   "statement": "State equation of liquidMassFlow(t)"
+  }
+ ],
+ "findings": [],
+ "validation": [
+  {
+   "case": "V1",
+   "equation": "s98",
+   "solveFor": "Derivative(liquidMassFlow(t), t)",
+   "inputs": {
+    "A__pipe": 0.0007,
+    "L__pipe": 5.0,
+    "K__pipe": 8.0,
+    "outletPressure": 101325.0,
+    "P__drum(t)": 101325.0,
+    "g__drum": 9.80665,
+    "crossSectionArea": 0.5,
+    "liquid_volume__drum(t)": 0.08,
+    "phase_M__drum__L(t)": 0.0194,
+    "phase_v__drum__L(t)": 2.1e-05,
+    "liquidMassFlow(t)": 0.4,
+    "darcyFriction": 0.024
+   },
+   "expected": -0.09445858899600372,
+   "tolerance": {
+    "relative": 1e-12
+   },
+   "cite": "Independent hand formula of the outlet momentum balance (tests/derived_momentum_inputs.py reference_outlet), with D_h = (4 A/pi)^(1/2); closure values are inputs, not package evaluations"
+  },
+  {
+   "case": "V2",
+   "equation": "s26",
+   "solveFor": "Derivative(m__drum__1(t), t)",
+   "inputs": {
+    "feedRate": 0.5,
+    "inlet_mass_fraction_1__feed(t)": 0.15,
+    "molar_mass_1__drum": 0.04607,
+    "liquidMassFlow(t)": 0.4,
+    "phase_x_1__drum__L(t)": 0.05,
+    "phase_M__drum__L(t)": 0.0194,
+    "phase_present__drum__V(t)": 1.0,
+    "phase_x_1__drum__V(t)": 0.3,
+    "vapourMolarOutflow(t)": 2.0
+   },
+   "expected": -0.0001368453608247555,
+   "tolerance": {
+    "relative": 1e-12
+   },
+   "cite": "Independent hand formula: feed w_F F minus the liquid donor F x_1 M_1/M_L minus the vapour donor M_1 x_1V n_V"
+  }
+ ]
+}
