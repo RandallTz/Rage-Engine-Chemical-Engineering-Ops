@@ -3,6 +3,7 @@
 The user asked for this queue on 30 October 2026. It lists the work for Codex and is Codex's inbox.
 
 - **Ownership:** the coordinating Claude session keeps the queue up to date; Codex changes only the State cell of the item it works on.
+- **Claude takes the queue (user decision, 7 November 2026, `dec-claude-takes-codex-queue`):** Codex has no usage, so Claude does the `repairs requested` and `ready` items too. A repair run commits code to its own `claude/*` branch, pushes that branch and sets the State to `review pending` naming the branch; a separate Claude review run merges it into `fase-a-adopcion` after review. Codex may resume any item later by the same states.
 - **Use (7 November 2026, `dec-autonomous-loops`):** nobody pastes per-item prompts. Codex starts every run with the generic prompt in [Autonomous loops](../../tools/roadmap_board/README.md#autonomous-loops) and takes the first item whose state is `ready` or `repairs requested`. Claude takes the first `review pending` item. The Model column gives the tier: *Light* or *Strong (Astra)*.
 - **Scope:** this file only lists pending work, at most five lines per item: what, files, acceptance command and done criterion. Status history, counts, timings and evidence go to the [roadmap](multiphysics-roadmap.md) section the item names; never here.
 - **State:** each State cell starts with one token, then ` · ` and one short line: `ready`, `in progress`, `review pending`, `repairs requested`, `blocked` (name what it waits for) or `accepted`. The board check rejects any other start.
