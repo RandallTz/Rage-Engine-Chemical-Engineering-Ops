@@ -28,6 +28,6 @@ Rules that apply to every run:
 
 | # | Item | Model | Unblocks | State |
 |---|---|---|---|---|
-| 1 | Steady state as a one-step Transform technique over the current dynamic selection | Light | `demo-02-steady` (UI half) | `repairs requested` · RT-12 (roadmap Demo 0.2, third re-review of 8 November: a state scale with the wrong dimension breaks the Demo 0.2 CSTR and a kinetic steady test); RT-11 confirmed for the drums, the solver change accepted; branch claude/steady-rt6-rt7 not merged |
+| 1 | Steady state as a one-step Transform technique over the current dynamic selection | Light | `demo-02-steady` (UI half) | `review pending` · RT-12 repaired on branch claude/steady-rt6-rt7 (commit 0a47e9c) |
 
 Delivery evidence, counts and timings for these items are in the roadmap (Demo 0.2, F3/F9-R8 and F5 sections). The earlier per-item prompts were removed on 7 November 2026: items 1-9 are delivered, and new work uses the generic prompt.
