@@ -116,7 +116,7 @@ def stability(eos, T, P, z):
 def rachford_rice(z, K):
     f = lambda b: float(np.sum(z * (K - 1) / (1 + b * (K - 1))))
     if not (K.max() > 1 > K.min()):
-        raise CubicOutOfScope("Rachford-Rice has no root: all K on one side of 1.")
+        raise CubicOutOfScope("Rachford-Rice has no root: all K on one side of 1.", cause="no_rachford_rice_root")
     lo = 1 / (1 - K.max())              # negative-flash window (Whitson and Michelsen 1989)
     hi = 1 / (1 - K.min())
     eps = 1e-12 * (hi - lo)
@@ -162,12 +162,14 @@ def split_TP(eos, T, P, z, w_trial):
         try:
             dv = np.linalg.solve(HV + HL, -g)
         except np.linalg.LinAlgError:
-            raise CubicOutOfScope("Singular two-phase Hessian (critical point of the split).")
+            raise CubicOutOfScope("Singular two-phase Hessian (critical point of the split).",
+                                  cause="singular_split_hessian", T=T, P=P)
         t = 1.0
         while np.any(v + t * dv <= 0) or np.any(z - v - t * dv <= 0):
             t *= 0.5
             if t < 1e-12:
-                raise CubicOutOfScope("Two-phase Newton step left the amount simplex.")
+                raise CubicOutOfScope("Two-phase Newton step left the amount simplex.", cause="not_converged",
+                                      T=T, P=P)
         v = v + t * dv
     l = z - v
     beta = float(v.sum())
@@ -205,7 +207,8 @@ def flash_TP(eos, T, P, z):
     w = min(trials, key=lambda t: t[1])[0]
     beta, y, x = split_TP(eos, T, P, zn, w)
     if not (N_ABSENT < beta < 1 - N_ABSENT):
-        raise CubicOutOfScope(f"Split collapsed to one phase at T = {T:.6g} K, P = {P:.6g} Pa.")
+        raise CubicOutOfScope(f"Split collapsed to one phase at T = {T:.6g} K, P = {P:.6g} Pa.",
+                              cause="split_collapsed", T=T, P=P)
     pv = eos.phase(T, P, y)
     pl = eos.phase(T, P, x)
     res_mu = float(np.max(np.abs((np.log(y) + pv["lnphi"]) - (np.log(x) + pl["lnphi"]))))
@@ -213,7 +216,9 @@ def flash_TP(eos, T, P, z):
     tm_cert = min([t[1] for t in cert if np.max(np.abs(t[0] - y)) > TOL_SAME], default=math.inf)
     if res_mu > TOL_MU or tm_cert < -TOL_TM:
         raise CubicOutOfScope(f"Two-phase state at T = {T:.6g} K, P = {P:.6g} Pa not certified "
-                              f"(mu {res_mu:.3g}, tm {tm_cert:.3g}); a third phase is outside this package.")
+                              f"(mu {res_mu:.3g}, tm {tm_cert:.3g}); a third phase is outside this package.",
+                              cause="third_phase" if tm_cert < -TOL_TM else "not_certified", T=T, P=P,
+                              mu_residual=res_mu, tm=tm_cert)
     a = eos.molar_props(T, P, y, pv["Z"])
     b = eos.molar_props(T, P, x, pl["Z"])
     # Order by density (less dense first). Density alone cannot tell a vapour from the lighter of two liquids
@@ -253,92 +258,285 @@ def _bracketed_root(f, lo, hi, what, state, **kw):
     return brentq(f, lo, hi, **kw)
 
 
-def _uv_T_window(g_at, lnPa, lnPb, lo, hi, state):
-    """[T_a, T_b] inside [lo, hi] at which the inner ln P problem of a UV flash has a root (see flash_UV)."""
-    def side(T):
-        g = g_at(T)
-        ga, gb = g(lnPa), g(lnPb)
-        if not (math.isfinite(ga) and math.isfinite(gb)):
-            raise CubicOutOfScope(f"UV flash: non-finite volume residual at T = {T:.6g} K.", cause="outside_bracket",
-                                  T=T, **state)
-        if ga < 0.0 and gb < 0.0:
-            return -1                    # V(P_min) < V: the state needs P < P_min, T too low
-        if ga > 0.0 and gb > 0.0:
-            return 1                     # V(P_max) > V: the state needs P > P_max, T too high
-        return 0
-    s_lo, s_hi = side(lo), side(hi)
+N_WINDOW_SCAN = 25       # T grid of the default PH and UV bracket searches
+N_WINDOW_BISECT = 20     # bisections per end of an evaluable T window (grid step / 2^20, ~3e-5 K)
+N_LL_BISECT = 40         # bisections in ln P towards the non-evaluable high-pressure side of one UV isotherm
+N_UV_SCAN, N_UV_BISECT = N_WINDOW_SCAN, N_WINDOW_BISECT     # earlier names (A1 repairs review R3)
+
+
+def _probe(fn):
+    """(fn(), None), or (None, cause) when fn raises a located CubicOutOfScope. A bracket search treats such a
+    state as non-evaluable: the package has one vapour and one liquid candidate, so a certified liquid-liquid
+    split (`liquid_liquid_split`), a split that a third phase destabilizes (`third_phase`) or a split that does
+    not converge cannot be published there. The cause is kept as the label of that side; the published result is
+    always a fresh certified flash at the root, never a probe."""
+    try:
+        return fn(), None
+    except CubicOutOfScope as e:
+        return None, str(e.datos.get("cause") or "unlocated")
+
+
+def _windows(side, lo, hi, s_lo, s_hi, what, state):
+    """Evaluable temperature windows of a default PH or UV bracket [lo, hi].
+
+    side(T) is 0 when the specified state can be sought at T and otherwise a label: the cause of a non-evaluable
+    probe (for example `liquid_liquid_split`), or for UV -1/+1 (the volume needs P below/above the P bracket). The
+    sides are taken on an N_WINDOW_SCAN-point grid; every run of grid points with side 0 becomes one window, each
+    end refined by N_WINDOW_BISECT bisections against its neighbour. Returns [(T_a, T_b, side below, side above,
+    interior grid points)], a neighbour side being None at a bracket end."""
+    grid = np.linspace(lo, hi, N_WINDOW_SCAN)
     if s_lo == 0 and s_hi == 0:
-        return lo, hi
-    grid = np.linspace(lo, hi, N_UV_SCAN)
-    sides = [s_lo] + [side(T) for T in grid[1:-1]] + [s_hi]
-    ev = [k for k, s in enumerate(sides) if s == 0]
-    if not ev:
+        return [(lo, hi, None, None, [float(T) for T in grid[1:-1]])]
+    sides = [s_lo] + [side(float(T)) for T in grid[1:-1]] + [s_hi]
+    if 0 not in sides:
+        causes = [s for s in sides if isinstance(s, str)]
         raise CubicOutOfScope(
-            f"UV flash: no temperature in [{lo:.6g}, {hi:.6g}] K at which V = {state['V']:.6g} m3 is reached with P in "
-            f"[{math.exp(lnPa):.6g}, {math.exp(lnPb):.6g}] Pa (sides on a {N_UV_SCAN}-point grid: {sides}).",
-            cause="outside_bracket", bracket=[lo, hi], sides=sides, **state)
+            f"{what}: no temperature in [{lo:.6g}, {hi:.6g}] K at which the state is evaluable (sides on a "
+            f"{N_WINDOW_SCAN}-point grid: {sides}).",
+            cause=causes[0] if causes else "outside_bracket", bracket=[lo, hi], sides=sides, **state)
 
     def refine(bad, good):
-        for _ in range(N_UV_BISECT):
+        for _ in range(N_WINDOW_BISECT):
             mid = 0.5 * (bad + good)
             if side(mid) == 0:
                 good = mid
             else:
                 bad = mid
         return good
-    ka, kb = ev[0], ev[-1]
-    Ta = float(grid[ka]) if ka == 0 else refine(float(grid[ka - 1]), float(grid[ka]))
-    Tb = float(grid[kb]) if kb == len(grid) - 1 else refine(float(grid[kb + 1]), float(grid[kb]))
-    return Ta, Tb
+    out, k, last = [], 0, len(grid) - 1
+    while k <= last:
+        if sides[k] != 0:
+            k += 1
+            continue
+        k0 = k
+        while k + 1 <= last and sides[k + 1] == 0:
+            k += 1
+        Ta = float(grid[k0]) if k0 == 0 else refine(float(grid[k0 - 1]), float(grid[k0]))
+        Tb = float(grid[k]) if k == last else refine(float(grid[k + 1]), float(grid[k]))
+        inside = [float(T) for T in grid[k0:k + 1] if Ta < T < Tb]
+        out.append((Ta, Tb, None if k0 == 0 else sides[k0 - 1], None if k == last else sides[k + 1], inside))
+        k += 1
+    return out
+
+
+def _root_on_windows(f, f_probe, windows, what, state, **kw):
+    """T at which f(T) = 0 on the evaluable windows of _windows.
+
+    f increases with T (H at fixed P, U at fixed V, by positive heat capacities on the stable states), so at most
+    one window brackets the root. f_probe(T) is (value, None) or (None, cause). A window end at which the full
+    residual is not evaluable (for UV the side test sees only the two P ends) is replaced by the nearest
+    evaluable grid point inside the window; when the root lies between that point and the failing one, the edge
+    is bisected (N_WINDOW_BISECT). Without a bracketing window, the root lies in a gap or beyond a bracket end and
+    the label of that side locates the rejection: its cause (for example `liquid_liquid_split`: the true state is
+    a split this package cannot publish), or `outside_bracket` at a bracket end or a -1/+1 side. A single window
+    spanning the bracket is the plain search, unchanged."""
+    single = len(windows) == 1 and windows[0][2] is None and windows[0][3] is None
+    if single and f_probe(windows[0][0])[1] is None and f_probe(windows[0][1])[1] is None:
+        return _bracketed_root(f, windows[0][0], windows[0][1], what, state, **kw)
+
+    def edge(bad, good, f_good, bad_label):
+        """Bisect between a non-evaluable T and an evaluable one whose residual has the wrong sign for a bracket
+        with it; returns (T, f) of an evaluable point across the root, or None with the root on the bad side."""
+        for _ in range(N_WINDOW_BISECT):
+            mid = 0.5 * (bad + good)
+            fm, cause = f_probe(mid)
+            if fm is None:
+                bad, bad_label = mid, cause
+            elif fm * f_good <= 0.0:
+                return mid, fm
+            else:
+                good, f_good = mid, fm
+        return None, (bad, bad_label, good, f_good)
+
+    ends = []
+    for Ta, Tb, below, above, inside in windows:
+        pts = [Ta] + inside + [Tb]
+        lo_i, fa, lo_bad = 0, None, None
+        while lo_i < len(pts):
+            fa, cause = f_probe(pts[lo_i])
+            if fa is not None:
+                break
+            lo_bad = (pts[lo_i], cause)
+            lo_i += 1
+        if fa is None:                                  # no evaluable point in this window
+            continue
+        hi_i, fb, hi_bad = len(pts) - 1, None, None
+        while hi_i > lo_i:
+            fb, cause = f_probe(pts[hi_i])
+            if fb is not None:
+                break
+            hi_bad = (pts[hi_i], cause)
+            hi_i -= 1
+        if hi_i == lo_i:
+            fb = fa
+        Tlo, Thi = pts[lo_i], pts[hi_i]
+        if fa == 0.0:
+            return Tlo
+        if fb == 0.0:
+            return Thi
+        if fa * fb < 0.0:
+            return brentq(f, Tlo, Thi, **kw)
+        if fa > 0.0 and lo_bad is not None:             # the root may sit between the failing point and Tlo
+            T_in, f_in = edge(lo_bad[0], Tlo, fa, lo_bad[1])
+            if T_in is not None:
+                return brentq(f, T_in, Tlo, **kw)
+            Tlo, below, fa = f_in[2], f_in[1], f_in[3]
+        if fb < 0.0 and hi_bad is not None:
+            T_in, f_in = edge(hi_bad[0], Thi, fb, hi_bad[1])
+            if T_in is not None:
+                return brentq(f, Thi, T_in, **kw)
+            Thi, above, fb = f_in[2], f_in[1], f_in[3]
+        ends.append((Tlo, Thi, below, above, fa, fb))
+    if not ends:
+        raise CubicOutOfScope(f"{what}: the residual is not evaluable at any window point.", cause="not_evaluable",
+                              windows=[[w[0], w[1]] for w in windows], **state)
+    if ends[0][4] > 0.0:                                # below the first window
+        T_edge, label, res = ends[0][0], ends[0][2], ends[0][4]
+    elif ends[-1][5] < 0.0:                             # above the last window
+        T_edge, label, res = ends[-1][1], ends[-1][3], ends[-1][5]
+    else:                                               # in a gap between two windows
+        i = next((i for i in range(len(ends) - 1) if ends[i][5] < 0.0 < ends[i + 1][4]), None)
+        if i is None:
+            raise CubicOutOfScope(f"{what}: residual not monotone across the evaluable windows "
+                                  f"{[(e[0], e[1], e[4], e[5]) for e in ends]}.", cause="not_monotone",
+                                  windows=[[e[0], e[1]] for e in ends], **state)
+        T_edge, label, res = ends[i][1], ends[i][3], ends[i][5]
+    cause = label if isinstance(label, str) else "outside_bracket"
+    raise CubicOutOfScope(
+        f"{what}: the specified state lies beyond the evaluable window edge T = {T_edge:.6g} K (residual "
+        f"{res:.6g}), on a side labelled {label!r}, which this package does not publish.",
+        cause=cause, T_edge=T_edge, residual=res, windows=[[e[0], e[1]] for e in ends], **state)
 
 
 def flash_PH(eos, P, H, z, T_bracket=None):
+    """T from H at fixed P. With an explicit T_bracket, brentq on it. With the default bracket, a temperature
+    whose state is not evaluable (for example a certified liquid-liquid split, PSRK CO2 + ethanol at 7 MPa and
+    231 K) is a labelled side, not a failure: the evaluable windows of T are located (_windows) and the root is
+    sought on them (_root_on_windows). When the specified H lies on such a side the result is the located
+    rejection with that cause, never another state. When both default ends are evaluable the search is the
+    plain one."""
     z = np.asarray(z, dtype=float)
-    lo, hi = T_bracket or (max(eos.T_range[0], 150.0), min(eos.T_range[1], 1000.0))
-    f = lambda T: sum(p["n"] * p["h"] for p in flash_TP(eos, T, P, z)["phases"]) - H
-    T = _bracketed_root(f, lo, hi, "PH flash (T)", {"P": P, "H": H, "z": z.tolist()},
-                        xtol=1e-10, rtol=1e-14, maxiter=200)
+    memo = {}
+
+    def probe(T):
+        if T not in memo:
+            memo[T] = _probe(lambda: flash_TP(eos, T, P, z))
+        st, cause = memo[T]
+        return (None, cause) if st is None else (sum(p["n"] * p["h"] for p in st["phases"]) - H, None)
+
+    def f(T):
+        val, cause = probe(T)
+        if val is None:
+            flash_TP(eos, T, P, z)                      # re-raise the located rejection
+        return val
+    where = {"P": P, "H": H, "z": z.tolist()}
+    if T_bracket is not None:
+        T = _bracketed_root(f, T_bracket[0], T_bracket[1], "PH flash (T)", where, xtol=1e-10, rtol=1e-14,
+                            maxiter=200)
+    else:
+        lo, hi = max(eos.T_range[0], 150.0), min(eos.T_range[1], 1000.0)
+        side = lambda T: 0 if probe(T)[1] is None else probe(T)[1]
+        windows = _windows(side, lo, hi, side(lo), side(hi), "PH flash (T)", where)
+        T = _root_on_windows(f, probe, windows, "PH flash (T)", where, xtol=1e-10, rtol=1e-14, maxiter=200)
     st = flash_TP(eos, T, P, z)
     st["T"], st["P"] = T, P
     return st
 
 
-N_UV_SCAN = 25           # T grid of the default UV bracket search
-N_UV_BISECT = 20         # bisections per end of the evaluable T window (grid step / 2^20, ~3e-5 K)
-
-
 def flash_UV(eos, U, V, z, T_bracket=None, P_bracket=(1e3, 5e7)):
     """Rigid vessel: nested, P(T) from the volume at each T, then T from U. Two-phase V(P) is monotone.
 
+    Inner problem at each T: ln P with V(P) = V on P_bracket. V decreases with P, so the residual at the two P
+    ends tells whether that T is too low (V(P_min) < V), too high (V(P_max) > V) or evaluable. A non-evaluable
+    state at P_max (typically a certified liquid-liquid split of compressed liquids) is a labelled side, not a
+    failure: ln P is bisected towards it until an evaluable P with V(P) <= V brackets the root; when none is found
+    in N_LL_BISECT bisections the volume is reached only on the non-evaluable side and that T takes its label (a
+    non-evaluable state at P_min labels the T directly).
+
     With an explicit T_bracket the outer search is brentq on it (located `outside_bracket` when U is outside).
-    With the default bracket (A1 repairs review R3), the outer search first finds the window of T at which the
-    volume V is reachable with P inside P_bracket: on an isochore P(T) increases with T, so at each T the inner
-    residual V(P) - V at the two P ends tells whether that T is too low (V(P_min) < V), too high (V(P_max) > V)
-    or evaluable. The evaluable window is located on a grid of N_UV_SCAN temperatures and its ends are refined by
-    bisection; brentq in T then runs inside that window. When both default ends are evaluable the window is the
-    default bracket itself, so the result equals the plain search."""
+    With the default bracket (A1 repairs review R3), the outer search first finds the windows of T on a grid
+    (_windows) and then the root on them (_root_on_windows); a U that lies on a non-evaluable side is the located
+    rejection with its cause. When both default ends are evaluable the window is the default bracket itself, so
+    the result equals the plain search."""
     z = np.asarray(z, dtype=float)
     lnPa, lnPb = math.log(P_bracket[0]), math.log(P_bracket[1])
+    flashes, inner, outer = {}, {}, {}
+
+    def tp(T, lnP):
+        if (T, lnP) not in flashes:
+            flashes[(T, lnP)] = flash_TP(eos, T, math.exp(lnP), z)
+        return flashes[(T, lnP)]
 
     def g_at(T):
-        return lambda lnP: sum(p["n"] * p["v"] for p in flash_TP(eos, T, math.exp(lnP), z)["phases"]) - V
+        return lambda lnP: sum(p["n"] * p["v"] for p in tp(T, lnP)["phases"]) - V
+
+    def inner_side(T):
+        """(side, ln P bracket, ln P of the non-evaluable side) of the inner problem at T."""
+        if T in inner:
+            return inner[T]
+        g = g_at(T)
+        ga, cause_a = _probe(lambda: g(lnPa))
+        gb, cause_b = (None, None) if ga is None else _probe(lambda: g(lnPb))
+        for gv in (ga, gb):
+            if gv is not None and not math.isfinite(gv):
+                raise CubicOutOfScope(f"UV flash: non-finite volume residual at T = {T:.6g} K.",
+                                      cause="outside_bracket", T=T, U=U, V=V, z=z.tolist())
+        if ga is None:
+            res = (cause_a, None, lnPa)
+        elif gb is not None:
+            s = -1 if (ga < 0.0 and gb < 0.0) else 1 if (ga > 0.0 and gb > 0.0) else 0
+            res = (s, (lnPa, lnPb), None)
+        elif ga < 0.0:
+            res = (-1, None, None)
+        else:
+            l, h, res = lnPa, lnPb, None
+            for _ in range(N_LL_BISECT):
+                m = 0.5 * (l + h)
+                gm, cm = _probe(lambda: g(m))
+                if gm is None:
+                    h, cause_b = m, cm
+                elif gm <= 0.0:
+                    res = (0, (l, m), h)
+                    break
+                else:
+                    l = m
+            if res is None:
+                res = (cause_b, None, h)
+        inner[T] = res
+        return res
 
     def at_T(T):
-        g = g_at(T)
-        lnP = _bracketed_root(g, lnPa, lnPb, f"UV flash (ln P at T = {T:.6g} K)", {"T": T, "V": V, "z": z.tolist()},
+        s, br, ln_bad = inner_side(T)
+        where = {"T": T, "V": V, "z": z.tolist()}
+        if isinstance(s, str):
+            raise CubicOutOfScope(
+                f"UV flash at T = {T:.6g} K: V = {V:.6g} m3 is reached only on the non-evaluable side ({s}, near "
+                f"P = {math.exp(ln_bad):.6g} Pa), which this package does not publish.",
+                cause=s, P_side=math.exp(ln_bad), **where)
+        if br is None:                                  # V(P_min) < V with a non-evaluable state at P_max
+            raise CubicOutOfScope(f"UV flash (ln P at T = {T:.6g} K): V = {V:.6g} m3 needs P below "
+                                  f"{P_bracket[0]:.6g} Pa.", cause="outside_bracket", **where)
+        lnP = _bracketed_root(g_at(T), br[0], br[1], f"UV flash (ln P at T = {T:.6g} K)", where,
                               xtol=1e-13, maxiter=200)
-        return flash_TP(eos, T, math.exp(lnP), z), math.exp(lnP)
+        return tp(T, lnP), math.exp(lnP)
 
     def f(T):
         st, P = at_T(T)
         return sum(p["n"] * p["u"] for p in st["phases"]) - U
+
+    def probe(T):
+        if T not in outer:
+            outer[T] = _probe(lambda: f(T))
+        return outer[T]
+    where = {"U": U, "V": V, "z": z.tolist()}
     if T_bracket is not None:
-        lo, hi = T_bracket
+        T = _bracketed_root(f, T_bracket[0], T_bracket[1], "UV flash (T)", where, xtol=1e-10, rtol=1e-14,
+                            maxiter=200)
     else:
-        lo, hi = _uv_T_window(g_at, lnPa, lnPb, max(eos.T_range[0], 150.0), min(eos.T_range[1], 1000.0),
-                              {"U": U, "V": V, "z": z.tolist(), "P_bracket": list(P_bracket)})
-    T = _bracketed_root(f, lo, hi, "UV flash (T)", {"U": U, "V": V, "z": z.tolist()},
-                        xtol=1e-10, rtol=1e-14, maxiter=200)
+        lo, hi = max(eos.T_range[0], 150.0), min(eos.T_range[1], 1000.0)
+        side = lambda T: inner_side(T)[0]
+        windows = _windows(side, lo, hi, side(lo), side(hi), "UV flash (T)", {**where, "P_bracket": list(P_bracket)})
+        T = _root_on_windows(f, probe, windows, "UV flash (T)", where, xtol=1e-10, rtol=1e-14, maxiter=200)
     st, P = at_T(T)
     st["T"], st["P"] = T, P
     return st
