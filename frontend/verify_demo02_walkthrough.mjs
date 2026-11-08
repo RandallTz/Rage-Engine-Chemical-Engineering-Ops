@@ -1,0 +1,72 @@
+// Headless Demo 0.2 model-file round trip. Requires an isolated frontend (DEMO02_ORIGIN) built with NEXT_PUBLIC_API_URL pointing to an isolated backend, the
+// fixture from tests/prepare_flowsheet_http.py, and Playwright (PLAYWRIGHT_MODULE, optional PLAYWRIGHT_CHROMIUM_PATH). A frontend whose node_modules is a junction needs `next dev --webpack`.
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import {createRequire} from 'node:module';
+import {fileURLToPath} from 'node:url';
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+const origin=process.env.DEMO02_ORIGIN;
+if(!origin)throw new Error('Set DEMO02_ORIGIN to an isolated frontend connected to an isolated backend.');
+const endpoint=new URL(origin);if(!['127.0.0.1','localhost'].includes(endpoint.hostname)||['3000','8004','8005'].includes(endpoint.port)||!endpoint.port)throw new Error('Use an isolated local frontend port, never 3000, 8004 or 8005.');
+const sourceFile=process.env.DEMO02_FLOWSHEET_SOURCE??path.join(root,'.tmp/flowsheet-http/source.json');
+if(!fs.existsSync(sourceFile))throw new Error('Generate .tmp/flowsheet-http/source.json with tests/prepare_flowsheet_http.py.');
+const equipment=['continuous-reactor.rage-model.json','flash-drum.rage-model.json'].map(name=>JSON.parse(fs.readFileSync(path.join(root,'docs/ejemplos/demo-0.2',name),'utf8')));
+for(const file of equipment){assert.equal(file.format,'rage.model-file');assert.equal(file.model.commonModel.template.equipment,true);}
+const columnFile=path.join(root,'docs/ejemplos/demo-0.2/column.index-set.json');const column=JSON.parse(fs.readFileSync(columnFile,'utf8'));assert.equal(column.indexSet.format,'rage.index-set');assert.notEqual(column.format,'rage.model-file');
+const common=JSON.parse(fs.readFileSync(sourceFile,'utf8'));
+const model=JSON.parse(fs.readFileSync(path.join(root,'docs/ejemplos/demo-0.2/flash-drum.rage-model.json'),'utf8')).model;
+model.id=common.id;model.nombre='Demo 0.2 round trip';model.commonModel=common;
+model.resultadoRef={firma:'previous-result',estado:'resuelto',fecha:'2026-11-07T00:00:00.000Z'};
+const require=createRequire(import.meta.url),{chromium}=require(process.env.PLAYWRIGHT_MODULE??'playwright');
+const browser=await chromium.launch({headless:true,...(process.env.PLAYWRIGHT_CHROMIUM_PATH?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_PATH}:{})});
+try{
+ const first=await browser.newContext({acceptDownloads:true});
+ await first.addInitScript(({model})=>localStorage.setItem('rage.motor.hojas.v1',JSON.stringify([model])),{model});
+ const page=await first.newPage();page.setDefaultTimeout(120000);await page.goto(origin+'/models',{waitUntil:'domcontentloaded'});
+ await page.getByRole('heading',{name:'Your models'}).waitFor();
+ const exported=page.waitForEvent('download');await page.getByRole('button',{name:'Export model',exact:true}).click();
+ const download=await exported,output=path.join(root,'.tmp/demo02-walkthrough-export.rage-model.json');await download.saveAs(output);
+ const doc=JSON.parse(fs.readFileSync(output,'utf8'));assert.equal(doc.format,'rage.model-file');assert.deepEqual(doc.model.commonModel.flowsheet,common.flowsheet);assert.deepEqual(doc.model.commonModel.flowsheetLayout,common.flowsheetLayout);assert.ok(doc.model.resultadoRef);
+ await first.close();
+ const second=await browser.newContext();const importedPage=await second.newPage();importedPage.setDefaultTimeout(120000);await importedPage.goto(origin+'/models',{waitUntil:'domcontentloaded'});
+ assert.equal(await importedPage.evaluate(()=>localStorage.getItem('rage.motor.hojas.v1')),null,'The import profile must be clean.');
+ await importedPage.getByRole('heading',{name:'Start with a physical system'}).waitFor();
+ await importedPage.getByLabel('Import model file').setInputFiles(output);
+ await importedPage.waitForURL(/\/models\/[^/]+\/model/, {timeout:180000});
+ const imported=await importedPage.evaluate(()=>JSON.parse(localStorage.getItem('rage.motor.hojas.v1'))[0]);
+ assert.notEqual(imported.id,model.id);assert.deepEqual(imported.commonModel.flowsheet,common.flowsheet);assert.deepEqual(imported.commonModel.flowsheetLayout,common.flowsheetLayout);assert.deepEqual(imported.commonModel.datos,common.datos);assert.equal(imported.resultado,undefined);assert.equal(imported.resultadoRef,undefined);assert.equal(imported.flowsheetSelection,undefined);
+ for(const instance of ['R1','D1','R2'])await importedPage.locator(`[data-instance-id="${instance}"]`).first().waitFor({timeout:120000});
+ console.log('Model file exported and imported in a clean profile; topology, layout and data preserved.');
+ await importedPage.goto(origin+`/models/${encodeURIComponent(imported.id)}/transform`,{waitUntil:'domcontentloaded'});
+ const formulation=importedPage.locator('section').filter({has:importedPage.getByRole('heading',{name:'Flowsheet formulation',exact:true})});
+ await formulation.getByRole('button',{name:'Use dynamic formulation'}).click();
+ await formulation.getByText(/3 instances.*dynamic/).waitFor({timeout:1800000});
+ await formulation.getByRole('button',{name:'Use steady state (zero accumulation)'}).click();
+ await formulation.getByText(/3 instances.*steady/).waitFor({timeout:1800000});
+ await formulation.getByRole('link',{name:'Continue to Solve',exact:false}).click();
+ const [solve]=await Promise.all([importedPage.waitForResponse(r=>r.url().includes('/modelo/resolver')&&r.request().method()==='POST',{timeout:1800000}),importedPage.getByRole('button',{name:'Solve network'}).click()]);const published=await solve.json();assert.equal(solve.status(),200,JSON.stringify(published));
+ await importedPage.waitForURL(/\/results/, {timeout:180000});
+ const series=new Map(published.series.map(row=>[row.id,row])),scalar=x=>Array.isArray(x)?x[0]:x;
+ const values=published.indexedNetwork.stages.map(stage=>{const id=stage.seriesIds.find(key=>key.includes('.closure.')&&series.get(key)?.nombre.startsWith('T__'));assert.ok(id);return scalar(series.get(id).valores);});
+ const expected=[335.243964,344.588553,345.642769];values.forEach((value,i)=>assert.ok(Math.abs(value-expected[i])<1e-6,`Temperature ${i+1}: ${value}`));
+ const reactor=common.flowsheet.templates.reactor;
+ function state(index,datum){const quantity=Object.entries(reactor.motores.derivedExecution.initialValues).find(([,id])=>id===datum)?.[0];assert.ok(quantity);const key=published.indexedNetwork.stages[index].seriesIds.find(id=>id.endsWith(`.state.${quantity}`));assert.ok(key);return scalar(series.get(key).valores);}
+ const conversions=[0,2].map(i=>{const first=state(i,'cell.mass')/Number(reactor.datos.molarMass1.declaracion.texto),third=state(i,'cell.mass3')/Number(reactor.datos.molarMass3.declaracion.texto);return 1-first/(first+third);});
+ conversions.forEach((value,i)=>assert.ok(Math.abs(value-[0.349817,0.543864][i])<1e-6,`Conversion ${i+1}: ${value}`));
+ const third=await browser.newContext();const invalid=await third.newPage();await invalid.goto(origin+'/models',{waitUntil:'domcontentloaded'});
+ await invalid.getByRole('heading',{name:'Start with a physical system'}).waitFor();
+ await invalid.getByLabel('Import model file').setInputFiles(columnFile);
+ await invalid.locator('p[role=alert]').getByText('Expected a rage.model-file version 1 document.').waitFor();
+ const edited=structuredClone(doc);edited.model.commonModel.flowsheet.connections[0].to.instance='missing';
+ await invalid.getByLabel('Import model file').setInputFiles({name:'edited.rage-model.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(edited))});
+ const alert=invalid.locator('p[role=alert]').filter({hasText:'flowsheet_unknown_instance'});await alert.waitFor();assert.match(await alert.innerText(),/flowsheet\.connections|flowsheet_/i);
+ const invalidFile=await alert.innerText();
+ await invalid.getByRole('button',{name:'Create model',exact:true}).first().click();
+ await invalid.getByLabel('Model name').fill('Fundamental law smoke test');
+ await invalid.locator('form').getByRole('button',{name:'Create model',exact:true}).click();
+ await invalid.waitForURL(/\/models\/[^/]+\/model/,{timeout:180000});
+ await invalid.getByRole('heading',{name:'Fundamental laws',exact:true}).first().waitFor({timeout:180000});
+ console.log(JSON.stringify({temperatures:values,conversions,invalidFile,scope:'Fundamental laws, equipment documents, column import boundary, headless flowsheet export, clean-profile import, diagram, steady Transform, Solve and Results'}));
+ await third.close();await second.close();
+}finally{await browser.close();}
