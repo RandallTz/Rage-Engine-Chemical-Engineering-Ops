@@ -16,8 +16,9 @@ function load(file){
   const code=ts.transpileModule(fs.readFileSync(file,'utf8'),{fileName:file,compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText;
   new Function('module','exports','require',code)(loadedModule,loadedModule.exports,id=>id.startsWith('.')?load(path.resolve(path.dirname(file),id)):require(id));return loadedModule.exports;
 }
-const live=JSON.parse(fs.readFileSync(path.join(root,'.tmp/index-sets/publication.json'),'utf8'));
-const rejects=JSON.parse(fs.readFileSync(path.join(root,'.tmp/index-sets/rejections.json'),'utf8'));
+function readProduced(file,producer){if(!fs.existsSync(file))throw new Error(`Missing ${path.relative(process.cwd(),file)}: produced by ${producer}; run it first.`);return JSON.parse(fs.readFileSync(file,'utf8'));}
+const live=readProduced(path.join(root,'.tmp/index-sets/publication.json'),'tests/test_index_sets.py');
+const rejects=readProduced(path.join(root,'.tmp/index-sets/rejections.json'),'tests/test_index_sets.py');
 const {leerModeloComun}=load(path.join(here,'motores/modelo/lector'));
 const {readIndexSet,readIndexSetExpansion}=load(path.join(here,'motores/modelo/indexSets'));
 let checks=0;

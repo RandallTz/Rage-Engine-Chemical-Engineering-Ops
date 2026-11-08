@@ -20,6 +20,7 @@ from core.compilador.steady import SteadySystem, read_result
 @pytest.fixture(scope='module')
 def source():
     model = frozen_model()
+    Path('.tmp').mkdir(exist_ok=True)
     Path('.tmp/cstr-authored-test.json').write_text(json.dumps(model),encoding='utf-8')
     return model
 
