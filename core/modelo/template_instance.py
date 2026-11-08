@@ -1,8 +1,11 @@
 """Atomic template instantiation by verified alpha-renaming and journal replay."""
+from collections import OrderedDict
 from copy import deepcopy
 from dataclasses import replace
 import hashlib
+import json
 import re
+from threading import RLock
 from uuid import uuid4
 import sympy as sp
 from core.modelo.lector import leer_modelo_comun, ErrorModelo
@@ -16,6 +19,67 @@ class TemplateInstanceError(ValueError):
     def __init__(self, path, message):
         super().__init__(message)
         self.diagnostics = [{'code': 'template_replay_failed', 'path': path, 'message': message}]
+
+
+# Physical journals whose identity references are remapped field by field.
+# Any other field that names a volume, stream or exchange identity is rejected
+# (RI-2), because the identity map would leave it stale.
+_PHYSICAL_JOURNALS = ('materialDerivation', 'energyDerivation', 'thermodynamicDerivation',
+                      'momentumDerivation', 'kineticReactions')
+_REMAPPED_CHANGES = {'momentumDerivation': ('inletStreamId', 'outletStreamId')}
+
+# Source recipes whose rebinding has matched one uncached replay of the target
+# in this process (RI-1). Keyed by revision, the whole source document and the
+# whole recorded history, so any change to the template replays cold again.
+_COLD_VERIFIED = OrderedDict()
+_COLD_LIMIT = 64
+_cold_lock = RLock()
+
+
+def _cold_key(source, definition, revision):
+    return hashlib.sha256(json.dumps([revision, source, definition], sort_keys=True,
+        separators=(',', ':'), ensure_ascii=False, allow_nan=False).encode()).hexdigest()
+
+
+def _reject_unmapped_identities(source, identities):
+    def scan(value, path):
+        if isinstance(value, dict):
+            for key, item in value.items():
+                if key in identities:
+                    raise TemplateInstanceError(path + '.' + key, f'This journal key names the identity {key!r}, which the identity map does not rewrite; a dedicated identity adapter is required.')
+                scan(item, path + '.' + key)
+        elif isinstance(value, list):
+            for i, item in enumerate(value):
+                scan(item, f'{path}[{i}]')
+        elif isinstance(value, str) and value in identities:
+            raise TemplateInstanceError(path, f'This journal field names the identity {value!r}, which the identity map does not rewrite; a dedicated identity adapter is required.')
+    for name in _PHYSICAL_JOURNALS:
+        journal = source['motores'].get(name)
+        if not isinstance(journal, dict) or not isinstance(journal.get('volumes'), dict):
+            continue
+        for owner, entry in journal['volumes'].items():
+            base = f'motores.{name}.volumes.{owner}'
+            if not isinstance(entry, dict):
+                continue
+            for key, value in entry.items():
+                if key == 'origin':
+                    continue
+                if key != 'operations' or not isinstance(value, list):
+                    scan(value, base + '.' + key)
+                    continue
+                for i, op in enumerate(value):
+                    if not isinstance(op, dict):
+                        continue
+                    for field, item in op.items():
+                        path = f'{base}.operations[{i}].{field}'
+                        if field in ('id', 'title'):
+                            continue  # operation identity and prose, never physical identities
+                        if field == 'changes' and isinstance(item, dict):
+                            for change, setting in item.items():
+                                if change not in _REMAPPED_CHANGES.get(name, ()):
+                                    scan(setting, path + '.' + change)
+                        else:
+                            scan(item, path)
 
 
 def instantiate_template(source, *, identity_namespace=None):
@@ -67,6 +131,7 @@ def _instantiate(source, *, identity_namespace=None):
     owners = {**maps['volumes'], **maps['streams'], **maps['exchanges']}
     if len(owners) != sum(len(maps[k]) for k in ('volumes','streams','exchanges')):
         raise TemplateInstanceError('template.recipe', 'Overlapping volume/stream/exchange names require an unambiguous identity adapter.')
+    _reject_unmapped_identities(source, set(owners))
 
     def symbol_name(name):
         # Physical producers delimit owner identities with double underscores.
@@ -147,6 +212,7 @@ def _instantiate(source, *, identity_namespace=None):
     from .preparation_cache import enabled, remember_verified_instance
     from .equation_workbench import SOURCE_REVISION
     from .template_replay import bind_replay
+    from core.mathematics.preparation import preparation_policy
     try:
         rebuilt = (bind_replay(replayed,remapped,expression,equation_id,qmap,owners,_known_unit)
                    if enabled() else build(target,remapped))
@@ -156,16 +222,19 @@ def _instantiate(source, *, identity_namespace=None):
         inputs=tuple(equation_id(i) for i in node.inputs),predicates=tuple(expression(p) for p in node.predicates),
         branches=tuple((expression(eq),admitted) for eq,admitted in node.branches)) for key,node in replayed.graph.nodes.items()}
     units={expression(q):unit for q,unit in replayed.units.items()}
-    if set(expected.nodes)!=set(rebuilt.graph.nodes):
-        raise TemplateInstanceError('template.recipe','The identity map changed the set of deduced equations.')
-    signatures={}
-    for old,key in maps['equations'].items():
-        wanted=equation_signature(expected,key,units,_known_unit)
-        actual=equation_signature(rebuilt.graph,key,rebuilt.units,_known_unit)
-        a,b=expected.nodes[key],rebuilt.graph.nodes[key]
-        if wanted!=actual or (a.rule,a.inputs,a.family)!=(b.rule,b.inputs,b.family):
-            raise TemplateInstanceError('equations.'+old,'The replayed deduction differs under the identity map.')
-        signatures[old]={'instanceId':key,'signature':actual}
+    def certify(candidate):
+        if set(expected.nodes)!=set(candidate.graph.nodes):
+            raise TemplateInstanceError('template.recipe','The identity map changed the set of deduced equations.')
+        result={}
+        for old,key in maps['equations'].items():
+            wanted=equation_signature(expected,key,units,_known_unit)
+            actual=equation_signature(candidate.graph,key,candidate.units,_known_unit)
+            a,b=expected.nodes[key],candidate.graph.nodes[key]
+            if wanted!=actual or (a.rule,a.inputs,a.family)!=(b.rule,b.inputs,b.family):
+                raise TemplateInstanceError('equations.'+old,'The replayed deduction differs under the identity map.')
+            result[old]={'instanceId':key,'signature':actual}
+        return result
+    signatures=certify(rebuilt)
     # Rebind only after proving equivalence to the fully signed source history.
     for op,receipt in zip(remapped['operations'],rebuilt.receipts):
         if receipt.calculated_input_signatures:op['sourceSignatures']=dict(receipt.calculated_input_signatures)
@@ -175,6 +244,39 @@ def _instantiate(source, *, identity_namespace=None):
         verified=bind_replay(active,remapped,expression,equation_id,qmap,owners,_known_unit)
     else:
         verified=build(target)
+    # RI-1: the rebinding is checked above against the same renaming that
+    # produced it. Before it may seed the cache, the target's own journals are
+    # replayed once uncached and must match it: the full history (which also
+    # validates the pinned input signatures) and the active selection. One
+    # matching cold replay per exact source recipe and revision covers later
+    # instances of it, which differ only in fresh identity tokens.
+    cold_key=_cold_key(source,full,SOURCE_REVISION)
+    with _cold_lock:
+        known=cold_key in _COLD_VERIFIED
+    if enabled() and not known:
+        whole={**remapped,'cursor':len(remapped['operations'])}
+        try:
+            with preparation_policy(cached=False):
+                cold=build(deepcopy(target),deepcopy(whole))
+                cold_active=cold if remapped['cursor']==whole['cursor'] else build(deepcopy(target))
+        except ValueError as error:
+            raise TemplateInstanceError('motores.equationWorkbench','The instance does not replay from its own journals: '+str(error)) from error
+        def receipt_inputs(result):
+            return [dict(r.calculated_input_signatures) for r in result.receipts]
+        if certify(cold)!=signatures:
+            raise TemplateInstanceError('template.recipe','The rebound instance differs from the uncached replay of its own journals.')
+        if receipt_inputs(cold)!=receipt_inputs(rebuilt) or cold.graph.domains!=rebuilt.graph.domains:
+            raise TemplateInstanceError('motores.equationWorkbench','The rebound input signatures or domains differ from the uncached replay of the instance.')
+        if source_signature(target,cold_active)!=source_signature(target,verified):
+            raise TemplateInstanceError('motores.equationWorkbench','The rebound active selection differs from the uncached replay of the instance.')
+        known=True
+    elif not enabled():
+        known=True  # this whole instance was replayed uncached
+    if known:
+        with _cold_lock:
+            _COLD_VERIFIED[cold_key]=True
+            _COLD_VERIFIED.move_to_end(cold_key)
+            while len(_COLD_VERIFIED)>_COLD_LIMIT:_COLD_VERIFIED.popitem(last=False)
     if selection:
         selected=operation_value(selection);selected['sourceSignature']=source_signature(target,verified)
         target['motores']['derivedExecution']=selected
