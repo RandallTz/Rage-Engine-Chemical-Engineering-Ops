@@ -49,6 +49,17 @@ class InverseSteadyHTTP(unittest.TestCase):
         for key in ['selection','sourceSignature','formulationSignature','settingsSignature']:self.assertEqual(changed[key],self.report[key])
         for key in ['signature','specificationSignature','dataSignature']:self.assertNotEqual(changed[key],self.report[key])
 
+    def test_constant_grammar_variants_publish_over_http(self):
+        # F3H-1: Python admits `pi` and unary plus, so the TS readers must read these publications.
+        path=ROOT/'.tmp/f3-inverse-http/publication.json';variants={}
+        for text in ['pi/6','+0.6']:
+            body=copy.deepcopy(self.body);body['modelo']['datos'][self.record['specifications'][0]['targetDataId']]['declaracion']['texto']=text
+            response=asyncio.run(request('resolver',body));self.assertEqual(response.status_code,200,response.text)
+            report=asyncio.run(request('compilation',body));self.assertEqual(report.status_code,200,report.text)
+            variants[text]={'result':response.json(),'report':report.json()}
+        publication=json.loads(path.read_text(encoding='utf-8'));publication['variants']=variants
+        path.write_text(json.dumps(publication),encoding='utf-8')
+
     def test_strict_record_and_structured_rejections(self):
         mutations=[lambda b:b['inverseSpecification'].update(version=True),lambda b:b['inverseSpecification'].update(extra=1),lambda b:b['inverseSpecification']['freedInputs'].clear(),lambda b:b['inverseSpecification']['freedInputs'][0].update(quantityId=self.named('x3')),lambda b:b.update(extra=True)]
         for path in ['resolver','compilation']:
