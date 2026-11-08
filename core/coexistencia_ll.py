@@ -111,14 +111,16 @@ def _jacobian(F, v, h=1e-7):
     return J
 
 
-def _newton(F, v0, max_iter=40):
-    """Damped Newton with a central-difference Jacobian. Returns (v, f, iterations)."""
+def _newton(F, v0, max_iter=40, h=1e-7):
+    """Damped Newton with a central-difference Jacobian of step h. Returns (v, f, iterations). A residual that is
+    itself a finite difference (the plait point) has a noise floor of about 1e-9, so its Jacobian needs a step well
+    above 1e-7; see ternary_liquid_liquid.PLAIT_JACOBIAN_STEP."""
     v = np.array(v0, dtype=float)
     f = F(v)
     for k in range(max_iter):
         if np.max(np.abs(f)) < TOL_NEWTON:
             return v, f, k
-        paso = np.linalg.solve(_jacobian(F, v), -f)
+        paso = np.linalg.solve(_jacobian(F, v, h), -f)
         a = 1.0
         for _ in range(30):
             try:
