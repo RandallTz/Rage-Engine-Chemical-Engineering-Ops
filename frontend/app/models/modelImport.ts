@@ -17,5 +17,5 @@ export async function importModelFile(value: unknown): Promise<HojaMotor> {
   const summary = await response.json();
   if (!response.ok || summary?.format !== 'rage.formulation-summary' || summary.version !== 1) throw new Error(summary?.detail?.message ?? 'The Engine rejected the imported formulation.');
   // A copy cannot inherit cached execution, a removal marker or a selected map tied to another ID.
-  return { ...model, id: crypto.randomUUID(), actualizada: new Date().toISOString(), removedAt: undefined, archivada: false, transformation: undefined, derivedSelection:undefined, resultado: undefined, resultadoRef: undefined };
+  return { ...model, id: crypto.randomUUID(), actualizada: new Date().toISOString(), removedAt: undefined, archivada: false, transformation: undefined, derivedSelection:undefined, indexedSelection:undefined, flowsheetSelection:undefined, flowsheetStale:false, chartReference:undefined, resultado: undefined, resultadoRef: undefined };
 }
