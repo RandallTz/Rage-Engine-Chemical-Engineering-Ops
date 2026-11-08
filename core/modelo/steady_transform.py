@@ -13,6 +13,15 @@ from core import unidades
 from core.mathematics.constants import si_magnitude
 
 
+# Editable numerical default for state bounds, in SI units of any dimension.
+DEFAULT_BOUND_REACH = 1e12
+# Editable numerical default for the variable scale (SI), keyed by the unit whose
+# dimension it applies to: a floor so that the Newton scaling does not follow the
+# initial holdup (RT-9). Energy inventories have no declared magnitude in a
+# drum model; 1e7 J was bracketed numerically (1e5 J and 1e9 J fail; 1e6 to 1e8 J solve).
+DEFAULT_VARIABLE_SCALE = {'J': 1e7}
+
+
 def prepare_steady_transform(model):
     selection = read_definition(model.get('motores', {}).get('derivedExecution'), model)
     if selection['version'] == 5:
@@ -39,16 +48,16 @@ def prepare_steady_transform(model):
             'origen': {'propietarioId': 'estudio', 'ruta': 'steadyTransform.'+key}}
         return identity
 
-    def declared_magnitudes(dimension):
+    def occurring_magnitudes(expression, dimension):
         values = []
-        for key, entry in model['datos'].items():
-            if entry.get('origen', {}).get('ruta', '').startswith('steadyTransform.'):
-                continue
-            try:
-                if unidades.interpretar(entry['declaracion']['unidad'])['dimension'] == dimension:
-                    values.append(abs(float(dynamic._datum(key, dimension))))
-            except (ValueError, LoweringError):
-                continue
+        occurring = expression.free_symbols
+        for q, parameter in dynamic.parameter_symbols.items():
+            if parameter in occurring and parameter in dynamic.parameter_values:
+                try:
+                    if dynamic._dim(q) == dimension:
+                        values.append(abs(float(dynamic.parameter_values[parameter])))
+                except (ValueError, LoweringError, TypeError):
+                    continue
         return values
 
     def residual_scale(equation):
@@ -62,14 +71,7 @@ def prepare_steady_transform(model):
         expanded = dynamic._expand(residual)
         # Only data that occur in this row can set its scale (RT-6); an unrelated
         # datum of the same dimension never does.
-        occurring = expanded.free_symbols
-        for q, parameter in dynamic.parameter_symbols.items():
-            if parameter in occurring and parameter in dynamic.parameter_values:
-                try:
-                    if dynamic._dim(q) == dimension:
-                        candidates.append(abs(float(dynamic.parameter_values[parameter])))
-                except (ValueError, LoweringError, TypeError):
-                    continue
+        candidates.extend(occurring_magnitudes(expanded, dimension))
         expanded = expanded.xreplace({d: sp.S.Zero for d in expanded.atoms(sp.Derivative)})
         for term in sp.Add.make_args(sp.expand(expanded)):
             value = si_magnitude(term).subs(substitutions)
@@ -80,12 +82,19 @@ def prepare_steady_transform(model):
             raise LoweringError('steady_transform_missing_scale', 'Declare a nonzero characteristic magnitude for the residual.', str(equation))
         return scale
 
-    def numerical_bounds(q, seed, scale):
-        # The reach comes from declared magnitudes of the quantity's dimension and
-        # a wide factor, never from the initial state alone (RT-7): the root of a
-        # steady selection must not depend on the initial holdup.
-        reach = 1e3*max([scale, *declared_magnitudes(dynamic._dim(q))])
-        lower, upper = seed-reach, seed+reach
+    def variable_scale(q, scale):
+        floors = [value for unit, value in DEFAULT_VARIABLE_SCALE.items()
+                  if unidades.interpretar(unit)['dimension'] == dynamic._dim(q)]
+        return max([scale, *floors])
+
+    def numerical_bounds(q, seed, scale, equation):
+        # The reach never comes from the initial state (RT-7, RT-9): the root of a
+        # steady selection must not depend on the initial holdup. It is the
+        # documented numerical default DEFAULT_BOUND_REACH (SI units), widened
+        # only by data of the quantity's own dimension that occur in its row
+        # (RT-10). The result is written as editable lower/upper data, reported in Solve.
+        reach = max([DEFAULT_BOUND_REACH, *occurring_magnitudes(dynamic._expand(equation.lhs-equation.rhs), dynamic._dim(q))])
+        lower, upper = -reach, reach
         # These names identify inventories emitted by the physical producers;
         # an arbitrary mathematical quantity is never classified by its unit.
         name = q.func.__name__ if q.is_Function else str(q)
@@ -118,12 +127,12 @@ def prepare_steady_transform(model):
             selected['invariants'][qid] = seed_id
             continue
         scale = max(abs(seed), 1.)
-        lower, upper = numerical_bounds(q, seed, scale)
+        lower, upper = numerical_bounds(q, seed, scale, dynamic._equation(row['equationId']).equation)
         bounds = selection.get('dae', {}).get('stateBounds', {}).get(qid)
         config['variables'][qid] = {'seedDataId': seed_id,
             'lowerDataId': bounds['lowerDataId'] if bounds else datum(qid+'.lower', lower, unit),
             'upperDataId': bounds['upperDataId'] if bounds else datum(qid+'.upper', upper, unit),
-            'scaleDataId': datum(qid+'.scale', scale, unit)}
+            'scaleDataId': datum(qid+'.scale', variable_scale(q, scale), unit)}
         equation = dynamic._equation(row['equationId']).equation
         config['residualScales'][row['equationId']] = datum(row['equationId']+'.residualScale', residual_scale(equation), dynamic._unit(equation.lhs-equation.rhs))
     # Affine blocks have no Newton settings; their initialized values seed v5.
@@ -134,9 +143,9 @@ def prepare_steady_transform(model):
             if initial is None:
                 initial = dynamic._expand(q).subs({**dynamic.parameter_values, **dynamic.initial_values, dynamic.time: 0})
             seed = float(initial); scale = max(abs(seed), 1.); unit = dynamic._unit(q)
-            lower, upper = numerical_bounds(q, seed, scale)
+            lower, upper = numerical_bounds(q, seed, scale, dynamic._equation(row['equationId']).equation)
             config['variables'][qid] = {key: datum(qid+'.'+key, value, unit) for key, value in
-                [('seedDataId', seed), ('lowerDataId', lower), ('upperDataId', upper), ('scaleDataId', scale)]}
+                [('seedDataId', seed), ('lowerDataId', lower), ('upperDataId', upper), ('scaleDataId', variable_scale(q, scale))]}
             equation = dynamic._equation(row['equationId']).equation
             config['residualScales'][row['equationId']] = datum(row['equationId']+'.residualScale', residual_scale(equation), dynamic._unit(equation.lhs-equation.rhs))
     for row in selected['checks']:
