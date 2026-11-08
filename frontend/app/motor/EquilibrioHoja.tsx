@@ -11,6 +11,7 @@ import {formatearNumeroMotor as num} from './formatearNumeroMotor';
 import GraficaCorteEquilibrio from './GraficaCorteEquilibrio';
 import CoberturaGruposPaquete from './CoberturaGruposPaquete';
 import MulticomponentEquilibrium from './MulticomponentEquilibrium';
+import EosDiagramView from './EosDiagramView';
 import styles from './equilibrioMotor.module.css';
 
 type Tipo='Txy'|'Pxy';
@@ -89,5 +90,6 @@ export default function EquilibrioHoja({h,r,guardar}:{h:HojaMotor;r:ResultadoMot
         </article>;
       })}</div>
     </>}
+    <EosDiagramView muestra={muestra}/>
   </section>;
 }

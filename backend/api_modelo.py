@@ -470,3 +470,17 @@ def termodinamica(cuerpo: Any = Body(...)):
     else:
         m = _modelo(cuerpo)
     return describir(m)
+
+
+@router.get("/eos-diagrams/capabilities")
+def eos_diagram_capabilities():
+    """Operations and packages of the elevated-pressure EOS diagrams (peng-robinson-vdw1f, psrk-unifac)."""
+    from backend.eos_diagrams import capabilities
+    return capabilities()
+
+
+@router.post("/eos-diagrams")
+def eos_diagram(body: Any = Body(...)):
+    """Bubble/dew curve, isotherm or critical locus of an EOS package; every rejection is a response, not a 422."""
+    from backend.eos_diagrams import compute
+    return compute(body)
