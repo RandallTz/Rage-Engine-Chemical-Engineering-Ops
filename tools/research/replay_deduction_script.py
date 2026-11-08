@@ -125,6 +125,15 @@ class Names:
         self.declared = set(declared)         # declared symbol/function names (ids equal to their names)
         self.engine = {id_: name for id_, name in quantities}
         self.readable = {id_: self.alias(name) for id_, name in quantities}
+        # An alias must never make two different engine quantities read alike (one would shadow the other).
+        # Such ids keep their engine spelling, and the shared alias is refused as ambiguous.
+        spellings = {}
+        for id_, name in quantities:
+            spellings.setdefault(self.readable[id_], set()).add(name)
+        self.ambiguous = {alias: sorted(names) for alias, names in spellings.items() if len(names) > 1}
+        for id_, name in quantities:
+            if self.readable[id_] in self.ambiguous:
+                self.readable[id_] = name
         self.by_name = {}
         for id_, _ in quantities:             # engine catalog order: the first match wins, as in the engine
             self.by_name.setdefault(self.readable[id_], id_)
@@ -148,7 +157,10 @@ class Names:
             return name
         if name in self.by_name:
             return self.by_name[name]
-        close = difflib.get_close_matches(name, list(self.by_name), n=4, cutoff=0.6)
+        if name in self.ambiguous:
+            raise JournalError('Ambiguous name %r in %s: it reads as several engine quantities (%s); write the engine name.'
+                               % (name, where, ', '.join(self.ambiguous[name])))
+        close =difflib.get_close_matches(name, list(self.by_name), n=4, cutoff=0.6)
         raise JournalError('Unknown quantity %r in %s.%s' % (name, where, (' Close engine names: ' + ', '.join(close)) if close else ''))
 
     def expression(self, text):
@@ -272,11 +284,16 @@ class GenericSession:
             self.port_names[stream['id']] = 'puerto.' + str(index)
         self.definition = {'format': WORKBENCH_FORMAT, 'version': 1, 'operations': [], 'cursor': 0}
         self.model_id = script.get('operation') or 'research-script'
-        # Engine spellings of the generic context -> the script's own names: the volume, its streams and the
-        # generic component index i (the engine writes the unbound index as None).
+        # Engine spellings of the generic context -> the script's own names: the volume and its streams. The
+        # material producer writes the unbound component index as None (read as i: q__feed__i(t) is the component
+        # flow). Without declared species the energy and thermodynamic producers write their sum over components
+        # with a stand-in index i (energy_equations: componenteIds or ['i']), a different engine identity: it reads
+        # as sum (q__feed__sum(t) is the stream's total mass flow in the enthalpy balance, m__tank__sum(t) the
+        # total inventory). The stand-in is renamed first, so the two can never shadow each other.
         self.aliases = tuple((re.compile(pattern), replacement) for pattern, replacement in [
             *[(re.escape(port) + r'(?![0-9])', stream) for stream, port in self.port_names.items()],
-            (r'__' + GENERIC_OWNER + r'(?![A-Za-z0-9])', '__' + self.name), (r'__None(?![A-Za-z0-9])', '__i')])
+            (r'__' + GENERIC_OWNER + r'(?![A-Za-z0-9])', '__' + self.name),
+            (r'__i(?![A-Za-z0-9_])', '__sum'), (r'__None(?![A-Za-z0-9])', '__i')])
 
     def owners(self):
         return [self.name]
