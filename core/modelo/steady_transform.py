@@ -56,8 +56,10 @@ def prepare_steady_transform(model):
                     continue
         return values
 
-    def residual_scale(equation):
-        residual = equation.lhs-equation.rhs
+    def residual_scale(equation, divisor=1.):
+        # divisor is |c| of a state row c*dq/dt = ...: the scale of the normalized row
+        # does not change when the row is multiplied by a constant (RT-13).
+        residual = (equation.lhs-equation.rhs)/sp.Float(divisor)
         dimension = dynamic._dim(residual)
         candidates = []
         # Keep separate terms so cancellation at the initial state cannot erase
@@ -86,6 +88,21 @@ def prepare_steady_transform(model):
     inventory_dimensions = (mass_dimension, energy_dimension)
     characteristic = {}
 
+    def row_coefficient(q, equation):
+        """|c| in c*dq/dt of a state row, or None when it is not a finite nonzero number."""
+        try:
+            c = si_magnitude(sp.diff(dynamic._expand(equation.lhs-equation.rhs), sp.Derivative(q, dynamic.time))).subs(
+                {**dynamic.parameter_values, **dynamic.initial_values,
+                 **getattr(dynamic, 'initial_algebraic', {}), **dynamic.initial_closure, dynamic.time: 0})
+            if c.is_number and c.is_real and c.is_finite and c != 0:
+                return abs(float(c))
+        except (ValueError, LoweringError, TypeError):
+            pass
+        return None
+
+    def normalized_scale(q, equation):
+        return residual_scale(equation, row_coefficient(q, equation) or 1.)
+
     def characteristic_time():
         # tau = declared characteristic inventory / characteristic mass flow, both
         # model data: the check scale of a mass budget and the residual scale of
@@ -103,34 +120,25 @@ def prepare_steady_transform(model):
                 equation = dynamic._equation(state_row['equationId']).equation
                 if dynamic._dim(equation.lhs-equation.rhs) == mass_flow_dimension:
                     try:
-                        flows.append(residual_scale(equation))
+                        flows.append(normalized_scale(dynamic._quantity(state_row['quantityId']), equation))
                     except LoweringError:
                         continue  # a conserved or zero-rate row has no characteristic flow
             characteristic['tau'] = max(inventories)/max(flows) if inventories and flows and max(inventories) > 0 else None
         return characteristic['tau']
 
     def variable_scale(q, equation, fallback):
-        # The row is c * dq/dt = (fluxes); an inventory scales as residual scale / |c|
-        # times tau. Other states (flows, pressures) and rows with no finite nonzero c
-        # take the state's own occurring data;
-        # algebraic variables and models without a mass-budget check keep the
-        # seed-based fallback max(|seed|, 1).
+        # The normalized row is dq/dt = (fluxes)/c; an inventory scales as the scale of
+        # the normalized row times tau. Other states (flows, pressures) and rows with no
+        # finite nonzero c take the state's own occurring data. Algebraic variables and
+        # selections without a mass-budget check keep the seed-based fallback
+        # max(|seed|, 1), reported as basis 'seed'. Returns (scale, basis).
         tau = characteristic_time()
-        residual = equation.lhs-equation.rhs
-        expanded = dynamic._expand(residual)
-        coefficient = None
-        try:
-            c = si_magnitude(sp.diff(expanded, sp.Derivative(q, dynamic.time))).subs(
-                {**dynamic.parameter_values, **dynamic.initial_values,
-                 **getattr(dynamic, 'initial_algebraic', {}), **dynamic.initial_closure, dynamic.time: 0})
-            if c.is_number and c.is_real and c.is_finite and c != 0:
-                coefficient = abs(float(c))
-        except (ValueError, LoweringError, TypeError):
-            pass
-        if tau and coefficient and dynamic._dim(q) in inventory_dimensions:
-            return residual_scale(equation)/coefficient*tau
-        own = occurring_magnitudes(expanded, dynamic._dim(q))
-        return max(own) if own and max(own) > 0 else fallback
+        if tau and row_coefficient(q, equation) and dynamic._dim(q) in inventory_dimensions:
+            return normalized_scale(q, equation)*tau, 'residence-time'
+        own = occurring_magnitudes(dynamic._expand(equation.lhs-equation.rhs), dynamic._dim(q))
+        if own and max(own) > 0:
+            return max(own), 'own-data'
+        return fallback, 'seed'
 
     def numerical_bounds(q, seed, scale, equation):
         # The reach never comes from the initial state (RT-7, RT-9): the root of a
@@ -168,6 +176,7 @@ def prepare_steady_transform(model):
                     upper = min(upper, edge - margin)
         return lower, upper
 
+    scale_basis = []
     for row in selection['states']:
         qid = row['quantityId']; q = dynamic._quantity(qid)
         seed = float(dynamic.initial_values[q]); unit = dynamic._unit(q)
@@ -179,7 +188,8 @@ def prepare_steady_transform(model):
             selected['invariants'][qid] = seed_id
             continue
         equation = dynamic._equation(row['equationId']).equation
-        scale = variable_scale(q, equation, max(abs(seed), 1.))
+        scale, basis = variable_scale(q, equation, max(abs(seed), 1.))
+        scale_basis.append({'quantityId': qid, 'basis': basis})
         lower, upper = numerical_bounds(q, seed, scale, equation)
         bounds = selection.get('dae', {}).get('stateBounds', {}).get(qid)
         config['variables'][qid] = {'seedDataId': seed_id,
@@ -187,7 +197,8 @@ def prepare_steady_transform(model):
             'upperDataId': bounds['upperDataId'] if bounds else datum(qid+'.upper', upper, unit),
             'scaleDataId': datum(qid+'.scale', scale, unit)}
         equation = dynamic._equation(row['equationId']).equation
-        config['residualScales'][row['equationId']] = datum(row['equationId']+'.residualScale', residual_scale(equation), dynamic._unit(equation.lhs-equation.rhs))
+        coefficient = row_coefficient(q, equation) or 1.
+        config['residualScales'][row['equationId']] = datum(row['equationId']+'.residualScale', residual_scale(equation, coefficient)*coefficient, dynamic._unit(equation.lhs-equation.rhs))
     # Affine blocks have no Newton settings; their initialized values seed v5.
     for row in selected['algebraic']:
         qid = row['quantityId']; q = dynamic._quantity(qid)
@@ -197,6 +208,7 @@ def prepare_steady_transform(model):
                 initial = dynamic._expand(q).subs({**dynamic.parameter_values, **dynamic.initial_values, dynamic.time: 0})
             seed = float(initial); scale = max(abs(seed), 1.); unit = dynamic._unit(q)
             lower, upper = numerical_bounds(q, seed, scale, dynamic._equation(row['equationId']).equation)
+            scale_basis.append({'quantityId': qid, 'basis': 'seed'})
             config['variables'][qid] = {key: datum(qid+'.'+key, value, unit) for key, value in
                 [('seedDataId', seed), ('lowerDataId', lower), ('upperDataId', upper), ('scaleDataId', scale)]}
             equation = dynamic._equation(row['equationId']).equation
@@ -212,4 +224,5 @@ def prepare_steady_transform(model):
     output['estudio'] = {'tipo': 'steady', 'version': 1, 'metodoSolicitado': 'damped_newton'}
     report = SteadySystem(output).report
     return {'format': 'rage.steady-transform', 'version': 1, 'model': output,
-            'dynamicSelection': deepcopy(selection), 'dynamicSignature': signature(selection), 'report': report}
+            'dynamicSelection': deepcopy(selection), 'dynamicSignature': signature(selection), 'report': report,
+            'scaleBasis': scale_basis}
