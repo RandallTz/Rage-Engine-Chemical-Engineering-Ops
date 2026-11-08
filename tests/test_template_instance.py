@@ -108,4 +108,88 @@ class TemplateInstanceTests(unittest.TestCase):
         asyncio.run(check())
 
 
+class ColdReplayCertificationTests(unittest.TestCase):
+    """RI-1 and RI-2 (queue item 6 re-review, 7 November 2026)."""
+
+    def test_rebinding_is_checked_against_one_uncached_replay_of_the_instance(self):
+        from unittest import mock
+        from dataclasses import replace
+        import sympy as sp
+        from core.mathematics.preparation import enabled
+        from core.modelo import template_instance, preparation_cache
+        source=marked(flash);real=template_instance.build;cold_calls=[]
+        def corrupted(model,*args):
+            result=real(model,*args)
+            if not enabled() and model['id']!=source['id']:
+                cold_calls.append(model['id'])
+                key=next(k for k,n in result.graph.nodes.items() if isinstance(n.equation,sp.Equality))
+                node=result.graph.nodes[key]
+                result.graph.nodes[key]=replace(node,equation=sp.Eq(node.equation.lhs,node.equation.rhs+1,evaluate=False))
+            return result
+        template_instance._COLD_VERIFIED.clear()
+        with mock.patch.object(template_instance,'build',corrupted), \
+             mock.patch.object(preparation_cache,'remember_verified_instance') as remember:
+            with self.assertRaises(TemplateInstanceError) as raised:instantiate_template(source)
+            remember.assert_not_called()
+        self.assertTrue(cold_calls)
+        # Located at the source equation whose cold replay differs.
+        self.assertTrue(raised.exception.diagnostics[0]['path'].startswith('equations.'),raised.exception.diagnostics)
+        # A matching cold replay certifies the recipe once; later instances reuse it.
+        cold_calls.clear()
+        def counted(model,*args):
+            if not enabled():cold_calls.append(model['id'])
+            return real(model,*args)
+        with mock.patch.object(template_instance,'build',counted):
+            instantiate_template(source)
+            self.assertEqual(len(cold_calls),1)
+            instantiate_template(source)
+            self.assertEqual(len(cold_calls),1)
+
+    def test_unmapped_boundary_identity_in_a_journal_rejects(self):
+        # Only momentum inlet/outlet stream fields are remapped. A schema-valid
+        # string elsewhere that equals a boundary identity (here a thermodynamic
+        # package reference named like a stream) is ambiguous and is rejected,
+        # located and without mutation, before any replay.
+        source=marked(flash);stream=source['corrientes'][0]['id']
+        owner=source['volumenes'][0]['id'];package=source['termodinamica']['paquetes'][0]['id']
+        source['termodinamica']['paquetes'][0]['id']=stream
+        for volume in source['volumenes']:
+            if volume['termodinamica'].get('paqueteId')==package:volume['termodinamica']['paqueteId']=stream
+        source['motores']['thermodynamicDerivation']['volumes'][owner]['operations'][0]['changes']['closure']['packageId']=stream
+        before=copy.deepcopy(source)
+        with self.assertRaises(TemplateInstanceError) as raised:instantiate_template(source)
+        self.assertEqual(source,before)
+        self.assertEqual(raised.exception.diagnostics[0]['path'],
+                         f'motores.thermodynamicDerivation.volumes.{owner}.operations[0].changes.closure.packageId')
+
+
+class PublishedEquipmentColdReplayTests(unittest.TestCase):
+    """The published Demo 0.2 drum and CSTR instances replay cold to their certified signatures."""
+
+    def test_drum_and_cstr_instances_match_a_cold_replay(self):
+        from core.mathematics.preparation import preparation_policy
+        from core.mathematics.provenance import equation_signature
+        from core.compilador.derived_graph import source_signature
+        from core.modelo import preparation_cache, template_instance
+        from core.modelo.equation_workbench import build, _known_unit
+        root=Path(__file__).resolve().parents[1]/'docs'/'ejemplos'/'demo-0.2'
+        for name in ('flash-drum','continuous-reactor'):
+            with self.subTest(template=name):
+                source=json.loads((root/(name+'.rage-model.json')).read_text(encoding='utf-8'))['model']['commonModel']
+                preparation_cache.clear();template_instance._COLD_VERIFIED.clear()
+                response=json.loads(json.dumps(instantiate_template(source)))
+                preparation_cache.clear()
+                target=response['model'];p=response['provenance']
+                with preparation_policy(cached=False):
+                    replayed=build(target)
+                    full=build(target,{**target['motores']['equationWorkbench'],
+                                       'cursor':len(target['motores']['equationWorkbench']['operations'])})
+                self.assertEqual(p['instanceSignature'],source_signature(target,replayed))
+                self.assertEqual({row['instanceId'] for row in p['equationSignatures'].values()},set(full.graph.nodes))
+                for old,row in p['equationSignatures'].items():
+                    self.assertEqual(row['signature'],equation_signature(full.graph,row['instanceId'],full.units,_known_unit),old)
+                if 'derivedExecution' in target['motores']:
+                    self.assertEqual(target['motores']['derivedExecution']['sourceSignature'],source_signature(target,replayed))
+
+
 if __name__=='__main__':unittest.main()
