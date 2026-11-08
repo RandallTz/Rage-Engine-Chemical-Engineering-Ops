@@ -39,6 +39,8 @@ def requirement_names():
 
 def local_modules():
     local = {d.name for d in ROOT.iterdir() if d.is_dir()}
+    # Scripts under tools/ are imported by tests through sys.path; they are not packages.
+    local |= {path.stem for path in (ROOT / "tools").rglob("*.py")}
     for sub in SCAN:
         base = ROOT / sub
         if not base.is_dir():

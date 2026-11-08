@@ -39,7 +39,13 @@ ok(validacion.relaciones.some(x => x.id === "equilibrio.A") && validacion.variab
 // The published result was generated on Windows; Linux libm gives the same integration within ~1e-13 relative
 // (observed in CI on 6 Nov 2026: an event time 393.02647369376547 vs 393.0264736937146). Numbers are compared to
 // 1e-9 relative (absolute floor 1e-12); keys, lengths, types, strings and every other value stay exact.
-const REL_TOL = 1e-9, ABS_TOL = 1e-12;
+// One message reports a stability residual at round-off ("min tm = 1.07e-14" vs "9.78e-15"): that field alone
+// is compared numerically, to 1e-10 absolute, and the rest of the message stays exact.
+const REL_TOL = 1e-9, ABS_TOL = 1e-12, TM_TOL = 1e-10, TM_FIELD = /min tm = (-?[\d.]+(?:e[+-]?\d+)?)/;
+const sameMessage = (a, b) => {
+  const [ma, mb] = [TM_FIELD.exec(a), TM_FIELD.exec(b)];
+  return Boolean(ma && mb) && a.replace(TM_FIELD, "") === b.replace(TM_FIELD, "") && Math.abs(Number(ma[1]) - Number(mb[1])) <= TM_TOL;
+};
 const differences = (a, b, at = "$", out = []) => {
   if (out.length >= 8) return out;
   if (typeof a === "number" && typeof b === "number") {
@@ -47,6 +53,8 @@ const differences = (a, b, at = "$", out = []) => {
   } else if (a && b && typeof a === "object" && typeof b === "object" && Array.isArray(a) === Array.isArray(b)) {
     const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
     for (const key of keys) differences(a[key], b[key], `${at}.${key}`, out);
+  } else if (typeof a === "string" && typeof b === "string" && sameMessage(a, b)) {
+    return out;
   } else if (!isDeepStrictEqual(a, b)) out.push(`${at}: fresh ${JSON.stringify(a)} vs published ${JSON.stringify(b)}`);
   return out;
 };
