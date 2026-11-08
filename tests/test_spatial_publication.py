@@ -29,10 +29,10 @@ import sympy as sp
 from core.adimensionalizacion.dimensional import analizar_modelo
 from core.adimensionalizacion.lector import leer_modelo
 from core.mathematics.graph import EquationGraph
-from core.mathematics.publication import PublicationError, spatial_publication, terminal_rows, to_matematico
+from core.mathematics.publication import PublicationError, _number, spatial_publication, terminal_rows, to_matematico
 from core.modelo.equation_workbench import build, describe, edit
 from test_boundary_conditions import Session, symbols
-from test_operator_expansion import FLUX, TEMPERATURE, expanded, heat_pde, source
+from test_operator_expansion import FLUX, TEMPERATURE, domain, expanded, heat_pde, source
 from test_requires_discretization import fick_model
 
 mp.mp.dps = 30
@@ -65,6 +65,9 @@ def evaluate(tree, env, fields):
         return evaluate(tree['base'], env, fields) ** evaluate(tree['exponente'], env, fields)
     if kind == 'funcion':
         return getattr(mp, {'abs': 'fabs'}.get(tree['nombre'], tree['nombre']))(evaluate(tree['argumentos'][0], env, fields))
+    if kind == 'llamada':
+        function, _ = fields[tree['funcionId']]
+        return function(*(evaluate(a, env, fields) for a in tree['argumentos']))
     if kind == 'derivada':
         variable = tree['respecto']
         return mp.diff(lambda v: evaluate(tree['expresion'], {**env, variable: v}, fields), env[variable], tree['orden'])
@@ -267,6 +270,7 @@ class LocatedRejectionsTest(unittest.TestCase):
         s = Session(source())
         _, pde = heat_pde(s)
         region = slab(s, pde)
+        s.append(kind='expand_spatial_operators', sources=[pde], domains=[region])
         symbols(s, q_w='W/m2')
         flux = [q for q in s.result().units if str(q).startswith('heat_flux_energy__')][0]
         neumann = s.append(kind='declare_condition', conditionKind='neumann', form='flux', sources=[s.result().selected[0]], domains=[region], boundary='right',
@@ -277,6 +281,7 @@ class LocatedRejectionsTest(unittest.TestCase):
         block = spatial_publication(result.graph, result.selected, result.units)
         self.assertIsNone(block['matematico'])
         self.assertIn(neumann, block['adapterFindings'][0]['message'])
+        self.assertEqual({k: block['adapterFindings'][0][k] for k in ('code', 'equationId')}, {'code': 'untyped_normal_flux', 'equationId': neumann})
         self.assertTrue(block['requiresDiscretization'])
 
     def test_field_with_two_argument_sets_is_rejected(self):
@@ -309,8 +314,168 @@ class LocatedRejectionsTest(unittest.TestCase):
         graph = copy.deepcopy(result.graph)
         graph.add('interface', BoundaryTrace(T1, x, sp.Rational(1, 10)), BoundaryTrace(T2, x, sp.Rational(1, 10)), 'Continuity', 'boundary_condition',
                   (pde, region), ('Perfect contact',), 'energy', kind='constraint')
-        with self.assertRaisesRegex(PublicationError, 'continuity across an interface is not published yet'):
+        with self.assertRaisesRegex(PublicationError, 'continuity across an interface .*is not published yet'):
             to_matematico(graph, ['interface'], result.units)
+
+
+class RepairTest(unittest.TestCase):
+    """Independent review of PDE-4 (P4-1 to P4-8): each finding keeps its reproducer."""
+
+    def published(self, s):
+        result = s.result()
+        return result, spatial_publication(result.graph, result.selected, result.units)
+
+    def test_p41_coefficient_depending_on_the_field_keeps_its_dependence(self):
+        s = Session(source())
+        s.append(kind='declare_function', name='kT', unit='W/(m*K)', dependencies=[s.id('T(x, y, z, t)')])
+        _, pde = heat_pde(s, s.id('kT(T(x, y, z, t))'))
+        region = slab(s, pde)
+        key = s.append(kind='expand_spatial_operators', sources=[pde], domains=[region])
+        result, block = self.published(s)
+        self.assertEqual(block['adapterFindings'], [])
+        model = block['matematico']
+        leer_modelo(json.loads(json.dumps(model)), 'matematico', version=2)
+        self.assertEqual([f['id'] for f in model['funciones']], ['kT'])
+        self.assertEqual(model['funciones'][0]['entradas'], [{'Theta': {'n': 1, 'd': 1}}])
+        self.assertNotIn('kT', {item['id'] for item in model['simbolos']})
+        # Reference: T = x^2 + 3t + 300 and k(T) = 2 + T, so d/dx(k T_x) = 2(302 + 3t + x^2) + 4x^2 = 604 + 6t + 6x^2;
+        # a conductivity frozen in x would drop the term (dk/dx)(dT/dx) = 4x^2 and give 604 + 6t + 2x^2.
+        fields = {'T': (lambda x, t: x ** 2 + 3 * t + 300, ['x', 't']), 'kT': (lambda value: 2 + value, None)}
+        equation = by_id(model['ecuaciones'], key)
+        for x, t in ((mp.mpf('0.03'), mp.mpf(2)), (mp.mpf('0.08'), mp.mpf(11))):
+            right = evaluate(equation['derecha'], {'c': mp.mpf(4), 'rho_mixture__v1': mp.mpf(5), 'x': x, 't': t}, fields)
+            self.assertLess(abs(right - (604 + 6 * t + 6 * x ** 2)), 1e-18)
+            self.assertGreater(abs(right - (604 + 6 * t + 2 * x ** 2)), 1e-3)
+        self.assertEqual([d for d in analizar_modelo(model)['diagnosticos'] if d['severidad'] == 'error'], [])
+
+    def test_p41_scalar_argument_is_a_function_call_too(self):
+        s = Session(source())
+        symbols(s, T_s='K')
+        s.append(kind='declare_function', name='kS', unit='W/(m*K)', dependencies=[s.id('T_s')])
+        _, pde = heat_pde(s, s.id('kS(T_s)'))
+        region = slab(s, pde)
+        s.append(kind='expand_spatial_operators', sources=[pde], domains=[region])
+        _, block = self.published(s)
+        self.assertEqual(block['adapterFindings'], [])
+        model = block['matematico']
+        self.assertEqual([f['id'] for f in model['funciones']], ['kS'])
+        self.assertIn('T_s', {item['id'] for item in model['simbolos'] if item['rol'] == 'parametro'})
+
+    def test_p42_unexpanded_divergence_is_rejected_unless_cartesian_on_its_coordinates(self):
+        cases = {}
+        s = Session(source())
+        _, pde = heat_pde(s)
+        domain(s, pde, 'cylindrical', ['r'])
+        cases['cylindrical domain, not expanded'] = self.published(s)[1]
+        s = Session(source())
+        _, pde = heat_pde(s)
+        slab(s, pde)
+        cases['Cartesian domain on x only, not expanded'] = self.published(s)[1]
+        s = Session(source())
+        slab(s, s.result().selected[0])
+        cases['domain on the unclosed local law'] = self.published(s)[1]
+        for name, block in cases.items():
+            self.assertTrue(block['requiresDiscretization'], name)
+            self.assertIsNone(block['matematico'], name)
+            self.assertEqual([f['code'] for f in block['adapterFindings']], ['non_cartesian_operator'], name)
+            self.assertIn('expand the spatial operators', block['adapterFindings'][0]['message'], name)
+        # Positive control: a Cartesian domain on x, y, z keeps its divergence of a gradient flux as a valid v2 document.
+        s = Session(source())
+        _, pde = heat_pde(s)
+        domain(s, pde, 'cartesian', ['x', 'y', 'z'], lower='0')
+        block = self.published(s)[1]
+        self.assertEqual(block['adapterFindings'], [])
+        self.assertIn('divergencia', json.dumps(block['matematico']))
+        self.assertEqual([d for d in analizar_modelo(block['matematico'])['diagnosticos'] if d['severidad'] == 'error'], [])
+
+    def test_p42_vector_flux_that_is_not_a_gradient_is_rejected(self):
+        s = Session(source())
+        domain(s, s.result().selected[0], 'cartesian', ['x', 'y', 'z'], lower='0')
+        block = self.published(s)[1]
+        self.assertIsNone(block['matematico'])
+        self.assertEqual(block['adapterFindings'][0]['code'], 'unclosed_flux')
+
+    def test_p43_neumann_and_robin_stay_flux_and_mixed_after_the_normal_derivative_expansion(self):
+        def conditions(s, key, region):
+            neumann = s.append(kind='declare_condition', conditionKind='neumann', sources=[key], domains=[region], boundary='left',
+                               symbol=s.id('T(x, t)'), right='0', reason='Insulated wall')
+            robin = s.append(kind='declare_condition', conditionKind='robin', sources=[key], domains=[region], boundary='right',
+                             symbol=s.id('T(x, t)'), coefficient=s.id('beta'), right=s.id('T_inf'), reason='Newton cooling, beta = h/k')
+            return dict(left=s.append(kind='expand_normal_derivative', sources=[neumann], domains=[region]),
+                        right=s.append(kind='expand_normal_derivative', sources=[robin], domains=[region]))
+        s, pde, region, rows = slab_model(dict(beta='1/m', T_inf='K'), conditions)
+        result, block = self.published(s)
+        self.assertEqual(block['adapterFindings'], [])
+        model = block['matematico']
+        types = {c['id']: (c['tipo'], c['ubicacion']['extremo']) for c in model['condiciones']}
+        self.assertEqual(types, {rows['left'] + '.condition': ('flujo', 'desde'), rows['right'] + '.condition': ('mixta', 'hasta')})
+        # The expanded rows keep the analytic eigenfunction cos(lam x) exp(-alpha lam^2 t), lam a tan(lam a) = beta.
+        a, beta = mp.mpf(1) / 10, mp.mpf(30)
+        lam = mp.findroot(lambda v: v * mp.tan(v * a) - beta, 8 / a / 3)
+        alpha = mp.mpf(15) / (mp.mpf(7800) * mp.mpf(460))
+        fields = {'T': (lambda x, t: mp.cos(lam * x) * mp.exp(-alpha * lam ** 2 * t), ['x', 't'])}
+        env = {'k': mp.mpf(15), 'rho_mixture__v1': mp.mpf(7800), 'c': mp.mpf(460), 'beta': beta, 'T_inf': mp.mpf(0)}
+        left, right = (by_id(model['condiciones'], rows[n] + '.condition')['ecuacion'] for n in ('left', 'right'))
+        for t in (mp.mpf(0), mp.mpf(5)):
+            self.assertLess(abs(residual(left, {**env, 'x': mp.mpf(0), 't': t}, fields)), 1e-18)
+            self.assertLess(abs(residual(right, {**env, 'x': a, 't': t}, fields)), 1e-15)
+        self.assertGreater(abs(residual(right, {**env, 'beta': -beta, 'x': a, 't': mp.mpf(0)}, fields)), 1)
+
+    def test_p44_time_dependent_dirichlet_wall_is_a_dirichlet_condition(self):
+        s = Session(source())
+        _, pde = heat_pde(s)
+        region = slab(s, pde)
+        key = s.append(kind='expand_spatial_operators', sources=[pde], domains=[region])
+        s.append(kind='declare_function', name='Tw', unit='K', dependencies=[s.id('t')])
+        wall = s.append(kind='declare_condition', conditionKind='dirichlet', sources=[key], domains=[region], boundary='right',
+                        symbol=s.id('T(x, t)'), right=s.id('Tw(t)'), reason='Programmed wall temperature')
+        _, block = self.published(s)
+        self.assertEqual(block['adapterFindings'], [])
+        condition = by_id(block['matematico']['condiciones'], wall + '.condition')
+        self.assertEqual((condition['tipo'], condition['ubicacion']), ('dirichlet', {'variableId': 'x', 'extremo': 'hasta'}))
+        # T(x, t) = (x/a) Tw(t) with Tw = 300 + 5 t meets the wall at x = a for every t and not elsewhere.
+        a = mp.mpf(1) / 10
+        Tw = lambda t: 300 + 5 * t  # noqa: E731
+        fields = {'T': (lambda x, t: x / a * Tw(t), ['x', 't']), 'Tw': (Tw, ['t'])}
+        for t in (mp.mpf(0), mp.mpf(3)):
+            self.assertLess(abs(residual(condition['ecuacion'], {'x': a, 't': t}, fields)), 1e-20)
+            self.assertGreater(abs(residual(condition['ecuacion'], {'x': a / 2, 't': t}, fields)), 100)
+
+    def test_p45_two_domains_on_one_coordinate_are_rejected_as_composite_media(self):
+        s = Session(source())
+        _, pde = heat_pde(s)
+
+        def layer(lower, upper, name):
+            return s.append(kind='declare_spatial_domain', sources=[pde], chart='cartesian', coordinates=[s.id('x')],
+                            intervals=[{'lower': lower, 'upper': upper, 'lowerOpen': False, 'upperOpen': False, 'endpointUnit': 'cm'}],
+                            parts=[{'name': name + '_lo', 'coordinate': s.id('x'), 'end': 'lower'},
+                                   {'name': name + '_hi', 'coordinate': s.id('x'), 'end': 'upper'}], reason='Layer ' + name)
+        first = layer('-10', '0', 'a')
+        layer('0', '10', 'b')
+        s.append(kind='expand_spatial_operators', sources=[pde], domains=[first])
+        result, block = self.published(s)
+        self.assertIsNone(block['matematico'])
+        self.assertEqual([f['code'] for f in block['adapterFindings']], ['composite_media'])
+        with self.assertRaises(PublicationError) as raised:
+            to_matematico(result.graph, terminal_rows(result.graph, result.selected), result.units)
+        self.assertEqual(raised.exception.code, 'composite_media')
+
+    def test_p47_rejections_carry_a_code_and_the_row(self):
+        s = Session(source())
+        domain(s, s.result().selected[0], 'cylindrical', ['r'])
+        result, block = self.published(s)
+        finding = block['adapterFindings'][0]
+        self.assertEqual(set(finding), {'code', 'message', 'equationId'})
+        self.assertEqual(finding['code'], 'non_cartesian_operator')
+        self.assertTrue(finding['message'].startswith(finding['equationId'] + ': '))
+        with self.assertRaises(PublicationError) as raised:
+            to_matematico(result.graph, ['operation.1.missing'], result.units)
+        self.assertEqual(raised.exception.finding()['code'], 'no_spatial_content')
+
+    def test_decimal_constants_stay_exact(self):
+        for text in ('1.4142135623730951', '2.718281828459045', '0.1'):
+            tree = _number(sp.Float(text, 17))
+            self.assertEqual(sp.Rational(tree['numerador']['valor'], tree['denominador']['valor']), sp.Rational(text))
 
 
 class WorkbenchReportTest(unittest.TestCase):
@@ -332,7 +497,9 @@ class WorkbenchReportTest(unittest.TestCase):
         self.assertEqual(block['findings'][0]['equationId'], 'matter.v1.1.operators')
         # The unexpanded local form keeps its divergence as a typed v2 operator, or a located adapter finding says why not.
         self.assertTrue(block['matematico'] is not None or block['adapterFindings'])
-        self.assertFalse(report['execution']['supported'] and report['spatial']['solve']['accepted'])
+        # Solve itself rejects the model: the compiler does not run a spatial system, whatever the block says.
+        self.assertIs(report['execution']['supported'], False)
+        self.assertEqual(report['spatial']['solve'], {'accepted': False, 'code': 'requires_discretization'})
 
 
 if __name__ == '__main__':
