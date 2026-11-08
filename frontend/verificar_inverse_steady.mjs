@@ -67,6 +67,8 @@ check(Math.abs(declaredInverseSI({texto:'25.2',unidad:'kmol/h'},'mol/s')-7)<1e-1
 // F3H-1: the client admits the constant grammar Python admits (`pi`, unary plus), in direct and published form.
 check(Math.abs(declaredInverseSI({texto:'pi/6',unidad:'1'},'1')-Math.PI/6)<1e-15&&declaredInverseSI({texto:'+0.6',unidad:'1'},'1')===.6&&declaredInverseSI({texto:'-pi',unidad:'1'},'1')===-Math.PI,'Client admits pi and unary plus');
 for(const [text,variant] of Object.entries(live.variants)){check(leerResultados(variant.result)===variant.result,`HTTP result with target ${text} accepted`);check(readCompilationReport(variant.report)!==undefined,`HTTP compilation with target ${text} accepted`);}
+check(Math.abs(declaredInverseSI({texto:'e/5',unidad:'1'},'1')-Math.E/5)<1e-15&&declaredInverseSI({texto:'1e-3',unidad:'1'},'1')===.001&&declaredInverseSI({texto:'exp(0)',unidad:'1'},'1')===1,'Client admits e as a whole token (1e-3 and exp unchanged)');
+assert.throws(()=>declaredInverseSI({texto:'2e',unidad:'1'},'1'));checks++;
 check(Math.abs(live.variants['pi/6'].result.series.find(s=>s.id==='steady.residual.specification.outlet-fraction').valores)<1e-12,'pi/6 target solved over HTTP');
 assert.throws(()=>declaredInverseSI({texto:'300',unidad:'degC'},'K'));checks++;
 const source=structuredClone(live.model),data=Object.fromEntries(inverseDataIds(live.record).map(id=>[id,source.datos[id].declaracion]));

@@ -52,7 +52,7 @@ class InverseSteadyHTTP(unittest.TestCase):
     def test_constant_grammar_variants_publish_over_http(self):
         # F3H-1: Python admits `pi` and unary plus, so the TS readers must read these publications.
         path=ROOT/'.tmp/f3-inverse-http/publication.json';variants={}
-        for text in ['pi/6','+0.6']:
+        for text in ['pi/6','+0.6','e/5','0.1*e']:
             body=copy.deepcopy(self.body);body['modelo']['datos'][self.record['specifications'][0]['targetDataId']]['declaracion']['texto']=text
             response=asyncio.run(request('resolver',body));self.assertEqual(response.status_code,200,response.text)
             report=asyncio.run(request('compilation',body));self.assertEqual(report.status_code,200,report.text)
