@@ -28,7 +28,7 @@ Rules that apply to every run:
 
 | # | Item | Model | Unblocks | State |
 |---|---|---|---|---|
-| 1 | `demo-02-contract`: equipment template marker and typed ports in the common model | Strong (Astra) | Every Demo 0.2 equipment; F4 boundaries | `review pending` · RC-8 to RC-11 repaired on branch claude/hopeful-roentgen-6f47d1 |
+| 1 | `demo-02-contract`: equipment template marker and typed ports in the common model | Strong (Astra) | Every Demo 0.2 equipment; F4 boundaries | `accepted` · RC-8 to RC-11 re-reviewed and merged into fase-a-adopcion (7 November 2026) |
 | 2 | Results: list phase events of derived models; describe `package_closure` in the compilation summary | Light | Demo 0.1/0.2 presentation | `repairs requested` · RE-1 to RE-4 reviewed on claude/keen-nobel-0f362b (not merged); RE-5 to RE-7 open (roadmap Demo 0.2) |
 | 3 | F3 slice 5 inverse specifications over HTTP, contracts, strict readers and Solve/Results | Light | F3; sizing (Demo after 0.3) | `accepted` · F3H-1 to F3H-4 and the Solve closure request merged into fase-a-adopcion (cherry-picks of 742ed66 and e6503a8, 7 November) |
 | 4 | F5-C1 equilibrium-reaction constraint in Model/compiler | Strong (Astra) | F5; the reactive stage of `demo-02-column` | `repairs requested` · RA-1 (Python reader accepts Unicode digits; roadmap F5 claude-a re-review), RA-2 doc update with it |
