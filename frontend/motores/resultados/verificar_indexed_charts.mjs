@@ -22,16 +22,31 @@ globalThis.fetch=async (_url,options)=>{
   const request=JSON.parse(options.body);
   return {ok:true,json:async()=>({format:'rage.chart-data',version:1,resultId:request.resultId,rows:request.requests.map(({kind,id,unit,values,events})=>({kind,id,unit,values,events,dimension:{}}))})};
 };
+const {defaultChartSummary,DEFAULT_CHART_LIMIT}=load(path.join(here,'chartSpecification'));
 for(const mode of ['steady','dynamic']){
   const result=results[mode],layout=defaultChartLayout(result),byId=new Map(result.series.map(row=>[row.id,row]));
+  const display=new Map(result.indexedNetwork.display.map(d=>[d.seriesId,d]));
   readChartLayout(layout,{current:result});
   const prepared=await prepareCharts(layout,{current:result});
-  assert.ok(prepared.length);
+  assert.ok(prepared.length&&prepared.length<=DEFAULT_CHART_LIMIT,'defaults are a capped subset');
+  // C-1: readable labels from the publisher, never raw symbols or hashed identities.
+  for(const chart of prepared){
+    assert.doesNotMatch(chart.spec.title,/__|\(t\)|Derivative|volume_|stream_/,chart.spec.title);
+    for(const trace of chart.traces)assert.doesNotMatch(trace.name,/__|\(t\)|Derivative|volume_|stream_/,trace.name);
+  }
+  // C-2: temperature first, then liquid and vapour composition; internal and boundary-port groups are not default charts.
+  const rankOf=c=>display.get(c.series[0].id).rank;
+  assert.deepEqual(layout.charts.map(rankOf),[...layout.charts.map(rankOf)].sort((a,b)=>a-b),'defaults are ranked');
+  assert.equal(display.get(layout.charts[0].series[0].id).label,'Temperature');
+  assert.ok(layout.charts.slice(0,8).some(c=>/^Liquid mole fraction of /.test(c.title))&&layout.charts.slice(0,8).some(c=>/^Vapour mole fraction of /.test(c.title)));
+  assert.ok(layout.charts.every(c=>rankOf(c)<=7),'no internal or port groups by default');
+  // C-3: the omitted groups are counted so the interface can say so.
+  const summary=defaultChartSummary(result);
+  assert.equal(summary.shown,layout.charts.length);assert.ok(summary.available>summary.shown);
   if(mode==='steady'){
-    assert.deepEqual(layout.charts.map(c=>c.series[0].id),result.indexedNetwork.profiles.map(p=>p.seriesId));
-    assert.ok(layout.charts.some(c=>c.y.unit==='K'));
-    assert.ok(layout.charts.some(c=>c.y.unit==='1'));
-    for(const phase of ['L','V'])assert.ok(layout.charts.some(c=>/phase_x_/.test(byId.get(c.series[0].id).nombre)&&byId.get(c.series[0].id).nombre.includes(`__${phase}(`)),`Missing ${phase} composition profile`);
+    assert.ok(layout.charts.every(c=>result.indexedNetwork.profiles.some(p=>p.seriesId===c.series[0].id)));
+    assert.ok(layout.charts.some(c=>c.y.unit==='K')&&layout.charts.some(c=>c.y.unit==='1'));
+    for(const phase of ['Liquid','Vapour'])assert.ok(layout.charts.some(c=>c.title.startsWith(phase+' mole fraction of ')),`Missing ${phase} composition profile`);
   }else{
     assert.ok(layout.charts.some(c=>c.y.unit==='K'&&c.series.length===result.indexedNetwork.count));
     assert.ok(layout.charts.some(c=>c.y.unit==='1'&&c.series.length===result.indexedNetwork.count));
@@ -41,5 +56,11 @@ for(const mode of ['steady','dynamic']){
     assert.deepEqual(chart.traces[i].points,axis.valores.map((x,j)=>({x,y:row.valores[j]})));
     if(mode==='dynamic')assert.match(chart.traces[i].name,/Stage [1-9][0-9]*/);
   }
+}
+// Version 2 results keep their former defaults (every published series, raw names, capped at the layout limit).
+for(const mode of ['steady','dynamic']){
+  const legacy=structuredClone(results[mode]);delete legacy.indexedNetwork.display;legacy.indexedNetwork.version=2;
+  const layout=defaultChartLayout(legacy);readChartLayout(layout,{current:legacy});
+  assert.ok(layout.charts.length>DEFAULT_CHART_LIMIT);
 }
 console.log('Fresh indexed network chart defaults and published samples verified.');

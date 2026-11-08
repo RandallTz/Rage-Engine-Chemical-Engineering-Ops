@@ -1,6 +1,7 @@
 """Reproducible sparse assembly from equation-variable incidence, policy v2."""
 import numpy as np
 import sympy as sp
+from core.mathematics.numeric_lowering import lambdify_numeric
 from scipy.sparse import csc_matrix, issparse
 from scipy.sparse.linalg import splu, LinearOperator, svds
 
@@ -49,7 +50,7 @@ class ExpressionJacobian:
         self.shape = (len(expressions), len(variables))
         self.edges = sorted(edges)
         self.policy = policy(len(variables), len(edges), requested)
-        self.function = sp.lambdify([time, x, c],
+        self.function = lambdify_numeric([time, x, c],
             [e for _, _, e in self.direct+self.indirect], modules='numpy', cse=True)
 
     def __call__(self, time, state):

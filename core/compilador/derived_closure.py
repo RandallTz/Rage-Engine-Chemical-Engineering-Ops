@@ -14,6 +14,7 @@ import math
 
 import numpy as np
 import sympy as sp
+from core.mathematics.numeric_lowering import lambdify_numeric
 from scipy.optimize import brentq
 
 from core.mathematics.constants import UnitBasis, si_magnitude
@@ -630,7 +631,7 @@ class SteadyClosures:
                     raise LoweringError('closure_input_unresolved', 'Express the closure input ' + str(quantity) +
                                         ' of ' + closure.owner + ' in steady unknowns and data (select its reconstruction).')
                 used |= value.free_symbols
-                functions.append(sp.lambdify([symbols], value, modules='numpy'))
+                functions.append(lambdify_numeric([symbols], value, modules='numpy'))
             closure.inputs = [lambda t, y, fn=fn: float(fn(y)) for fn in functions]
             self.dependencies.append(used)
 

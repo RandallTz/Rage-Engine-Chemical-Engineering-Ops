@@ -7,8 +7,7 @@
 #
 # Two tiers, so that the gate on every push is quick and nothing is dropped:
 #
-#   fast  (every push, and PRs)  tests/validar_*.py suites not listed under
-#                                "slow" in tools/ci/test_tiers.json, pinned-
+#   fast  (every push, and PRs)  registered fast Python suites, pinned-
 #                                dependency check, tsc, pure frontend
 #                                verifiers, next build.  A few minutes.
 #   slow  (PRs to main, nightly, manual)  the long suites (UNIFAC validators,
@@ -16,9 +15,8 @@
 #                                suite, plus the Python-backed frontend
 #                                verifiers and the browser check.
 #
-# Every tests/validar_*.py suite is in exactly one tier: "slow" is an explicit
-# list, everything else is fast, and tools/ci/check_tiers.py fails the fast job
-# if the slow matrix below and the list disagree.
+# Every validator and pytest file belongs to exactly one tier. The tier check
+# verifies coverage and the slow matrices against the registry.
 #
 # Versions are PINNED in requirements.txt on purpose: several checks compare
 # against exact values ("benzene/toluene 50/50 = 365.515693 K, bit for bit"),
@@ -60,6 +58,16 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies for Python-backed verifiers
+        working-directory: frontend
+        run: npm ci
 
       - name: Install dependencies
         run: pip install -r requirements.txt
@@ -106,6 +114,48 @@ jobs:
 
       - name: Slow-tier suite
         run: python run_tests.py --tier slow ${{ matrix.suite }}
+
+  pytest-slow:
+    name: Pytest, slow tier (${{ matrix.group }})
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        group:
+          - group-1
+          - group-2
+          - group-3
+          - group-4
+          - group-5
+          - group-6
+          - group-7
+          - group-8
+          - group-9
+          - group-10
+          - group-11
+          - group-12
+          - group-13
+          - group-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend dependencies for Python-backed verifiers
+        working-directory: frontend
+        run: npm ci
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Slow pytest group
+        run: python run_tests.py --tier slow --group ${{ matrix.group }}
 
   frontend:
     name: Frontend (types, pure verifiers, build)

@@ -53,33 +53,48 @@ export function readChartLayout(value:unknown,sources?:ChartSources):ChartLayout
   }
   return layout;
 }
-export function defaultChartLayout(result:ConjuntoResultados):ChartLayout{
+/** Default charts of an indexed result show the ranks the Python publisher marks as primary (version 3), at most this many. */
+export const DEFAULT_CHART_LIMIT=24,DEFAULT_RANK_LIMIT=7,CHART_LAYOUT_LIMIT=100;
+function networkCharts(result:ConjuntoResultados):{charts:ChartSpec[];available:number}|undefined{
   const network=result.indexedNetwork;
-  if(network){
-    const rows=new Map(result.series.map(row=>[row.id,row]));
-    const charts:ChartSpec[]=[];
-    if(network.mode==='steady'){
-      for(const profile of network.profiles){
-        const row=rows.get(profile.seriesId)!;
-        charts.push({id:`profile-${charts.length+1}`,title:row.nombre,type:'xy',x:{kind:'axis',id:network.stageAxisId!,unit:'1'},y:{unit:row.unidadSI},events:false,series:[{source:'current',id:row.id}]});
-      }
-    }else{
-      const groups=new Map<string,{axis:string;unit:string;title:string;ids:string[]}>();
-      for(const stage of network.stages)for(const id of stage.seriesIds){
-        const row=rows.get(id)!;
-        const axis=result.ejes.find(a=>a.id===row.ejes[0]&&a.rol==='tiempo');
-        if(!axis||row.ejes.length!==1)continue;
-        const key=JSON.stringify([id.slice(stage.ownerId.length+1),axis.id,row.unidadSI]);
-        const group=groups.get(key)??{axis:axis.id,unit:row.unidadSI,title:row.nombre,ids:[]};
-        group.ids.push(id);groups.set(key,group);
-      }
-      for(const group of groups.values())for(let offset=0;offset<group.ids.length;offset+=100){
-        const axis=result.ejes.find(a=>a.id===group.axis)!;
-        charts.push({id:`stages-${charts.length+1}`,title:group.title,type:'time_series',x:{kind:'axis',id:axis.id,unit:axis.unidadSI},y:{unit:group.unit},events:true,series:group.ids.slice(offset,offset+100).map(id=>({source:'current',id}))});
-      }
+  if(!network)return undefined;
+  const rows=new Map(result.series.map(row=>[row.id,row]));
+  const labels=network.version===3?new Map(network.display.map(d=>[d.seriesId,d])):undefined;
+  const charts:ChartSpec[]=[],ranks:number[]=[];
+  if(network.mode==='steady'){
+    for(const profile of network.profiles){
+      const row=rows.get(profile.seriesId)!,entry=labels?.get(profile.seriesId);
+      charts.push({id:`profile-${charts.length+1}`,title:entry?.label??row.nombre,type:'xy',x:{kind:'axis',id:network.stageAxisId!,unit:'1'},y:{unit:row.unidadSI},events:false,series:[{source:'current',id:row.id}]});
+      ranks.push(entry?.rank??0);
     }
-    if(charts.length)return {format:'rage.result-charts',version:1,charts:charts.slice(0,100)};
+  }else{
+    const groups=new Map<string,{axis:string;unit:string;title:string;rank:number;ids:string[]}>();
+    for(const stage of network.stages)for(const id of stage.seriesIds){
+      const row=rows.get(id)!,entry=labels?.get(id);
+      const axis=result.ejes.find(a=>a.id===row.ejes[0]&&a.rol==='tiempo');
+      if(!axis||row.ejes.length!==1)continue;
+      const key=JSON.stringify([entry?entry.group:id.slice(stage.ownerId.length+1),axis.id,row.unidadSI]);
+      const group=groups.get(key)??{axis:axis.id,unit:row.unidadSI,title:entry?.label??row.nombre,rank:entry?.rank??0,ids:[]};
+      group.ids.push(id);groups.set(key,group);
+    }
+    for(const group of groups.values())for(let offset=0;offset<group.ids.length;offset+=100){
+      const axis=result.ejes.find(a=>a.id===group.axis)!;
+      charts.push({id:`stages-${charts.length+1}`,title:group.title,type:'time_series',x:{kind:'axis',id:axis.id,unit:axis.unidadSI},y:{unit:group.unit},events:true,series:group.ids.slice(offset,offset+100).map(id=>({source:'current',id}))});
+      ranks.push(group.rank);
+    }
   }
+  if(!labels)return {charts:charts.slice(0,CHART_LAYOUT_LIMIT),available:charts.length};
+  const order=charts.map((c,k)=>k).filter(k=>ranks[k]<=DEFAULT_RANK_LIMIT).sort((a,b)=>ranks[a]-ranks[b]||a-b).slice(0,DEFAULT_CHART_LIMIT);
+  return {charts:order.map(k=>charts[k]),available:charts.length};
+}
+/** How many default charts are shown out of all the published chart groups, so the interface can say when a cap applies. */
+export function defaultChartSummary(result:ConjuntoResultados):{shown:number;available:number}{
+  const network=networkCharts(result);
+  return network?{shown:network.charts.length,available:network.available}:{shown:defaultChartLayout(result).charts.length,available:defaultChartLayout(result).charts.length};
+}
+export function defaultChartLayout(result:ConjuntoResultados):ChartLayout{
+  const network=networkCharts(result);
+  if(network?.charts.length)return {format:'rage.result-charts',version:1,charts:network.charts};
   const series=result.series.find(s=>s.unidadSI==='K'&&s.ejes.length<=1)??result.series.find(s=>s.ejes.length<=1);
   if(!series)return {format:'rage.result-charts',version:1,charts:[]};
   const axis=result.ejes.find(a=>a.id===series.ejes[0]&&a.rol==='tiempo');
@@ -115,7 +130,8 @@ export async function prepareCharts(layout:ChartLayout,sources:ChartSources,sign
       const xRow=raw[1]?rows.find(r=>r.kind===raw[1].kind&&r.id===raw[1].id&&r.unit===raw[1].unit):undefined;
       const xs=xRow?.values as number[]|undefined;
       const stage=result.indexedNetwork?.stages.find(s=>s.seriesIds.includes(row.id));
-      traces.push({name:`${ref.source} · ${stage?`Stage ${stage.index} · `:''}${row.nombre}`,points:values.map((y,i)=>({x:xs?xs[i]:i,y}))});
+      const shown=result.indexedNetwork?.version===3?result.indexedNetwork.display.find(d=>d.seriesId===row.id)?.label:undefined;
+      traces.push({name:`${ref.source} · ${stage?`Stage ${stage.index} · `:''}${shown??row.nombre}`,points:values.map((y,i)=>({x:xs?xs[i]:i,y}))});
       if(spec.events&&xRow)events.push(...xRow.events);
     }
     if(spec.type==='time_series'){

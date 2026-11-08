@@ -5,6 +5,7 @@ import math
 
 import numpy as np
 import sympy as sp
+from core.mathematics.numeric_lowering import lambdify_numeric
 
 from core import unidades as units
 from core.mathematics.constants import si_magnitude
@@ -293,8 +294,8 @@ class SteadySystem(DerivedGraph):
             self.residual, self.jacobian = self._closure_residual(expressions)
         else:
             self.jacobian_expression = sp.Matrix(expressions).jacobian(self.symbols)
-            self.residual = sp.lambdify([self.symbols], expressions, modules='numpy', cse=True)
-            self.jacobian = sp.lambdify([self.symbols], self.jacobian_expression, modules='numpy', cse=True)
+            self.residual = lambdify_numeric([self.symbols], expressions, modules='numpy', cse=True)
+            self.jacobian = lambdify_numeric([self.symbols], self.jacobian_expression, modules='numpy', cse=True)
         from core.solvers.sparse_blocks import ExpressionJacobian
         blocks = []
         if self.closures:
@@ -324,7 +325,7 @@ class SteadySystem(DerivedGraph):
     def _closure_residual(self, expressions):
         """Package residual with centered or second-order inward differences."""
         closures = self.closures
-        function = sp.lambdify([self.symbols, closures.symbols], expressions, modules='numpy', cse=True)
+        function = lambdify_numeric([self.symbols, closures.symbols], expressions, modules='numpy', cse=True)
         def residual(values):
             return np.asarray(function(np.asarray(values, dtype=float), closures.vector(values)), dtype=float)
         def jacobian(values):
@@ -363,8 +364,8 @@ class SteadySystem(DerivedGraph):
     def _numeric(self, expression):
         """A function of the steady unknowns that also reads the package closure outputs."""
         if not self.closures or not expression.has(*self.closures.symbols):
-            return sp.lambdify([self.symbols], expression, modules='numpy')
-        function = sp.lambdify([self.symbols, self.closures.symbols], expression, modules='numpy')
+            return lambdify_numeric([self.symbols], expression, modules='numpy')
+        function = lambdify_numeric([self.symbols, self.closures.symbols], expression, modules='numpy')
         return lambda values: function(np.asarray(values, dtype=float), self.closures.vector(values))
 
     def specialize(self, expression):
