@@ -1,6 +1,7 @@
 'use client';
 import ResultCharts from './ResultCharts';
-import {commonTimeEvents} from './ResultEvents';
+import {commonTimeEvents,EventMarkerLabel,eventLabelRows} from './ResultEvents';
+export {EventMarkerLabel};
 import {nombreEventoRed} from './metadatosRed';
 import { englishLabel } from '../models/english';
 import {useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
@@ -24,26 +25,21 @@ export function publishedSeriesCharts(r:ResultadoMotor):GraficaMotor[]{
   for(const series of r.seriesEvaluadas??[]){const key=JSON.stringify([series.grupo,series.unidad]);const group=groups.get(key)??{name:`${series.grupo} · ${series.unidad}`,ids:[]};group.ids.push(series.id);groups.set(key,group);}
   return [...groups.values()].map((group,index)=>({id:`published-${index+1}`,nombre:group.name,tipo:'tiempo',x:'t',y:group.ids,ancha:false,altura:310,instante:r.tiempos.length-1}));
 }
-export function EventMarkerLabel({viewBox,value}:{viewBox?:{x?:number;y?:number};value?:unknown}){
-  const area=usePlotArea(),text=useRef<SVGTextElement>(null),[measured,setMeasured]=useState(0);
-  useLayoutEffect(()=>{if(text.current)setMeasured(text.current.getComputedTextLength());},[value]);
-  if(!area||typeof value!=='string')return null;
-  const available=Math.max(1,area.width-12),width=Math.min(measured||value.length*10,available);
-  const x=Math.max(area.x+6,Math.min((viewBox?.x??area.x)+6,area.x+area.width-6-width));
-  return <text ref={text} className="common-event-label" x={x} y={area.y+6} textAnchor="start" dominantBaseline="hanging" fontSize={10} textLength={measured>available?available:undefined} lengthAdjust="spacingAndGlyphs">{value}</text>;
-}
-export function commonEventMarkers(r:ResultadoMotor,g:Pick<GraficaMotor,'tipo'|'x'>,unit:string|undefined){
+export function commonEventMarkers(r:ResultadoMotor,g:Pick<GraficaMotor,'tipo'|'x'>,unit:string|undefined,domain?:[number,number],width=550){
   if(g.tipo!=='tiempo'||g.x!=='t'||!unit)return [];
-  return commonTimeEvents(r.commonResult).map((event,index)=><ReferenceLine key={`event-${index}`} x={event.valor} yAxisId={unit} stroke="#84713e" strokeDasharray="3 5" label={{value:`${nombreEventoRed(event.codigo)} · ${event.propietarioId??'model'}`,content:<EventMarkerLabel/>}}/>);
+  const events=commonTimeEvents(r.commonResult),texts=events.map(event=>`${nombreEventoRed(event.codigo)} � ${event.propietarioId??'model'}`);
+  const rows=domain?eventLabelRows(events.map((event,i)=>({x:event.valor,text:texts[i]})),domain,width):events.map(()=>0);
+  return events.map((event,index)=><ReferenceLine key={`event-${index}`} x={event.valor} yAxisId={unit} stroke="#84713e" strokeDasharray="3 5" label={{value:texts[index],content:<EventMarkerLabel row={rows[index]}/>}}/>);
 }
 function Grafica({g,h,r,cambiar}:{g:GraficaMotor;h:HojaMotor;r:ResultadoMotor;cambiar:(g:GraficaMotor)=>void}){
   const host=useRef<HTMLDivElement>(null),resize=useRef<{y:number;altura:number}|null>(null),[ancho,setAncho]=useState(0),[altura,setAltura]=useState<number|null>(null);
   useEffect(()=>{const el=host.current;if(!el)return;const observer=new ResizeObserver(([e])=>setAncho(e.contentRect.width));observer.observe(el);return()=>observer.disconnect();},[]);
   const datos=useMemo(()=>datosGraficasMotor(h,r,g.tipo,g.instante),[h,r,g.tipo,g.instante]);
+  const xs=datos.filas.map(f=>Number((f as Record<string,unknown>)[g.x])).filter(Number.isFinite),xDomain:[number,number]|undefined=xs.length?[Math.min(...xs),Math.max(...xs)]:undefined;
   const tramo=r.ensamblajeV2?.respuesta.resultados?intervaloNoCertificado(r.ensamblajeV2.respuesta.resultados):null;
   const vx=datos.variables.find(v=>v.id===g.x),ys=g.y.map(id=>datos.variables.find(v=>v.id===id)).filter(v=>v!==undefined),unidades=[...new Set(ys.map(v=>v.unidad))];
   return <>{g.tipo==='perfil'&&<label style={{display:'flex',alignItems:'center',gap:16,fontSize:11,padding:'0 10px 14px'}}>t = {numero(r.tiempos[Math.min(g.instante,r.tiempos.length-1)])} s<input aria-label={`Time for ${g.nombre}`} type="range" min={0} max={r.tiempos.length-1} value={Math.min(g.instante,r.tiempos.length-1)} onChange={e=>cambiar({...g,instante:Number(e.target.value)})}/></label>}
-    <div ref={host} style={{height:altura??g.altura,minWidth:0}}>{!vx||!ys.length?<span className={styles.muted}>Edit the chart to choose available variables.</span>:ancho>0&&<LineChart width={ancho} height={altura??g.altura} data={datos.filas} margin={{top:14,right:22,bottom:28,left:8}} accessibilityLayer><CartesianGrid vertical={false} stroke="#dfe3d7" strokeDasharray="3 5"/><XAxis dataKey={g.x} type="number" domain={limitesGraficaMotor(datos.filas,[g.x],['dataMin','dataMax'])} tickFormatter={numero} tick={{fontSize:10}} height={48} label={{value:`${vx.nombre} [${nombreUnidad(vx.unidad)}]`,position:'insideBottom',offset:0,fontSize:11}}/>{unidades.map((u,i)=><YAxis key={u} yAxisId={u} domain={limitesGraficaMotor(datos.filas,ys.filter(v=>v.unidad===u).map(v=>v.id))} orientation={i%2?'right':'left'} tickFormatter={numero} width={62} tick={{fontSize:10}} label={{value:nombreUnidad(u),angle:i%2?90:-90,position:i%2?'insideRight':'insideLeft',fontSize:11}}/>)}{tramo&&g.x==='t'&&unidades[0]&&<ReferenceArea x1={tramo[0]} x2={tramo[1]} yAxisId={unidades[0]} fill="#ad8050" fillOpacity={0.14} strokeOpacity={0}/> }{commonEventMarkers(r,g,unidades[0])}<Tooltip labelFormatter={v=>`${vx.nombre}: ${numero(v)} ${nombreUnidad(vx.unidad)}`} formatter={(v,n)=>[numero(v),String(n)]}/><Legend wrapperStyle={{fontSize:11}}/>{ys.map((v,i)=><Line key={v.id} dataKey={v.id} yAxisId={v.unidad} name={`${v.nombre} [${nombreUnidad(v.unidad)}]`} type="linear" stroke={colores[i%colores.length]} strokeWidth={2} dot={datos.filas.length===1} isAnimationActive={false} connectNulls={false}/>)}</LineChart>}</div>
+    <div ref={host} style={{height:altura??g.altura,minWidth:0}}>{!vx||!ys.length?<span className={styles.muted}>Edit the chart to choose available variables.</span>:ancho>0&&<LineChart width={ancho} height={altura??g.altura} data={datos.filas} margin={{top:14,right:22,bottom:28,left:8}} accessibilityLayer><CartesianGrid vertical={false} stroke="#dfe3d7" strokeDasharray="3 5"/><XAxis dataKey={g.x} type="number" domain={limitesGraficaMotor(datos.filas,[g.x],['dataMin','dataMax'])} tickFormatter={numero} tick={{fontSize:10}} height={48} label={{value:`${vx.nombre} [${nombreUnidad(vx.unidad)}]`,position:'insideBottom',offset:0,fontSize:11}}/>{unidades.map((u,i)=><YAxis key={u} yAxisId={u} domain={limitesGraficaMotor(datos.filas,ys.filter(v=>v.unidad===u).map(v=>v.id))} orientation={i%2?'right':'left'} tickFormatter={numero} width={62} tick={{fontSize:10}} label={{value:nombreUnidad(u),angle:i%2?90:-90,position:i%2?'insideRight':'insideLeft',fontSize:11}}/>)}{tramo&&g.x==='t'&&unidades[0]&&<ReferenceArea x1={tramo[0]} x2={tramo[1]} yAxisId={unidades[0]} fill="#ad8050" fillOpacity={0.14} strokeOpacity={0}/> }{commonEventMarkers(r,g,unidades[0],xDomain,ancho)}<Tooltip labelFormatter={v=>`${vx.nombre}: ${numero(v)} ${nombreUnidad(vx.unidad)}`} formatter={(v,n)=>[numero(v),String(n)]}/><Legend wrapperStyle={{fontSize:11}}/>{ys.map((v,i)=><Line key={v.id} dataKey={v.id} yAxisId={v.unidad} name={`${v.nombre} [${nombreUnidad(v.unidad)}]`} type="linear" stroke={colores[i%colores.length]} strokeWidth={2} dot={datos.filas.length===1} isAnimationActive={false} connectNulls={false}/>)}</LineChart>}</div>
     <button className={styles.resize} aria-label={`Resize ${g.nombre}`} title="Drag or use the arrow keys to resize" onKeyDown={e=>{if(['ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();cambiar({...g,altura:Math.min(800,Math.max(240,g.altura+(e.key==='ArrowUp'?-40:40)))});}}} onPointerDown={e=>{resize.current={y:e.clientY,altura:g.altura};e.currentTarget.setPointerCapture(e.pointerId);}} onPointerMove={e=>{if(resize.current)setAltura(Math.min(800,Math.max(240,resize.current.altura+e.clientY-resize.current.y)));}} onPointerUp={e=>{if(resize.current)cambiar({...g,altura:Math.min(800,Math.max(240,resize.current.altura+e.clientY-resize.current.y))});resize.current=null;setAltura(null);}} onPointerCancel={()=>{resize.current=null;setAltura(null);}}>―</button>
   </>;
 }
