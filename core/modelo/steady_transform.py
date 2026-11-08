@@ -39,23 +39,37 @@ def prepare_steady_transform(model):
             'origen': {'propietarioId': 'estudio', 'ruta': 'steadyTransform.'+key}}
         return identity
 
-    def residual_scale(equation):
-        residual = equation.lhs-equation.rhs
-        dimension = dynamic._dim(residual)
-        candidates = []
+    def declared_magnitudes(dimension):
+        values = []
         for key, entry in model['datos'].items():
             if entry.get('origen', {}).get('ruta', '').startswith('steadyTransform.'):
                 continue
             try:
                 if unidades.interpretar(entry['declaracion']['unidad'])['dimension'] == dimension:
-                    candidates.append(abs(float(dynamic._datum(key, dimension))))
+                    values.append(abs(float(dynamic._datum(key, dimension))))
             except (ValueError, LoweringError):
                 continue
+        return values
+
+    def residual_scale(equation):
+        residual = equation.lhs-equation.rhs
+        dimension = dynamic._dim(residual)
+        candidates = []
         # Keep separate terms so cancellation at the initial state cannot erase
         # the characteristic flow or power. All evaluation remains in Python.
         substitutions = {**dynamic.parameter_values, **dynamic.initial_values,
                          **getattr(dynamic, 'initial_algebraic', {}), **dynamic.initial_closure, dynamic.time: 0}
         expanded = dynamic._expand(residual)
+        # Only data that occur in this row can set its scale (RT-6); an unrelated
+        # datum of the same dimension never does.
+        occurring = expanded.free_symbols
+        for q, parameter in dynamic.parameter_symbols.items():
+            if parameter in occurring and parameter in dynamic.parameter_values:
+                try:
+                    if dynamic._dim(q) == dimension:
+                        candidates.append(abs(float(dynamic.parameter_values[parameter])))
+                except (ValueError, LoweringError, TypeError):
+                    continue
         expanded = expanded.xreplace({d: sp.S.Zero for d in expanded.atoms(sp.Derivative)})
         for term in sp.Add.make_args(sp.expand(expanded)):
             value = si_magnitude(term).subs(substitutions)
@@ -67,7 +81,11 @@ def prepare_steady_transform(model):
         return scale
 
     def numerical_bounds(q, seed, scale):
-        lower, upper = seed-10*scale, seed+10*scale
+        # The reach comes from declared magnitudes of the quantity's dimension and
+        # a wide factor, never from the initial state alone (RT-7): the root of a
+        # steady selection must not depend on the initial holdup.
+        reach = 1e3*max([scale, *declared_magnitudes(dynamic._dim(q))])
+        lower, upper = seed-reach, seed+reach
         # These names identify inventories emitted by the physical producers;
         # an arbitrary mathematical quantity is never classified by its unit.
         name = q.func.__name__ if q.is_Function else str(q)
