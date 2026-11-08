@@ -27,7 +27,7 @@ export function publishedSeriesCharts(r:ResultadoMotor):GraficaMotor[]{
 }
 export function commonEventMarkers(r:ResultadoMotor,g:Pick<GraficaMotor,'tipo'|'x'>,unit:string|undefined,domain?:[number,number],width=550){
   if(g.tipo!=='tiempo'||g.x!=='t'||!unit)return [];
-  const events=commonTimeEvents(r.commonResult),texts=events.map(event=>`${nombreEventoRed(event.codigo)} · ${event.propietarioId??'model'}`);
+  const events=commonTimeEvents(r.commonResult),texts=events.map(event=>`${nombreEventoRed(event.codigo)} Â· ${event.propietarioId??'model'}`);
   const rows=domain?eventLabelRows(events.map((event,i)=>({x:event.valor,text:texts[i]})),domain,width):events.map(()=>0);
   return events.map((event,index)=><ReferenceLine key={`event-${index}`} x={event.valor} yAxisId={unit} stroke="#84713e" strokeDasharray="3 5" label={{value:texts[index],content:<EventMarkerLabel row={rows[index]}/>}}/>);
 }
