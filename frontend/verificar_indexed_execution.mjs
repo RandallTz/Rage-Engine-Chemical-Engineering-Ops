@@ -34,7 +34,7 @@ console.log(`Indexed execution contract: ${checks} checks passed.`);
 if(process.argv.includes('--http')){
   let resultChecks=0;
   for(const mode of ['dynamic','steady']){
-    const result=readProduced(path.resolve(here,`../.tmp/indexed-http-${mode}.json`),'tests/test_indexed_execution_http.py (live HTTP run)');
+    const result=readProduced(path.resolve(here,`../.tmp/indexed-http-${mode}.json`),'tests/test_indexed_execution_http.py');
     const selection=result.procedencia.indexedCompilation.selection;
     assert.deepEqual(readIndexedResult(result,selection),result);resultChecks++;
     const changed=structuredClone(result);changed.series[0].valores=mode==='steady'?999:changed.series[0].valores.map(()=>999);

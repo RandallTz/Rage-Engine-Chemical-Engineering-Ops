@@ -27,7 +27,7 @@ function readProduced(file,producer){if(!fs.existsSync(file))throw new Error(`Mi
 let model=guardarHoja({...nuevaHoja(common.nombre),id:common.id,commonModel:common}),checks=0;
 const base=structuredClone(model),signatures=[];
 for(const mode of ['dynamic','steady']){
-  const result=readProduced(path.join(root,`.tmp/indexed-http-${mode}.json`),'tests/test_indexed_execution_http.py (live HTTP run)');
+  const result=readProduced(path.join(root,`.tmp/indexed-http-${mode}.json`),'tests/test_indexed_execution_http.py');
   model=guardarHoja(applyIndexed(model,result.procedencia.indexedCompilation));
   assert.ok(currentIndexed(guardarHoja(structuredClone(model))));checks++;
   assert.equal(leerHojas().find(row=>row.id===model.id).indexedSelection.report.selection.mode,mode);checks++;
