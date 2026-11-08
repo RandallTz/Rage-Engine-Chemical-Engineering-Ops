@@ -60,3 +60,33 @@ def test_partial_profile_for_a_quantity_of_only_some_stages():
     row['valores'][0] = 1.0
     with pytest.raises(Exception):
         leer_resultados(steady)
+
+
+def test_boundary_ports_share_a_group_and_a_steady_profile_across_stages():
+    """D-2: a boundary quantity is one group over the stages that publish it, named by the template port identity."""
+    results = publications(3)
+    for mode, result in results.items():
+        network = result['indexedNetwork']
+        display = {d['seriesId']: d for d in network['display']}
+        port_series = {v for p in network['endPorts'] + network['sidePorts']
+                       for variable in p['variables'].values() for v in (variable if isinstance(variable, list) else [variable])}
+        assert port_series and all(display[k]['rank'] == 8 and display[k]['label'].startswith('Port ') for k in port_series)
+        by_group = {}
+        for key in port_series:
+            by_group.setdefault(display[key]['group'], []).append(key)
+        assert any(len(keys) > 1 for keys in by_group.values()), 'a port quantity of several stages shares one group'
+        if mode == 'steady':
+            profiled = {p['seriesId']: p for p in network['profiles']}
+            for group, keys in by_group.items():
+                profile = next(p for p in network['profiles'] if display[p['seriesId']]['group'] == group)
+                assert {k for k in profile['stageSeriesIds'] if k} == set(keys)
+            assert all(display[s]['rank'] == 8 for s in profiled if display[s]['label'].startswith('Port '))
+
+
+def test_flows_rank_with_amounts_and_one_rank_limit():
+    """D-1/D-3: a published flow is not a secondary property, and the rank limit has one source (the client)."""
+    for result in publications(3).values():
+        display = result['indexedNetwork']['display']
+        assert all(d['rank'] == 4 for d in display if d['label'].endswith(' flow') and not d['label'].startswith('Port'))
+    import core.compilador.indexed_display as module
+    assert not hasattr(module, 'DEFAULT_RANK_LIMIT')

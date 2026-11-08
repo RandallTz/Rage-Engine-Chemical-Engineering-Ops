@@ -43,6 +43,11 @@ for(const mode of ['steady','dynamic']){
   // C-3: the omitted groups are counted so the interface can say so.
   const summary=defaultChartSummary(result);
   assert.equal(summary.shown,layout.charts.length);assert.ok(summary.available>summary.shown);
+  // D-1: the notice states exactly what the cap omits; nothing is double counted or lost.
+  assert.equal(summary.shown+summary.omitted.capped+summary.omitted.ports+summary.omitted.internal,summary.available-0);
+  const ranksOf=new Set(result.indexedNetwork.display.map(d=>d.rank));assert.ok(!ranksOf.has(8)||summary.omitted.ports>0);
+  // D-2: boundary-port values of several stages form one group (a steady profile over the stages that publish them).
+  if(mode==='steady')assert.ok(result.indexedNetwork.profiles.some(p=>display.get(p.seriesId).rank===8&&p.stageSeriesIds.some(id=>id===null)),'a boundary-port profile covers only the stages that publish it');
   if(mode==='steady'){
     assert.ok(layout.charts.every(c=>result.indexedNetwork.profiles.some(p=>p.seriesId===c.series[0].id)));
     assert.ok(layout.charts.some(c=>c.y.unit==='K')&&layout.charts.some(c=>c.y.unit==='1'));
@@ -60,6 +65,8 @@ for(const mode of ['steady','dynamic']){
 // Version 2 results keep their former defaults (every published series, raw names, capped at the layout limit).
 for(const mode of ['steady','dynamic']){
   const legacy=structuredClone(results[mode]);delete legacy.indexedNetwork.display;legacy.indexedNetwork.version=2;
+  // Versions 1 and 2 only ever published profiles that cover every stage, so the partial (version 3) ones are left out.
+  legacy.indexedNetwork.profiles=legacy.indexedNetwork.profiles.filter(p=>p.stageSeriesIds.every(id=>id!==null));
   const layout=defaultChartLayout(legacy);readChartLayout(layout,{current:legacy});
   assert.ok(layout.charts.length>DEFAULT_CHART_LIMIT);
 }

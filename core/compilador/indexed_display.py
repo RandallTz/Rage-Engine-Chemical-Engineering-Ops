@@ -4,11 +4,11 @@ The Python publisher owns display names so the interface never parses symbol str
 (the stage index is structure the client already has). Ranks order the default charts: 0 temperature, 1 liquid
 composition, 2 vapour composition, 3 pressure, 4 phase amounts and flows, 5 inventories and states, 6 phase
 properties, 7 other published quantities, 8 boundary-port values, 9 internal quantities (derivatives, losses,
-stream bookkeeping). The default chart layout shows ranks up to DEFAULT_RANK_LIMIT.
+stream bookkeeping). The rank limit and the chart cap of the default layout live in one place, the client's
+chartSpecification.ts (DEFAULT_RANK_LIMIT, DEFAULT_CHART_LIMIT); this module only publishes the ranks.
 """
 import re
 
-DEFAULT_RANK_LIMIT = 5
 PHASES = {'L': 'Liquid', 'V': 'Vapour'}
 PROPERTIES = {'amount': ('amount', 4), 'h': ('molar enthalpy', 6), 'u': ('molar internal energy', 6),
               'v': ('molar volume', 6), 'M': ('molar mass', 6), 'present': ('presence indicator', 6)}
@@ -78,6 +78,8 @@ class Namer:
             return simple[base][0], owner, simple[base][1], base
         if base == 'q' and parts:
             return f'Component flow of {self.species(parts[-1])} (stream)', owner, 9, 'q'
+        if re.fullmatch(r'(?:[a-z]+)?(?:Mass|Molar|Volumetric)?[Ff]low', base):
+            return humanize(base), owner, 4, base
         m = re.fullmatch(r'(.+?)_(\d+)', base)
         if m:
             return f'{humanize(m.group(1))} of {self.species(m.group(2))}', owner, 7, base
@@ -100,6 +102,8 @@ def stage_display(namer, rows):
 
 
 def port_display(port_id, role, unit, species=None):
+    """port_id is the stage-agnostic port name, so one boundary quantity of every stage that publishes it shares a
+    label and a group."""
     names = {'flow': 'flow', 'enthalpy': 'specific enthalpy', 'temperature': 'temperature', 'pressure': 'pressure',
              'power': 'power', 'fraction': 'mass fraction'}
     label = f'Port {port_id}: {names[role]}' + (f' of {species}' if species else '')
