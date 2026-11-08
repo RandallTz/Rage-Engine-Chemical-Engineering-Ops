@@ -276,14 +276,16 @@ def _probe(fn):
         return None, str(e.datos.get("cause") or "unlocated")
 
 
-def _windows(side, lo, hi, s_lo, s_hi, what, state):
+def _windows(side, lo, hi, s_lo, s_hi, what, state, refine_edges=True):
     """Evaluable temperature windows of a default PH or UV bracket [lo, hi].
 
     side(T) is 0 when the specified state can be sought at T and otherwise a label: the cause of a non-evaluable
     probe (for example `liquid_liquid_split`), or for UV -1/+1 (the volume needs P below/above the P bracket). The
     sides are taken on an N_WINDOW_SCAN-point grid; every run of grid points with side 0 becomes one window, each
     end refined by N_WINDOW_BISECT bisections against its neighbour. Returns [(T_a, T_b, side below, side above,
-    interior grid points)], a neighbour side being None at a bracket end."""
+    interior grid points)], a neighbour side being None at a bracket end. With refine_edges=False the ends stay
+    the grid points (no bisection): the cheap first pass of the root search, which needs the exact edge only when
+    no window brackets the root."""
     grid = np.linspace(lo, hi, N_WINDOW_SCAN)
     if s_lo == 0 and s_hi == 0:
         return [(lo, hi, None, None, [float(T) for T in grid[1:-1]])]
@@ -296,6 +298,8 @@ def _windows(side, lo, hi, s_lo, s_hi, what, state):
             cause=causes[0] if causes else "outside_bracket", bracket=[lo, hi], sides=sides, **state)
 
     def refine(bad, good):
+        if not refine_edges:
+            return good
         for _ in range(N_WINDOW_BISECT):
             mid = 0.5 * (bad + good)
             if side(mid) == 0:
@@ -319,7 +323,7 @@ def _windows(side, lo, hi, s_lo, s_hi, what, state):
     return out
 
 
-def _root_on_windows(f, f_probe, windows, what, state, **kw):
+def _root_on_windows(f, f_probe, windows, what, state, bracket_only=False, **kw):
     """T at which f(T) = 0 on the evaluable windows of _windows.
 
     f increases with T (H at fixed P, U at fixed V, by positive heat capacities on the stable states), so at most
@@ -329,7 +333,10 @@ def _root_on_windows(f, f_probe, windows, what, state, **kw):
     is bisected (N_WINDOW_BISECT). Without a bracketing window, the root lies in a gap or beyond a bracket end and
     the label of that side locates the rejection: its cause (for example `liquid_liquid_split`: the true state is
     a split this package cannot publish), or `outside_bracket` at a bracket end or a -1/+1 side. A single window
-    spanning the bracket is the plain search, unchanged."""
+    spanning the bracket is the plain search, unchanged. With bracket_only=True the function returns T only when
+    f changes sign between two evaluable points of one window (or is zero at one) and returns None otherwise,
+    without the edge bisections and without raising: the caller then repeats the search on edge-refined
+    windows."""
     single = len(windows) == 1 and windows[0][2] is None and windows[0][3] is None
     if single and f_probe(windows[0][0])[1] is None and f_probe(windows[0][1])[1] is None:
         return _bracketed_root(f, windows[0][0], windows[0][1], what, state, **kw)
@@ -376,6 +383,8 @@ def _root_on_windows(f, f_probe, windows, what, state, **kw):
             return Thi
         if fa * fb < 0.0:
             return brentq(f, Tlo, Thi, **kw)
+        if bracket_only:
+            continue
         if fa > 0.0 and lo_bad is not None:             # the root may sit between the failing point and Tlo
             T_in, f_in = edge(lo_bad[0], Tlo, fa, lo_bad[1])
             if T_in is not None:
@@ -387,6 +396,8 @@ def _root_on_windows(f, f_probe, windows, what, state, **kw):
                 return brentq(f, Thi, T_in, **kw)
             Thi, above, fb = f_in[2], f_in[1], f_in[3]
         ends.append((Tlo, Thi, below, above, fa, fb))
+    if bracket_only:
+        return None
     if not ends:
         raise CubicOutOfScope(f"{what}: the residual is not evaluable at any window point.", cause="not_evaluable",
                               windows=[[w[0], w[1]] for w in windows], **state)
@@ -406,6 +417,70 @@ def _root_on_windows(f, f_probe, windows, what, state, **kw):
         f"{what}: the specified state lies beyond the evaluable window edge T = {T_edge:.6g} K (residual "
         f"{res:.6g}), on a side labelled {label!r}, which this package does not publish.",
         cause=cause, T_edge=T_edge, residual=res, windows=[[e[0], e[1]] for e in ends], **state)
+
+
+def _predict_lnP(solved, T):
+    """ln P guess at T from the ln P roots already found at other temperatures of the same UV search (linear in
+    T through the two nearest, else the nearest) and the distance in T to the nearest, or (None, None) before the
+    first one."""
+    if not solved:
+        return None, None
+    near = sorted(solved, key=lambda t: abs(t - T))[:2]
+    if len(near) == 2 and near[0] != near[1]:
+        t0, t1 = near
+        return solved[t0] + (solved[t1] - solved[t0]) * (T - t0) / (t1 - t0), abs(T - t0)
+    return solved[near[0]], abs(T - near[0])
+
+
+WARM_LNP_WIDTH = 1e-2    # largest first half-width (in ln P) of the warm-started bracket of one UV isotherm
+WARM_LNP_GROW = 8.0
+
+
+def _warm_lnP_root(g, br, guess, dT, what, state):
+    """Root of g (decreasing in ln P) on the evaluable bracket br = (l, h), the same brentq root as the plain
+    search (xtol 1e-13). With a guess from a neighbouring temperature the bracket starts as a narrow interval
+    around it and grows towards the side the signs point to; any non-evaluable end, or a failure to bracket
+    before the interval is br, falls back to the plain search on br. The result is a root of the same function,
+    found with fewer flashes when the guess is close; it is never accepted without a sign change."""
+    if guess is not None and br[0] < guess < br[1]:
+        w = min(WARM_LNP_WIDTH, max(1e-8, 0.1 * dT))    # ln P moves by under 0.1 per K on these isochores
+        lo, hi = max(br[0], guess - w), min(br[1], guess + w)
+        glo, ghi = _probe(lambda: g(lo))[0], _probe(lambda: g(hi))[0]
+        while glo is not None and ghi is not None:
+            if glo == 0.0:
+                return lo
+            if ghi == 0.0:
+                return hi
+            if glo * ghi < 0.0:
+                return brentq(g, lo, hi, xtol=1e-13, maxiter=200)
+            if lo <= br[0] and hi >= br[1]:
+                break
+            w *= WARM_LNP_GROW
+            if glo > 0.0:                               # V too large at both: the root is at higher P
+                lo, glo = hi, ghi
+                hi = min(br[1], hi + w)
+                ghi = _probe(lambda: g(hi))[0] if hi > lo else None
+            else:
+                hi, ghi = lo, glo
+                lo = max(br[0], lo - w)
+                glo = _probe(lambda: g(lo))[0] if lo < hi else None
+    return _bracketed_root(g, br[0], br[1], what, state, xtol=1e-13, maxiter=200)
+
+
+def _search_T(f, f_probe, side, lo, hi, what, where, window_state):
+    """Default-bracket search of a PH or UV temperature. Pass 1 uses the windows on the grid, unrefined, and
+    needs no edge bisection when f changes sign inside one window (the usual case: the true state is evaluable).
+    Only when no window brackets the root does it refine the window edges (N_WINDOW_BISECT bisections each, the
+    expensive part) and run the full _root_on_windows, which locates the edge or the labelled rejection. f is
+    increasing in T, so the root of pass 1 is the root of the full search."""
+    s_lo, s_hi = side(lo), side(hi)
+    kw = dict(xtol=1e-10, rtol=1e-14, maxiter=200)
+    windows = _windows(side, lo, hi, s_lo, s_hi, what, window_state, refine_edges=False)
+    T = _root_on_windows(f, f_probe, windows, what, where, bracket_only=True, **kw)
+    if T is not None:
+        return T
+    windows = _windows(side, lo, hi, s_lo, s_hi, what, window_state)
+    return _root_on_windows(f, f_probe, windows, what, where, **kw)
 
 
 def flash_PH(eos, P, H, z, T_bracket=None):
@@ -436,8 +511,7 @@ def flash_PH(eos, P, H, z, T_bracket=None):
     else:
         lo, hi = max(eos.T_range[0], 150.0), min(eos.T_range[1], 1000.0)
         side = lambda T: 0 if probe(T)[1] is None else probe(T)[1]
-        windows = _windows(side, lo, hi, side(lo), side(hi), "PH flash (T)", where)
-        T = _root_on_windows(f, probe, windows, "PH flash (T)", where, xtol=1e-10, rtol=1e-14, maxiter=200)
+        T = _search_T(f, probe, side, lo, hi, "PH flash (T)", where, where)
     st = flash_TP(eos, T, P, z)
     st["T"], st["P"] = T, P
     return st
@@ -460,7 +534,7 @@ def flash_UV(eos, U, V, z, T_bracket=None, P_bracket=(1e3, 5e7)):
     the result equals the plain search."""
     z = np.asarray(z, dtype=float)
     lnPa, lnPb = math.log(P_bracket[0]), math.log(P_bracket[1])
-    flashes, inner, outer = {}, {}, {}
+    flashes, inner, outer, solved = {}, {}, {}, {}
 
     def tp(T, lnP):
         if (T, lnP) not in flashes:
@@ -468,7 +542,9 @@ def flash_UV(eos, U, V, z, T_bracket=None, P_bracket=(1e3, 5e7)):
         return flashes[(T, lnP)]
 
     def g_at(T):
-        return lambda lnP: sum(p["n"] * p["v"] for p in tp(T, lnP)["phases"]) - V
+        # ln(V(P)/V): the same sign and root as V(P) - V, and nearly linear in ln P across a two-phase interval
+        # (V changes by orders of magnitude between bubble and dew), so the root finder converges in fewer steps
+        return lambda lnP: math.log(sum(p["n"] * p["v"] for p in tp(T, lnP)["phases"]) / V)
 
     def inner_side(T):
         """(side, ln P bracket, ln P of the non-evaluable side) of the inner problem at T."""
@@ -516,8 +592,9 @@ def flash_UV(eos, U, V, z, T_bracket=None, P_bracket=(1e3, 5e7)):
         if br is None:                                  # V(P_min) < V with a non-evaluable state at P_max
             raise CubicOutOfScope(f"UV flash (ln P at T = {T:.6g} K): V = {V:.6g} m3 needs P below "
                                   f"{P_bracket[0]:.6g} Pa.", cause="outside_bracket", **where)
-        lnP = _bracketed_root(g_at(T), br[0], br[1], f"UV flash (ln P at T = {T:.6g} K)", where,
-                              xtol=1e-13, maxiter=200)
+        guess, dT = _predict_lnP(solved, T)
+        lnP = _warm_lnP_root(g_at(T), br, guess, dT, f"UV flash (ln P at T = {T:.6g} K)", where)
+        solved[T] = lnP
         return tp(T, lnP), math.exp(lnP)
 
     def f(T):
@@ -535,8 +612,7 @@ def flash_UV(eos, U, V, z, T_bracket=None, P_bracket=(1e3, 5e7)):
     else:
         lo, hi = max(eos.T_range[0], 150.0), min(eos.T_range[1], 1000.0)
         side = lambda T: inner_side(T)[0]
-        windows = _windows(side, lo, hi, side(lo), side(hi), "UV flash (T)", {**where, "P_bracket": list(P_bracket)})
-        T = _root_on_windows(f, probe, windows, "UV flash (T)", where, xtol=1e-10, rtol=1e-14, maxiter=200)
+        T = _search_T(f, probe, side, lo, hi, "UV flash (T)", where, {**where, "P_bracket": list(P_bracket)})
     st, P = at_T(T)
     st["T"], st["P"] = T, P
     return st
