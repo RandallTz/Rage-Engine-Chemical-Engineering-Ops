@@ -1,0 +1,44 @@
+{
+  "format": "rage.deduction-script",
+  "version": 1,
+  "note": "Format v1. The engineer replays it with tools/research/replay_deduction_script.py: assumptions through the family journals, steps through the equation workbench. Write readable names only; hashed ids and input signatures come from the engine. A step the engine refuses is reported with its message, and steps that use it are skipped. Rules: docs/engine/multiphysics-roadmap.md, section Research dossiers.",
+  "operation": "<op>",
+  "dossier": "dossiers/<op>.md",
+  "title": "<one line>",
+  "system": {"generic": true},
+  "volumes": [
+    {"id": "<volume>", "phases": ["liquid"], "components": "generic, i = 1..N"}
+  ],
+  "streams": [
+    {"id": "feed", "volume": "<volume>", "direction": "inlet"},
+    {"id": "product", "volume": "<volume>", "direction": "outlet"}
+  ],
+  "contacts": [
+    {"id": "wall", "volume": "<volume>", "otherBody": "<service or surroundings>", "boundary": {"type": "wall", "conductive": true, "permeable": false, "moving": false}, "crosses": ["heat"], "transferLaw": "s2", "reason": "<why these properties>", "cite": "[R3]"}
+  ],
+  "fundamentalAssumptions": [
+    {"id": "A1", "family": "matter", "volume": "<volume>", "action": "start", "reason": "Component mass conservation over the control volume", "cite": "[R1]"},
+    {"id": "A2", "family": "matter", "volume": "<volume>", "action": "no_reaction", "reason": "<physical justification>", "cite": "[R1]"},
+    {"id": "A3", "family": "matter", "volume": "<volume>", "action": "integrate", "reason": "Integral balance over the volume (Gauss and Reynolds)"},
+    {"id": "A4", "family": "matter", "volume": "<volume>", "action": "total", "reason": "Component inventories; the boundary is partitioned into the declared streams"},
+    {"id": "A5", "family": "matter", "volume": "<volume>", "action": "impermeable_remainder", "reason": "<why no other mass crosses the boundary>"},
+    {"id": "A6", "family": "energy", "volume": "<volume>", "action": "start", "reason": "First law over the control volume"},
+    {"id": "A7", "family": "momentum", "volume": "<volume>", "action": "start", "reason": "Cauchy momentum conservation"},
+    {"id": "A8", "family": "momentum", "volume": "<volume>", "action": "set_assumption", "name": "pressureStress", "value": true, "reason": "<physical justification>"}
+  ],
+  "thermodynamics": {"volume": "<volume>", "closure": "<package, for example UNIFAC equilibrium, or a declared single-phase law>", "policy": "<phase policy>", "cite": "[R2]"},
+  "steps": [
+    {"id": "s1", "family": "matter", "kind": "declare_symbol", "name": "k", "unit": "1/s", "reason": "<what the symbol is>", "cite": "[R3]"},
+    {"id": "s2", "family": "matter", "kind": "declare_relation", "relationKind": "constitutive", "left": "q__product__i(t)", "right": "k*m__<volume>__i(t)", "reason": "<physical law at the outlet>", "source": {"kind": "empirical correlation", "citation": "<author, year, equation>", "validRange": "<range>"}, "cite": "[R3]"},
+    {"id": "s3", "family": "matter", "kind": "substitute", "sources": ["balance:matter.<volume>:m__<volume>__i(t)"], "relation": "s2", "symbol": "q__product__i(t)", "reason": "The outlet law enters the component balance"}
+  ],
+  "results": [
+    {"id": "r1", "fromStep": "s3", "statement": "Component balance of <volume> with the outlet law"}
+  ],
+  "findings": [
+    {"step": "sN", "hypothesis": "<what the engine seems to lack>", "neededFor": "<why>"}
+  ],
+  "validation": [
+    {"case": "V1", "equation": "s3", "solveFor": "Derivative(m__<volume>__i(t), t)", "inputs": {"k": 0.5, "m__<volume>__i(t)": 2.0, "q__feed__i(t)": 3.0}, "expected": 2.0, "tolerance": {"relative": 1e-9}, "cite": "[R4] Table 3"}
+  ]
+}
