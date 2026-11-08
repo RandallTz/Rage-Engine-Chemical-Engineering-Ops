@@ -63,7 +63,7 @@ User decision `dec-autonomous-loops` (7 November 2026): Claude (either account) 
 
 1. Follow "When a session starts" (CLAUDE.md for Claude; AGENTS.md for Codex), then run the board check.
 2. Pick one item, in this order:
-   - **Claude:** a mailbox entry addressed to its account; then the first queue item in `review pending`; then the first unclaimed board milestone owned by `claude` whose `dependsOn` are done; then the claude-a or claude-b lane items in the roadmap.
+   - **Claude:** a mailbox entry addressed to its account; then the first queue item in `review pending`; then, while `dec-claude-takes-codex-queue` holds, the first in `repairs requested` or `ready` (repair on a `claude/*` branch, reviewed by another run before it reaches `fase-a-adopcion`); then the first unclaimed board milestone owned by `claude` whose `dependsOn` are done; then the claude-a or claude-b lane items in the roadmap.
    - **Codex:** the first queue item in `repairs requested`, then the first in `ready`.
 3. Claim it (milestone and files), set the queue State to `in progress` when it is a queue item, and read only the documents and sources that item names. When the item touches or reviews code, use `graphify` to locate code instead of reading whole files: in the new worktree, copy the main checkout's `graphify-out/`, then run `graphify update .` (see [tools/graphify/README.md](../graphify/README.md)). Documentation-only items skip it.
 4. Do it. Acceptance is the item's named command or test passing, plus the formula rule of AGENTS.md (each formula checked numerically against a reference). Claude routes inside the run by tier (CLAUDE.md "Model tiers"): Opus for review, deduction and gates; Sonnet for already decided edits; Haiku for lookups.
