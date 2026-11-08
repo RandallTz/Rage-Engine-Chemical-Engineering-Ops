@@ -110,8 +110,45 @@ function loadQueue() {
   return rows;
 }
 
+// Progress percentages: the table under "### Progress percentages" in the roadmap (`dec-progress-table`).
+// Rows: a bold first cell is a block with its own total, "· " starts a sub-row of the block above, and the
+// "Project total" row closes the table. The % cell is a number 0-100, optionally with "~" or "≈" (an estimate).
+const PROGRESS_FILE = 'docs/engine/multiphysics-roadmap.md';
+function loadProgress() {
+  const lines = fs.readFileSync(path.join(root, PROGRESS_FILE), 'utf8').split(/\r?\n/);
+  const start = lines.findIndex((line) => /^#{2,6}\s+Progress percentages\b/.test(line));
+  if (start < 0) { problem(`${PROGRESS_FILE}: heading "Progress percentages" not found`); return { rows: [], total: null }; }
+  const rows = [];
+  let total = null;
+  let parent = '';
+  let inTable = false;
+  for (const line of lines.slice(start + 1)) {
+    if (/^#{1,6}\s/.test(line)) break;
+    if (!line.trim().startsWith('|')) { if (inTable) break; continue; }
+    const cells = line.split('|').slice(1, -1).map((c) => c.trim());
+    if (cells.length < 3) continue;
+    if (/^Block$/i.test(cells[0])) { inTable = true; continue; }
+    if (!inTable || /^-+$/.test(cells[0].replace(/[:\s]/g, ''))) continue;
+    const clean = (s) => s.replace(/\*\*/g, '').replace(/`/g, '').trim();
+    const name = clean(cells[0]);
+    const m = clean(cells[2]).match(/^([~≈])?\s*(\d+(?:\.\d+)?)$/);
+    if (!m || Number(m[2]) > 100) { problem(`${PROGRESS_FILE}: progress row "${name}" needs a % between 0 and 100 (optionally ~ or ≈), got "${cells[2]}"`); continue; }
+    const percent = Number(m[2]);
+    const estimate = Boolean(m[1]);
+    if (/^project total/i.test(name)) { total = { name: name.replace(/\s*\(weighted\)\s*$/i, ''), percent, estimate, formula: clean(cells[1]) }; continue; }
+    const sub = name.startsWith('·');
+    const label = name.replace(/^·\s*/, '');
+    if (!sub) parent = label;
+    rows.push({ id: `p${rows.length + 1}`, order: rows.length + 1, level: sub ? 'sub' : 'block', parent: sub ? parent : '', name: label, state: clean(cells[1]), percent, estimate, group: cells[0].startsWith('**') });
+  }
+  if (!rows.length) problem(`${PROGRESS_FILE}: progress table has no rows`);
+  if (!total) problem(`${PROGRESS_FILE}: progress table has no "Project total" row`);
+  return { rows, total };
+}
+
 const registry = loadRegistry();
 const queue = loadQueue();
+const progress = loadProgress();
 const board = JSON.parse(fs.readFileSync(path.join(root, 'docs/engine/project-board.json'), 'utf8'));
 if (board.format !== 'rage.project-board' || board.version !== 1) problem('project-board.json: unsupported format or version');
 if (!/^\d{4}-\d{2}-\d{2}$/.test(board.reviewDate || '')) problem('project-board.json: reviewDate must be YYYY-MM-DD');
@@ -262,6 +299,7 @@ const summary = [
   `M1 current step: ${current ? `${current.title} [${current.status}, ${current.owner}]` : 'complete'}`,
   `Open decisions: ${board.decisions.filter((d) => d.status === 'open').map((d) => d.title).join('; ') || 'none'}`,
   `Open risks: ${board.risks.filter((r) => r.status === 'open').length}`,
+  `Progress: project total ≈ ${progress.total.percent}% over ${progress.rows.length} rows (${PROGRESS_FILE})`,
   `Codex queue: ${queue.length} items (${QUEUE_FILE})`,
   `Claims: ${claims.map((c) => `${c.agent} on ${c.id} [${c.files.join(', ')}]`).join('; ') || 'none'}`,
   ...(unclaimed.length ? [`Unclaimed active items (claim before editing their files): ${unclaimed.join(', ')}`] : []),
@@ -279,7 +317,12 @@ write('risks', risks);
 write('reviews', reviews);
 write('ownership', ownershipRows);
 write('queue', queue);
+// One dataset: the weighted total first (level "total"), then the table rows in order.
+write('progress', [
+  { id: 'total', order: 0, level: 'total', parent: '', name: progress.total.name, state: progress.total.formula, percent: progress.total.percent, estimate: progress.total.estimate, group: true },
+  ...progress.rows,
+]);
 fs.writeFileSync(path.join(out, 'summary.txt'), summary + '\n');
 // The dashboard stores its page as a document {text}; page.html is its source.
 fs.writeFileSync(path.join(out, 'page.json'), JSON.stringify({ text: fs.readFileSync(path.join(root, 'tools/roadmap_board/page.html'), 'utf8') }));
-console.log(summary + `\nWrote ${['capabilities', 'milestones', 'gates', 'decisions', 'risks', 'reviews', 'ownership', 'queue'].map((n) => n + '.json').join(', ')} to tools/roadmap_board/out/`);
+console.log(summary + `\nWrote ${['capabilities', 'milestones', 'gates', 'decisions', 'risks', 'reviews', 'ownership', 'queue', 'progress'].map((n) => n + '.json').join(', ')} to tools/roadmap_board/out/`);
