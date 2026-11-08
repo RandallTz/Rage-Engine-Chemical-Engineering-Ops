@@ -6,6 +6,7 @@ from core.mathematics.numeric_lowering import lambdify_numeric
 from core.resultados import conjunto, eje, evento, serie, leer_resultados
 from core.solvers import integrar
 from .indexed_network import discharge, _failure
+from .indexed_display import Namer, stage_display, port_display
 
 
 def dynamic_result(system):
@@ -45,7 +46,7 @@ def _publish(system, times, samples, mode, *, events=(), status='resuelto', evid
     dynamic = mode == 'dynamic'
     axes = [eje('t','Time','tiempo','s',times)] if dynamic else [eje('j','Stage j','parametro','1',range(1,len(system.stages)+1))]
     rows, checks, stages, missing = [], [], [], []
-    profiles = {}
+    display, stage_rows, namers = {}, [], []
     samples = np.asarray(samples)
     output_vectors = [system.closure_values(t,y) for t,y in zip(times,samples)]
     def evaluate(j, expression):
@@ -63,6 +64,10 @@ def _publish(system, times, samples, mode, *, events=(), status='resuelto', evid
         source_quantities = {v:k for k,v in mapping['quantities'].items()}
         source_volumes = {v:k for k,v in mapping['volumes'].items()}
         record = {'index':j+1,'ownerId':owner,'seriesIds':[],'closures':[]}
+        namer = Namer(stage.model, mapping)
+        namers.append(namer)
+        rows_here = []
+        stage_rows.append(rows_here)
         local = samples[:,system.offsets[j]:system.offsets[j+1]]
         def add(key, label, unit, values, profile=False):
             key_id = owner+'.'+key
@@ -72,7 +77,7 @@ def _publish(system, times, samples, mode, *, events=(), status='resuelto', evid
             rows.append(serie(key_id,label,unit,['t'] if dynamic else [], values if dynamic else values[0], propietarioId=owner))
             record['seriesIds'].append(key_id)
             if profile:
-                profiles.setdefault(key,[]).append(key_id)
+                rows_here.append((key_id,label,unit))
             return key_id
         for k,(quantity,qid) in enumerate(zip(stage.states,stage.state_ids)):
             add('state.'+source_quantities[qid],str(quantity),stage._unit(quantity),local[:,k].tolist(),True)
@@ -113,8 +118,13 @@ def _publish(system, times, samples, mode, *, events=(), status='resuelto', evid
                 _,fluxes,enthalpy = discharge(stage,port,getattr(system,'location','indexSet')+'.ports.'+port['id'])
                 total = sum(fluxes)
                 bindings['flow'] = add(prefix+'flow','Boundary mass flow','kg/s',evaluate(j,total))
+                display[bindings['flow']] = port_display(port['id'],'flow','kg/s')
+                stream_components = next(s for s in stage.model['corrientes'] if s['id']==port['boundary']['id'])['componenteIds']
                 bindings['composition'] = [add(prefix+'fraction.'+str(k),'Boundary mass fraction','1',evaluate(j,q/total)) for k,q in enumerate(fluxes,1)]
+                for k,key in enumerate(bindings['composition']):
+                    display[key] = port_display(port['id'],'fraction','1',namer.species(str(stream_components[k])))
                 bindings['specificEnthalpy'] = add(prefix+'enthalpy','Boundary specific enthalpy','J/kg',evaluate(j,enthalpy))
+                display[bindings['specificEnthalpy']] = port_display(port['id'],'enthalpy','J/kg')
                 stream = next(s for s in stage.model['corrientes'] if s['id']==port['boundary']['id'])
                 inlet = next((c.inlets[stream['id']] for c in stage.closures if stream['id'] in c.inlets),None)
                 donor = next((c for c in stage.closures if c.owner==port['volumeId']),None)
@@ -122,6 +132,7 @@ def _publish(system, times, samples, mode, *, events=(), status='resuelto', evid
                     values = ([inlet[symbol]]*len(times) if inlet is not None else
                               evaluate(j,stage._expand(sp.Function(symbol+'__'+donor.owner)(stage.time))) if donor is not None and port.get('donorPhase') else None)
                     bindings[role] = add(prefix+role,'Boundary '+role,unit,values)
+                    display[bindings[role]] = port_display(port['id'],role,unit)
             else:
                 volume = next(v for v in stage.model['volumenes'] if v['id']==port['volumeId'])
                 data_id = volume.get('terminos',{}).get(port['boundary']['id'])
@@ -133,21 +144,28 @@ def _publish(system, times, samples, mode, *, events=(), status='resuelto', evid
                     power = float(stage._datum(data_id,{'M':1,'L':2,'T':-3})) if data_id else None
                     powers = None if power is None else [power]*len(times)
                 bindings['power'] = add(prefix+'power','Boundary power','W',powers)
+                display[bindings['power']] = port_display(port['id'],'power','W')
             record.setdefault('_ports',[]).append({'portId':port['id'],'stage':j+1,'kind':port['kind'],
                                                   'direction':port['direction'],'variables':bindings})
         stages.append(record)
     ports = [p for stage in stages for p in stage.pop('_ports',[])]
     profile_rows = []
+    by_id = {row['id']:row for row in rows}
+    groups = {}
+    for j,(namer,rows_here) in enumerate(zip(namers,stage_rows)):
+        for key_id,(label,rank,group) in stage_display(namer,rows_here).items():
+            display[key_id] = (label,rank,group)
+            groups.setdefault(group,{})[j] = key_id
     if not dynamic:
-        by_id = {row['id']:row for row in rows}
-        for key,sources in profiles.items():
-            if len(sources) != len(stages):
+        for group,members in groups.items():
+            sources = [members.get(j) for j in range(len(stages))]
+            first = by_id[next(k for k in sources if k)]
+            if any(by_id[k]['unidadSI']!=first['unidadSI'] or by_id[k]['dimension']!=first['dimension'] for k in sources if k):
                 continue
-            source = by_id[sources[0]]
-            if any(by_id[k]['unidadSI']!=source['unidadSI'] for k in sources):
-                continue
-            target = identity+'.profile.'+key
-            rows.append(serie(target,source['nombre']+' by stage',source['unidadSI'],['j'],[by_id[k]['valores'] for k in sources],propietarioId=identity))
+            target = identity+'.profile.'+first['id'].split('.stage.',1)[1].split('.',1)[1]
+            label,rank,_ = display[first['id']]
+            rows.append(serie(target,label,first['unidadSI'],['j'],[by_id[k]['valores'] if k else None for k in sources],propietarioId=identity))
+            display[target] = (label,rank,group)
             profile_rows.append({'seriesId':target,'stageSeriesIds':sources})
         checks.extend({'id':f'{identity}.stage.{r["stage"]}.conservation.{r["equationId"]}',
                        'valor':r['residual'],'tolerancia':r['tolerance'],'descripcion':'Connected zero-rate balance residual.'}
@@ -159,8 +177,9 @@ def _publish(system, times, samples, mode, *, events=(), status='resuelto', evid
         {'motor':getattr(system,'publication_engine','rage.compilador.indexed_network'),'metodo':system.method if dynamic else 'damped_newton',
          'firma':expansion['sourceSignature'],'networkEvidence':{'version':1,'mode':mode,'linearPolicy':system.linear_policy,
          'numerical':evidence,'unresolvedPortSeries':missing}},axes,rows,events,checks,modeloId=system.model['id'])
-    result['indexedNetwork'] = {'version':2,'indexSetId':identity,'count':len(stages),'mode':mode,
+    result['indexedNetwork'] = {'version':3,'indexSetId':identity,'count':len(stages),'mode':mode,
         'stageAxisId':None if dynamic else 'j','stages':stages,
         'endPorts':[p for p in ports if p['stage'] in (1,len(stages))],
-        'sidePorts':[p for p in ports if p['stage'] not in (1,len(stages))],'profiles':profile_rows}
+        'sidePorts':[p for p in ports if p['stage'] not in (1,len(stages))],'profiles':profile_rows,
+        'display':[{'seriesId':k,'label':v[0],'rank':v[1],'group':v[2]} for k,v in display.items()]}
     return leer_resultados(result)

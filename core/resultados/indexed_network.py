@@ -24,11 +24,13 @@ def read_indexed_network(result):
             fail(path, 'Expected an array.')
 
     fields = ['version','indexSetId','count','mode','stageAxisId','stages','endPorts','profiles']
-    if isinstance(value, dict) and value.get('version') == 2:
+    if isinstance(value, dict) and value.get('version') in (2, 3):
         fields.append('sidePorts')
+    if isinstance(value, dict) and value.get('version') == 3:
+        fields.append('display')
     obj(value, fields, '')
-    if type(value['version']) not in (int,float) or value['version'] not in (1,2):
-        fail('.version', 'Expected version 1 or 2.')
+    if type(value['version']) not in (int,float) or value['version'] not in (1,2,3):
+        fail('.version', 'Expected version 1, 2 or 3.')
     text(value['indexSetId'], '.indexSetId')
     count = value['count']
     if type(count) not in (int,float) or not 0 < count <= 9007199254740991 or int(count) != count:
@@ -38,7 +40,7 @@ def read_indexed_network(result):
         fail('.mode', 'Expected dynamic or steady.')
     for key in ('stages','endPorts','profiles'):
         array(value[key], '.'+key)
-    if value['version'] == 2:
+    if value['version'] in (2, 3):
         array(value['sidePorts'], '.sidePorts')
     if len(value['stages']) != count:
         fail('.stages', 'Stage count differs from n.')
@@ -156,10 +158,30 @@ def read_indexed_network(result):
             if row['ejes'] != [axis['id']] or row.get('propietarioId') != value['indexSetId']:
                 fail(path, 'Profile owner or axis differs from the index set.')
             for stage_index, source in enumerate(profile['stageSeriesIds']):
+                if source is None and value['version'] == 3:
+                    if row['valores'][stage_index] is not None:
+                        fail(path, 'A stage without the quantity must publish an undefined profile value.')
+                    continue
                 if not isinstance(source,str) or source not in value['stages'][stage_index]['seriesIds']:
                     fail(path, 'Profile sources must follow stage order.')
                 original = series[source]
                 if (original['unidadSI'] != row['unidadSI'] or original['dimension'] != row['dimension']
                         or original['valores'] != row['valores'][stage_index]):
                     fail(path, 'Profile must preserve each scalar source value and unit.')
+    if value['version'] == 3:
+        array(value['display'], '.display')
+        shown = set()
+        needed = set(used) | {p['seriesId'] for p in value['profiles']}
+        for index, entry in enumerate(value['display']):
+            path = f'.display[{index}]'
+            obj(entry, ['seriesId','label','rank','group'], path)
+            for key in ('seriesId','label','group'):
+                text(entry[key], path+'.'+key)
+            if entry['seriesId'] not in needed or entry['seriesId'] in shown:
+                fail(path, 'Display entries must name each stage or profile series once.')
+            if type(entry['rank']) is not int or not 0 <= entry['rank'] <= 99:
+                fail(path+'.rank', 'Expected an integer rank from 0 to 99.')
+            shown.add(entry['seriesId'])
+        if shown != needed:
+            fail('.display', 'Every stage and profile series needs a display entry.')
     return value

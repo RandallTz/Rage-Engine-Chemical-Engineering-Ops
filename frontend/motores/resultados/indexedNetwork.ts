@@ -5,8 +5,10 @@ export type IndexedNetworkPublication = {
   indexSetId:string;count:number;mode:'dynamic'|'steady';stageAxisId:string|null;
   stages:{index:number;ownerId:string;seriesIds:string[];closures:{volumeId:string;mode:'equilibrium'|'single_phase';verificationId:string}[]}[];
   endPorts:IndexedBoundaryPort[];
-  profiles:{seriesId:string;stageSeriesIds:string[]}[];
-}&({version:1}|{version:2;sidePorts:IndexedBoundaryPort[]});
+  profiles:{seriesId:string;stageSeriesIds:(string|null)[]}[];
+}&({version:1}|{version:2;sidePorts:IndexedBoundaryPort[]}|{version:3;sidePorts:IndexedBoundaryPort[];display:IndexedDisplay[]});
+/** Python-published presentation metadata (version 3): readable stage-agnostic label, default-chart rank and a group key shared by the same quantity across stages. */
+export type IndexedDisplay={seriesId:string;label:string;rank:number;group:string};
 export type IndexedBoundaryPort={portId:string;stage:number;kind:'material'|'heat'|'work';direction:'inlet'|'outlet';
   variables:{flow:string;composition:string[];temperature:string;pressure:string;specificEnthalpy:string}|{power:string}};
 
@@ -19,13 +21,13 @@ export function readIndexedNetwork(result:ConjuntoResultados):IndexedNetworkPubl
   };
   const text=(row:unknown,path:string)=>{if(typeof row!=='string'||!row.trim())fail(path,'Expected nonempty text.');};
   const array=(row:unknown,path:string)=>{if(!Array.isArray(row))fail(path,'Expected an array.');};
-  obj(value,['version','indexSetId','count','mode','stageAxisId','stages','endPorts','profiles',...(value?.version===2?['sidePorts']:[])],'');
-  if(value.version!==1&&value.version!==2)fail('.version','Expected version 1 or 2.');
+  obj(value,['version','indexSetId','count','mode','stageAxisId','stages','endPorts','profiles',...(value?.version===2||value?.version===3?['sidePorts']:[]),...(value?.version===3?['display']:[])],'');
+  if(value.version!==1&&value.version!==2&&value.version!==3)fail('.version','Expected version 1, 2 or 3.');
   text(value.indexSetId,'.indexSetId');
   if(!Number.isSafeInteger(value.count)||value.count<=0)fail('.count','Expected a positive safe integer.');
   if(!['dynamic','steady'].includes(value.mode))fail('.mode','Expected dynamic or steady.');
   for(const key of ['stages','endPorts','profiles'] as const)array(value[key],'.'+key);
-  if(value.version===2)array(value.sidePorts,'.sidePorts');
+  if(value.version===2||value.version===3)array(value.sidePorts,'.sidePorts');
   if(value.stages.length!==value.count)fail('.stages','Stage count differs from n.');
   const series=new Map(result.series.map(s=>[s.id,s])),checks=new Map(result.verificaciones.map(v=>[v.id,v]));
   if(checks.size!==result.verificaciones.length)fail('.stages','Certificate identities must be unique.');
@@ -59,7 +61,7 @@ export function readIndexedNetwork(result:ConjuntoResultados):IndexedNetworkPubl
   });
   const ports=new Set<string>();
   const boundaries=[...value.endPorts.map((port,i)=>({port,path:`.endPorts[${i}]`,interior:false})),
-    ...(value.version===2?value.sidePorts.map((port,i)=>({port,path:`.sidePorts[${i}]`,interior:true})):[])];
+    ...(value.version===2||value.version===3?value.sidePorts.map((port,i)=>({port,path:`.sidePorts[${i}]`,interior:true})):[])];
   boundaries.forEach(({port,path,interior})=>{
     obj(port,['portId','stage','kind','direction','variables'],path);text(port.portId,path+'.portId');
     if(ports.has(port.portId))fail(path,'Repeated end-port identity.');ports.add(port.portId);
@@ -91,13 +93,26 @@ export function readIndexedNetwork(result:ConjuntoResultados):IndexedNetworkPubl
       profiles.add(profile.seriesId);array(profile.stageSeriesIds,path+'.stageSeriesIds');
       if(profile.stageSeriesIds.length!==value.count||row!.ejes.length!==1||row!.ejes[0]!==axis!.id||row!.propietarioId!==value.indexSetId)fail(path,'Invalid profile sources, owner or axis.');
       profile.stageSeriesIds.forEach((id,j)=>{
+        if(id===null&&value.version===3){if((row!.valores as (number|null)[])[j]!==null)fail(path,'A stage without the quantity must publish an undefined value.');return;}
         if(typeof id!=='string'||!value.stages[j].seriesIds.includes(id))fail(path,'Sources must follow stage order.');
-        const original=series.get(id)!;
+        const original=series.get(id as string)!;
         const dimensionKeys=Object.keys(original.dimension).sort(),otherKeys=Object.keys(row!.dimension).sort();
         const sameDimension=JSON.stringify(dimensionKeys)===JSON.stringify(otherKeys)&&dimensionKeys.every(k=>original.dimension[k].n===row!.dimension[k].n&&original.dimension[k].d===row!.dimension[k].d);
         if(original.unidadSI!==row!.unidadSI||!sameDimension||original.valores!==(row!.valores as (number|null)[])[j])fail(path,'Profile must preserve scalar source values and units.');
       });
     });
+  }
+  if(value.version===3){
+    array(value.display,'.display');
+    const needed=new Set([...used,...value.profiles.map(p=>p.seriesId)]),shown=new Set<string>();
+    value.display.forEach((entry,i)=>{
+      const path=`.display[${i}]`;obj(entry,['seriesId','label','rank','group'],path);
+      for(const key of ['seriesId','label','group'] as const)text(entry[key],`${path}.${key}`);
+      if(!needed.has(entry.seriesId)||shown.has(entry.seriesId))fail(path,'Display entries must name each stage or profile series once.');
+      if(!Number.isInteger(entry.rank)||entry.rank<0||entry.rank>99)fail(path+'.rank','Expected an integer rank from 0 to 99.');
+      shown.add(entry.seriesId);
+    });
+    if(shown.size!==needed.size)fail('.display','Every stage and profile series needs a display entry.');
   }
   return value;
 }
