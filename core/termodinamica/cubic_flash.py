@@ -204,7 +204,33 @@ def flash_TP(eos, T, P, z):
         lab = _label_single(eos, T, P, zn, ph["Z"])
         return {"phases": [dict(kind=lab, n=ntot, x=zn, **props)], "tm_min": tm_min, "mu_residual": 0.0,
                 "trials": trials, "d": d}
-    w = min(trials, key=lambda t: t[1])[0]
+    # The split is seeded by the lowest tangent-plane trial, and by the next distinct unstable trials only when the
+    # earlier seed gives no publishable state for a numerical reason. Which seed lands on the liquid-liquid split
+    # and which leaves the simplex or fails its certificate near a phase boundary changes with the last digits of the
+    # linear algebra (BLAS kernel and thread count), so a single seed made the rejection cause kernel dependent
+    # (PSRK CO2 + ethanol, F9 CI). A state is still published only when it passes the same certificate.
+    unstable = sorted((t for t in trials if t[1] < -TOL_TM), key=lambda t: t[1])
+    seeds, first = [], None
+    for t in unstable:
+        if all(np.max(np.abs(t[0] - u[0])) > TOL_SAME for u in seeds):
+            seeds.append(t)
+    for w, _ in seeds[:N_SPLIT_SEEDS]:
+        try:
+            return _split_state(eos, T, P, zn, ntot, trials, d, w)
+        except CubicOutOfScope as e:
+            if e.datos.get("cause") not in _SPLIT_RETRY:
+                raise
+            first = first or e
+    raise first
+
+
+_SPLIT_RETRY = {"not_converged", "no_rachford_rice_root", "split_collapsed", "singular_split_hessian",
+                "third_phase", "not_certified"}
+N_SPLIT_SEEDS = 3
+
+
+def _split_state(eos, T, P, zn, ntot, trials, d, w):
+    """Certified two-phase state of feed zn from one unstable trial composition w."""
     beta, y, x = split_TP(eos, T, P, zn, w)
     if not (N_ABSENT < beta < 1 - N_ABSENT):
         raise CubicOutOfScope(f"Split collapsed to one phase at T = {T:.6g} K, P = {P:.6g} Pa.",

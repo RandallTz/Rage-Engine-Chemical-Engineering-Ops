@@ -207,7 +207,7 @@ def sweep_temperature(sis, P, tri, T_end, dT=2.0, min_dT=1e-6, bisections=40):
                              "competitor": comp_}
         gaps = [(float(np.max(np.abs(cur["liquids"][i] - cur["liquids"][j]))), [i, j]) for i, j in ((0, 1), (0, 2), (1, 2))]
         gap, pair = min(gaps)
-        if state == "no_convergence" and gap < MERGE_GAP:
+        if (state == "no_convergence" or _merged_liquids(state, new)) and gap < MERGE_GAP:
             # two liquids of the family merge: a critical end point (L=L critical with the third liquid present);
             # published as a bracket, the critical condition itself is not solved here
             return out, {"kind": "critical_end_point_bracket", "lastCertifiedT": cur["T"], "mergingLiquids": pair,
@@ -215,6 +215,19 @@ def sweep_temperature(sis, P, tri, T_end, dT=2.0, min_dT=1e-6, bisections=40):
         return out, {"kind": "certification_lost" if state == "uncertified" else state,
                      "lastCertifiedT": cur["T"], "bracket": abs(hi - cur["T"]) if step > min_dT else None,
                      "competitor": comp_}
+
+
+def _merged_liquids(state, new):
+    """True when a triangle failed certification only because two of its liquids are no longer distinct: the
+    chemical potentials still agree and no other phase lowers the tangent plane, so the loss is the collapse of the
+    family onto a critical end point. Within round-off of that point the Newton step may either fail to converge or
+    return the collapsed triangle, so which of the two states is reported depends on the BLAS kernel; both are the
+    same event and must be classified alike."""
+    if state != "uncertified" or not new:
+        return False
+    cert = new["certificate"]
+    failed = {r["id"] for r in cert["residuos"] if r["estado"] != "cumple"}
+    return failed == {"distincion_fases"} and cert["estabilidad"]["estado"] == "estable"
 
 
 def _try(sis, T, P, seed):
