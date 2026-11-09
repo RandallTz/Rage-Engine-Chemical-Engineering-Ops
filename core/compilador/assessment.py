@@ -245,7 +245,20 @@ def assess_model(model: dict, *, initialize: bool = True) -> Assessment:
     return result
 
 
-def certification(result, source):
+DIAGNOSTIC_PREFIXES = ('reactions.equilibrium_limit.',)
+
+
+def is_diagnostic(check):
+    """Published values that describe a distance, not a certificate (roadmap RV-5): they carry no verdict."""
+    return any(check['id'].startswith(prefix) for prefix in DIAGNOSTIC_PREFIXES)
+
+
+def certification(result, source, legacy=False):
+    """Verdict from the published certificate; without one, from the verification checks that carry a verdict.
+
+    `legacy=True` reproduces the rule used before 8 November 2026, when diagnostics failed the verdict. It exists
+    only so that saved results written under that rule still read; `read_assessment` accepts either form.
+    """
     physical = result['procedencia'].get('physicalCertification')
     status = {'cumple': 'passed', 'no_cumple': 'failed', 'no_evaluable': 'not_evaluable'}.get(
         (physical or {}).get('estado'), 'not_evaluable')
@@ -260,7 +273,7 @@ def certification(result, source):
         rows.append({'code': 'CERTIFICATION_NOT_EVALUABLE', 'path': 'procedencia.physicalCertification',
                      'message': 'No physical certificate is published; initialization and numerical completion are not certification.'})
         for index, check in enumerate(result['verificaciones']):
-            if check['valor'] > check['tolerancia']:
+            if check['valor'] > check['tolerancia'] and (legacy or not is_diagnostic(check)):
                 status = 'failed'
                 rows.append({'code': 'CERTIFICATION_FAILED', 'path': f'verificaciones[{index}]',
                              'message': 'Published numerical verification failed: '+check['id']})
@@ -341,7 +354,7 @@ def read_assessment(value, *, model=None, result=None):
         raise ValueError('Invalid partial structural inspection.')
     if result is not None:
         if (value['modelId'] != result['modeloId'] or value.get('resultSignature') != result_signature(result, signature_version) or
-                value['certification'] != certification(result, source)):
+                value['certification'] not in (certification(result, source), certification(result, source, legacy=True))):
             raise ValueError('Assessment does not match the published result or certification evidence.')
     elif 'resultSignature' not in value and value['certification']['status'] != 'not_evaluated':
         raise ValueError('Certification requires published-result evidence.')

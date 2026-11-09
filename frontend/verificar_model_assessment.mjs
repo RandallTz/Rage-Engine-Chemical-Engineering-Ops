@@ -73,6 +73,19 @@ for(const version of [undefined,1]){
  assert.equal(leerResultados(result),result);
 }
 console.log('Assessment signature version: 9 transport contract checks passed.');
+// RV-5: equilibrium-limit values are diagnostics; they never decide the certification verdict.
+{const diagnostic={id:'reactions.equilibrium_limit.reactor',descripcion:'diagnostic',valor:.154,tolerancia:1e-3},real={id:'injected-failed-check',descripcion:'real',valor:1,tolerancia:1e-7};
+ const withChecks=checks=>{const r=structuredClone(live.result);r.verificaciones=checks;return r;};
+ const verdictRow=(path,code='CERTIFICATION_FAILED')=>({code,path,message:'Published numerical verification failed'});
+ const current=withChecks([diagnostic]);assert.equal(leerResultados(current).procedencia.assessment.certification.status,'not_evaluable');
+ const legacy=withChecks([diagnostic]);Object.assign(legacy.procedencia.assessment.certification,{status:'failed',code:'CERTIFICATION_FAILED',diagnostics:[...legacy.procedencia.assessment.certification.diagnostics,verdictRow('verificaciones[0]')]});
+ const upgraded=leerResultados(legacy).procedencia.assessment.certification;
+ assert.equal(upgraded.status,'not_evaluable');assert.equal(upgraded.code,'CERTIFICATION_NOT_EVALUABLE');assert.ok(upgraded.diagnostics.every(d=>d.code!=='CERTIFICATION_FAILED'));
+ const forged=withChecks([diagnostic,real]);assert.throws(()=>leerResultados(forged),/verdict disagrees/);
+ const failed=withChecks([diagnostic,real]);Object.assign(failed.procedencia.assessment.certification,{status:'failed',code:'CERTIFICATION_FAILED',diagnostics:[...failed.procedencia.assessment.certification.diagnostics,verdictRow('verificaciones[1]')]});
+ const kept=leerResultados(failed).procedencia.assessment.certification;assert.equal(kept.status,'failed');assert.deepEqual(kept.diagnostics.filter(d=>d.code==='CERTIFICATION_FAILED').map(d=>d.path),['verificaciones[1]']);
+ const legacyWithReal=withChecks([diagnostic,real]);Object.assign(legacyWithReal.procedencia.assessment.certification,{status:'failed',code:'CERTIFICATION_FAILED',diagnostics:[...legacyWithReal.procedencia.assessment.certification.diagnostics,verdictRow('verificaciones[0]'),verdictRow('verificaciones[1]')]});
+ assert.deepEqual(leerResultados(legacyWithReal).procedencia.assessment.certification.diagnostics.filter(d=>d.code==='CERTIFICATION_FAILED').map(d=>d.path),['verificaciones[1]']);}
 const old=structuredClone(live.result);delete old.procedencia.assessment;
 assert.equal(leerResultados(old),old);assert.ok(assessmentLines().every(line=>line.includes('Not evaluated')));
 
