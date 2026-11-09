@@ -126,15 +126,17 @@ def evaluacion_desde_estado(e, ids, sistema, politica=None, objetivo=None, masas
         "T": T, "P": P,
         "composicionMolar": {str(i): float(z[k]) for k, i in enumerate(ids)},
         "componentes": [{"id": i, "cas": c, "masaMolarKgMol": float(sistema.M[k]),
-                         "fuente": f"thermo (IUPAC), {md.especie(c).nombre}"} for k, (i, c) in enumerate(zip(ids, sistema.cas))],
+                         "fuente": f"thermo (IUPAC), {sistema.nombre_de(c) if hasattr(sistema, 'nombre_de') else md.especie(c).nombre}"}
+                        for k, (i, c) in enumerate(zip(ids, sistema.cas))],
         "fases": fases, "mezcla": mezcla, "referencia": dict(mz.REFERENCIA),
         "estabilidad": {"estado": "estable", "alcance": list(FASES_MEZCLA),
-                        "metodo": f"{sistema.paquete.nombre}. Mínimo de G a (T, P, n): fase única de menor G, prueba "
+                        "metodo": getattr(sistema, "metodo_estabilidad", None) or (
+                                  f"{sistema.paquete.nombre}. Mínimo de G a (T, P, n): fase única de menor G, prueba "
                                   "de distancia al plano tangente frente a vapor (mínimo analítico) y líquido (malla "
                                   "en el simplex de hasta 3 componentes y refinamiento local), adición de la fase "
                                   "inestable, minimización de G y pulido de Newton de la igualdad de potenciales; "
                                   "certificación final con la prueba completa. Hasta 3 fases (LLV). Especies "
-                                  "ausentes excluidas sin evaluar log(0). Parámetros: " + sistema.procedencia + "."},
+                                  "ausentes excluidas sin evaluar log(0). Parámetros: " + sistema.procedencia + ".")},
         "verificaciones": vs,
     }
 

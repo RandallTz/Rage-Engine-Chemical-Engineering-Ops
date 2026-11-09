@@ -41,6 +41,7 @@ class NetworkExecution:
             substitutions = (catalogo.leer_sustituciones(declaration['datosPuros'], 'datosPuros', set(cas))
                              if declaration.get('datosPuros') else None)
             package = (packages.PaqueteAgua(cas) if v.cierre.agua else
+                       v.cierre.paquete if v.cierre.eos else
                        packages.PaqueteMezcla(declaration['modelo']['id'], cas, substitutions))
             self.packages.append(package)
             n = initial[v.i_n].copy()

@@ -31,6 +31,7 @@ from core import expresiones_motor as ex
 from core import mezclas as mz
 from core import paquetes_volumen as pv
 from core.dynamic_common import Funcion, Detencion
+from core.termodinamica import eos_package
 
 REVISION = 2
 VOLUMENES_VERIFICADOS = 3
@@ -221,6 +222,8 @@ def capacidades_v2():
         "revision": REVISION, "revisionesAdmitidas": [2], "disponible": publicable,
         "motivo": None if publicable else motivo,
         "paquetes": paquetes if publicable else [],
+        # Additive (F8b): the cubic EOS packages a dynamic volume may select through the common path.
+        "paquetesEos": eos_package.capacidades() if publicable else [],
         "volumenesMaximos": VOLUMENES_VERIFICADOS, "componentesMaximos": COMPONENTES_VERIFICADOS,
         "tamanos": TAMANOS,
         "fronteras": ["rigida", "presion_prescrita"],
@@ -422,7 +425,8 @@ def validar_v2(cuerpo):
             diag("MOTOR_ENS_PAQUETE", "invalido", "Paquete con id único.", f"/paquetes/{i}")
             continue
         mod = p.get("modelo")
-        ok = isinstance(mod, dict) and (mod == mt.MODELO_AGUA or motor_mezclas.es_modelo_mezcla(mod))
+        ok = isinstance(mod, dict) and (mod == mt.MODELO_AGUA or motor_mezclas.es_modelo_mezcla(mod)
+                                        or eos_package.es_modelo_eos(mod))
         if not ok:
             diag("MOTOR_ENS_MODELO", "no_soportado", f"Modelo {mod!r} no publicado.", f"/paquetes/{i}/modelo")
         paquetes[p["id"]] = mod if ok else None
