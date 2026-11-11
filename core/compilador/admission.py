@@ -17,6 +17,10 @@ from .compilador import AdmissionError, _Dato, temporal_method
 def _liquid_only_volume(model, volume, path, owner, reject):
     _, package = capa._volumen(model, owner)
     cas = capa._cas(model, volume)
+    if package['modelo']['id'] in capa.EOS_PAQUETES:
+        reject('unsupported_package', 'The cubic EOS packages have no liquid-only phase set: a liquid-only species '
+               'needs a mixture package with that phase set.', path+'.termodinamica', 'MOTOR_ENS_ESPECIE_SOLO_LIQUIDO')
+        return
     try:
         substitutions = catalogo.leer_sustituciones(package['datosPuros'], 'datosPuros', set(cas)) if package.get('datosPuros') else None
         mezclas.Sistema(package['modelo']['id'], cas, sustituciones=substitutions, solo_liquido=True)
@@ -181,7 +185,8 @@ def validate(model, *, initialization=True):
         package_id = package['modelo']['id']
         if package_id == capa.AGUA and package.get('datosPuros'):
             reject('unsupported_substitution', 'IAPWS-95 does not accept pure-data substitutions.', path+'.termodinamica', 'MOTOR_ENS_SUSTITUCION_NO_ADMITIDA')
-        version = '1' if package_id == capa.AGUA else getattr(mezclas.PAQUETES.get(package_id), 'version', None)
+        version = ('1' if package_id == capa.AGUA or package_id in capa.EOS_PAQUETES
+                   else getattr(mezclas.PAQUETES.get(package_id), 'version', None))
         if version is None or str(version) != package['modelo']['version']:
             reject('unsupported_package', 'The requested package version is unavailable.', path+'.termodinamica', 'MOTOR_ENS_PAQUETE')
         elif set(volume['componenteIds']) <= identified_components:

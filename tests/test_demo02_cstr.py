@@ -25,9 +25,24 @@ def source():
     return model
 
 
+# kr and Er are derived by detailed balance (certified Gibbs minimisation for K, then the reaction enthalpy at that
+# composition), so they carry the convergence level of that solve and move with the BLAS kernel and thread count.
+# Measured on 8 Nov 2026 (Windows, one thread, OPENBLAS_CORETYPE=Zen) against the fixture written with the default
+# kernel: reverseRate differs by 6.3e-15 relative and reverseActivation by 1.2e-6 J/mol (52993.87855417002 against
+# 52993.8785542915). They are compared to 1e-13 relative (16 times the measured spread) and 1e-5 J/mol (8 times);
+# every other datum, equation and journal entry of the model stays exactly equal.
+DERIVED_DATA = {'reverseRate': ('rel', 1e-13), 'reverseActivation': ('abs', 1e-5)}
+
+
 def test_fixture_matches_fresh_shared_authoring(source):
     model,_=author_demo_cstr()
-    assert model==source
+    fresh,recorded=copy.deepcopy(model),copy.deepcopy(source)
+    for key,(kind,tol) in DERIVED_DATA.items():
+        a,b=fresh['datos'][key]['declaracion'],recorded['datos'][key]['declaracion']
+        x,y=float(a['texto']),float(b['texto'])
+        assert abs(x-y)<=(tol*abs(y) if kind=='rel' else tol),(key,x,y)
+        a['texto']=b['texto']
+    assert fresh==recorded
 
 
 def test_jacket_publication_follows_the_recorded_heat_law():

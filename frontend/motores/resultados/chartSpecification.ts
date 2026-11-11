@@ -54,8 +54,9 @@ export function readChartLayout(value:unknown,sources?:ChartSources):ChartLayout
   return layout;
 }
 /** Default charts of an indexed result show the ranks the Python publisher marks as primary (version 3), at most this many. */
-export const DEFAULT_CHART_LIMIT=24,DEFAULT_RANK_LIMIT=7,CHART_LAYOUT_LIMIT=100;
-function networkCharts(result:ConjuntoResultados):{charts:ChartSpec[];available:number}|undefined{
+export const DEFAULT_CHART_LIMIT=24,DEFAULT_RANK_LIMIT=7,CHART_LAYOUT_LIMIT=100,BOUNDARY_PORT_RANK=8;
+type Omitted={capped:number;ports:number;internal:number};
+function networkCharts(result:ConjuntoResultados):{charts:ChartSpec[];available:number;omitted:Omitted}|undefined{
   const network=result.indexedNetwork;
   if(!network)return undefined;
   const rows=new Map(result.series.map(row=>[row.id,row]));
@@ -83,14 +84,15 @@ function networkCharts(result:ConjuntoResultados):{charts:ChartSpec[];available:
       ranks.push(group.rank);
     }
   }
-  if(!labels)return {charts:charts.slice(0,CHART_LAYOUT_LIMIT),available:charts.length};
-  const order=charts.map((c,k)=>k).filter(k=>ranks[k]<=DEFAULT_RANK_LIMIT).sort((a,b)=>ranks[a]-ranks[b]||a-b).slice(0,DEFAULT_CHART_LIMIT);
-  return {charts:order.map(k=>charts[k]),available:charts.length};
+  if(!labels)return {charts:charts.slice(0,CHART_LAYOUT_LIMIT),available:charts.length,omitted:{capped:0,ports:0,internal:0}};
+  const eligible=charts.map((c,k)=>k).filter(k=>ranks[k]<=DEFAULT_RANK_LIMIT).sort((a,b)=>ranks[a]-ranks[b]||a-b),order=eligible.slice(0,DEFAULT_CHART_LIMIT);
+  const omitted={capped:eligible.length-order.length,ports:ranks.filter(r=>r===BOUNDARY_PORT_RANK).length,internal:ranks.filter(r=>r>BOUNDARY_PORT_RANK).length};
+  return {charts:order.map(k=>charts[k]),available:charts.length,omitted};
 }
 /** How many default charts are shown out of all the published chart groups, so the interface can say when a cap applies. */
-export function defaultChartSummary(result:ConjuntoResultados):{shown:number;available:number}{
+export function defaultChartSummary(result:ConjuntoResultados):{shown:number;available:number;omitted:Omitted}{
   const network=networkCharts(result);
-  return network?{shown:network.charts.length,available:network.available}:{shown:defaultChartLayout(result).charts.length,available:defaultChartLayout(result).charts.length};
+  return network?{shown:network.charts.length,available:network.available,omitted:network.omitted}:{shown:defaultChartLayout(result).charts.length,available:defaultChartLayout(result).charts.length,omitted:{capped:0,ports:0,internal:0}};
 }
 export function defaultChartLayout(result:ConjuntoResultados):ChartLayout{
   const network=networkCharts(result);

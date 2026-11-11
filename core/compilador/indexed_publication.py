@@ -34,6 +34,13 @@ def dynamic_result(system):
                   'stop':str(trajectory.detenida) if trajectory.detenida else None})
 
 
+def port_name(port_id, stage):
+    """Stage-agnostic name of an exposed boundary port: the author's id without a trailing '.<stage>' that repeats the
+    stage the port sits on (feed.2 at stage 2 is 'feed'), so the same boundary quantity of several stages is one group."""
+    suffix = '.'+str(stage)
+    return port_id[:-len(suffix)] if port_id.endswith(suffix) and len(port_id) > len(suffix) else port_id
+
+
 def steady_result(system):
     root, evidence = system.solve()
     return _publish(system.dynamic, [0.], [system.state(root)], 'steady',
@@ -112,19 +119,20 @@ def _publish(system, times, samples, mode, *, events=(), status='resuelto', evid
             if published['endpoint']['stage'] != j+1:
                 continue
             port = published['port']
+            template_port = port_name(port['id'],j+1)
             bindings = {}
             prefix = 'port.'+port['id']+'.'
             if port['kind'] == 'material':
                 _,fluxes,enthalpy = discharge(stage,port,getattr(system,'location','indexSet')+'.ports.'+port['id'])
                 total = sum(fluxes)
                 bindings['flow'] = add(prefix+'flow','Boundary mass flow','kg/s',evaluate(j,total))
-                display[bindings['flow']] = port_display(port['id'],'flow','kg/s')
+                display[bindings['flow']] = port_display(template_port,'flow','kg/s')
                 stream_components = next(s for s in stage.model['corrientes'] if s['id']==port['boundary']['id'])['componenteIds']
                 bindings['composition'] = [add(prefix+'fraction.'+str(k),'Boundary mass fraction','1',evaluate(j,q/total)) for k,q in enumerate(fluxes,1)]
                 for k,key in enumerate(bindings['composition']):
-                    display[key] = port_display(port['id'],'fraction','1',namer.species(str(stream_components[k])))
+                    display[key] = port_display(template_port,'fraction','1',namer.species(str(stream_components[k])))
                 bindings['specificEnthalpy'] = add(prefix+'enthalpy','Boundary specific enthalpy','J/kg',evaluate(j,enthalpy))
-                display[bindings['specificEnthalpy']] = port_display(port['id'],'enthalpy','J/kg')
+                display[bindings['specificEnthalpy']] = port_display(template_port,'enthalpy','J/kg')
                 stream = next(s for s in stage.model['corrientes'] if s['id']==port['boundary']['id'])
                 inlet = next((c.inlets[stream['id']] for c in stage.closures if stream['id'] in c.inlets),None)
                 donor = next((c for c in stage.closures if c.owner==port['volumeId']),None)
@@ -132,7 +140,7 @@ def _publish(system, times, samples, mode, *, events=(), status='resuelto', evid
                     values = ([inlet[symbol]]*len(times) if inlet is not None else
                               evaluate(j,stage._expand(sp.Function(symbol+'__'+donor.owner)(stage.time))) if donor is not None and port.get('donorPhase') else None)
                     bindings[role] = add(prefix+role,'Boundary '+role,unit,values)
-                    display[bindings[role]] = port_display(port['id'],role,unit)
+                    display[bindings[role]] = port_display(template_port,role,unit)
             else:
                 volume = next(v for v in stage.model['volumenes'] if v['id']==port['volumeId'])
                 data_id = volume.get('terminos',{}).get(port['boundary']['id'])
@@ -144,7 +152,7 @@ def _publish(system, times, samples, mode, *, events=(), status='resuelto', evid
                     power = float(stage._datum(data_id,{'M':1,'L':2,'T':-3})) if data_id else None
                     powers = None if power is None else [power]*len(times)
                 bindings['power'] = add(prefix+'power','Boundary power','W',powers)
-                display[bindings['power']] = port_display(port['id'],'power','W')
+                display[bindings['power']] = port_display(template_port,'power','W')
             record.setdefault('_ports',[]).append({'portId':port['id'],'stage':j+1,'kind':port['kind'],
                                                   'direction':port['direction'],'variables':bindings})
         stages.append(record)
@@ -156,6 +164,10 @@ def _publish(system, times, samples, mode, *, events=(), status='resuelto', evid
         for key_id,(label,rank,group) in stage_display(namer,rows_here).items():
             display[key_id] = (label,rank,group)
             groups.setdefault(group,{})[j] = key_id
+    for published in ports:
+        for variable in published['variables'].values():
+            for key_id in (variable if isinstance(variable,list) else [variable]):
+                groups.setdefault(display[key_id][2],{})[published['stage']-1] = key_id
     if not dynamic:
         for group,members in groups.items():
             sources = [members.get(j) for j in range(len(stages))]

@@ -114,6 +114,7 @@
       "test_reaction_jacobian_bounds_liquid.py",
       "test_solid_liquid_equilibrium.py",
       "test_sparse_blocks.py",
+      "test_spatial_publication.py",
       "test_steady_transform.py",
       "test_template_instance.py",
       "test_v2_initialization.py",
@@ -181,7 +182,8 @@
     ],
     "group-14": [
       "test_equilibrium_reaction_thermal.py",
-      "test_flowsheet_network.py"
+      "test_flowsheet_network.py",
+      "test_eos_dynamic_volume.py"
     ]
   },
   "pytest_measured_seconds": {
@@ -213,6 +215,7 @@
     "test_dynamic_definition.py": 9.6,
     "test_energy_derivation.py": 19.65,
     "test_equation_manipulation.py": 8.78,
+    "test_eos_dynamic_volume.py": 7500,
     "test_equation_workbench.py": 559.39,
     "test_equilibrium_reaction_constraint.py": 116.03,
     "test_equilibrium_reaction_liquid.py": 410.35,
@@ -281,6 +284,7 @@
     "test_solver_stage_stop.py": 2.98,
     "test_sparse_blocks.py": 95.42,
     "test_spatial_domain.py": 13.498,
+    "test_spatial_publication.py": 28.0,
     "test_steady_package_closure.py": 574.16,
     "test_steady_transform.py": 185.91,
     "test_steep_tv_bracket.py": 30.77,

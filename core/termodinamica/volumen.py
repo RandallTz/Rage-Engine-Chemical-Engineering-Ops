@@ -52,15 +52,32 @@ class CierreVolumen:
         self.ids = list(v["componenteIds"])
         self.candidatas = capa.candidatas(modelo, vid)
         self.agua = paq["modelo"]["id"] == capa.AGUA
-        self.sis = None if self.agua else capa._sistema(modelo, v, paq)
-        self.M = np.array([agua.M]) if self.agua else np.array(self.sis.M, dtype=float)
+        self.eos = paq["modelo"]["id"] in capa.EOS_PAQUETES
+        self.paquete = None
+        if self.eos:
+            # F8b: the cubic EOS packages close a dynamic volume at every evaluation through the same flashes as
+            # capa.cierre; a missing record, a substitution or an unsupported phase set is a located rejection.
+            from core import paquetes_volumen
+            from .eos_package import PaqueteEOS
+            if paq.get("datosPuros"):
+                raise capa.NoSoportado(f"paquete {paq['modelo']['id']} en el volumen {vid}: reads its own "
+                                       "pure-component records and does not accept pure-data substitutions")
+            try:
+                self.paquete = PaqueteEOS(paq["modelo"]["id"], capa._cas(modelo, v))
+            except paquetes_volumen.PaqueteNoAplicable as e:
+                raise capa.NoSoportado(f"paquete {paq['modelo']['id']} en el volumen {vid}: {e}") from e
+        self.sis = None if (self.agua or self.eos) else capa._sistema(modelo, v, paq)
+        self.M = (np.array([agua.M]) if self.agua else
+                  np.array(self.paquete.M if self.eos else self.sis.M, dtype=float))
         self.semilla = None
 
     def estado(self, n, espec, a, b, rapido=True):
         n = np.asarray(n, dtype=float)
         if self.agua:
             return self._agua(n, espec, a, b, rapido)
-        if rapido and self.semilla is not None and espec in ("PH", "UV", "TP"):
+        if self.eos:
+            e = self.paquete.estado(espec, a, b, n, semilla=self.semilla)
+        elif rapido and self.semilla is not None and espec in ("PH", "UV", "TP"):
             e = mz.flash_rapido(self.sis, espec, a, b, n, self.semilla)
         elif espec == "PH":
             e = self.sis.equilibrio_PH(a, b, n)

@@ -44,7 +44,7 @@ export function leerResultados(dato: unknown): ConjuntoResultados {
   readPhysicalEvidence(r as unknown as ConjuntoResultados);
   if(provenance.daeDiagnostics!==undefined||(r as unknown as ConjuntoResultados).procedencia.compilation?.derivedExecution?.version===4)readDAEEvidence(r as unknown as ConjuntoResultados);
   if(provenance.nonlinearDiagnostics!==undefined)readNonlinearEvidence(r as unknown as ConjuntoResultados);
-  if(provenance.assessment!==undefined)readAssessment(provenance.assessment,r as unknown as ConjuntoResultados);
+  if(provenance.assessment!==undefined)provenance.assessment=readAssessment(provenance.assessment,r as unknown as ConjuntoResultados);
   return r as unknown as ConjuntoResultados;
 }
 

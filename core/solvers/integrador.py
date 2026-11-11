@@ -206,12 +206,51 @@ def _rk(sistema, t0, y0, tf, rtol, atol, max_step, metodo="RK45", first_step=Non
         return _rk(sistema,t0,initial,tf,rtol,atol,max_step,metodo,first_step=step)
 
 
+# Margins that are on their bound (<= 0) at the start of the current step and whose rate is not outward there.
+# A trial stage or the endpoint of that step may undershoot such a margin by the cancellation of an explicit
+# Runge-Kutta combination (a state exactly on its bound whose true growth is of high order); the undershoot is a
+# violation only when the margin is still moving outward at that point (the sign of its derivative decides).
+_ADMITTED = {}
+
+
+def _rate_not_outward(sistema, t, y, indices, horizon):
+    """Indices whose margin does not decrease along the right-hand side at (t, y); [] if it cannot be evaluated."""
+    try:
+        margins = np.asarray(sistema.dominio(t, y), dtype=float)
+        rate = np.asarray(sistema.rhs(t, y), dtype=float)
+        predicted = np.asarray(sistema.dominio(t + horizon, y + horizon * rate), dtype=float)
+    except Exception:  # noqa: BLE001 - an unevaluable point is not an admissible one
+        return []
+    return [k for k in indices if np.isfinite(predicted[k]) and predicted[k] >= margins[k]]
+
+
+def _admit_bound_states(sistema, t, y, t_final):
+    """Record the margins on their bound at an accepted step start that do not leave it (rate sign)."""
+    _ADMITTED.pop(id(sistema), None)
+    if not hasattr(sistema, "dominio"):
+        return
+    margins = sistema.dominio(t, y)
+    on_bound = [k for k, v in enumerate(margins) if v <= 0]
+    if on_bound:
+        horizon = 1e-7 * max(t_final, 1e-300)
+        keep = _rate_not_outward(sistema, t, y, on_bound, horizon)
+        if keep:
+            _ADMITTED[id(sistema)] = (frozenset(keep), horizon)
+
+
 def _fuera(sistema, t, y):
     """Índices de dominio con valor negativo, o [] (sin dominio declarado: nunca)."""
     if not hasattr(sistema, "dominio"):
         return []
     d = sistema.dominio(t, y)
-    return [k for k, v in enumerate(d) if not v >= 0]
+    bad = [k for k, v in enumerate(d) if not v >= 0]
+    admitted = _ADMITTED.get(id(sistema))
+    if bad and admitted:
+        keep = [k for k in bad if k in admitted[0]]
+        if keep:
+            inward = _rate_not_outward(sistema, t, y, keep, admitted[1])
+            bad = [k for k in bad if k not in keep or k not in inward]
+    return bad
 
 
 def _detener_dominio(sistema, tray, k, t):
@@ -220,7 +259,19 @@ def _detener_dominio(sistema, tray, k, t):
     tray.eventos.append(("agotamiento", t, None, None, tray.detenida.mensaje))
 
 
-def integrar(sistema, y0, t_final, rtol=1e-8, atol=1e-10, max_step=np.inf, h_min=1e-10, max_pasos=200000, metodo="RK45", *, _start_time=0.0):
+def integrar(*args, **kwargs):
+    """Integrate; the admitted on-bound margins of an outer call survive a nested (refinement) call."""
+    system = args[0] if args else kwargs['sistema']
+    previous = _ADMITTED.get(id(system))
+    try:
+        return _integrar_trayectoria(*args, **kwargs)
+    finally:
+        _ADMITTED.pop(id(system), None)
+        if previous is not None:
+            _ADMITTED[id(system)] = previous
+
+
+def _integrar_trayectoria(sistema, y0, t_final, rtol=1e-8, atol=1e-10, max_step=np.inf, h_min=1e-10, max_pasos=200000, metodo="RK45", *, _start_time=0.0):
     """Retain the accepted prefix if a system-classified failure escapes a probe/restart."""
     tray = Trayectoria(t_fin=_start_time, y_fin=np.array(y0, dtype=float))
 
@@ -299,12 +350,14 @@ def _integrar(sistema, y0, t_final, rtol, atol, max_step, h_min, max_pasos, meto
                     _detener_dominio(sistema, tray, k, t)
                     tray.t_fin, tray.y_fin = t, y
                     return tray
+    _admit_bound_states(sistema, t, y, t_final)
     paso_max = max_step
     margin_min_step = max(h_min, MARGIN_MIN_STEP*t_final)
     current_margins = initial_margins
     r = _rk(sistema, t, y, t_final, rtol, atol, paso_max, metodo)
     while r.status == "running" and tray.pasos < max_pasos:
         t_a, y_a = r.t, r.y.copy()
+        _admit_bound_states(sistema, t_a, y_a, t_final)
         try:
             r.step()
         except Detencion as d:

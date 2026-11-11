@@ -46,7 +46,7 @@ def test_connected_steady_publication_has_profiles_from_actual_stage_roots():
     assert all(row['valor'] <= row['tolerancia'] for row in result['verificaciones'])
     by_id = {row['id']:row for row in result['series']}
     for profile in metadata['profiles']:
-        assert by_id[profile['seriesId']]['valores'] == [by_id[key]['valores'] for key in profile['stageSeriesIds']]
+        assert by_id[profile['seriesId']]['valores'] == [by_id[key]['valores'] if key else None for key in profile['stageSeriesIds']]
     assert any(by_id[row['seriesId']]['unidadSI'] == 'K' for row in metadata['profiles'])
     Path('.tmp').mkdir(exist_ok=True)
     Path('.tmp/indexed-steady-result.json').write_text(json.dumps(result),encoding='utf-8')

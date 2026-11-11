@@ -202,5 +202,45 @@ class DomainTests(unittest.TestCase):
         self.assertLessEqual(result.t_fin, .5)
 
 
+    def test_state_on_its_bound_runs_when_its_rate_is_not_outward(self):
+        # A chain x_k' = x_{k-1}, x_0' = 1 starts with seven states exactly on the bound; x_k = t^k/k!. The
+        # explicit Runge-Kutta stage combination undershoots the high-order components by cancellation at
+        # roundoff size; their rate is inward there, so the run must not stop at t = 0.
+        class Chain:
+            def __init__(self, n): self.n = n
+            def dominio(self, t, y): return [*y]
+            def describir_dominio(self, k): return f'x{k}'
+            def firma(self, t, y): return None
+            def rhs(self, t, y):
+                rate = np.empty(self.n)
+                rate[0], rate[1:] = 1., y[:-1]
+                return rate
+        import math
+        for method in ('RK45', 'BDF'):
+            with self.subTest(method=method):
+                result = integrar(Chain(7), [0.] * 7, 2., rtol=1e-9, atol=1e-12, metodo=method)
+                self.assertIsNone(result.detenida)
+                self.assertEqual(result.t_fin, 2.)
+                self.assertAlmostEqual(result.y_fin[-1], 2. ** 7 / math.factorial(7), delta=1e-8)
+
+    def test_state_on_its_bound_stops_when_it_truly_leaves(self):
+        class Leave:
+            def __init__(self, rate): self.rate = rate
+            def dominio(self, t, y): return [y[0]]
+            def describir_dominio(self, k): return 'A'
+            def firma(self, t, y): return None
+            def rhs(self, t, y): return np.array([self.rate(t, y)])
+        # Outward at t = 0 (derivative -1): stopped at t = 0.
+        # Zero derivative at t = 0 but leaving afterwards (y' = -t, y = -t^2/2): stopped at the start.
+        for rate in (lambda t, y: -1., lambda t, y: -t):
+            for method in ('RK45', 'BDF'):
+                with self.subTest(method=method):
+                    result = integrar(Leave(rate), [0.], 1., metodo=method, h_min=1e-9)
+                    self.assertIsNotNone(result.detenida)
+                    self.assertEqual(result.detenida.codigo, 'agotamiento')
+                    self.assertLess(result.t_fin, 1e-3)
+                    self.assertGreaterEqual(result.y_fin[0], 0.)
+
+
 if __name__ == '__main__':
     unittest.main()
