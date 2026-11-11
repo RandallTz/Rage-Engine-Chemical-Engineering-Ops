@@ -228,6 +228,9 @@ def crear(modelo, cas, sustituciones=None):
         if sustituciones:
             raise PaqueteNoAplicable("IAPWS-95 es una formulacion completa sin datos sustituibles.")
         return PaqueteAgua(cas)
+    from core.termodinamica import eos_package      # lazy: eos_package subclasses PaqueteMezcla
+    if eos_package.es_modelo_eos(modelo):
+        return eos_package.PaqueteEOS(modelo["id"], cas, sustituciones)
     if modelo.get("id") in mz.PAQUETES and modelo.get("version") == mz.PAQUETES[modelo["id"]].version:
         return PaqueteMezcla(modelo["id"], cas, sustituciones)
     raise PaqueteNoAplicable(f"Modelo {modelo!r} no publicado.")

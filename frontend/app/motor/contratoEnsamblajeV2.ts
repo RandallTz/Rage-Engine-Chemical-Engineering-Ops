@@ -156,18 +156,23 @@ export type CombinacionV2 = {nombre: string; publicada: boolean; motivo: string;
    * liquido_rigido_lleno) y nivel de evidencia. */
   id?: string; evidencia?: EvidenciaV2};
 
+export type PaqueteCapacidadV2 = {modelo: ModeloEstado; operaciones: ('TP'|'PH'|'UP'|'UV'|'TV')[]; fases: FaseEstado[];
+  combinaciones: CombinacionV2[]; dinamica: boolean;
+  /** Aditivos (C0): especies, dominio, limites y pares binarios con su evidencia. */
+  componentesCAS?: string[]; dominio?: {T: [number, number]; P: [number, number]}; limites?: string[];
+  pares?: {componentesCAS: [string, string]; procedencia: string; evidencia: EvidenciaV2; motivo: string}[];
+  /** Aditivo (UNIFAC): solo en paquetes de contribucion de grupos, que no publican `pares`. */
+  coberturaGrupos?: CoberturaGrupos};
+
 export type CapacidadesEnsamblajeV2 = {revision: 2; executionProvenance?:V2ExecutionProvenance; revisionesAdmitidas: (1|2)[];
   /** false si la formulacion del agua no supera su auditoria (entonces no se resuelve nada). */
   disponible: boolean;
   /** Por que no esta disponible (null si lo esta). */
   motivo: string|null;
-  paquetes: {modelo: ModeloEstado; operaciones: ('TP'|'PH'|'UP'|'UV'|'TV')[]; fases: FaseEstado[];
-    combinaciones: CombinacionV2[]; dinamica: boolean;
-    /** Aditivos (C0): especies, dominio, limites y pares binarios con su evidencia. */
-    componentesCAS?: string[]; dominio?: {T: [number, number]; P: [number, number]}; limites?: string[];
-    pares?: {componentesCAS: [string, string]; procedencia: string; evidencia: EvidenciaV2; motivo: string}[];
-    /** Aditivo (UNIFAC): solo en paquetes de contribucion de grupos, que no publican `pares`. */
-    coberturaGrupos?: CoberturaGrupos}[];
+  paquetes: PaqueteCapacidadV2[];
+  /** Aditivo (F8b): paquetes de ecuacion de estado cubica (peng-robinson-vdw1f, psrk-unifac) que un volumen
+   * dinamico puede elegir por la ruta comun; mismo esquema que `paquetes`, sin `pares` ni `coberturaGrupos`. */
+  paquetesEos?: PaqueteCapacidadV2[];
   volumenesMaximos: number;
   /** Componentes DECLARADOS por volumen admitidos (7 desde la ampliacion N; antes 3). Ver `tamanos`. */
   componentesMaximos: number;
