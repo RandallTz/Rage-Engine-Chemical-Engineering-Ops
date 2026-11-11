@@ -832,7 +832,7 @@ Results chart groundwork delivered (2 November 2026; review pending): optional r
 - **Generic control module.** Sensor, controller (PID first) and actuator are equations attached to any dynamic model, not only to chemical ones. They are declared in Model; the sampling and the solver interaction belong to Solve.
 - **Real-time stepping.** An incremental integrator accepts disturbances while it runs: flows, levels and set points.
 
-#### Design: generic control module and real-time stepping (claude-a, 8 November 2026; repaired 10 November 2026 after DR-1 to DR-11; review pending)
+#### Design: generic control module and real-time stepping (claude-a, 8 November 2026; repaired 10 November 2026 after DR-1 to DR-11; accepted 10 November 2026)
 
 Design only; no code changed. It advances `demo-03` and parallel plan item A4. Implementation follows in the one-item sessions C1-C9 below. The probes ran from throwaway scripts against branch tip 1051e60; the repair probes ran against d424e32.
 
@@ -982,6 +982,19 @@ Out of Demo 0.3: flowsheet `signal` ports, sampled controllers, cascade or MPC, 
 **6. Decision (`dec-control-surface`, taken by the user on 10 November 2026)**
 
 Control equations are a fifth Signal family in the existing Model worksheet and its right-hand panel; live run and setpoint controls go in the existing Solve workspace, with no new page or editor. This design reads it as also covering the live preview charts in Solve, which show uncertified rows and never replace Results (DR-11), and the change to `frontend/app/motor/ubicacionEcuaciones.ts` under `/motor` that the new family needs (DR-8). C3 and C9 are unblocked once this repair is accepted.
+
+**Independent re-review (claude-a, 10 November 2026): accepted, with one amendment to C1.** I reviewed the repairs 3e90280 and 6ec9470 against my findings DR-1 to DR-11 (first round: `origin/claude/demo03-control-review`, a998721) and against `dec-control-surface` as recorded on `fase-a-adopcion` (7ae3329). Parts accepted in the first round were not reopened. The probes are in the shared session notes folder `demo03-control-review/`.
+
+- *DR-1 holds, rerun through the engine.* I used the controlled CSTR authored through shared operations in the first round, lowered by `DerivedSystem`, with SciPy BDF on its RHS at `rtol` 1e-6 and `max_step` 10 s over 400 s (`dr1.py`). Two state jumps at 80 s and 240 s were applied by truncating the bracketing accepted step at t* with its dense output. The live run advanced in 10 s client edges; the replay knew only the actions. Both took 106 steps, both actions landed exactly at t*, and the 81 published samples are bit-identical (hash d6460cc73d3f8a06). The steps never clip to a client edge, so the pace does not enter the numerics.
+- *DR-2 holds.* `timeInputs` becomes an optional key on versions 1-4. The CSTR is version 1, and the kinetic and closure gates are unchanged.
+- *DR-3 holds, with one amendment (below).*
+- *DR-4 to DR-10 hold.* The constant-join rejection is in C1. Acceptance is at solver tolerance for C2 and slope-tied for C6: on the first-round saturation case, 10 rtol |u_c| / |du_c/dt| = 1.6e-5 s against a measured 1.9e-6 s. C5 now carries an explicit `runTimeline` validator and the repeated time at an action, and C7 owns the signature. The frontend files are listed. The session limits, keep-alive, idempotent `advance`, generator-scoped admission, `max_pasos` stop and single-process rule are specified. The actuator relation is recorded as the limiting case of a mixing service, and a loop joins through two signal relations plus one actuator relation.
+- *DR-11 holds.* The steps are now in different files and stay parallel-safe: C1 is the only item in step 1 that edits `core/compilador/derived.py`; C3 and C6 do not share a file.
+- *`dec-control-surface`.* The design follows the decision: a fifth Signal family in `ModelWorksheet` and its right-hand panel, live controls in Solve, and no new page or editor. It also reads the decision as covering the live preview charts in Solve (uncertified rows that never replace Results) and the `/motor` classification file `ubicacionEcuaciones.ts`. That reading is recorded openly; the user can narrow it.
+
+**Amendment to C1 (CR-1).** The inactive-rate rule must also cover the conditions that the inactive row records. In the first-round CSTR probe, the unselected filter rate `ddt(z) = (y_m - z)/tau_f` without a `tau_f` datum was rejected earlier than `_check_operations`. The rejection came from `_collect_conditions`, with `unsupported_condition` ("The nonzero condition needs a finite initial sign", `operation.173`), because `selected_keys` includes every `operation.*` node (`core/compilador/derived.py:508`). C1 must either exclude the predicates of inactive rows and of rows reduced away, listing them in the compilation report, or require their data. Its acceptance test must state which, and must cover the PID-to-PI reduction without a `tau_f` datum.
+
+C1 is the next item, in parallel with C4 and C5.
 
 ### After Demo 0.3
 
