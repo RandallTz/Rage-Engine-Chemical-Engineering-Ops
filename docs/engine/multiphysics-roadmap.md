@@ -832,6 +832,183 @@ Results chart groundwork delivered (2 November 2026; review pending): optional r
 - **Generic control module.** Sensor, controller (PID first) and actuator are equations attached to any dynamic model, not only to chemical ones. They are declared in Model; the sampling and the solver interaction belong to Solve.
 - **Real-time stepping.** An incremental integrator accepts disturbances while it runs: flows, levels and set points.
 
+#### Design: generic control module and real-time stepping (claude-a, 8 November 2026; review pending)
+
+Design only; no code changed. It advances `demo-03` and parallel plan item A4. Implementation follows in the one-item sessions C1-C9 below. The probes ran from throwaway scripts against branch tip 1051e60.
+
+**What exists today**
+
+| Area | Current behaviour (code) | Consequence |
+|---|---|---|
+| Stepping | `integrar` runs one call from `y0` to `t_final` (`core/solvers/integrador.py:223`). The start time is the private `_start_time`, used only by `refine`. `_integrar` also uses `t_final` for the zero-domain probe and `margin_min_step` (:295, :303, :362). | A shorter call changes the numerics. There is no public continuation. |
+| Resume | `POST /modelo/resolver` is one blocking request (`backend/api_modelo.py:348`). Nothing in `backend/` or the Results contract pauses, checkpoints or continues a run. | A run cannot be stopped and continued, and a partial run only exists after a solver stop. |
+| Data | `_datum` parses with no quantities and rejects a non-number (`core/compilador/derived_graph.py:49`). A "time-only boundary quantity" binds to that constant (`core/compilador/derived.py:185`). Values are substituted symbolically (`.subs(system.parameter_values)`) in `nonlinear_block.py`, `reaction_block.py` and `dae.py`, and copied to `evaluator.valores` in `derived_closure.py`. | A value cannot change during a run by editing `parameter_values`. |
+| Model vocabulary | `parse_expression` accepts arithmetic, sqrt, exp and log (`core/mathematics/dimensions.py:99-145`), although the tokenizer knows `min`, `max` and `step` (`core/expresiones_motor.py:22`). `_ast` lowers exp, log, sin, cos and abs (`core/compilador/derived.py:743`). A relation cannot have a time derivative on its left. | A saturation and a controller's integral state cannot be recorded. Differential rows come only from the physical journals. |
+| Events and bounds | `event_state`/`firma` locate regime changes by bisection. `DerivedSystem.firma` reports only closures (`core/compilador/derived.py:1143`). `dominio` stops the run (`agotamiento`) and never clips. | A valve limit cannot be a domain bound. It is a recorded equation; its switching can use the event protocol. |
+| Publication | `resolve_system` integrates once, then evaluates series at `linspace(0, final, muestras)` and sets `estado` to `parcial` when `detenida` (`core/compilador/derived.py:1310-1423`). Readers reject unknown `procedencia` fields. | A new provenance field needs a Python and TypeScript reader version. `parcial` is reusable. |
+| Identity | `source_signature` pins equations and units "independently of labels/data" (`core/compilador/derived_graph.py:18`). | A changed setpoint does not stale the formulation. |
+| Families and ports | `FAMILIES` holds matter, momentum, energy and thermodynamics (`core/modelo/equation_workbench.py:13`). `panelDeEcuacion` returns null for anything else. `core/modelo/flowsheet.py:258` connects only material ports. | A control equation has no family or panel, and a signal cannot be connected in a flowsheet. |
+
+**Probe results** (scratch scripts; machine shared with other sessions, so timings are upper bounds)
+
+| Probe | Result |
+|---|---|
+| PI on a first-order plant, RK45, `rtol` 1e-9 (K 0.685, tau 450 s, K_c 4, tau_I 300 s) | Maximum error against the closed form 3.1e-11. |
+| Step inside an integration with no break point | 3.0e-10 at `rtol` 1e-9; error control alone copes. |
+| Saturation with back-calculation against an exact piecewise reference (matrix exponentials; exit at t = 242.805 s) | 8.6e-9 with a signature event, 1.4e-7 without. The event locates the kink but is not needed for acceptable accuracy. |
+| Third-order loop with a measurement lag | 2.5e-10. |
+| The engine itself: M1-A with the heat command driven by a PI law and a declared integral state | Lowering accepted the state; the temperature matches the closed form to 2.0e-9 K on a 10 K step. It needed a scratch parser shim for the missing rate declaration; that is the C1 gap and the only missing piece on this path. |
+| Accepted CSTR, BDF, 400 s simulated from a settled state | One shot 14.2 s wall (28x real time). Restarting at 40 s slices 50.6 s (7.9x); at 10 s slices 180 s (2.2x); end state within 1.2e-6 to 6.7e-6 relative at `rtol` 1e-6. |
+| Accepted CSTR, start-up | Lowering 27-51 s; authoring the controlled variant through shared operations 26 minutes (budget for C8). |
+
+Not run: the controller on the CSTR through the engine. That attempt stopped on a unit mistake in the probe (`K_c`) after the 26-minute authoring and was replaced by the M1-A probe; C8 is the first real CSTR run. The CSTR figures in §4 come from an independent reference.
+
+**1. Where a controller lives**
+
+Both, with one owner for each half. Sensor, controller and actuator equations are authored and recorded in Model; numbers and timing belong to Solve; the charts are Results. There is no separate controller service that runs beside the solver.
+
+- **Model.** A control loop is one generic deduction, `control-loop`, with an integral state that is a real differential state. It uses the equation workbench through new family `signal`. Its roots are provenance-typed: the error and the PID law are `definition` (a designed law, not physics), the integral is a declared rate with its initial value, and the sensor lag and valve are `constitutive`. PI is PID with `tau_D = 0` applied by the existing `apply_zero`; removing anti-windup or the lag are also recorded reductions.
+- **Fit with `dec-composable-operations`.** Rule 1: one deduction, with PI, P and no-lag as recorded assumptions. Rule 2 (intrinsic energy) does not apply: a signal block has no control volume, and that is recorded in its reason text. Rule 3: the loop is a service-like template. Rule 4: it joins the process by exactly two recorded relations, measured = process quantity and manipulated quantity = actuator output. Unlike material or heat there is no opposite-sign entry, because a signal conserves nothing. Rule 5: flat models join through the same workbench relations; a flowsheet `signal` port is deferred (below).
+- **No special cases.** Measurement and command name a quantity identity with a unit, never a port kind. The same deduction binds to a temperature, level, flow or pressure in any family, including non-chemical models. `dec-contact-boundaries` is unaffected, since a signal is not a physical contact.
+- **Solve.** Gains, limits and initial values are data. The setpoint and disturbances are declared time inputs (§2). Continuous control only: a sampled, zero-order-hold controller is a later Solve option, as the bullet above reserves.
+- **No other UI.** Rows go in the existing `ModelWorksheet` and its right-hand panel. Operator controls go in the existing Solve workspace (see the decision in §6).
+
+**2. Minimal physical content**
+
+| Element | Recorded equations | Notes |
+|---|---|---|
+| Sensor | `tau_m d(y_m)/dt = y_p - y_m` | Instant sensor is the reduction `y_m = y_p`. |
+| Error | `e = s (r(t) - y_m)`, `s = +1` reverse, `-1` direct | `s` is data. |
+| Controller, ISA dependent form | `u_c = b + K_c (e + I/tau_I + D)` | `b` is the bias; `I` has units of `y*s`. |
+| Derivative, on the measurement | `D = -s tau_D (y_m - z)/tau_f`, `tau_f dz/dt = y_m - z` | Removed for PI by `apply_zero` on `tau_D`; state `z` is then not selected. |
+| Limits | `u = min(max(u_c, u_min), u_max)` | Default valve range 0 to 1. |
+| Integral with back-calculation | `dI/dt = e + (tau_I/K_c)(u - u_c)/tau_t` | In saturation, `u_c` tracks `u` with time `tau_t`. `tau_t -> infinity` by `apply_zero` on `1/tau_t` is no anti-windup. |
+| Actuator | `tau_v dv/dt = u - v`, or `v = u` | Slew limits are out of scope. |
+| Join | one `constitutive` relation, for example `T_j = T_c + v (T_h - T_c)` | Three-way blending; `F = v F_max` for a prescribed flow. A pressure-driven valve `K(v)` is later work. |
+
+**Setpoint and disturbance steps.** No `step(t)` enters the equations. A setpoint or disturbance is a Model quantity that depends on time (`r(t)`, `feedRate(t)`), and Solve declares it a *time input*: a scalar held constant between actions, with a jump at each action. Scheduled and operator changes are the same record (§3). A quantity declared as a constant symbol stays constant: the deduction assumed it, and an action on it is rejected.
+
+**3. Real-time stepping**
+
+*Meaning.* One mechanism: the existing integrator paced against the wall clock, with results shown as they come and operator changes taking effect between accepted steps. Simulated time is the only physical clock; wall-clock time only decides when the client asks for the next stretch.
+
+*Method.* The probes rule out restarting the solver at fixed display slices: on the accepted CSTR with BDF it costs 3.6 times (40 s slices) to 12.7 times (10 s slices) the one-shot time. So:
+
+- `_integrar` becomes a step generator; `integrar` drains it unchanged. The BDF or RK45 object survives across HTTP calls.
+- `advance(t_next)` steps until the accepted time reaches `t_next` and reads samples from the dense output.
+- An operator action applies at the integrator's current accepted time `t_a`; the value is recorded with full precision. The solver restarts only then, as at a signature event.
+- A scheduled action uses `t_bound = t_s` to land exactly.
+- A time input is held as a pseudo-state with zero rate in the state vector. The jump happens at the restart and `.subs` is untouched, because the value reaches every compiled function through `y`. It is published as an ordinary series, with an event at the action. `Trayectoria.y` is left-continuous at the jump.
+
+*Changes to `integrar`.* A public `start_time`, a fixed `horizon` that replaces `t_final` in the probe and margin scales, and the generator. Existing callers must produce byte-identical trajectories.
+
+*Results contract.* New optional, versioned `procedencia.runTimeline`:
+
+```
+{format: "rage.run-timeline", version: 1, horizon, actions: [{seq, t, quantityId, value, unit, origin: "scheduled"|"operator"}],
+ termination: {reason: "completed"|"operator_stop"|"solver_stop", tEnd}}
+```
+
+Actions are also published as `eventos` so charts mark them. The final document is built by the existing publication path over the concatenated trajectory, so charts and readers are unchanged. Preview rows sent during the run are not a result: they are uncertified appended samples, and a later `refine` may rewrite them. Only the final document is a result.
+
+*Reproducibility.* Replay is `start` plus the recorded timeline. Each action lands at the recorded float, so the step sequence is the same (`r.t == t_a` stops without clipping); replay never uses the wall clock. The acceptance test requires bit-identical series on one build. Across machines, agreement to the solver tolerance. Preview evaluation must not touch the closure warm-start state, which is the rule `event_state` probes already follow. Pace is excluded from the signature.
+
+*Invalidation.*
+
+| Change during a run | Effect |
+|---|---|
+| Setpoint or declared disturbance | A timeline action. Model and formulation stay valid. The finished run is a new result whose identity includes the timeline. Earlier results stay valid for their own timeline. |
+| Value not declared a time input | Rejected (`time_input_not_declared`), with a located diagnostic. Change it before a new run. |
+| Model or Transform edit | The session runs on its pinned copy. At the end, the existing `sourceSignature` comparison marks the result stale. |
+| Tolerance or method | Existing rule: a new run. Not changeable mid-run. |
+
+*Interrupted run.* Stop publishes `estado: "parcial"` up to the last accepted time, with `termination.reason` set and an event; verifications cover only that range. The existing solver stops map to `solver_stop`. Pause is no request. If the session is lost (server restart, eviction), the numbers are gone but the timeline survives in the client, and replay rebuilds them. v1 has no checkpoint document and no continuation from a saved result; a stationary start uses ordinary initial data.
+
+*Server.* Three routes on the existing router: `run-session/start`, `advance` and `stop`, with one in-memory lowered system per session, bounded and evicted by age. `start` covers the lowering time (27-51 s measured on this busy machine). The client drives the pace; if a stretch takes longer than wall time, the run falls behind and says so, and never skips physics. The scope is `DerivedSystem` with the identity formulation; scaled, indexed and flowsheet runs reject with a located diagnostic and follow later.
+
+**4. First end-to-end demonstration**
+
+Plant: the accepted Demo 0.2 CSTR (`tests/demo02_cstr.py`), re-authored by the same shared operations so that `jacketTemperature` and `feedRate` depend on time. Its jacket `heat` term is reused; no new port work is needed.
+
+- Loop: reactor temperature, three-way jacket valve with `T_c` 320 K and `T_h` 350 K, bias 2/3 (340 K, the accepted `T_j`), `K_c` 0.2 1/K, `tau_I` 300 s, `tau_m` 30 s, `tau_t` 60 s.
+- Start: the independent steady state, as ordinary initial data: 335.2440 K, conversion 0.3498, holdup 1.342 kg.
+- Timeline, 3000 s: setpoint +1 K, then feed +20 %. A second case steps the setpoint +5 K, which saturates the valve.
+- Premise check: the highest temperature is 340.24 K, below the liquid-only limit near 343 K recorded on this model.
+
+| Tier | Reference | Tolerance for acceptance |
+|---|---|---|
+| Analytic, exact | PI on the constant-capacity M1 mixing model (`mixing_source`, `tests/m1_acceptance.py:206`), `suppliedHeat` manipulated. `M c dT/dt = F c (T_F - T) + Q` (the equal flow-work offset cancels), so `K = 1/(F c)`, `tau = M/F`. Second-order closed form; third-order and saturation by matrix exponentials. | Temperature 1e-6 K at `rtol` 1e-9 (the probe reached 2.0e-9 K). |
+| Independent numerical | CSTR with an LSODA reference that has no compiled expression (extends `reference_train`). | Temperature 1e-3 K. |
+| Linear | 8-state closed-loop matrix exponential of the numerically linearized CSTR, small step. | 5e-4 of the step. |
+
+Probe values on the CSTR: `dT/dT_j` 0.6832; loop gain 4.10; the nonlinear response agrees with the linear reference within 1.8e-4 of a 1 K step and 1.2e-4 of a 0.1 K step; the +20 % feed step peaks at 0.161 K; the +5 K step ends at 340.24 K and is saturated for about 10 % of the samples. A reduced first-order model of the CSTR differs by 5.4 %, so no first-order formula is claimed for it. That is why the exact analytic tier uses the constant-capacity model.
+
+**5. Implementation items**
+
+Each item is one session. Lane B items cite `dec-claude-absorbs-codex` as `authorizedBy`. Each delivery gets an independent review.
+
+| Item | Scope and files | Depends on | Acceptance |
+|---|---|---|---|
+| **C1** Declared rates and saturating functions | New operation `declare_rate` (first time derivative of a declared function, `definition` or `constitutive`), `min`/`max` in `parse_expression` with a same-dimension check, `_ast` lowering. `core/mathematics/{dimensions,session,contract}.py`, `core/compilador/derived.py` (`_ast` only), new `tests/test_control_kernel.py`. | none | Undo/replay; rejects a derivative of a symbol, a second derivative or wrong units; numeric `min`/`max` against direct evaluation. |
+| **C2** Declared time inputs | Optional `timeInputs` in a derived-execution version 2 selection; each held as a zero-rate pseudo-state. `core/modelo/derived_execution.py`, `core/compilador/derived.py`, new `tests/test_time_inputs.py`. | C1 | Without actions, equal within 1e-12 to the scalar binding; version 1 selections unchanged; rejects a symbol, closure pressure or scaled formulation. |
+| **C3** Control deduction | Generic author `tests/control_loop.py` through shared operations only, family `signal` (`core/modelo/equation_workbench.py`, `frontend/app/motor/ubicacionEcuaciones.ts`), new `tests/test_control_loop.py`. | C1, C2, decision §6 | Exact analytic tier; PID to PI reduction, no-lag, no-anti-windup, undo and a renamed index each change the graph correctly; a missing datum blocks. |
+| **C4** Step generator and timeline driver | `_integrar` generator, public `start_time`, `horizon`. `core/solvers/integrador.py`, new `core/solvers/timeline.py`, new `tests/test_integrator_timeline.py`. | none | Existing integrator tests and trajectories byte-identical; action landing; replay bit-identical; closure state untouched by preview; `refine` replays the timeline or stops, and never rebuilds a suffix without the actions. |
+| **C5** Results contract | `runTimeline` v1 in both readers and the signature. `core/resultados/formato.py`, `frontend/motores/resultados/`, `docs/contracts/results-format.md`. | none | Python/TS round trip; `parcial` with each termination reason; a v0 result reads unchanged. |
+| **C6** Regime events | Non-smooth `min`/`max` branches in `DerivedSystem.firma` and `event_state`, so saturation is located and published. `core/compilador/derived.py`. | C1, C2 | Analytic exit time from saturation within 1e-6 s; closure signature unchanged. |
+| **C7** Run session | `core/compilador/run_session.py` (new), routes in `backend/api_modelo.py`, split `resolve_system` into integration and `publish_trajectory` (`core/compilador/derived.py`, publication only), new `tests/test_run_session.py`. | C2, C4, C5, C6 | HTTP start/advance/stop; live run equals replay bit for bit; eviction; concurrency lock; rejected actions located; `/resolver` results and generated examples unchanged. |
+| **C8** Demonstration model and acceptance | `tests/demo03_cstr_control.py`, `tests/test_demo03_cstr_control.py`, `docs/ejemplos/demo-0.3/`. | C3, C6, C7 | Independent and linear tiers of §4; derivation audit; regenerated fixtures byte-stable. No product-library import. |
+| **C9** Solve and Results surface | Run, pace, pause, stop and action controls in the existing Solve workspace; preview through existing charts; `signal` rows in `ModelWorksheet`. `frontend/app/models/DerivedSolve.tsx`, `frontend/motores/modelo/servicioModelo.ts`, new `frontend/verificar_run_session.mjs`; `/checklist` and board close-out. | C7, decision §6 | Headless verifier against an own backend; `verificar_physical_journals.mjs`; browser check of a live run; the client calculates nothing. |
+
+Order, with no file overlap inside a step: (1) **C1, C4 and C5 in parallel**; (2) C2; (3) **C3 and C6 in parallel**; (4) C7; (5) **C8 and C9 in parallel**. C1, C2, C6 and C7 all edit `core/compilador/derived.py`, which is why they are in separate steps.
+
+Out of Demo 0.3: flowsheet `signal` ports, sampled controllers, cascade or MPC, a pressure-driven valve `K(v)`, continuation from a saved result, and live tuning (a declared `K_c(t)` would work but bumps the output without a velocity form).
+
+**6. Decision for the user (`dec-control-surface`, open)**
+
+*Should control equations appear as a fifth `Signal` family in the existing Model worksheet, with live run and setpoint controls added to the existing Solve workspace (no new page or editor)?* **Recommendation: yes.** Filing them under Energy would break "each equation goes in its place" for level or flow loops, and no other surface exists. C1, C2, C4 and C5 do not wait for this answer.
+
+#### Independent review of the control and real-time design (claude-a, 10 November 2026): not accepted, repair the text first
+
+Reviewed: the section above as of 3155818, against `fase-a-adopcion` eb8f9af. No code changed. Reproducers (process-local scripts; the only shim is a `ddt(...)` parser hook standing in for C1) are in the shared session notes folder `demo03-control-review/`: `analytic.py`, `restart.py`, `spike2.py`, `ref_cl.py`, `diag.py`, with their logs.
+
+**What holds**
+
+- *PI closed form.* Derived by hand for `tau dy/dt = -y + K u`, `u = K_c(e + I/tau_I)`, `dI/dt = e`: `y = 1 - exp(-sigma t)(cos(w t) + (sigma - a/tau)/w sin(w t))`, with `a = K K_c`, `sigma = (1+a)/(2 tau)`, `w^2 = a/(tau tau_I) - sigma^2`. For the probe values, zeta = 0.922. SciPy RK45, Radau and LSODA at `rtol` 1e-10 agree within 3.2e-11, 1.5e-11 and 5.6e-11. The integral settles at `tau_I r/(K K_c)`, as expected. The M1-A analytic tier is valid: its recorded balanced flows and common caloric coefficient give `M c dT/dt = F c (T_F - T) + Q`.
+- *Anti-windup.* In output units `I' = K_c I/tau_I`, the design's integral is `dI'/dt = K_c e/tau_I + (u - u_c)/tau_t`, the standard back-calculation form. The RHS with min/max is Lipschitz-continuous (a kink, not a jump), so there is no sliding mode; events only improve accuracy. The design is honest about this.
+- *Engine premise (point 4).* Using shared operations only (`edit_history`), PI with sensor lag, back-calculation, clamp and three-way blend was added to the frozen accepted CSTR: 23 appended operations, from 149 to 172. It lowered in 35 s and ran with BDF at `rtol` 1e-6. An independent LSODA closed loop, extending `reference_train` without any compiled expression, reproduces the temperature within 2.9e-7 K for the +1 K step and 8.0e-7 K for the saturated +5 K step (31 samples over 3000 s). The final value is 340.2433 K, which confirms the design's 340.24 K. No separate spike is needed before C1.
+- *Lowering of min/max.* `SistemaExplicito` already compiles min/max (`core/compilador/explicito.py:272`), the dimension analyser accepts them, and `ExpressionJacobian` differentiates `Max`/`Min` to Heaviside and evaluates them. C1's "`_ast` only" scope on the lowering side is enough.
+- *Determinism.* Repeating the CSTR run gives the same trajectory hash under `PYTHONHASHSEED` 11 and 222. Reruns on the same object, and on a fresh system in another thread, are bit-identical. The replay premise holds on one build.
+- *Restart cost, direction reproduced.* At the fixture's `rtol` 1e-9, over 400 s from the settled state: one shot takes 14.7 s (27x real time), 40 s slices 2.78x and 10 s slices 9.19x. The design reports 3.6x and 12.7x.
+- *Authoring cost.* Each appended operation replays the whole CSTR history, about 25-30 s, so the design's 26-minute budget for C8 is the right magnitude.
+
+**Findings** (DR-1 to DR-3 block implementation)
+
+1. **DR-1 (blocking): operator actions land up to one BDF step late.** One-shot BDF from the settled CSTR takes 25 accepted steps over 400 s (median 1.06 s, largest 177 s). "Applies at the integrator's current accepted time" therefore lands an action up to 177 s of simulated time after the instant the client displayed. Capping the step instead costs as much as restarting: `max_step` 10 s costs 3.07x and 2 s costs 20.7x (`restart.py cost`). The restart argument holds only for unbounded steps. Repair: apply an action at the requested time t* inside the last accepted step, using that step's dense output. Truncate the segment at t* and restart there. Replay steps until a step brackets t* and does the same; it uses the same step sequence and interpolant, so it is bit-identical. Record t* in the timeline. State the `max_step` policy (`resolve_system` uses `final/(samples-1)`) and how it relates to the scheduled-action `t_bound` rule.
+2. **DR-2 (blocking): "derived-execution version 2" is already taken.** Version 2 is published with a required nonempty `algebraic` block (`docs/contracts/common-model.md:320`, `core/modelo/derived_execution.py:15-18`). Package closures lower only in version 1 (`core/compilador/derived.py:154`), and kinetic models need version 1 or 5 (`derived_execution.py:8`, `derived.py:385`). The demonstration CSTR has both, so it cannot use C2's selection. Repair: a new version, or a versioned optional key admitted by versions 1 and 5, and widen those gates. Add the TS reader `frontend/motores/modelo/derivedExecution.ts` to C2's files.
+3. **DR-3 (blocking): lowering rejects the recorded PID-to-PI reductions.** `_check_operations` (`derived.py:656-670`) requires every `operation.*` equality to be an identity or a consequence of the selected rates. On the CSTR (`spike2.py`):
+   - Leaving the filter rate `ddt(z)` unselected is rejected with `unsupported_condition` at `operation.173`.
+   - `apply_zero` on `tau_D` without a datum is rejected with `unsupported_operation` at `operation.174.condition`. It is accepted only with a `tau_D = 0` datum.
+
+   The design says the state z "is then not selected", and C3's acceptance needs exactly this reduction. In addition, "`apply_zero` on `1/tau_t`" cannot be expressed, because `apply_zero` takes a declared quantity (`core/mathematics/session.py:356`); declare a back-calculation gain `k_t` [1/s] instead. Repair: C1 defines how lowering treats superseded declared rates and reduced gains. That puts the `derived.py` change in step 1 rather than in C3, where it would collide with C6.
+4. **DR-4: a constant symbol silently receives a time-varying value.** The probe joined `jacketTemperature`, declared as a constant symbol, to `Tcold + valve*(Thot - Tcold)`. Lowering accepted it and the run was correct (`derived.py:208-214` substitutes any symbol on a relation's left side). §2 promises that a constant stays constant, but nothing enforces that at a join. Add to C3: joining a declared constant to a time-dependent expression is rejected, with its location.
+5. **DR-5: C2's 1e-12 acceptance cannot be met.** A zero-rate pseudo-state changes the RMS error norm, and therefore the step sequence. On a three-state toy problem (`analytic.py`), RK45 at `rtol` 1e-9 goes from 132 to 129 steps with a difference of 5.0e-10, and BDF at `rtol` 1e-6 differs by 1.2e-6. Accept to the solver tolerance instead, or hold time inputs outside the state vector.
+6. **DR-6: C6's 1e-6 s acceptance is marginal.** The analytic saturation exit is at 227.929032 s, with slope `du_c/dt` = -1.26e-3 1/s. The located exit errs by 1.9e-6 s with RK45 and 9.8e-7 s with BDF at `rtol` 1e-9. The error is about the state error divided by the slope; tie the tolerance to that, or use `rtol` 1e-11.
+7. **DR-7: Results contract facts.** Python `leer_resultados` accepts unknown `procedencia` keys and repeated axis times (tested), so "readers reject unknown procedencia fields" is wrong for Python; check the TS reader `frontend/motores/resultados/lector.ts`. State how the jump at an action is sampled (left and right values at t*). C5's "and the signature" means `report['signature']` in `derived.py`, which overlaps C1 in step 1; move it to C7.
+8. **DR-8: file lists miss the frontend for `declare_rate` and the `signal` family.** `frontend/app/models/equationWorkbench.ts:9-10` allow-lists operation kinds and families, so the strict TS reader rejects any document that uses them. `ModelWorksheet.tsx:42` maps any unknown family to thermodynamics. `EquationWorkbenchPanel.tsx` has no control for the new operation. Other affected files: `DeducedModelSummary.tsx:12` and `core/compilador/presentation.py:16-17`. `frontend/app/motor/ubicacionEcuaciones.ts` lies under `/motor`, which AGENTS.md changes only on explicit request, so `dec-control-surface` should name it. C3 delivers a test author only: say whether inserting the loop into a user's own model belongs to Demo 0.3.
+9. **DR-9: the run-session lifecycle is unspecified.**
+   - Size: each lowered CSTR holds about 121 MB (tracemalloc). Lowering took 178-200 s under load and 35 s in the probe, so `start` needs no client timeout; the frontend uses 20 s elsewhere.
+   - Limits: give the maximum number of sessions and the idle TTL. A paused run sends no request, so age eviction would drop it.
+   - Requests: `advance` needs a sequence cursor so that a retry is idempotent.
+   - Integrator state: `_ADMITTED` is process-global and keyed by `id(system)` (`core/solvers/integrador.py:213, 262-271`); it must become generator-scoped. `max_pasos` leaves the loop without `detenida` (`integrador.py:358, 536`), so the run would publish as completed.
+   - Process: `uvicorn --reload` restarts and multi-worker launches lose sessions. State the single-process requirement (the desktop launcher already runs one process).
+10. **DR-10: the actuator join is posed (point 2).** `T_j = T_c + v (T_h - T_c)` is a steady, adiabatic, equal-capacity mixing balance recorded as a constitutive relation. `dec-composable-operations` rules 3 and 4 make a valve a service with its own control volume, with a prescribed service state as a recorded limiting case. Record it as that limiting-case assumption with its premises (instantaneous, adiabatic, equal heat capacities, constant total jacket flow), or deduce it from a mixing-point balance. Then correct "exactly two recorded relations": a loop joins through two signal relations plus one physical actuator relation. The rest of point 2 stands: the control law is a declared `definition` root with provenance, which the deduction skill allows, and no port kind is special-cased.
+11. **DR-11 (non-blocking).**
+    - `dec-control-surface` should also say whether the live preview charts in Solve are acceptable, since ARCHITECTURE §12 gives charts to Results.
+    - A restart at an action that changes the min/max regime must re-baseline the signature and publish no `cambio_firma` (C4/C6).
+    - Live setpoints can push the CSTR toward its liquid-only limit near 343 K; the closure stability stop should publish as `solver_stop`.
+
+**Re-review condition.** The design author repairs DR-1 to DR-10 in this section on `claude/inspiring-galileo-c64edd`, then requests a re-review. C1, C4 and C5 do not start before then. `dec-control-surface` remains the user's decision.
+
 ### After Demo 0.3
 
 - F7 spatial work (meshes, discretization, PDE solvers, mesh visualisation) stays deferred until the user resumes it.
