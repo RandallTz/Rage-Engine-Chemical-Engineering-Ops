@@ -5,6 +5,7 @@ probes detect competing roots; finite probing is not a global uniqueness proof.
 No probe result replaces a failed primary solve.
 """
 import numpy as np
+from scipy.sparse import issparse
 
 
 class NonlinearError(Exception):
@@ -42,7 +43,36 @@ def solve(residual, jacobian, seed, bounds, variable_scales, residual_scales, *,
         except (ArithmeticError, ValueError):
             return False
 
+    eps = np.finfo(float).eps
+
+    def attainable(z, r, matrix, smallest):
+        """Residual and step tolerances, raised to the resolution floating point can deliver.
+
+        In scaled units u = z/xs, the evaluated residual is a sum of terms of
+        size about |J_s| |u| (J_s = diag(1/rs) J diag(xs)); each carries a
+        rounding error of order eps, accumulated over the n+2 operations of a
+        row, so the residual cannot be resolved below (n+2) eps (|J_s| |u|_inf
+        + |r|_inf). That residual noise moves the Newton step by at most
+        noise/sigma_min(J_s) (||J_s^-1||_inf <= sqrt(n)/sigma_min), and the
+        iterate itself is only represented to eps |u|_inf. A request below
+        these floors cannot be certified by any run, so the request is raised
+        to the floor; a request above it is untouched. Convergence uses the full
+        floors; stagnation (a step too small to move the iterate while the
+        residual is still above its limit) uses only the representation floor
+        eps |u|_inf, so that the noise bound cannot declare a stall early. At u ~ 1 and J_s ~ 1
+        the floors are ~1e-15, below every shipped tolerance.
+        """
+        u = float(np.max(np.abs(z) / xs))
+        magnitude = abs(matrix) if issparse(matrix) else np.abs(np.asarray(matrix, dtype=float))
+        rows = np.asarray(magnitude @ xs, dtype=float).ravel() / rs
+        jnorm = float(np.max(rows))
+        noise = (n + 2) * eps * (jnorm * u + float(np.linalg.norm(r, ord=np.inf)))
+        step_noise = max(eps * u, noise * np.sqrt(n) / smallest)
+        return (max(residual_tolerance, noise), max(step_tolerance, step_noise),
+                max(step_tolerance, eps * u))
+
     def iterate(start):
+        limits = [residual_tolerance, step_tolerance]
         evidence = dict(iterations=0, evaluations=0, backtracks=0,
                         residualNorm=None, stepNorm=None, conditionInfinity=None)
         def fail(code, message):
@@ -88,12 +118,14 @@ def solve(residual, jacobian, seed, bounds, variable_scales, residual_scales, *,
             if not np.all(np.isfinite(correction)):
                 fail('nonlinear_nonfinite', 'The scaled Newton correction is not representable.')
             evidence['stepNorm'] = float(np.linalg.norm(correction, ord=np.inf))
-            if (evidence['residualNorm'] <= residual_tolerance
-                    and evidence['stepNorm'] <= step_tolerance):
-                return z, {**evidence, 'terminationReason': 'converged'}
+            residual_limit, step_limit, stall_limit = attainable(z, r, matrix, smallest)
+            limits[0], limits[1] = residual_limit, step_limit
+            if (evidence['residualNorm'] <= residual_limit
+                    and evidence['stepNorm'] <= step_limit):
+                return z, {**evidence, 'terminationReason': 'converged'}, tuple(limits)
             if iteration == max_iterations:
                 fail('nonlinear_iteration_limit', 'The Newton iteration budget was exhausted without convergence.')
-            if evidence['stepNorm'] <= step_tolerance:
+            if evidence['stepNorm'] <= stall_limit:
                 fail('nonlinear_stagnation', 'The Newton step is small but the residual exceeds tolerance.')
             with np.errstate(over='ignore'):
                 merit = float(np.dot(r, r))
@@ -142,7 +174,7 @@ def solve(residual, jacobian, seed, bounds, variable_scales, residual_scales, *,
                 fail(last_failure, 'No admissible sufficient-decrease Newton step within the backtracking budget.')
         raise AssertionError('Unreachable Newton termination')
 
-    root, evidence = iterate(seed)
+    root, evidence, root_limits = iterate(seed)
     midpoint = (bounds[:, 0] + bounds[:, 1]) / 2
     probes = [midpoint, bounds[:, 0], bounds[:, 1]]
     for k in range(n):
@@ -153,7 +185,7 @@ def solve(residual, jacobian, seed, bounds, variable_scales, residual_scales, *,
         if np.array_equal(probe, seed) or not inside(probe):
             continue
         try:
-            other, detail = iterate(probe)
+            other, detail, other_limits = iterate(probe)
         except NonlinearError as error:
             # A failed diagnostic probe is neither a root nor a fallback.
             evidence['evaluations'] += error.diagnostic['evaluations']
@@ -161,8 +193,10 @@ def solve(residual, jacobian, seed, bounds, variable_scales, residual_scales, *,
         completed += 1
         evidence['evaluations'] += detail['evaluations']
         distance = float(np.linalg.norm((other-root)/xs, ord=np.inf))
-        uncertainty = max(100*step_tolerance,
-                          10*residual_tolerance*max(evidence['conditionInfinity'], detail['conditionInfinity']))
+        step_used = max(root_limits[1], other_limits[1])
+        residual_used = max(root_limits[0], other_limits[0])
+        uncertainty = max(100*step_used,
+                          10*residual_used*max(evidence['conditionInfinity'], detail['conditionInfinity']))
         if distance > uncertainty:
             raise NonlinearError('nonlinear_multiple_roots', 'Deterministic probes found distinct admissible roots; select an unambiguous domain.', **evidence)
     return root, {**evidence, 'completedProbes': completed,
