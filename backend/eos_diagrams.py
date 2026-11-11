@@ -62,8 +62,8 @@ def capabilities():
             "unsupported": [
                 {"element": "pure-data substitutions and binary parameters", "reason": "k_ij = 0 and catalog data only"},
                 {"element": "liquid-liquid, three-phase and solid regions", "reason": "two-candidate packages"},
-                {"element": "dynamic assembly with these packages",
-                 "reason": "the v2 assembly publishes only the mixture packages; layer closures are in /modelo"}]}
+                {"element": "derived (Model-deduced) execution with these packages",
+                 "reason": "dynamic volumes of the v2 assembly select them (paquetesEos); the derived execution path supports only UNIFAC"}]}
 
 
 class _Reader:

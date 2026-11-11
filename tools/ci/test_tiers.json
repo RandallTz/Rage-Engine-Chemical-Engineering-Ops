@@ -182,7 +182,8 @@
     ],
     "group-14": [
       "test_equilibrium_reaction_thermal.py",
-      "test_flowsheet_network.py"
+      "test_flowsheet_network.py",
+      "test_eos_dynamic_volume.py"
     ]
   },
   "pytest_measured_seconds": {
@@ -214,6 +215,7 @@
     "test_dynamic_definition.py": 9.6,
     "test_energy_derivation.py": 19.65,
     "test_equation_manipulation.py": 8.78,
+    "test_eos_dynamic_volume.py": 7500,
     "test_equation_workbench.py": 559.39,
     "test_equilibrium_reaction_constraint.py": 116.03,
     "test_equilibrium_reaction_liquid.py": 410.35,

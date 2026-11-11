@@ -216,6 +216,8 @@ class SistemaCompilado:
                     if v.cierre.agua:
                         return paquetes_volumen.PaqueteAgua(capa._cas(self.modelo, mv)).estado(
                             'UP', a, b, amounts, certificar=True)
+                    if v.cierre.eos:
+                        return v.cierre.paquete.estado('UP', a, b, amounts, certificar=True)
                     return v.cierre.sis.equilibrio_UP(a, b, amounts)
                 from .initialization import initialize_state
                 e = initialize_state(n, en['tipo'], val, v.rigida,

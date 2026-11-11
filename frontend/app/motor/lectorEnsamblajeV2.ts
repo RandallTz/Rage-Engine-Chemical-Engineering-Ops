@@ -26,6 +26,15 @@ export function leerCapacidadesV2(raw:unknown):CapacidadesEnsamblajeV2{
     if(p.componentesCAS!==undefined&&!identificadoresPublicados(p.componentesCAS)||p.dominio!==undefined&&!dominioPublicado(p.dominio)||p.limites!==undefined&&!textosPublicados(p.limites))fallo('catálogo o dominio de paquete inválido');
   }
   if(new Set(c.paquetes.map(p=>claveModelo(p.modelo))).size!==c.paquetes.length)fallo('paquete y versión duplicados');
+  if(c.paquetesEos!==undefined){
+    if(!Array.isArray(c.paquetesEos))fallo('paquetes EOS inválidos');
+    for(const p of c.paquetesEos){
+      if(!p||!['peng-robinson-vdw1f','psrk-unifac'].includes(p.modelo?.id)||!textoPublicado(p.modelo.version)||typeof p.dinamica!=='boolean'||!identificadoresPublicados(p.operaciones)||p.operaciones.some(x=>!['TP','PH','UP','UV','TV'].includes(x))||!identificadoresPublicados(p.fases)||p.fases.some(x=>!['liquido','vapor','solido','fluido'].includes(x))||!Array.isArray(p.combinaciones)||p.pares!==undefined||p.coberturaGrupos!==undefined)fallo('paquete EOS sin alcance');
+      if(p.componentesCAS!==undefined&&!identificadoresPublicados(p.componentesCAS)||p.dominio!==undefined&&!dominioPublicado(p.dominio)||p.limites!==undefined&&!textosPublicados(p.limites))fallo('catálogo o dominio de paquete EOS inválido');
+      for(const x of p.combinaciones)if(x.evidencia!==undefined&&!['contrastada','cualitativa','imposible_en_el_modelo','sin_modelo','excluida'].includes(x.evidencia)||typeof x.publicada!=='boolean'||!x.nombre||!x.motivo)fallo('evidencia de combinación EOS');
+    }
+    if(new Set(c.paquetesEos.map(p=>claveModelo(p.modelo))).size!==c.paquetesEos.length||c.paquetesEos.some(p=>c.paquetes.some(q=>claveModelo(q.modelo)===claveModelo(p.modelo))))fallo('paquete EOS duplicado');
+  }
   if(c.corrientes.entrePaquetes!==undefined&&c.corrientes.entrePaquetes!=='misma_referencia')fallo('compatibilidad de referencias desconocida');
   for(const p of c.paquetes){for(const x of p.combinaciones)if(x.evidencia!==undefined&&!['contrastada','cualitativa','imposible_en_el_modelo','sin_modelo','excluida'].includes(x.evidencia)||typeof x.publicada!=='boolean'||!x.nombre||!x.motivo)fallo('evidencia de combinación');if(p.pares!==undefined&&(!Array.isArray(p.pares)||p.pares.some(x=>!identificadoresPublicados(x.componentesCAS)||x.componentesCAS.length!==2||!textoPublicado(x.procedencia)||!x.evidencia||!textoPublicado(x.motivo))))fallo('pares sin procedencia');}
   for(const p of c.paquetes){
