@@ -331,6 +331,14 @@ def describe(model,definition=None,*,unbound=False):
     graph,final,locations,units,definition,blocking,introduced=build(model,definition,unbound=unbound)
     quantities={**catalog(graph,units),**introduced}
     unsigned=_unsigned_findings(definition)
+    report=_describe_report(model,definition,unbound,graph,final,locations,units,quantities,blocking,unsigned)
+    from core.mathematics.publication import spatial_publication
+    spatial=spatial_publication(graph,final,units,model_id=model['id']+'.spatial')
+    if spatial:report['spatial']=spatial
+    return report
+
+
+def _describe_report(model,definition,unbound,graph,final,locations,units,quantities,blocking,unsigned):
     return {'format':'rage.equation-workbench-report','version':1,'modelId':model['id'],'definition':definition,'findings':_source_findings(model)+unsigned,**({'draft':True} if unbound else {}),
             'equations':[{**row,'ownerId':locations.get(row['id'],'system'),'current':row['id'] in final} for row in graph.rows()],
             'quantities':[{'id':id_,'input':'q_'+str(index+1),'latex':math_latex(s,graph.names),'unit':_known_unit(s,units),'coordinate':isinstance(s,sp.Symbol),'name':str(s)} for index,(id_,s) in enumerate(quantities.items())],

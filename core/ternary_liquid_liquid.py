@@ -33,6 +33,12 @@ IDX = [0, 1, 2]
 TOL_MU = mz.TOL_MU
 TOL_TM = mz.TOL_TM
 MERGE_GAP = 3e-3                  # max |xa - xb| at which a branch hands over to the plait point
+# The plait residual is a second finite difference of mu (a Hessian and its derivative along the null vector), so
+# it carries noise of about 2e-9 that depends on the BLAS kernel through eigh. A Jacobian step of 1e-7 divides that
+# noise by 1e-7 and the cubic row of J is wrong by 1e-2 against a true 3e-3 (benzene-water-ethanol, 300 K); the
+# Jacobian is constant for steps from 1e-5 to 1e-2 (measured with the default, one-thread and SandyBridge
+# kernels). 1e-4 sits in the middle of that plateau.
+PLAIT_JACOBIAN_STEP = 1e-4
 EDGE_FRACTION = 1e-9              # a species below this in both liquids: the branch reached a binary edge
 PROFILES = {"exploratoria": {"dsMax": 0.25, "lattice": 10}, "refinada": {"dsMax": 0.08, "lattice": 14}}
 TRAZADOR = {"id": "trazador-ll-ternario", "version": "1"}
@@ -150,7 +156,7 @@ def plait_point(sis, T, P, x_guess):
     """x of the plait point near x_guess, and its residual. NoConvergence if not found."""
     F = lambda w: plait_residual(sis, T, P, w)
     try:
-        w, f, _ = ll._newton(F, logits(x_guess))
+        w, f, _ = ll._newton(F, logits(x_guess), h=PLAIT_JACOBIAN_STEP)
     except (np.linalg.LinAlgError, FloatingPointError, OverflowError, ValueError) as x:
         raise ll.NoConvergence("no_convergente", f"plait point: {x}")
     if not np.max(np.abs(f)) < 1e-6:

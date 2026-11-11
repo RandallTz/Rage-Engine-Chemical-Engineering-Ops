@@ -150,6 +150,32 @@ class AssessmentTests(unittest.TestCase):
         self.assertEqual(result['procedencia']['assessment']['certification']['status'], 'failed')
         leer_resultados(result)
 
+    def test_equilibrium_limit_diagnostic_carries_no_verdict_but_real_failures_do(self):
+        """RV-5: a kinetically limited CSTR sits away from equilibrium; that distance is information, not a failure."""
+        from core.compilador.assessment import attach_result, certification
+        model = fixture([('2', 'kg')])
+        diagnostic = {'id': 'reactions.equilibrium_limit.reactor', 'valor': .154, 'tolerancia': 1e-3,
+                      'descripcion': 'Distance to chemical equilibrium (diagnostic).'}
+        result = resolver_modelo({'modelo': model})
+        result['verificaciones'] = [diagnostic]
+        attach_result(assess(model), result)
+        self.assertEqual(result['procedencia']['assessment']['certification']['status'], 'not_evaluable')
+        leer_resultados(result)
+        # The same diagnostic beside a genuinely failed check still fails, and only the real check is cited.
+        real = {'id': 'injected-failed-check', 'valor': 1, 'tolerancia': 1e-7, 'descripcion': 'Fault-injected evidence.'}
+        result['verificaciones'] = [diagnostic, real]
+        attach_result(assess(model), result)
+        verdict = result['procedencia']['assessment']['certification']
+        self.assertEqual(verdict['status'], 'failed')
+        self.assertEqual([d['path'] for d in verdict['diagnostics'] if d['code'] == 'CERTIFICATION_FAILED'], ['verificaciones[1]'])
+        # A result saved under the pre-RV-5 rule (diagnostic failed the verdict) still reads.
+        result['verificaciones'] = [diagnostic]
+        attach_result(assess(model), result)
+        source = result['procedencia']['assessment']['sourceSignature']
+        result['procedencia']['assessment']['certification'] = certification(result, source, legacy=True)
+        self.assertEqual(result['procedencia']['assessment']['certification']['status'], 'failed')
+        leer_resultados(result)
+
     def test_partial_certification_describes_only_published_prefix(self):
         from core.compilador.assessment import attach_result
         model = fixture([('2', 'kg')])

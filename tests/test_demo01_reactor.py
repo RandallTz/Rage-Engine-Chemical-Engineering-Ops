@@ -4,6 +4,7 @@ The frozen fixture must equal a fresh authoring through the shared tools, solve 
 match an independent DOP853 integration whose caloric inventory is Gibbs-Helmholtz on the package potentials,
 and end at the certified equilibrium (its rates are in detailed balance with K(T) at the jacket temperature).
 """
+import json
 import unittest
 
 import numpy as np
@@ -11,6 +12,30 @@ import numpy as np
 from demo01_reactor import DEMO, FIXTURE, author_demo_reactor, demo_data, detailed_balance, frozen_model, publication
 from derived_reactor_inputs import OWNER, reference_reactor
 from core.compilador.derived import DerivedSystem, resolve_system
+
+
+def as_number(value):
+    try:
+        return float(value) if isinstance(value, str) else None
+    except ValueError:
+        return None
+
+
+def differences(fresh, frozen, at='$'):
+    """Exact structural comparison; numbers, and numeric text declarations, match to 1e-9 relative."""
+    if isinstance(fresh, dict) and isinstance(frozen, dict):
+        if set(fresh) != set(frozen):
+            return ['%s: keys differ' % at]
+        return [d for key in fresh for d in differences(fresh[key], frozen[key], '%s.%s' % (at, key))]
+    if isinstance(fresh, list) and isinstance(frozen, list):
+        if len(fresh) != len(frozen):
+            return ['%s: lengths differ' % at]
+        return [d for i, (x, y) in enumerate(zip(fresh, frozen)) for d in differences(x, y, '%s.%d' % (at, i))]
+    numeric = all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in (fresh, frozen))
+    x, y = (fresh, frozen) if numeric else (as_number(fresh), as_number(frozen))
+    if x is not None and y is not None and type(fresh) is type(frozen):
+        return [] if abs(x - y) <= 1e-9 * max(abs(x), abs(y)) else ['%s: fresh %r vs frozen %r' % (at, fresh, frozen)]
+    return [] if fresh == frozen and type(fresh) is type(frozen) else ['%s: fresh %r vs frozen %r' % (at, fresh, frozen)]
 
 
 class DemoBatchReactor(unittest.TestCase):
@@ -23,7 +48,11 @@ class DemoBatchReactor(unittest.TestCase):
         cls.reference, cls.reference_T = reference_reactor(cls.times, demo_data())
 
     def test_fixture_is_the_shared_authoring(self):
-        self.assertEqual(FIXTURE.read_text(encoding='utf-8'), publication(author_demo_reactor()))
+        # The fixture was written on Windows; Linux libm/LAPACK moves some derived data by about 1e-12 relative.
+        text = FIXTURE.read_text(encoding='utf-8')
+        fresh = publication(author_demo_reactor())
+        self.assertEqual(text[:text.index(' = ')], fresh[:fresh.index(' = ')])
+        self.assertEqual(differences(json.loads(fresh[fresh.index(' = ') + 3:fresh.rindex(';')]), frozen_model()), [])
 
     def test_rates_in_detailed_balance_with_the_package(self):
         balance = detailed_balance()

@@ -29,6 +29,20 @@ function finiteJSON(value:unknown):boolean {
   return value===null||['string','boolean'].includes(typeof value);
 }
 
+export const isDiagnosticCheck=(id:string)=>id.startsWith('reactions.equilibrium_limit.');
+const citesDiagnostic=(d:Diagnostic,result:ConjuntoResultados)=>{
+  const m=/^verificaciones\[(\d+)\]$/.exec(d.path),check=m?result.verificaciones[Number(m[1])]:undefined;
+  return !!check&&isDiagnosticCheck(check.id);
+};
+/** Re-express a pre-RV-5 verdict under the published rule: drop the rows caused by diagnostics, keep the rest as stored. */
+function upgradeLegacyCertification(a:ModelAssessment,result:ConjuntoResultados):ModelAssessment{
+  const rows=a.certification.diagnostics.filter(d=>!citesDiagnostic(d,result));
+  const failed=rows.some(d=>d.code==='CERTIFICATION_FAILED');
+  const certification=failed?{...a.certification,status:'failed' as const,code:'CERTIFICATION_FAILED' as const,diagnostics:rows}
+    :{...a.certification,status:'not_evaluable' as const,code:'CERTIFICATION_NOT_EVALUABLE' as const,diagnostics:rows};
+  return {...a,certification} as ModelAssessment;
+}
+
 export function readAssessment(value:unknown, result?:ConjuntoResultados):ModelAssessment {
   const required=['format','version','modelId','sourceSignature','structure','initialization','certification','inspection'];
   if(!object(value)||required.some(k=>!Object.hasOwn(value,k))||Object.keys(value).some(k=>![...required,'compilation','resultSignature','resultSignatureVersion'].includes(k))||value.format!=='rage.model-assessment'||value.version!==1||!digest(value.sourceSignature)||!finiteJSON(value))return reject('expected version 1 with a finite source identity.');
@@ -49,8 +63,15 @@ export function readAssessment(value:unknown, result?:ConjuntoResultados):ModelA
   if(result){
     if(a.modelId!==result.modeloId||!a.resultSignature)return reject('published model identity differs.');
     const physical=result.procedencia.physicalCertification;
-    const expected=physical?({cumple:'passed',no_cumple:'failed',no_evaluable:'not_evaluable'} as const)[physical.estado]:result.verificaciones.some(v=>v.valor>v.tolerancia)?'failed':'not_evaluable';
-    if(a.certification.status!==expected)return reject('verdict disagrees with the published certificate/checks.');
+    // Roadmap RV-5: equilibrium-limit values are diagnostics and never decide the verdict.
+    const expected=physical?({cumple:'passed',no_cumple:'failed',no_evaluable:'not_evaluable'} as const)[physical.estado]:result.verificaciones.some(v=>v.valor>v.tolerancia&&!isDiagnosticCheck(v.id))?'failed':'not_evaluable';
+    if(a.certification.status!==expected){
+      // Results saved before 8 November 2026 failed on diagnostics; read them, and show the published rule.
+      const legacy=!physical&&a.certification.status==='failed'&&result.verificaciones.some(v=>v.valor>v.tolerancia);
+      if(!legacy)return reject('verdict disagrees with the published certificate/checks.');
+      return upgradeLegacyCertification(a,result);
+    }
+    if(a.certification.diagnostics.some(d=>citesDiagnostic(d,result)))return upgradeLegacyCertification(a,result);
     const times=result.ejes.find(e=>e.rol==='tiempo')?.valores??[],scope=a.certification.scope;
     if(scope.numericalStatus!==result.estado||scope.complete!==(result.estado==='resuelto')||scope.samples!==times.length||scope.startSI!==(times[0]??null)||scope.endSI!==(times.at(-1)??null))return reject('certificate scope differs from the published prefix.');
   }
