@@ -12,6 +12,7 @@ import {bloqueosCierreTermodinamico} from './estadoTermodinamicoHoja';
 import { definitionOf, ensureInventoryExecution } from '../models/dynamicDefinition';
 import { momentumJournalOf } from '../models/momentumDerivation';
 import { equationSourceRevision } from '../models/equationWorkbench';
+import {steadySignature} from '../../motores/modelo/steadyContract';
 export const formulacionHoja=(h:HojaMotor)=>h.ensamblaje?formulacionVolumen(h.ensamblaje,h.ensamblaje.volumenes[0]):h.historial.pasos[h.historial.activo].formulacion;
 export const analizarHoja=(h:HojaMotor)=>{
   const a=balancesHoja(h).energia?analizarEnergia(h):h.ensamblaje?planEnsamblaje(h.ensamblaje,h.config).analisis:analizarMotor(formulacionHoja(h),h.config);
@@ -59,7 +60,11 @@ export const physicalExecutionSignature=(h:HojaMotor)=>{
   return h.hydraulicNetwork?JSON.stringify([current,'reduced-hydraulics-equation-operations-3',h.hydraulicNetwork,h.ensamblaje?.volumenes.map(v=>v.balances)]):current;
 };
 export const transformationSourceSignature=(h:HojaMotor)=>physicalExecutionSignature({...h,config:{...h.config,metodo:'rk45',muestras:2,rtol:1e-6,atol:1e-9}});
-export const firmaHoja=(h:HojaMotor)=>h.flowsheetSelection?JSON.stringify([physicalExecutionSignature(h),"flowsheet-selection-v1",h.flowsheetSelection]):h.indexedSelection?JSON.stringify([physicalExecutionSignature(h),'indexed-selection-v1',h.indexedSelection]):h.transformation?JSON.stringify([physicalExecutionSignature(h),'selected-transformation-v1',h.transformation]):physicalExecutionSignature(h);
+/** The pinned selections of flowsheets and indexed networks carry the whole prepared report (megabytes for a column), and this
+ * signature is stored in the sheet (`resultadoRef.firma`) and as a result key. Pinned as its SHA-256 it keeps the same
+ * identity (any change of the model or of the selection changes it) without exceeding the browser quota. */
+export const compactSelectionSignature=(text:string)=>`sha256:${steadySignature(text)}`;
+export const firmaHoja=(h:HojaMotor)=>h.flowsheetSelection?compactSelectionSignature(JSON.stringify([physicalExecutionSignature(h),"flowsheet-selection-v1",h.flowsheetSelection])):h.indexedSelection?compactSelectionSignature(JSON.stringify([physicalExecutionSignature(h),'indexed-selection-v1',h.indexedSelection])):h.transformation?JSON.stringify([physicalExecutionSignature(h),'selected-transformation-v1',h.transformation]):physicalExecutionSignature(h);
 export async function resolverHoja(h:HojaMotor,opciones:{signal?:AbortSignal;progreso?:(v:number)=>void}={}){
   if(h.equationWorkbench?.cursor)throw new Error('Equation operations require Python compilation; this legacy browser route is not connected.');
   ensureInventoryExecution(h);
