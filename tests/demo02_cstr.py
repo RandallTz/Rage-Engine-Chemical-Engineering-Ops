@@ -306,8 +306,14 @@ def simultaneous_steady_reference(count, data=None, pressures=None, guess=None):
         return rows
     if guess is None:
         guess = [v for row in sequential_steady_reference(count,data) for v in [*row['amounts'],row['temperature'],row['flow']]]
-    solution = root(residual,np.asarray(guess)/np.tile(scale,count),method='hybr',options={'xtol':1e-13})
-    if not solution.success:
+    # The reference enthalpy differentiates mu in T by a central difference (delta = 1e-3), so the scaled residual
+    # rows have a noise floor of 3e-11 to 9e-10 (measured with seven OPENBLAS_CORETYPE settings, 10 Nov 2026). hybr
+    # with xtol 1e-13 asks for steps far below that floor: it stops with "not making good progress" or not depending
+    # on the platform (CI runner, deterministic there, group-5). The step tolerance is set above the floor and the
+    # solution is certified by its own residual (1e-8, 11 times the largest floor measured, 8.9e-10), not by the flag.
+    solution = root(residual,np.asarray(guess)/np.tile(scale,count),method='hybr',options={'xtol':1e-10})
+    certified = float(np.max(np.abs(residual(solution.x)))) < 1e-8
+    if not (solution.success or certified):
         raise RuntimeError(solution.message)
     values = solution.x.reshape(count,6)*scale
     return [{'amounts':row[:4],'temperature':row[4],'flow':row[5],'conversion':1-2*row[0]/sum(row[:4]),
