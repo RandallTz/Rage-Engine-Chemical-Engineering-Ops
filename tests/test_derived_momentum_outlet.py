@@ -27,6 +27,14 @@ class MomentumOutlet(unittest.TestCase):
         cls.runs = {}
         for method in ('rk45', 'bdf'):
             model = select_outlet(cls.author, cls.out, method=method)
+            # Study tolerances tighter than the shared fixture's (rtol 1e-9, atol 1e-9 mol, 1e-3 J). Masses are about
+            # 100 kg, so at rtol 1e-9 the engine's own truncation error is about 1e-7 kg: BDF measured 1.06e-7 to
+            # 1.09e-7 kg against the DOP853 reference on six kernels, within a factor 1.9 of the 2e-7 kg bound, and
+            # 3.31e-7 kg on a CI runner (group-9, 11 Nov 2026), whose step sequence differs. The comparison is meant to
+            # test the engine's physics, not how many of its allowed rtol-sized steps fell on one side of the bound.
+            # At rtol 1e-10 the same runs measure at most 3e-8 kg on three kernels (BDF 6e-9 to 2.6e-8), so the bounds
+            # below are unchanged and keep a margin of 7 to 30.
+            model['estudio'].update({'rtol': 1e-10, 'atol': {'cantidad': 1e-10, 'energia': 1e-4}})
             system = DerivedSystem(model)
             cls.runs[method] = (model, system, resolve_system(system))
         cls.times = np.array(cls.runs['rk45'][2]['ejes'][0]['valores'])
@@ -90,7 +98,7 @@ class MomentumOutlet(unittest.TestCase):
                 self.assertEqual(result['estado'], 'resuelto')
                 values = _series(result)
                 ids = [row['quantityId'] for row in model['motores']['derivedExecution']['states']]
-                # Masses about 100 kg: 2e-7 kg is 2e-9 relative, at the study rtol of 1e-9.
+                # Masses about 100 kg: 2e-7 kg is 2e-9 relative, 20 times the study rtol of 1e-10 set in setUpClass.
                 for index, tolerance in [(0, 2e-7), (1, 2e-7), (3, 1e-7)]:
                     self.assertLess(np.max(abs(values['campo.' + ids[index]] - self.reference.y[index])), tolerance)
                 self.assertLess(np.max(abs(values['campo.' + ids[2]] - self.reference.y[2])) / abs(self.reference.y[2][0]), 1e-8)
