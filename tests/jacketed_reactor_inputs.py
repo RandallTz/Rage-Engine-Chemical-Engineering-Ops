@@ -332,6 +332,7 @@ def author_jacketed_reactor(data=None, method='bdf'):
     quantities = {**catalog(replayed.graph, replayed.units), **replayed.introduced}
     sel = model['motores']['derivedExecution']
     _jacket_selection(sel, model, quantities, out, data, JACKET, 4)
+    sel['checks'].append({'equationId': f'matter.{JACKET}.total', 'scaleDataId': _datum(model, 'scale.jacketMass', 1, 'kg')})
     model.update(id='demo-0.2-jacketed-reactor', nombre='Jacketed continuous liquid reactor: reacting volume and cooling jacket')
     sel['sourceSignature'] = source_signature(model, replayed)
     return model, out
@@ -441,7 +442,7 @@ def steady_jacketed(data=None, guess=None):
         return [*((feed_molar - flow * n / mass + nu * rate(temp, n)) / feed_molar.sum()),
                 (feed_energy - flow * H / mass - wall) / data['UA'] / 10.,
                 (data['P'] + mass * data['g'] / data['area'] - data['Pout'] - loss) / 1e3,
-                (data['coolantFlow'] * (h_in - hj(Tj)) + wall) / data['UA'] / 10.]
+                (data['coolantFlow'] * (h_in - hj(Tj)) + wall) / (data['UA'] + data['coolantFlow'] * 4180.) / 10.]   # scaled by the jacket's thermal sensitivity
     if guess is None:
         row = demo02_cstr.sequential_steady_reference(1, dict(data, Tj=data['Tin']))[0]
         guess = [*row['amounts'], row['temperature'], row['flow'], data['Tin']]
