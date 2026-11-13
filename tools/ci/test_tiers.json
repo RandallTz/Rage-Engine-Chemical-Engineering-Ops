@@ -184,6 +184,9 @@
       "test_equilibrium_reaction_thermal.py",
       "test_flowsheet_network.py",
       "test_eos_dynamic_volume.py"
+    ],
+    "group-15": [
+      "test_jacketed_reactor.py"
     ]
   },
   "pytest_measured_seconds": {
@@ -303,6 +306,7 @@
     "test_v2_initialization.py": 13.97,
     "test_v2_route_switch.py": 5513.63,
     "test_water_saturation_near_critical.py": 8.663,
-    "test_workspace_handoffs.py": 11.913
+    "test_workspace_handoffs.py": 11.913,
+    "test_jacketed_reactor.py": 3000.0
   }
 }
