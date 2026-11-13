@@ -28,5 +28,6 @@ Rules that apply to every run:
 
 | # | Item | Model | Unblocks | State |
 |---|---|---|---|---|
+| 1 | Review the dynamic jacket service volume and the jacketed reactor (F4): `tests/jacketed_reactor_inputs.py`, `tests/test_jacketed_reactor.py`, `docs/ejemplos/demo-0.2/jacketed-reactor.rage-model.json`, tier group-15, roadmap F4 entry of 13 November 2026 with findings J-1..J-4 and the dec-contact-boundaries evidence. Acceptance: `python -m pytest tests/test_jacketed_reactor.py` (JacketService in minutes; JacketedReactor authors for about 11-27 min, or set RAGE_JACKETED_MODEL to a saved model) and the deduction standard (no typed balance, closure value or caloric constant). Done: review verdict recorded in the roadmap F4 section and the branch merged. | Strong (Astra) | f4 | review pending · branch claude/competent-maxwell-951901 |
 
 Delivery evidence, counts and timings for these items are in the roadmap (Demo 0.2, F3/F9-R8 and F5 sections). The earlier per-item prompts were removed on 7 November 2026: items 1-9 are delivered, and new work uses the generic prompt.
