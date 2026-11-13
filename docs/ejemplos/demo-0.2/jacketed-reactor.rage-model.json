@@ -1,0 +1,4268 @@
+{
+ "format": "rage.model-file",
+ "version": 1,
+ "model": {
+  "version": 1,
+  "id": "demo-0.2-jacketed-reactor",
+  "nombre": "Jacketed continuous liquid reactor: reacting volume and cooling jacket",
+  "actualizada": "2026-11-13T00:00:00.000Z",
+  "historial": {
+   "activo": 0,
+   "rehacer": [],
+   "ultimoComponenteId": 0,
+   "pasos": [
+    {
+     "titulo": "Local conservation",
+     "origen": null,
+     "operacion": null,
+     "formulacion": {
+      "componentes": [],
+      "campo": {
+       "sinReaccion": false,
+       "sinDifusion": false,
+       "sinConveccion": false,
+       "estacionario": false,
+       "difusion": "flujo"
+      },
+      "coordenadas": "cartesianas",
+      "expandida": false,
+      "vista": "campo",
+      "fronteras": [],
+      "uniforme": false,
+      "fija": false,
+      "sinAcumulacion": false,
+      "invariantes": [
+       false,
+       false,
+       false
+      ],
+      "generacionUniforme": false,
+      "consumoUniforme": false,
+      "restoImpermeable": false,
+      "cantidadVolumen": false,
+      "densidadMediaConstante": false,
+      "densidadComunPuertos": false,
+      "expandirProducto": false
+     }
+    }
+   ]
+  },
+  "config": {
+   "datos": {},
+   "tiempo": {
+    "texto": "",
+    "unidad": "s"
+   },
+   "metodo": "rk45",
+   "muestras": 101,
+   "celdas": 40,
+   "rtol": 1e-06,
+   "atol": 1e-09,
+   "frontera": ""
+  },
+  "graficas": [],
+  "columnas": 2,
+  "commonModel": {
+   "componentes": [
+    {
+     "id": 1,
+     "identidadQuimica": {
+      "cas": "64-17-5"
+     },
+     "nombre": "ethanol",
+     "simbolo": "C1"
+    },
+    {
+     "id": 2,
+     "identidadQuimica": {
+      "cas": "64-19-7"
+     },
+     "nombre": "acetic acid",
+     "simbolo": "C2"
+    },
+    {
+     "id": 3,
+     "identidadQuimica": {
+      "cas": "141-78-6"
+     },
+     "nombre": "ethyl acetate",
+     "simbolo": "C3"
+    },
+    {
+     "id": 4,
+     "identidadQuimica": {
+      "cas": "7732-18-5"
+     },
+     "nombre": "water",
+     "simbolo": "C4"
+    }
+   ],
+   "corrientes": [
+    {
+     "componenteIds": [
+      1,
+      2,
+      3,
+      4
+     ],
+     "constante": false,
+     "desde": null,
+     "estadoExterior": {
+      "composicion": {
+       "base": "molar",
+       "fracciones": {
+        "1": 0.5,
+        "2": 0.5,
+        "3": 0.0,
+        "4": 0.0
+       }
+      },
+      "presion": {
+       "datoId": "feed.P",
+       "tipo": "dato"
+      },
+      "temperaturaId": "feed.T"
+     },
+     "hasta": "cell",
+     "id": "feed",
+     "materia": {
+      "base": "masica",
+      "caudalIds": {},
+      "modo": "por_componente"
+     },
+     "mecanismo": "convectivo"
+    },
+    {
+     "componenteIds": [
+      1,
+      2,
+      3,
+      4
+     ],
+     "constante": false,
+     "desde": "cell",
+     "extraccion": {
+      "cell": {
+       "fase": "liquido",
+       "tipo": "fase"
+      }
+     },
+     "hasta": "pipe",
+     "id": "liquid",
+     "materia": {
+      "base": "masica",
+      "caudalIds": {},
+      "modo": "por_componente"
+     },
+     "mecanismo": "convectivo"
+    },
+    {
+     "componenteIds": [
+      4
+     ],
+     "constante": false,
+     "desde": null,
+     "estadoExterior": {
+      "composicion": {
+       "base": "molar",
+       "fracciones": {
+        "4": 1.0
+       }
+      },
+      "presion": {
+       "datoId": "coolantIn.P",
+       "tipo": "dato"
+      },
+      "temperaturaId": "coolantIn.T"
+     },
+     "hasta": "jacket",
+     "id": "coolantIn",
+     "materia": {
+      "base": "masica",
+      "caudalIds": {},
+      "modo": "por_componente"
+     },
+     "mecanismo": "convectivo"
+    },
+    {
+     "componenteIds": [
+      4
+     ],
+     "constante": false,
+     "desde": "jacket",
+     "extraccion": {
+      "jacket": {
+       "fase": "liquido",
+       "tipo": "fase"
+      }
+     },
+     "hasta": null,
+     "id": "coolantOut",
+     "materia": {
+      "base": "masica",
+      "caudalIds": {},
+      "modo": "por_componente"
+     },
+     "mecanismo": "convectivo"
+    },
+    {
+     "componenteIds": [
+      1,
+      2,
+      3,
+      4
+     ],
+     "constante": false,
+     "desde": "pipe",
+     "extraccion": {
+      "pipe": {
+       "fase": "liquido",
+       "tipo": "fase"
+      }
+     },
+     "hasta": null,
+     "id": "discharge",
+     "materia": {
+      "base": "masica",
+      "caudalIds": {},
+      "modo": "por_componente"
+     },
+     "mecanismo": "convectivo"
+    }
+   ],
+   "datos": {
+    "activation": {
+     "declaracion": {
+      "texto": "50000.0",
+      "unidad": "J/mol"
+     },
+     "funcion": "parametro",
+     "magnitud": "activation",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "activation"
+     }
+    },
+    "cell.capacity": {
+     "declaracion": {
+      "texto": "500",
+      "unidad": "J/(kg*K)"
+     },
+     "funcion": "parametro",
+     "magnitud": "capacity",
+     "origen": {
+      "propietarioId": "volumen:cell",
+      "ruta": "capacity"
+     }
+    },
+    "cell.mass": {
+     "declaracion": {
+      "texto": "0.2303422",
+      "unidad": "kg"
+     },
+     "funcion": "inicial",
+     "magnitud": "cell.mass",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "cell.mass"
+     }
+    },
+    "cell.mass2": {
+     "declaracion": {
+      "texto": "0.3002598",
+      "unidad": "kg"
+     },
+     "funcion": "inicial",
+     "magnitud": "cell.mass2",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "cell.mass2"
+     }
+    },
+    "cell.mass3": {
+     "declaracion": {
+      "texto": "0.0",
+      "unidad": "kg"
+     },
+     "funcion": "inicial",
+     "magnitud": "cell.mass3",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "cell.mass3"
+     }
+    },
+    "cell.mass4": {
+     "declaracion": {
+      "texto": "0.0",
+      "unidad": "kg"
+     },
+     "funcion": "inicial",
+     "magnitud": "cell.mass4",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "cell.mass4"
+     }
+    },
+    "cell.maximumTemperature": {
+     "declaracion": {
+      "texto": "370",
+      "unidad": "K"
+     },
+     "funcion": "parametro",
+     "magnitud": "maximumTemperature",
+     "origen": {
+      "propietarioId": "volumen:cell",
+      "ruta": "maximumTemperature"
+     }
+    },
+    "cell.minimumTemperature": {
+     "declaracion": {
+      "texto": "290",
+      "unidad": "K"
+     },
+     "funcion": "parametro",
+     "magnitud": "minimumTemperature",
+     "origen": {
+      "propietarioId": "volumen:cell",
+      "ruta": "minimumTemperature"
+     }
+    },
+    "cell.pressure": {
+     "declaracion": {
+      "texto": "101325.0",
+      "unidad": "Pa"
+     },
+     "funcion": "frontera",
+     "magnitud": "cell.pressure",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "cell.pressure"
+     }
+    },
+    "cell.referenceEnergy": {
+     "declaracion": {
+      "texto": "0",
+      "unidad": "J/kg"
+     },
+     "funcion": "parametro",
+     "magnitud": "referenceEnergy",
+     "origen": {
+      "propietarioId": "volumen:cell",
+      "ruta": "referenceEnergy"
+     }
+    },
+    "cell.referenceTemperature": {
+     "declaracion": {
+      "texto": "300",
+      "unidad": "K"
+     },
+     "funcion": "parametro",
+     "magnitud": "referenceTemperature",
+     "origen": {
+      "propietarioId": "volumen:cell",
+      "ruta": "referenceTemperature"
+     }
+    },
+    "cell.temperature": {
+     "declaracion": {
+      "texto": "320.0",
+      "unidad": "K"
+     },
+     "funcion": "inicial",
+     "magnitud": "cell.temperature",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "cell.temperature"
+     }
+    },
+    "cell.volume": {
+     "declaracion": {
+      "texto": "1",
+      "unidad": "m3"
+     },
+     "funcion": "geometria",
+     "magnitud": "volume",
+     "origen": {
+      "propietarioId": "volumen:cell",
+      "ruta": "volume"
+     }
+    },
+    "coolantIn.P": {
+     "declaracion": {
+      "texto": "200000.0",
+      "unidad": "Pa"
+     },
+     "funcion": "frontera",
+     "magnitud": "coolantIn.P",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "coolantIn.P"
+     }
+    },
+    "coolantIn.T": {
+     "declaracion": {
+      "texto": "320.0",
+      "unidad": "K"
+     },
+     "funcion": "frontera",
+     "magnitud": "coolantIn.T",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "coolantIn.T"
+     }
+    },
+    "feed.P": {
+     "declaracion": {
+      "texto": "101325.0",
+      "unidad": "Pa"
+     },
+     "funcion": "frontera",
+     "magnitud": "feed.P",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "feed.P"
+     }
+    },
+    "feed.T": {
+     "declaracion": {
+      "texto": "320.0",
+      "unidad": "K"
+     },
+     "funcion": "frontera",
+     "magnitud": "feed.T",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "feed.T"
+     }
+    },
+    "forwardRate": {
+     "declaracion": {
+      "texto": "1e-07",
+      "unidad": "m3/(mol*s)"
+     },
+     "funcion": "parametro",
+     "magnitud": "forwardRate",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "forwardRate"
+     }
+    },
+    "initial1": {
+     "declaracion": {
+      "texto": "5.0",
+      "unidad": "mol"
+     },
+     "funcion": "inicial",
+     "magnitud": "initial1",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "initial1"
+     }
+    },
+    "initial2": {
+     "declaracion": {
+      "texto": "5.0",
+      "unidad": "mol"
+     },
+     "funcion": "inicial",
+     "magnitud": "initial2",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "initial2"
+     }
+    },
+    "initial3": {
+     "declaracion": {
+      "texto": "0.0",
+      "unidad": "mol"
+     },
+     "funcion": "inicial",
+     "magnitud": "initial3",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "initial3"
+     }
+    },
+    "initial4": {
+     "declaracion": {
+      "texto": "0.0",
+      "unidad": "mol"
+     },
+     "funcion": "inicial",
+     "magnitud": "initial4",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "initial4"
+     }
+    },
+    "jacket.mass": {
+     "declaracion": {
+      "texto": "0.2",
+      "unidad": "kg"
+     },
+     "funcion": "inicial",
+     "magnitud": "jacket.mass",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "jacket.mass"
+     }
+    },
+    "jacket.pressure": {
+     "declaracion": {
+      "texto": "101325.0",
+      "unidad": "Pa"
+     },
+     "funcion": "frontera",
+     "magnitud": "jacket.pressure",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "jacket.pressure"
+     }
+    },
+    "jacket.temperature": {
+     "declaracion": {
+      "texto": "320.0",
+      "unidad": "K"
+     },
+     "funcion": "inicial",
+     "magnitud": "jacket.temperature",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "jacket.temperature"
+     }
+    },
+    "molarMass1": {
+     "declaracion": {
+      "texto": "0.04606844",
+      "unidad": "kg/mol"
+     },
+     "funcion": "parametro",
+     "magnitud": "molarMass1",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "molarMass1"
+     }
+    },
+    "molarMass2": {
+     "declaracion": {
+      "texto": "0.06005196",
+      "unidad": "kg/mol"
+     },
+     "funcion": "parametro",
+     "magnitud": "molarMass2",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "molarMass2"
+     }
+    },
+    "molarMass3": {
+     "declaracion": {
+      "texto": "0.08810512",
+      "unidad": "kg/mol"
+     },
+     "funcion": "parametro",
+     "magnitud": "molarMass3",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "molarMass3"
+     }
+    },
+    "molarMass4": {
+     "declaracion": {
+      "texto": "0.01801528",
+      "unidad": "kg/mol"
+     },
+     "funcion": "parametro",
+     "magnitud": "molarMass4",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "molarMass4"
+     }
+    },
+    "path.volume": {
+     "declaracion": {
+      "texto": "5e-06",
+      "unidad": "m3"
+     },
+     "funcion": "frontera",
+     "magnitud": "path.volume",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "path.volume"
+     }
+    },
+    "rateTemperature": {
+     "declaracion": {
+      "texto": "340.0",
+      "unidad": "K"
+     },
+     "funcion": "parametro",
+     "magnitud": "rateTemperature",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "rateTemperature"
+     }
+    },
+    "reactingVolume": {
+     "declaracion": {
+      "texto": "0.00065",
+      "unidad": "m3"
+     },
+     "funcion": "parametro",
+     "magnitud": "reactingVolume",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "reactingVolume"
+     }
+    },
+    "reverseActivation": {
+     "declaracion": {
+      "texto": "52993.8785542915",
+      "unidad": "J/mol"
+     },
+     "funcion": "parametro",
+     "magnitud": "reverseActivation",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "reverseActivation"
+     }
+    },
+    "reverseRate": {
+     "declaracion": {
+      "texto": "2.724088784474497e-08",
+      "unidad": "m3/(mol*s)"
+     },
+     "funcion": "parametro",
+     "magnitud": "reverseRate",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "reverseRate"
+     }
+    },
+    "scale.mass": {
+     "declaracion": {
+      "texto": "100.0",
+      "unidad": "kg"
+     },
+     "funcion": "parametro",
+     "magnitud": "scale.mass",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "scale.mass"
+     }
+    },
+    "service.UA": {
+     "declaracion": {
+      "texto": "5.0",
+      "unidad": "W/K"
+     },
+     "funcion": "parametro",
+     "magnitud": "service.UA",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "service.UA"
+     }
+    },
+    "service.flow": {
+     "declaracion": {
+      "texto": "0.002",
+      "unidad": "kg/s"
+     },
+     "funcion": "parametro",
+     "magnitud": "service.flow",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "service.flow"
+     }
+    },
+    "solve.A": {
+     "declaracion": {
+      "texto": "0.003",
+      "unidad": "m2"
+     },
+     "funcion": "parametro",
+     "magnitud": "solve.A",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "solve.A"
+     }
+    },
+    "solve.F": {
+     "declaracion": {
+      "texto": "0.001",
+      "unidad": "kg/s"
+     },
+     "funcion": "parametro",
+     "magnitud": "solve.F",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "solve.F"
+     }
+    },
+    "solve.F0": {
+     "declaracion": {
+      "texto": "0.001",
+      "unidad": "kg/s"
+     },
+     "funcion": "parametro",
+     "magnitud": "solve.F0",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "solve.F0"
+     }
+    },
+    "solve.K": {
+     "declaracion": {
+      "texto": "1250.0",
+      "unidad": "1"
+     },
+     "funcion": "parametro",
+     "magnitud": "solve.K",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "solve.K"
+     }
+    },
+    "solve.Pout": {
+     "declaracion": {
+      "texto": "101325.0",
+      "unidad": "Pa"
+     },
+     "funcion": "parametro",
+     "magnitud": "solve.Pout",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "solve.Pout"
+     }
+    },
+    "solve.Q": {
+     "declaracion": {
+      "texto": "0.0",
+      "unidad": "W"
+     },
+     "funcion": "parametro",
+     "magnitud": "solve.Q",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "solve.Q"
+     }
+    },
+    "solve.g": {
+     "declaracion": {
+      "texto": "9.80665",
+      "unidad": "m/s2"
+     },
+     "funcion": "parametro",
+     "magnitud": "solve.g",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "solve.g"
+     }
+    },
+    "solve.kV": {
+     "declaracion": {
+      "texto": "0.0",
+      "unidad": "1/s"
+     },
+     "funcion": "parametro",
+     "magnitud": "solve.kV",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "solve.kV"
+     }
+    },
+    "solve.length": {
+     "declaracion": {
+      "texto": "0.4",
+      "unidad": "m"
+     },
+     "funcion": "parametro",
+     "magnitud": "solve.length",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "solve.length"
+     }
+    },
+    "solve.pipeArea": {
+     "declaracion": {
+      "texto": "1.25e-05",
+      "unidad": "m2"
+     },
+     "funcion": "parametro",
+     "magnitud": "solve.pipeArea",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "solve.pipeArea"
+     }
+    },
+    "solve.tf": {
+     "declaracion": {
+      "texto": "60000.0",
+      "unidad": "s"
+     },
+     "funcion": "estudio",
+     "magnitud": "solve.tf",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "solve.tf"
+     }
+    },
+    "solve.z0": {
+     "declaracion": {
+      "texto": "0.0",
+      "unidad": "m"
+     },
+     "funcion": "parametro",
+     "magnitud": "solve.z0",
+     "origen": {
+      "propietarioId": "estudio",
+      "ruta": "solve.z0"
+     }
+    }
+   },
+   "estudio": {
+    "atol": {
+     "cantidad": 1e-09,
+     "energia": 0.001
+    },
+    "metodoSolicitado": "bdf",
+    "muestras": 81,
+    "rtol": 1e-09,
+    "tiempoId": "solve.tf",
+    "tipo": "temporal"
+   },
+   "formato": "rage.modelo",
+   "id": "demo-0.2-jacketed-reactor",
+   "intercambios": [],
+   "matematico": null,
+   "motores": {
+    "derivedExecution": {
+     "checks": [
+      {
+       "equationId": "matter.cell.total",
+       "scaleDataId": "scale.mass"
+      }
+     ],
+     "format": "rage.derived-execution",
+     "initialEquations": [],
+     "initialValues": {
+      "x101ae075ed": "cell.mass2",
+      "x1477cb2534": "cell.mass3",
+      "x35f431eb22": "jacket.temperature",
+      "x50f6ad1a09": "solve.F0",
+      "x8acf6f1cc4": "cell.mass",
+      "x90b1e57552": "cell.mass4",
+      "xe19bda88c1": "cell.temperature",
+      "xf61c9e6b09": "jacket.mass"
+     },
+     "parameters": {
+      "x09d123bad9": "reverseActivation",
+      "x0d53a3f69f": "molarMass4",
+      "x0edfa2e8d6": "solve.z0",
+      "x0fe3bf5bee": "solve.Pout",
+      "x311e8b4001": "solve.K",
+      "x3de726b7e2": "solve.kV",
+      "x3e6d7a98c6": "solve.g",
+      "x444808a1dd": "molarMass1",
+      "x47862c6696": "solve.Q",
+      "x48e39ed84a": "rateTemperature",
+      "x517d953ee1": "solve.length",
+      "x5f2fd5f8b4": "activation",
+      "x65d652fd14": "molarMass3",
+      "x690005f64f": "service.flow",
+      "x7f010c31c7": "solve.A",
+      "x86adcd5e2a": "service.UA",
+      "x89a6587e76": "solve.pipeArea",
+      "x8cdb384c45": "cell.pressure",
+      "xa7bc246d70": "solve.g",
+      "xbd350d085e": "molarMass2",
+      "xd425ecb112": "forwardRate",
+      "xd53744ea4b": "jacket.pressure",
+      "xe11e049caa": "solve.F",
+      "xe984fca8ed": "reverseRate",
+      "xf349711680": "rateTemperature"
+     },
+     "reconstructions": [
+      {
+       "equationId": "thermodynamics.cell.component-amount-1",
+       "quantityId": "xe267c854d3"
+      },
+      {
+       "equationId": "thermodynamics.cell.component-amount-2",
+       "quantityId": "x3830d336a1"
+      },
+      {
+       "equationId": "thermodynamics.cell.component-amount-3",
+       "quantityId": "xf74cbf4318"
+      },
+      {
+       "equationId": "thermodynamics.cell.component-amount-4",
+       "quantityId": "x04fd42b911"
+      },
+      {
+       "equationId": "matter.cell.total-definition",
+       "quantityId": "x5619d04db6"
+      },
+      {
+       "equationId": "operation.96",
+       "quantityId": "xe6fbc3870c"
+      },
+      {
+       "equationId": "matter.pipe.1.stationary",
+       "quantityId": "x2cf166f444"
+      },
+      {
+       "equationId": "matter.pipe.2.stationary",
+       "quantityId": "xc0e34d2def"
+      },
+      {
+       "equationId": "matter.pipe.3.stationary",
+       "quantityId": "x913730a5cd"
+      },
+      {
+       "equationId": "matter.pipe.4.stationary",
+       "quantityId": "xe6e978abf9"
+      },
+      {
+       "equationId": "energy.pipe.zero-total-rate",
+       "quantityId": "x2c5bcf92a4"
+      },
+      {
+       "equationId": "operation.15",
+       "quantityId": "xce206d9154"
+      },
+      {
+       "equationId": "operation.28",
+       "quantityId": "x886188c4f6"
+      },
+      {
+       "equationId": "operation.41",
+       "quantityId": "x47a013ca19"
+      },
+      {
+       "equationId": "operation.54",
+       "quantityId": "x8c8914d336"
+      },
+      {
+       "equationId": "operation.124",
+       "quantityId": "xcaf80d1207"
+      },
+      {
+       "equationId": "operation.127",
+       "quantityId": "x904f7c0589"
+      },
+      {
+       "equationId": "operation.130",
+       "quantityId": "x0af9962c0c"
+      },
+      {
+       "equationId": "operation.133",
+       "quantityId": "x722fd7f36a"
+      },
+      {
+       "equationId": "operation.106",
+       "quantityId": "x08b6932918"
+      },
+      {
+       "equationId": "operation.146",
+       "quantityId": "x7cfa18b2c8"
+      },
+      {
+       "equationId": "operation.147",
+       "quantityId": "xb79229350b"
+      },
+      {
+       "equationId": "operation.148",
+       "quantityId": "xfc3de12178"
+      },
+      {
+       "equationId": "operation.149",
+       "quantityId": "x60096fb487"
+      },
+      {
+       "equationId": "operation.81",
+       "quantityId": "x1fbbee4aa2"
+      },
+      {
+       "equationId": "operation.144",
+       "quantityId": "x224953c4b2"
+      },
+      {
+       "equationId": "thermodynamics.jacket.component-amount-4",
+       "quantityId": "x404c7339f1"
+      },
+      {
+       "equationId": "matter.jacket.total-definition",
+       "quantityId": "x520ac739e3"
+      },
+      {
+       "equationId": "operation.161",
+       "quantityId": "x973171aff8"
+      },
+      {
+       "equationId": "operation.165",
+       "quantityId": "xc89ab6b6df"
+      },
+      {
+       "equationId": "operation.176",
+       "quantityId": "x1fd7b5c5df"
+      },
+      {
+       "equationId": "operation.85",
+       "quantityId": "xa3bd0c9a71"
+      }
+     ],
+     "sourceSignature": "b980ce166d146906404448de13a09c6189ca474bc20c9280139393a95e85c156",
+     "states": [
+      {
+       "equationId": "operation.21",
+       "quantityId": "x8acf6f1cc4"
+      },
+      {
+       "equationId": "operation.34",
+       "quantityId": "x101ae075ed"
+      },
+      {
+       "equationId": "operation.47",
+       "quantityId": "x1477cb2534"
+      },
+      {
+       "equationId": "operation.60",
+       "quantityId": "x90b1e57552"
+      },
+      {
+       "equationId": "operation.145",
+       "quantityId": "xff07ad5395"
+      },
+      {
+       "equationId": "operation.116",
+       "quantityId": "x50f6ad1a09"
+      },
+      {
+       "equationId": "operation.167",
+       "quantityId": "xf61c9e6b09"
+      },
+      {
+       "equationId": "operation.183",
+       "quantityId": "x529782eba3"
+      }
+     ],
+     "timeId": "x8a44e00a1e",
+     "version": 1
+    },
+    "energyDerivation": {
+     "format": "rage.energy-derivation",
+     "version": 1,
+     "volumes": {
+      "cell": {
+       "operations": [
+        {
+         "changes": {
+          "separarPresion": true
+         },
+         "id": "step-1",
+         "title": "Separate pressure and viscous stress"
+        },
+        {
+         "changes": {
+          "sinCinetica": true
+         },
+         "id": "step-2",
+         "title": "Negligible kinetic energy"
+        },
+        {
+         "changes": {
+          "sinTrabajoViscoso": true
+         },
+         "id": "step-3",
+         "title": "Negligible viscous work"
+        },
+        {
+         "changes": {
+          "sinFuerzasVolumen": true
+         },
+         "id": "step-4",
+         "title": "No body-force work"
+        },
+        {
+         "changes": {
+          "sinFuenteVolumetrica": true
+         },
+         "id": "step-5",
+         "title": "No volumetric energy source"
+        },
+        {
+         "changes": {
+          "forma": "integrada"
+         },
+         "id": "step-6",
+         "title": "Integrate the local first law and apply Gauss"
+        },
+        {
+         "changes": {
+          "forma": "integral"
+         },
+         "id": "step-7",
+         "title": "Apply Reynolds transport theorem"
+        },
+        {
+         "changes": {
+          "forma": "total"
+         },
+         "id": "step-8",
+         "title": "Define total energy and oriented stream contributions"
+        },
+        {
+         "changes": {
+          "entalpia": true
+         },
+         "id": "step-9",
+         "title": "Collect flow work into enthalpy"
+        },
+        {
+         "changes": {
+          "uniforme": true
+         },
+         "id": "step-10",
+         "title": "Uniform temperature and specific internal energy"
+        },
+        {
+         "changes": {
+          "presionUniforme": true
+         },
+         "id": "step-11",
+         "title": "Spatially uniform pressure"
+        },
+        {
+         "changes": {
+          "presionPrescrita": true
+         },
+         "id": "step-12",
+         "title": "Prescribed pressure"
+        }
+       ],
+       "origin": "reviewed_rebuild"
+      },
+      "jacket": {
+       "operations": [
+        {
+         "changes": {
+          "separarPresion": true
+         },
+         "id": "step-1",
+         "title": "Separate pressure and viscous stress"
+        },
+        {
+         "changes": {
+          "sinCinetica": true
+         },
+         "id": "step-2",
+         "title": "Negligible kinetic energy"
+        },
+        {
+         "changes": {
+          "sinTrabajoViscoso": true
+         },
+         "id": "step-3",
+         "title": "Negligible viscous work"
+        },
+        {
+         "changes": {
+          "sinFuerzasVolumen": true
+         },
+         "id": "step-4",
+         "title": "No body-force work"
+        },
+        {
+         "changes": {
+          "sinFuenteVolumetrica": true
+         },
+         "id": "step-5",
+         "title": "No volumetric energy source"
+        },
+        {
+         "changes": {
+          "forma": "integrada"
+         },
+         "id": "step-6",
+         "title": "Integrate the local first law and apply Gauss"
+        },
+        {
+         "changes": {
+          "forma": "integral"
+         },
+         "id": "step-7",
+         "title": "Apply Reynolds transport theorem"
+        },
+        {
+         "changes": {
+          "forma": "total"
+         },
+         "id": "step-8",
+         "title": "Define total energy and oriented stream contributions"
+        },
+        {
+         "changes": {
+          "entalpia": true
+         },
+         "id": "step-9",
+         "title": "Collect flow work into enthalpy"
+        },
+        {
+         "changes": {
+          "uniforme": true
+         },
+         "id": "step-10",
+         "title": "Uniform temperature and specific internal energy"
+        },
+        {
+         "changes": {
+          "presionUniforme": true
+         },
+         "id": "step-11",
+         "title": "Spatially uniform pressure"
+        },
+        {
+         "changes": {
+          "presionPrescrita": true
+         },
+         "id": "step-12",
+         "title": "Prescribed pressure"
+        }
+       ],
+       "origin": "reviewed_rebuild"
+      },
+      "pipe": {
+       "operations": [
+        {
+         "changes": {
+          "separarPresion": true
+         },
+         "id": "step-1",
+         "title": "Separate pressure and viscous stress"
+        },
+        {
+         "changes": {
+          "sinCinetica": true
+         },
+         "id": "step-2",
+         "title": "Negligible kinetic energy"
+        },
+        {
+         "changes": {
+          "sinTrabajoViscoso": true
+         },
+         "id": "step-3",
+         "title": "Negligible viscous work"
+        },
+        {
+         "changes": {
+          "sinFuerzasVolumen": true
+         },
+         "id": "step-4",
+         "title": "No body-force work"
+        },
+        {
+         "changes": {
+          "sinFuenteVolumetrica": true
+         },
+         "id": "step-5",
+         "title": "No volumetric energy source"
+        },
+        {
+         "changes": {
+          "forma": "integrada"
+         },
+         "id": "step-6",
+         "title": "Integrate the local first law and apply Gauss"
+        },
+        {
+         "changes": {
+          "forma": "integral"
+         },
+         "id": "step-7",
+         "title": "Apply Reynolds transport theorem"
+        },
+        {
+         "changes": {
+          "forma": "total"
+         },
+         "id": "step-8",
+         "title": "Define total energy and oriented stream contributions"
+        },
+        {
+         "changes": {
+          "entalpia": true
+         },
+         "id": "step-9",
+         "title": "Collect flow work into enthalpy"
+        },
+        {
+         "changes": {
+          "adiabatico": true
+         },
+         "id": "step-10",
+         "title": "Adiabatic boundary"
+        },
+        {
+         "changes": {
+          "sinAcumulacionTotal": true
+         },
+         "id": "step-11",
+         "title": "Zero total energy accumulation · algebraic constraint"
+        }
+       ],
+       "origin": "reviewed_rebuild"
+      }
+     }
+    },
+    "equationWorkbench": {
+     "cursor": 185,
+     "format": "rage.equation-workbench",
+     "operations": [
+      {
+       "family": "matter",
+       "kind": "declare_symbol",
+       "name": "feedRate",
+       "unit": "kg/s"
+      },
+      {
+       "family": "matter",
+       "kind": "declare_symbol",
+       "name": "withdrawalCoefficient",
+       "unit": "1/s"
+      },
+      {
+       "family": "matter",
+       "kind": "declare_symbol",
+       "name": "heatDuty",
+       "unit": "W"
+      },
+      {
+       "family": "matter",
+       "kind": "declare_symbol",
+       "name": "crossSectionArea",
+       "unit": "m2"
+      },
+      {
+       "family": "matter",
+       "kind": "declare_symbol",
+       "name": "floorElevation",
+       "unit": "m"
+      },
+      {
+       "family": "matter",
+       "kind": "declare_symbol",
+       "name": "outletPressure",
+       "unit": "Pa"
+      },
+      {
+       "dependencies": [
+        "x8a44e00a1e"
+       ],
+       "family": "matter",
+       "kind": "declare_function",
+       "name": "vapourMolarOutflow",
+       "unit": "mol/s"
+      },
+      {
+       "dependencies": [
+        "x8a44e00a1e"
+       ],
+       "family": "matter",
+       "kind": "declare_function",
+       "name": "liquidMassFlow",
+       "unit": "kg/s"
+      },
+      {
+       "family": "matter",
+       "kind": "declare_relation",
+       "left": "x2f6c7372d5",
+       "reason": "Prescribed feed rate with the package composition of the declared inlet",
+       "relationKind": "constitutive",
+       "right": "feedRate*x79d4e4767a"
+      },
+      {
+       "dependencies": [
+        "x8a44e00a1e"
+       ],
+       "family": "matter",
+       "kind": "declare_function",
+       "name": "liquidMassFraction_1",
+       "unit": "1"
+      },
+      {
+       "dependencies": [
+        "x8a44e00a1e"
+       ],
+       "family": "matter",
+       "kind": "declare_function",
+       "name": "liquidMoleFraction_1",
+       "unit": "1"
+      },
+      {
+       "family": "matter",
+       "kind": "declare_relation",
+       "left": "liquidMoleFraction_1",
+       "reason": "Phase donor: the stream has the liquid phase composition of this volume",
+       "relationKind": "constitutive",
+       "right": "xebda38c7e5"
+      },
+      {
+       "family": "matter",
+       "kind": "declare_relation",
+       "left": "liquidMassFraction_1*x18a338bf93",
+       "reason": "Definition of mass fraction from mole fraction, component molar mass and the phase mean molar mass",
+       "relationKind": "definition",
+       "right": "liquidMoleFraction_1*x444808a1dd"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "operation.12",
+       "sourceSignatures": {
+        "operation.12": "6275029c9468e50ec4c62c8adbcd1650a11ed571df23bd0b673857eb218fa6dd",
+        "operation.13": "8d56d6eecd185f9b6fa2fb237029655e2dc6754fc7fed59a6f6ed0331336561c"
+       },
+       "sources": [
+        "operation.13"
+       ],
+       "symbol": "x5a314b2bda"
+      },
+      {
+       "family": "matter",
+       "kind": "isolate",
+       "sourceSignatures": {
+        "operation.14": "02f35c91288d40cb9e04323ed114696882e51f79be918a7ee03e553144c0ba21"
+       },
+       "sources": [
+        "operation.14"
+       ],
+       "symbol": "liquidMassFraction_1"
+      },
+      {
+       "family": "matter",
+       "kind": "declare_relation",
+       "left": "x11b26c8f8d",
+       "reason": "Definition of component mass flow for a common convective stream velocity",
+       "relationKind": "definition",
+       "right": "liquidMassFlow*liquidMassFraction_1"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "operation.15",
+       "sourceSignatures": {
+        "operation.15": "f590c1c7019d6f131c2a8c686c82533041dc178d73b61a98d631bb406b9cc0af",
+        "operation.16": "9c65c7a44dd6ee2e748835fd7b24965a658b384cf62d726a09c936071a3814a7"
+       },
+       "sources": [
+        "operation.16"
+       ],
+       "symbol": "xce206d9154"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "operation.9",
+       "sourceSignatures": {
+        "matter.cell.1.source-consumo": "0890ac7261f036b289520da3d799ad3d2eaf8447a022866dbcdc0deed209842b",
+        "operation.9": "e54f74924425e012b13b60fdd54be5ecb2a29600c849cabfad74cfe0d1db3979"
+       },
+       "sources": [
+        "matter.cell.1.source-consumo"
+       ],
+       "symbol": "x2f6c7372d5"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "operation.17",
+       "sourceSignatures": {
+        "operation.17": "998568e0197229302bb937b22d6727c0fa77305b12bf81217937aa45b189db0a",
+        "operation.18": "01fc39b1762b9cba546f5198306b9dc39532b5d6994d36ec051b838680bffbe8"
+       },
+       "sources": [
+        "operation.18"
+       ],
+       "symbol": "x11b26c8f8d"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "reaction.cell.generation.1",
+       "sourceSignatures": {
+        "operation.19": "74b8fea0b04bb5a3c06cb3aaf89843be26ff56dd76324b8a997ad5aa0a389d1d",
+        "reaction.cell.generation.1": "3d7ea1af4244b12ee2043793d2d189479cf867cf12a7d18ba73dd57de73c39f1"
+       },
+       "sources": [
+        "operation.19"
+       ],
+       "symbol": "x94042bf632"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "reaction.cell.consumption.1",
+       "sourceSignatures": {
+        "operation.20": "5d2206f7a31caf1eb51f77af630d5070c293cb7868e34459cdc8b7018a2ec7fa",
+        "reaction.cell.consumption.1": "d94480043e50719e739929e102b5911199f3cf6c8780608084f1dff053cb27d7"
+       },
+       "sources": [
+        "operation.20"
+       ],
+       "symbol": "xb0b3cff52e"
+      },
+      {
+       "family": "matter",
+       "kind": "declare_relation",
+       "left": "xbf958d5f8e",
+       "reason": "Prescribed feed rate with the package composition of the declared inlet",
+       "relationKind": "constitutive",
+       "right": "feedRate*x5d6fe42efb"
+      },
+      {
+       "dependencies": [
+        "x8a44e00a1e"
+       ],
+       "family": "matter",
+       "kind": "declare_function",
+       "name": "liquidMassFraction_2",
+       "unit": "1"
+      },
+      {
+       "dependencies": [
+        "x8a44e00a1e"
+       ],
+       "family": "matter",
+       "kind": "declare_function",
+       "name": "liquidMoleFraction_2",
+       "unit": "1"
+      },
+      {
+       "family": "matter",
+       "kind": "declare_relation",
+       "left": "liquidMoleFraction_2",
+       "reason": "Phase donor: the stream has the liquid phase composition of this volume",
+       "relationKind": "constitutive",
+       "right": "xb9ca70fae9"
+      },
+      {
+       "family": "matter",
+       "kind": "declare_relation",
+       "left": "liquidMassFraction_2*x18a338bf93",
+       "reason": "Definition of mass fraction from mole fraction, component molar mass and the phase mean molar mass",
+       "relationKind": "definition",
+       "right": "liquidMoleFraction_2*xbd350d085e"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "operation.25",
+       "sourceSignatures": {
+        "operation.25": "a702f8a16187fc40fcc5299e197a17688fccab878007ace729e03aa05979c563",
+        "operation.26": "8629ac215cc0bf0fe3d187c946ac621ece7dcc601655a59caf2c6e8552c6c233"
+       },
+       "sources": [
+        "operation.26"
+       ],
+       "symbol": "xbf0cf8580c"
+      },
+      {
+       "family": "matter",
+       "kind": "isolate",
+       "sourceSignatures": {
+        "operation.27": "0fa781576a3235c3d6bb7f906c1a9b6bfdd3b31b5208f6e08cbbba55a5f291f7"
+       },
+       "sources": [
+        "operation.27"
+       ],
+       "symbol": "liquidMassFraction_2"
+      },
+      {
+       "family": "matter",
+       "kind": "declare_relation",
+       "left": "xec2fc31592",
+       "reason": "Definition of component mass flow for a common convective stream velocity",
+       "relationKind": "definition",
+       "right": "liquidMassFlow*liquidMassFraction_2"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "operation.28",
+       "sourceSignatures": {
+        "operation.28": "3f80fbcd3bb8434365f9fb25795a7f5a67fb645c3c6da58f473d74107c9197ab",
+        "operation.29": "fbf0d64dcdf8adeb66212a6384c2644d8448752d3d8f4f988e033c100efe1317"
+       },
+       "sources": [
+        "operation.29"
+       ],
+       "symbol": "x886188c4f6"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "operation.22",
+       "sourceSignatures": {
+        "matter.cell.2.source-consumo": "6290124d8fa384e4f4d823cc2d73e80e9bdffb18b70d35ec70091d187316d507",
+        "operation.22": "2ca02ebd9ae5948a3667258fdf4e4faf07c3fb2583e0ecb3ce7b9f0be7a23ab1"
+       },
+       "sources": [
+        "matter.cell.2.source-consumo"
+       ],
+       "symbol": "xbf958d5f8e"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "operation.30",
+       "sourceSignatures": {
+        "operation.30": "cca59e66edc877078250d8af4e07bf2cf4fefc02f06b3e27b51f7cb177832999",
+        "operation.31": "937f8571fb5b0d013fc24a6eb2d489c63f09ad920ee8fb57aa51db7db54202a0"
+       },
+       "sources": [
+        "operation.31"
+       ],
+       "symbol": "xec2fc31592"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "reaction.cell.generation.2",
+       "sourceSignatures": {
+        "operation.32": "661291205d0244718225090f093a789852a4f8ceee1439f673c3527f5619b2d9",
+        "reaction.cell.generation.2": "bf080b79639a3c49eb11c62176aa62f9e641812b0c00c88b82b6de2ae13f7a47"
+       },
+       "sources": [
+        "operation.32"
+       ],
+       "symbol": "x10b9c3e0ac"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "reaction.cell.consumption.2",
+       "sourceSignatures": {
+        "operation.33": "3e13b6df8c63dada945559c16df6ff5d9818b6d7d4e5a7258b8eba164e100eda",
+        "reaction.cell.consumption.2": "70985e82a3c319537ca9ef8b15c3d37d392c549cdbd42dd9bb8c588eb8d6a014"
+       },
+       "sources": [
+        "operation.33"
+       ],
+       "symbol": "x8578f8c9d7"
+      },
+      {
+       "family": "matter",
+       "kind": "declare_relation",
+       "left": "xe793b25398",
+       "reason": "Prescribed feed rate with the package composition of the declared inlet",
+       "relationKind": "constitutive",
+       "right": "feedRate*xe2ab38f351"
+      },
+      {
+       "dependencies": [
+        "x8a44e00a1e"
+       ],
+       "family": "matter",
+       "kind": "declare_function",
+       "name": "liquidMassFraction_3",
+       "unit": "1"
+      },
+      {
+       "dependencies": [
+        "x8a44e00a1e"
+       ],
+       "family": "matter",
+       "kind": "declare_function",
+       "name": "liquidMoleFraction_3",
+       "unit": "1"
+      },
+      {
+       "family": "matter",
+       "kind": "declare_relation",
+       "left": "liquidMoleFraction_3",
+       "reason": "Phase donor: the stream has the liquid phase composition of this volume",
+       "relationKind": "constitutive",
+       "right": "x19220ce159"
+      },
+      {
+       "family": "matter",
+       "kind": "declare_relation",
+       "left": "liquidMassFraction_3*x18a338bf93",
+       "reason": "Definition of mass fraction from mole fraction, component molar mass and the phase mean molar mass",
+       "relationKind": "definition",
+       "right": "liquidMoleFraction_3*x65d652fd14"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "operation.38",
+       "sourceSignatures": {
+        "operation.38": "6f95e7ca5584f25a3007a6738d757770c78818b26e52bcfc672fc25035e16cd6",
+        "operation.39": "6ecef0480ded27d6732e4b2895193d0a689b1d2c6317c394306817c3b1aa3c58"
+       },
+       "sources": [
+        "operation.39"
+       ],
+       "symbol": "x192eda0941"
+      },
+      {
+       "family": "matter",
+       "kind": "isolate",
+       "sourceSignatures": {
+        "operation.40": "8248d5cc474ab904bbd252be5bf0063c9ed764b13b952278abe80aef800d7079"
+       },
+       "sources": [
+        "operation.40"
+       ],
+       "symbol": "liquidMassFraction_3"
+      },
+      {
+       "family": "matter",
+       "kind": "declare_relation",
+       "left": "xf63ca6187e",
+       "reason": "Definition of component mass flow for a common convective stream velocity",
+       "relationKind": "definition",
+       "right": "liquidMassFlow*liquidMassFraction_3"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "operation.41",
+       "sourceSignatures": {
+        "operation.41": "8973df604ffe70d6e49bc71a9fe29ba8b0ef77c63525b75352ac33f2ab94c263",
+        "operation.42": "75813663a60c44946b7cd6cdb6bb001f0ade51e2d71f2b218a0426f4cd811fe2"
+       },
+       "sources": [
+        "operation.42"
+       ],
+       "symbol": "x47a013ca19"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "operation.35",
+       "sourceSignatures": {
+        "matter.cell.3.source-consumo": "8fe6c99f1aa710c483de655d303ba73041f2c25e2570b033170c8d26103ad55a",
+        "operation.35": "f8f63a39eae1a1c44848ff0e78b4e33119467ab926592dc69044bcc29f01113a"
+       },
+       "sources": [
+        "matter.cell.3.source-consumo"
+       ],
+       "symbol": "xe793b25398"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "operation.43",
+       "sourceSignatures": {
+        "operation.43": "242d09567fd76a115e0def9cfe678b3f1172f64c8d96916f7ef23f09468880a5",
+        "operation.44": "376a6f782d604bc1c7e6395ede22346f523c3b9f8d1089b7482c6de455c0ee48"
+       },
+       "sources": [
+        "operation.44"
+       ],
+       "symbol": "xf63ca6187e"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "reaction.cell.generation.3",
+       "sourceSignatures": {
+        "operation.45": "26c98b29fc7b674dfa7521dfb8473a60c9e2475ce57d4d5b2fd7878afd6740fc",
+        "reaction.cell.generation.3": "fdcfaa1da04f1cef8b40e90c062d1ae578e510e30ffcc8ae2b3c9f4f24975815"
+       },
+       "sources": [
+        "operation.45"
+       ],
+       "symbol": "x07a4f936a1"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "reaction.cell.consumption.3",
+       "sourceSignatures": {
+        "operation.46": "42e60a84a70bdf8f0b023b0a7a943335107fcd7276a8b072eec9424d3a186a10",
+        "reaction.cell.consumption.3": "9d25ade3b7d16eef16c26043df3e98c030dbc77a0e083182bafbbae93713b7f3"
+       },
+       "sources": [
+        "operation.46"
+       ],
+       "symbol": "x88ec136857"
+      },
+      {
+       "family": "matter",
+       "kind": "declare_relation",
+       "left": "xcfd46aff48",
+       "reason": "Prescribed feed rate with the package composition of the declared inlet",
+       "relationKind": "constitutive",
+       "right": "feedRate*x65805fd412"
+      },
+      {
+       "dependencies": [
+        "x8a44e00a1e"
+       ],
+       "family": "matter",
+       "kind": "declare_function",
+       "name": "liquidMassFraction_4",
+       "unit": "1"
+      },
+      {
+       "dependencies": [
+        "x8a44e00a1e"
+       ],
+       "family": "matter",
+       "kind": "declare_function",
+       "name": "liquidMoleFraction_4",
+       "unit": "1"
+      },
+      {
+       "family": "matter",
+       "kind": "declare_relation",
+       "left": "liquidMoleFraction_4",
+       "reason": "Phase donor: the stream has the liquid phase composition of this volume",
+       "relationKind": "constitutive",
+       "right": "x0103a9a013"
+      },
+      {
+       "family": "matter",
+       "kind": "declare_relation",
+       "left": "liquidMassFraction_4*x18a338bf93",
+       "reason": "Definition of mass fraction from mole fraction, component molar mass and the phase mean molar mass",
+       "relationKind": "definition",
+       "right": "liquidMoleFraction_4*x0d53a3f69f"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "operation.51",
+       "sourceSignatures": {
+        "operation.51": "c2b5bc735a8d528aee12223c732bae639abe7ddccc4c54bcc8163cc43cf4d406",
+        "operation.52": "7021553dad7074774f9e6302cb6cc4fd3249ef0bbdd188f70711d9c1dd024fe6"
+       },
+       "sources": [
+        "operation.52"
+       ],
+       "symbol": "xf6bb51b009"
+      },
+      {
+       "family": "matter",
+       "kind": "isolate",
+       "sourceSignatures": {
+        "operation.53": "e4f5489b0913cc183ab5d9303de8f5c6d471b359aa84904f2a35ba0c8aa2e24b"
+       },
+       "sources": [
+        "operation.53"
+       ],
+       "symbol": "liquidMassFraction_4"
+      },
+      {
+       "family": "matter",
+       "kind": "declare_relation",
+       "left": "x232c5f46da",
+       "reason": "Definition of component mass flow for a common convective stream velocity",
+       "relationKind": "definition",
+       "right": "liquidMassFlow*liquidMassFraction_4"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "operation.54",
+       "sourceSignatures": {
+        "operation.54": "42395d890f6660e528bac4cd88586954c59e46dd73104a48ce760436a35aac27",
+        "operation.55": "8969ad8e1d0e43acab701cebe461dd705177cd96dded950693b1e83a16d6f28e"
+       },
+       "sources": [
+        "operation.55"
+       ],
+       "symbol": "x8c8914d336"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "operation.48",
+       "sourceSignatures": {
+        "matter.cell.4.source-consumo": "cb2d3e545c33c1eb6710f19f6948ab0bdd6324fd01d85ce71281508c5e835d56",
+        "operation.48": "dfbcc7019fdad27c42ba538fadaa16b842d32a2f8f06f36bde48b2911f6c75f9"
+       },
+       "sources": [
+        "matter.cell.4.source-consumo"
+       ],
+       "symbol": "xcfd46aff48"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "operation.56",
+       "sourceSignatures": {
+        "operation.56": "2ba662e9605956ade9461aa76e8fa27c59f13c25a184c09c87f89a6a1affc969",
+        "operation.57": "75ca5a2d2c2b253cff2a8d41334225976d2c5d8715f9f8392909c1f0395de620"
+       },
+       "sources": [
+        "operation.57"
+       ],
+       "symbol": "x232c5f46da"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "reaction.cell.generation.4",
+       "sourceSignatures": {
+        "operation.58": "efdfc6e24f9b30210512a270634e83256fb330b4bc969c2e15654d56bfa8fc9c",
+        "reaction.cell.generation.4": "af1e1fed0e456132038fcec1595853fc803c8278ddcad1ffa071c1c316a839c6"
+       },
+       "sources": [
+        "operation.58"
+       ],
+       "symbol": "x013419dcb8"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "reaction.cell.consumption.4",
+       "sourceSignatures": {
+        "operation.59": "bb068896ca6deb4ef58c263cff0b52ca3e6d6073adb9a5ed4b102313be072a6d",
+        "reaction.cell.consumption.4": "178b8edf8b8ff2b9cd0d97d670a522a7af45129f70f0dcf206c7fb008ef387c5"
+       },
+       "sources": [
+        "operation.59"
+       ],
+       "symbol": "x73c80bafd6"
+      },
+      {
+       "family": "matter",
+       "kind": "combine",
+       "sourceSignatures": {
+        "operation.17": "998568e0197229302bb937b22d6727c0fa77305b12bf81217937aa45b189db0a",
+        "operation.30": "cca59e66edc877078250d8af4e07bf2cf4fefc02f06b3e27b51f7cb177832999",
+        "operation.43": "242d09567fd76a115e0def9cfe678b3f1172f64c8d96916f7ef23f09468880a5",
+        "operation.56": "2ba662e9605956ade9461aa76e8fa27c59f13c25a184c09c87f89a6a1affc969"
+       },
+       "sources": [
+        "operation.17",
+        "operation.30",
+        "operation.43",
+        "operation.56"
+       ]
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "thermodynamics.cell.phase-molar-mass-L",
+       "sourceSignatures": {
+        "operation.61": "f394db1c30787226a7e9cb63fdf0072d4071261b9492c280249458df90cce3c9",
+        "thermodynamics.cell.phase-molar-mass-L": "80dfa41c1774a2e3d01e90aea558eb61dfea5bdee37b07badf1cc7abb384a67f"
+       },
+       "sources": [
+        "operation.61"
+       ],
+       "symbol": "x18a338bf93"
+      },
+      {
+       "family": "matter",
+       "kind": "factor",
+       "sourceSignatures": {
+        "operation.62": "9b523047cc208fae8a6e31d96fd4802383443134091a62a00510876a9ae78c82"
+       },
+       "sources": [
+        "operation.62"
+       ]
+      },
+      {
+       "family": "matter",
+       "kind": "isolate",
+       "sourceSignatures": {
+        "operation.63": "e3246b387b7458aca3bf62fcf980c5fe724d97023e39d7aafbbf8f0d05f1ea1c"
+       },
+       "sources": [
+        "operation.63"
+       ],
+       "symbol": "x11b26c8f8d"
+      },
+      {
+       "family": "matter",
+       "kind": "differentiate",
+       "sourceSignatures": {
+        "operation.63": "e3246b387b7458aca3bf62fcf980c5fe724d97023e39d7aafbbf8f0d05f1ea1c"
+       },
+       "sources": [
+        "operation.63"
+       ],
+       "symbol": "x8a44e00a1e"
+      },
+      {
+       "family": "matter",
+       "kind": "isolate",
+       "sourceSignatures": {
+        "operation.65": "19a82cd91a4b16c6c22e28de695d2fe391030022d4faf1a8c9007198ea24bff3"
+       },
+       "sources": [
+        "operation.65"
+       ],
+       "symbol": "xae7177aa0b"
+      },
+      {
+       "family": "energy",
+       "kind": "substitute",
+       "relation": "operation.9",
+       "sourceSignatures": {
+        "energy.cell.enthalpy-balance": "759acc55e70187154955c7fd2b033ef70d4eab0e8d832d98ebb877a138a5e941",
+        "operation.9": "e54f74924425e012b13b60fdd54be5ecb2a29600c849cabfad74cfe0d1db3979"
+       },
+       "sources": [
+        "energy.cell.enthalpy-balance"
+       ],
+       "symbol": "x2f6c7372d5"
+      },
+      {
+       "family": "energy",
+       "kind": "substitute",
+       "relation": "operation.22",
+       "sourceSignatures": {
+        "operation.22": "2ca02ebd9ae5948a3667258fdf4e4faf07c3fb2583e0ecb3ce7b9f0be7a23ab1",
+        "operation.67": "1e77f1c87bf5a2c2897ffde5aec3474cb9000a463d97f035e696feca31450956"
+       },
+       "sources": [
+        "operation.67"
+       ],
+       "symbol": "xbf958d5f8e"
+      },
+      {
+       "family": "energy",
+       "kind": "substitute",
+       "relation": "operation.35",
+       "sourceSignatures": {
+        "operation.35": "f8f63a39eae1a1c44848ff0e78b4e33119467ab926592dc69044bcc29f01113a",
+        "operation.68": "f2ac6191c65d1a258af0ddedf2d48a0984e076b32b39faa1f7f623ce4316c8bd"
+       },
+       "sources": [
+        "operation.68"
+       ],
+       "symbol": "xe793b25398"
+      },
+      {
+       "family": "energy",
+       "kind": "substitute",
+       "relation": "operation.48",
+       "sourceSignatures": {
+        "operation.48": "dfbcc7019fdad27c42ba538fadaa16b842d32a2f8f06f36bde48b2911f6c75f9",
+        "operation.69": "5112c8d3e70e5b63bf5ef2a56528d4684993a52e1412ca5a582b8d9dcf656985"
+       },
+       "sources": [
+        "operation.69"
+       ],
+       "symbol": "xcfd46aff48"
+      },
+      {
+       "family": "energy",
+       "kind": "substitute",
+       "relation": "operation.17",
+       "sourceSignatures": {
+        "operation.17": "998568e0197229302bb937b22d6727c0fa77305b12bf81217937aa45b189db0a",
+        "operation.70": "a9b693d4a88ba3d2cb87dc936ec87bf13b62d796b5fc9f992559e53a5204b589"
+       },
+       "sources": [
+        "operation.70"
+       ],
+       "symbol": "x11b26c8f8d"
+      },
+      {
+       "family": "energy",
+       "kind": "substitute",
+       "relation": "operation.30",
+       "sourceSignatures": {
+        "operation.30": "cca59e66edc877078250d8af4e07bf2cf4fefc02f06b3e27b51f7cb177832999",
+        "operation.71": "adec17de104743cbaea7a151161311e709a41106920ec9009a73aa35093fb233"
+       },
+       "sources": [
+        "operation.71"
+       ],
+       "symbol": "xec2fc31592"
+      },
+      {
+       "family": "energy",
+       "kind": "substitute",
+       "relation": "operation.43",
+       "sourceSignatures": {
+        "operation.43": "242d09567fd76a115e0def9cfe678b3f1172f64c8d96916f7ef23f09468880a5",
+        "operation.72": "0c92d2ede89d14599270ea4a91fe938ee9f595a79341b0f599fbb6208f7f00b7"
+       },
+       "sources": [
+        "operation.72"
+       ],
+       "symbol": "xf63ca6187e"
+      },
+      {
+       "family": "energy",
+       "kind": "substitute",
+       "relation": "operation.56",
+       "sourceSignatures": {
+        "operation.56": "2ba662e9605956ade9461aa76e8fa27c59f13c25a184c09c87f89a6a1affc969",
+        "operation.73": "49a45dd83e6a873fa179471d36d6ea8a57dfd64b2effa2c08811efecf9273195"
+       },
+       "sources": [
+        "operation.73"
+       ],
+       "symbol": "x232c5f46da"
+      },
+      {
+       "family": "energy",
+       "kind": "declare_relation",
+       "left": "x6c67e1dead",
+       "reason": "Inlet stream specific enthalpy at its declared exterior state (package)",
+       "relationKind": "constitutive",
+       "right": "x85db98be3f"
+      },
+      {
+       "family": "energy",
+       "kind": "substitute",
+       "relation": "operation.75",
+       "sourceSignatures": {
+        "operation.74": "c4460a6db37ec86adf7d3b244477e4e26b5acd70d62f768b4dce5a41595be392",
+        "operation.75": "44c0eea9dde0b32c6e7728735b6cc2ca59923e962d53238ed271e259f5e122da"
+       },
+       "sources": [
+        "operation.74"
+       ],
+       "symbol": "x6c67e1dead"
+      },
+      {
+       "dependencies": [
+        "x8a44e00a1e"
+       ],
+       "family": "energy",
+       "kind": "declare_function",
+       "name": "liquidMolarEnthalpy",
+       "unit": "J/mol"
+      },
+      {
+       "family": "energy",
+       "kind": "declare_relation",
+       "left": "liquidMolarEnthalpy",
+       "reason": "The outgoing material draws the donor liquid phase at its thermodynamic state, evaluated at the uniform pressure of the volume. Premises: negligible stream kinetic energy; the frictional dissipation of the path stays in the stream; the pressure dependence of the liquid enthalpy over the path pressure change is neglected",
+       "relationKind": "constitutive",
+       "right": "x8a34df0e5c"
+      },
+      {
+       "family": "energy",
+       "kind": "declare_relation",
+       "left": "x1fbbee4aa2*x18a338bf93",
+       "reason": "Definition of molar enthalpy from mass-specific enthalpy and the mean molar mass",
+       "relationKind": "definition",
+       "right": "liquidMolarEnthalpy"
+      },
+      {
+       "family": "energy",
+       "kind": "substitute",
+       "relation": "operation.78",
+       "sourceSignatures": {
+        "operation.78": "3f11916a451fef3e1b5bc22b5270fdff0d7a3faa5c0f2ce6c52f77772b4bb0bf",
+        "operation.79": "0216ac437103fccf2197adceb5eafc48b5234eb2e673fefc3230484989054ab6"
+       },
+       "sources": [
+        "operation.79"
+       ],
+       "symbol": "x30a1bd91f7"
+      },
+      {
+       "family": "energy",
+       "kind": "isolate",
+       "sourceSignatures": {
+        "operation.80": "b2d6430d0dfffdb57abea98f4710761db93e5eeff63839b994c1ba8ee9f04c77"
+       },
+       "sources": [
+        "operation.80"
+       ],
+       "symbol": "x1fbbee4aa2"
+      },
+      {
+       "family": "energy",
+       "kind": "substitute",
+       "relation": "operation.81",
+       "sourceSignatures": {
+        "operation.76": "30f06ea2e2a470c252bc887f694413236ba1d512a7934a5f92e39adaa5225ff1",
+        "operation.81": "6b4a5c3409cc2636b3d35883a3eedc0b0f5eba9d43621b1baab7039f666be76e"
+       },
+       "sources": [
+        "operation.76"
+       ],
+       "symbol": "x1fbbee4aa2"
+      },
+      {
+       "dependencies": [
+        "x8a44e00a1e"
+       ],
+       "family": "energy",
+       "kind": "declare_function",
+       "name": "wallHeat",
+       "unit": "W"
+      },
+      {
+       "family": "energy",
+       "kind": "declare_symbol",
+       "name": "wallConductance",
+       "unit": "W/K"
+      },
+      {
+       "family": "energy",
+       "kind": "declare_relation",
+       "left": "wallHeat",
+       "reason": "Conductive shared wall between the two control volumes: the wall is impermeable and rigid (no mass flux and no boundary work cross it), its metal capacitance is lumped into the overall conductance, and the heat flux integrated over the shared wall follows a linear overall-conductance law",
+       "relationKind": "constitutive",
+       "right": "wallConductance*(xe19bda88c1-x35f431eb22)"
+      },
+      {
+       "domain": "positive",
+       "family": "energy",
+       "kind": "declare_domain",
+       "reason": "Passive conductive wall: positive overall conductance",
+       "sourceSignatures": {
+        "operation.85": "16d70874c0409081a7c26755706e0df47af252061b7bd1d502b349d705745827"
+       },
+       "sources": [
+        "operation.85"
+       ],
+       "symbol": "wallConductance"
+      },
+      {
+       "family": "energy",
+       "kind": "declare_relation",
+       "left": "xec524d671e",
+       "reason": "Exhaustive partition of the reactor boundary heat: the shared wall with the jacket is its only conductive part (the free surface and the remaining casing are insulated); heat leaving the reactor into the jacket counts negative",
+       "relationKind": "constraint",
+       "right": "-wallHeat"
+      },
+      {
+       "family": "energy",
+       "kind": "substitute",
+       "relation": "operation.87",
+       "sourceSignatures": {
+        "operation.82": "f9546904cf5407295f1ca7dd26ed02465023d5bee3dc617cf3f332ce7dfd534e",
+        "operation.87": "8ed056c8e7b259809e223121e0b14a6acc46281a8b0d33e84ee874ba079dcfdc"
+       },
+       "sources": [
+        "operation.82"
+       ],
+       "symbol": "xec524d671e"
+      },
+      {
+       "family": "momentum",
+       "kind": "declare_relation",
+       "left": "xb69e9bba06",
+       "reason": "The outlet port is at the lowest point of the liquid region",
+       "relationKind": "definition",
+       "right": "floorElevation"
+      },
+      {
+       "family": "momentum",
+       "kind": "substitute",
+       "relation": "operation.89",
+       "sourceSignatures": {
+        "momentum.cell.storage.pressure": "aa9adfd561f1c28503c5a75ea9825066c344390649e0da3d8afcdc3218602b84",
+        "operation.89": "33c807a03fed71a9d26ed2e49222866339e00dc661e245a5f8d462003bffe797"
+       },
+       "sources": [
+        "momentum.cell.storage.pressure"
+       ],
+       "symbol": "xb69e9bba06"
+      },
+      {
+       "family": "momentum",
+       "kind": "declare_relation",
+       "left": "x97bf854907",
+       "reason": "The pressure reference is the liquid free surface of a vertical prismatic liquid region",
+       "relationKind": "definition",
+       "right": "floorElevation+x26c0dc8118/crossSectionArea"
+      },
+      {
+       "family": "momentum",
+       "kind": "substitute",
+       "relation": "operation.91",
+       "sourceSignatures": {
+        "operation.90": "86f78b5ea07e9d866b00b3282e8708942c2ae741b8c06fa6007132289677aa80",
+        "operation.91": "f243e03ab1681fd2f5f75f064ae0e07ed69d086d4dbafcd8d8c37bc71b371baa"
+       },
+       "sources": [
+        "operation.90"
+       ],
+       "symbol": "x97bf854907"
+      },
+      {
+       "family": "momentum",
+       "kind": "declare_relation",
+       "left": "x0f3831d921",
+       "reason": "The uniform vapour-space pressure of the volume acts on the free surface",
+       "relationKind": "constitutive",
+       "right": "x8cdb384c45"
+      },
+      {
+       "family": "momentum",
+       "kind": "substitute",
+       "relation": "operation.93",
+       "sourceSignatures": {
+        "operation.92": "36038ac029051ef44c0639097c4470ab316da3b8130de84ecc1a5981ce987972",
+        "operation.93": "90ab9294e1c827b83512a6f13be112bab01865051d7b2db3f3c79d7fcd5c10ad"
+       },
+       "sources": [
+        "operation.92"
+       ],
+       "symbol": "x0f3831d921"
+      },
+      {
+       "family": "momentum",
+       "kind": "declare_relation",
+       "left": "x5d1bfc2e97",
+       "reason": "The hydrostatic column is the liquid phase of the package closure",
+       "relationKind": "constitutive",
+       "right": "x18a338bf93/x80e12199b7"
+      },
+      {
+       "family": "momentum",
+       "kind": "substitute",
+       "relation": "operation.95",
+       "sourceSignatures": {
+        "operation.94": "45f156cd1985d40bea5410263bab65545f394ff001c725a6e43434ac7f5f89aa",
+        "operation.95": "0d47ad8d56de05e6219233b8d63c2f9f7f93663f38b542350eacb687ec9b19da"
+       },
+       "sources": [
+        "operation.94"
+       ],
+       "symbol": "x5d1bfc2e97"
+      },
+      {
+       "domain": "positive",
+       "family": "momentum",
+       "kind": "declare_domain",
+       "reason": "The drawn liquid phase is present: positive liquid volume",
+       "sourceSignatures": {
+        "operation.96": "6661d7340cf80bb7762527e236d55648fd83da607d09ef39ba9c535df7b5fef5"
+       },
+       "sources": [
+        "operation.96"
+       ],
+       "symbol": "x26c0dc8118"
+      },
+      {
+       "family": "momentum",
+       "kind": "substitute",
+       "relation": "operation.66",
+       "sourceSignatures": {
+        "momentum.pipe.path.pressure-form": "0e7168a4cea7fd8e165e747ea897d58f0dbc0fe97fd7fac39e205d8f751cdd25",
+        "operation.66": "620e9d7112c0e3069320552b8021eb5ead1022d104ec979fe682e63d8f2f54ba"
+       },
+       "sources": [
+        "momentum.pipe.path.pressure-form"
+       ],
+       "symbol": "xae7177aa0b"
+      },
+      {
+       "family": "momentum",
+       "kind": "declare_relation",
+       "left": "xba1636b258",
+       "reason": "Continuous pressure at the shared material port",
+       "relationKind": "constraint",
+       "right": "xe6fbc3870c"
+      },
+      {
+       "family": "momentum",
+       "kind": "substitute",
+       "relation": "operation.99",
+       "sourceSignatures": {
+        "operation.98": "c2e778932fa47bf8bce8482dcd409bb75166a4aa74caf1ea3c8a997201797cc7",
+        "operation.99": "686ee63080ae048f942125b1e178b782002953857d2a8903299b754295756874"
+       },
+       "sources": [
+        "operation.98"
+       ],
+       "symbol": "xba1636b258"
+      },
+      {
+       "family": "momentum",
+       "kind": "substitute",
+       "relation": "operation.96",
+       "sourceSignatures": {
+        "operation.100": "c31e735e9437fa66288c1da0ddf15d97e419928a1ba1b41532b3b86247b48fb3",
+        "operation.96": "6661d7340cf80bb7762527e236d55648fd83da607d09ef39ba9c535df7b5fef5"
+       },
+       "sources": [
+        "operation.100"
+       ],
+       "symbol": "xe6fbc3870c"
+      },
+      {
+       "family": "momentum",
+       "kind": "substitute",
+       "relation": "operation.64",
+       "sourceSignatures": {
+        "momentum.pipe.path.darcy-weisbach": "fb77dfff72649b0f8732a04bfe8a18cd42bfc08ed6224dff2ed14ac544a91667",
+        "operation.64": "1df1fe84c575f12ed17c5ffe6cd904ac2dc0f53483ea3865ea67907cce4ba96a"
+       },
+       "sources": [
+        "momentum.pipe.path.darcy-weisbach"
+       ],
+       "symbol": "x11b26c8f8d"
+      },
+      {
+       "family": "momentum",
+       "kind": "declare_relation",
+       "left": "x82ab543c7b",
+       "reason": "Definition: hydraulic diameter of the declared circular section",
+       "relationKind": "definition",
+       "right": "(4*x89a6587e76/pi)^(1/2)"
+      },
+      {
+       "family": "momentum",
+       "kind": "substitute",
+       "relation": "operation.103",
+       "sourceSignatures": {
+        "operation.102": "6f94c6e707d5819837305426a54bfdb418af524f70a1fae5aadf76ba1cc95dac",
+        "operation.103": "29149b8898a3d175c3e0f1d89a6d7a0d7d8576fff0261806312298c3cdda2b64"
+       },
+       "sources": [
+        "operation.102"
+       ],
+       "symbol": "x82ab543c7b"
+      },
+      {
+       "family": "momentum",
+       "kind": "declare_relation",
+       "left": "x867521b3f7",
+       "reason": "Distributed wall friction is negligible against the local loss; the irreversible loss is the local-loss term",
+       "relationKind": "constitutive",
+       "right": "0",
+       "source": {
+        "citation": "Laminar circular-section friction f_D = 64/Re (Hagen-Poiseuille), hence f_D L/D_h = 16 pi mu L/F",
+        "kind": "order-of-magnitude bound",
+        "validRange": "F about 1e-3 kg/s, L = 0.4 m, D_h = 3.99 mm and a liquid viscosity of at most 0.8 mPa s (estimate, 320-345 K) give Re <= 800 and f_D L/D_h <= 16, at most 1.3 % of K = 1250. The quadratic local loss is a contraction loss whose throat Reynolds number (throat about 0.9 mm) is about 2.5e3-4e3."
+       }
+      },
+      {
+       "family": "momentum",
+       "kind": "substitute",
+       "relation": "operation.105",
+       "sourceSignatures": {
+        "operation.104": "dcd011954257bd50c275e90bb58c0369c7fe82f9e2d8d0ff745bd771f9836603",
+        "operation.105": "fcebc1b38e3e42ffd7e1b84467eae04632e15de5347135a74db1956777420ad8"
+       },
+       "sources": [
+        "operation.104"
+       ],
+       "symbol": "x867521b3f7"
+      },
+      {
+       "family": "momentum",
+       "kind": "substitute",
+       "relation": "operation.106",
+       "sourceSignatures": {
+        "operation.101": "5c46cbf928c4602faff3780c2d56d806e97c5a748ee865fd03d1a2ffc94137eb",
+        "operation.106": "97ee18e9285d181421cfdb0473c438955d2c4ddcc894d4cf3e794fe6c66e5011"
+       },
+       "sources": [
+        "operation.101"
+       ],
+       "symbol": "x08b6932918"
+      },
+      {
+       "family": "momentum",
+       "kind": "declare_relation",
+       "left": "xfb439985c6",
+       "reason": "Prescribed exterior pressure at the discharge port",
+       "relationKind": "constitutive",
+       "right": "outletPressure"
+      },
+      {
+       "family": "momentum",
+       "kind": "substitute",
+       "relation": "operation.108",
+       "sourceSignatures": {
+        "operation.107": "77626c1db7f6b7d72b35e45b7ce44407fbfe1d18fab8ece271b1d96d95cb72be",
+        "operation.108": "b8f0c345b2b0b2615f70a45997e6381ca098bd8af9f285edb7170ce8d53306e1"
+       },
+       "sources": [
+        "operation.107"
+       ],
+       "symbol": "xfb439985c6"
+      },
+      {
+       "family": "momentum",
+       "kind": "declare_relation",
+       "left": "x4635f3498f",
+       "reason": "No applied pressure drive or shaft work on the path",
+       "relationKind": "constitutive",
+       "right": "0"
+      },
+      {
+       "family": "momentum",
+       "kind": "substitute",
+       "relation": "operation.110",
+       "sourceSignatures": {
+        "operation.109": "006d12b05758558e9b62777bd409f4f5470972d0484e971b2da6fe0f142a7b90",
+        "operation.110": "ef9c2f6c6a78d4322bf0d28b9f383f0610f7f473dcfad1c0825ff1881e3c5ef1"
+       },
+       "sources": [
+        "operation.109"
+       ],
+       "symbol": "x4635f3498f"
+      },
+      {
+       "family": "momentum",
+       "kind": "declare_relation",
+       "left": "x9bdfc4b972",
+       "reason": "The path carries the drawn liquid phase: its reference density is the donor liquid density. Quasi-constant density: the path mass storage A L |d rho/dt| / F is neglected (monitored below 1e-3)",
+       "relationKind": "constitutive",
+       "right": "x18a338bf93/x80e12199b7"
+      },
+      {
+       "family": "momentum",
+       "kind": "substitute",
+       "relation": "operation.112",
+       "sourceSignatures": {
+        "operation.111": "68b690381fcdf68bff8fd762eb0fbe6fb3cc554596980a9f1247133669fd600f",
+        "operation.112": "bcefdf0c4a3e0298d87eb2c6d505caad61057ec0a6de6eac72a2b537a4c96a38"
+       },
+       "sources": [
+        "operation.111"
+       ],
+       "symbol": "x9bdfc4b972"
+      },
+      {
+       "family": "momentum",
+       "kind": "declare_relation",
+       "left": "x6778fb906f",
+       "reason": "Horizontal discharge path: equal endpoint elevations",
+       "relationKind": "definition",
+       "right": "xa3a556e82a"
+      },
+      {
+       "family": "momentum",
+       "kind": "substitute",
+       "relation": "operation.114",
+       "sourceSignatures": {
+        "operation.113": "4b3406f2ab8aac91a425f1a89e75dc34eee98a494ce5164df73ca573ab58b365",
+        "operation.114": "1a9d82a35a7d7428f9960588d8694a30f7deb9838e0eeb5addcc575159a3225b"
+       },
+       "sources": [
+        "operation.113"
+       ],
+       "symbol": "x6778fb906f"
+      },
+      {
+       "family": "momentum",
+       "kind": "isolate",
+       "sourceSignatures": {
+        "operation.115": "ff32edca288304e87ab6a59654f04803939559a208740f207e1ec461185f632c"
+       },
+       "sources": [
+        "operation.115"
+       ],
+       "symbol": "xce68eee1f7"
+      },
+      {
+       "domain": "positive",
+       "family": "momentum",
+       "kind": "declare_domain",
+       "reason": "Forward-flow regime of the loss closure and of the donor orientation",
+       "sourceSignatures": {
+        "operation.106": "97ee18e9285d181421cfdb0473c438955d2c4ddcc894d4cf3e794fe6c66e5011"
+       },
+       "sources": [
+        "operation.106"
+       ],
+       "symbol": "liquidMassFlow"
+      },
+      {
+       "domain": "positive",
+       "family": "momentum",
+       "kind": "declare_domain",
+       "reason": "Positive geometry and loss coefficient",
+       "sourceSignatures": {
+        "operation.116": "40fee18c21b5999e94d303d9edb0ffe5c905043681674221b5ea4fd5dd422c86"
+       },
+       "sources": [
+        "operation.116"
+       ],
+       "symbol": "crossSectionArea"
+      },
+      {
+       "domain": "positive",
+       "family": "momentum",
+       "kind": "declare_domain",
+       "reason": "Positive geometry and loss coefficient",
+       "sourceSignatures": {
+        "operation.116": "40fee18c21b5999e94d303d9edb0ffe5c905043681674221b5ea4fd5dd422c86"
+       },
+       "sources": [
+        "operation.116"
+       ],
+       "symbol": "x311e8b4001"
+      },
+      {
+       "domain": "positive",
+       "family": "momentum",
+       "kind": "declare_domain",
+       "reason": "Positive path geometry",
+       "sourceSignatures": {
+        "operation.116": "40fee18c21b5999e94d303d9edb0ffe5c905043681674221b5ea4fd5dd422c86"
+       },
+       "sources": [
+        "operation.116"
+       ],
+       "symbol": "x89a6587e76"
+      },
+      {
+       "domain": "positive",
+       "family": "momentum",
+       "kind": "declare_domain",
+       "reason": "Positive path geometry",
+       "sourceSignatures": {
+        "operation.116": "40fee18c21b5999e94d303d9edb0ffe5c905043681674221b5ea4fd5dd422c86"
+       },
+       "sources": [
+        "operation.116"
+       ],
+       "symbol": "x517d953ee1"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "matter.pipe.1.stationary",
+       "sourceSignatures": {
+        "matter.pipe.1.fixed-volume-apply": "3d962a3ec47ef9ad9268682334c78ff2a7a18d33ada30f8246a02335b6b82176",
+        "matter.pipe.1.stationary": "9ef3f40ae9a3defcbf306a0b7c7b9189dec3c6356eefe9fe93009fdc240257d4"
+       },
+       "sources": [
+        "matter.pipe.1.fixed-volume-apply"
+       ],
+       "symbol": "x2cf166f444"
+      },
+      {
+       "family": "matter",
+       "kind": "isolate",
+       "sourceSignatures": {
+        "operation.122": "e410f49ddb607f89c6bfb9cfd56cd1d658bd0dd79110b48be4d94ed4bb40104f"
+       },
+       "sources": [
+        "operation.122"
+       ],
+       "symbol": "xcaf80d1207"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "operation.17",
+       "sourceSignatures": {
+        "operation.123": "0a510ad5cc6a886385b9f5b6fe6065a35a2b4d9f1ed2bb61d1830e0ed5d50e1a",
+        "operation.17": "998568e0197229302bb937b22d6727c0fa77305b12bf81217937aa45b189db0a"
+       },
+       "sources": [
+        "operation.123"
+       ],
+       "symbol": "x11b26c8f8d"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "matter.pipe.2.stationary",
+       "sourceSignatures": {
+        "matter.pipe.2.fixed-volume-apply": "f9745b07175f8de2dc97172e3bdb9bae6f2fb30cc6fe82ef91aa263c5ea72218",
+        "matter.pipe.2.stationary": "b2e6188103e56f0664b9a8a8559c25841e6b2dc681ac3e410d49cdd5abb05f2c"
+       },
+       "sources": [
+        "matter.pipe.2.fixed-volume-apply"
+       ],
+       "symbol": "xc0e34d2def"
+      },
+      {
+       "family": "matter",
+       "kind": "isolate",
+       "sourceSignatures": {
+        "operation.125": "d7cfae5e63e8748d131c4b213f36e9acd7903cadddf60a4214d7ac0aa282ddcc"
+       },
+       "sources": [
+        "operation.125"
+       ],
+       "symbol": "x904f7c0589"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "operation.30",
+       "sourceSignatures": {
+        "operation.126": "fc776c018f23420cbb0a4fdcaedbd442a0a06aecbb4d643cd0027f6594baa1de",
+        "operation.30": "cca59e66edc877078250d8af4e07bf2cf4fefc02f06b3e27b51f7cb177832999"
+       },
+       "sources": [
+        "operation.126"
+       ],
+       "symbol": "xec2fc31592"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "matter.pipe.3.stationary",
+       "sourceSignatures": {
+        "matter.pipe.3.fixed-volume-apply": "9cec5b5e6bdbe8ed63549ac2cad525e6605718ae386ebb334fdf9ed3f7a8063a",
+        "matter.pipe.3.stationary": "df986e6608de021ae0427dc48ce9ff0acc0bf8aef3e3a305a8192450826d6558"
+       },
+       "sources": [
+        "matter.pipe.3.fixed-volume-apply"
+       ],
+       "symbol": "x913730a5cd"
+      },
+      {
+       "family": "matter",
+       "kind": "isolate",
+       "sourceSignatures": {
+        "operation.128": "1e18256afc42817ae100f0ebeac4b6f35033f0ff244ca6db87a2c7d867e1c39d"
+       },
+       "sources": [
+        "operation.128"
+       ],
+       "symbol": "x0af9962c0c"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "operation.43",
+       "sourceSignatures": {
+        "operation.129": "2c7c78f35b8ec1e19c93274928823d32962223c66b15c9de875dc0df341a5b6c",
+        "operation.43": "242d09567fd76a115e0def9cfe678b3f1172f64c8d96916f7ef23f09468880a5"
+       },
+       "sources": [
+        "operation.129"
+       ],
+       "symbol": "xf63ca6187e"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "matter.pipe.4.stationary",
+       "sourceSignatures": {
+        "matter.pipe.4.fixed-volume-apply": "9eb14c88e9e5523f85ad0bd90b3f9accceffd2dff61d48fed58e18cefaf66001",
+        "matter.pipe.4.stationary": "ae4ab8c0ab4285356be04dc12fd11b81e73a7919328584b398ef8c63eda92a5f"
+       },
+       "sources": [
+        "matter.pipe.4.fixed-volume-apply"
+       ],
+       "symbol": "xe6e978abf9"
+      },
+      {
+       "family": "matter",
+       "kind": "isolate",
+       "sourceSignatures": {
+        "operation.131": "49ecb927e69bda1c9794b9b1e6ec44324b68ce7f3dfabddfa8b515deb9b0a52c"
+       },
+       "sources": [
+        "operation.131"
+       ],
+       "symbol": "x722fd7f36a"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "operation.56",
+       "sourceSignatures": {
+        "operation.132": "ba067443330326fc8415cc89a20e7c78f939fc89bb47127e38af0a6e96e6de00",
+        "operation.56": "2ba662e9605956ade9461aa76e8fa27c59f13c25a184c09c87f89a6a1affc969"
+       },
+       "sources": [
+        "operation.132"
+       ],
+       "symbol": "x232c5f46da"
+      },
+      {
+       "family": "energy",
+       "kind": "substitute",
+       "relation": "energy.pipe.zero-total-rate",
+       "sourceSignatures": {
+        "energy.pipe.closed-0.11": "2b42e05d408fa75cf8907fc843aec2193c83236a8f3ca5acebab2dbed1a547de",
+        "energy.pipe.zero-total-rate": "1275c7b5e86591b5e38404e16a540055b8ffc3be6b0c456c96fed6c03593e68f"
+       },
+       "sources": [
+        "energy.pipe.closed-0.11"
+       ],
+       "symbol": "x2c5bcf92a4"
+      },
+      {
+       "family": "energy",
+       "kind": "substitute",
+       "relation": "operation.17",
+       "sourceSignatures": {
+        "operation.134": "91cf93521a89cf79366e749f3579c6604e30aefb13d097a72f5d82da9c457c78",
+        "operation.17": "998568e0197229302bb937b22d6727c0fa77305b12bf81217937aa45b189db0a"
+       },
+       "sources": [
+        "operation.134"
+       ],
+       "symbol": "x11b26c8f8d"
+      },
+      {
+       "family": "energy",
+       "kind": "substitute",
+       "relation": "operation.124",
+       "sourceSignatures": {
+        "operation.124": "54bfc43a70cb960ba5a08a52323e1f42e79907a45ae04235a97aa4db6c4e0ab4",
+        "operation.135": "ffdcc090bb723b4e1c506be33fa2d14cffeedde16c4bed3daa861ee013c15f6b"
+       },
+       "sources": [
+        "operation.135"
+       ],
+       "symbol": "xcaf80d1207"
+      },
+      {
+       "family": "energy",
+       "kind": "substitute",
+       "relation": "operation.30",
+       "sourceSignatures": {
+        "operation.136": "e191b0931aeb25bafc9d25f478e8f27e2efdb1720b56c93621ce192254081180",
+        "operation.30": "cca59e66edc877078250d8af4e07bf2cf4fefc02f06b3e27b51f7cb177832999"
+       },
+       "sources": [
+        "operation.136"
+       ],
+       "symbol": "xec2fc31592"
+      },
+      {
+       "family": "energy",
+       "kind": "substitute",
+       "relation": "operation.127",
+       "sourceSignatures": {
+        "operation.127": "c2bf6e98870bf73a35a6a44b40555f729eee316a3bee8a38f20019e100384b12",
+        "operation.137": "6111c5cdf0ee2aa8fe4571b711d99ae667dced2d00c239e0b1683ad681a42041"
+       },
+       "sources": [
+        "operation.137"
+       ],
+       "symbol": "x904f7c0589"
+      },
+      {
+       "family": "energy",
+       "kind": "substitute",
+       "relation": "operation.43",
+       "sourceSignatures": {
+        "operation.138": "cf58f98c4ad0404db2fac1c426a108001aedefc216a2e1913154a8c82c4a04ef",
+        "operation.43": "242d09567fd76a115e0def9cfe678b3f1172f64c8d96916f7ef23f09468880a5"
+       },
+       "sources": [
+        "operation.138"
+       ],
+       "symbol": "xf63ca6187e"
+      },
+      {
+       "family": "energy",
+       "kind": "substitute",
+       "relation": "operation.130",
+       "sourceSignatures": {
+        "operation.130": "4b3238831173ee72cc081bf9b38299e21fdd6e8ae76196572597a349ce38df93",
+        "operation.139": "60fe133ee625df9423e804f8a210181467c57544e00c2d8635a8235f5db146da"
+       },
+       "sources": [
+        "operation.139"
+       ],
+       "symbol": "x0af9962c0c"
+      },
+      {
+       "family": "energy",
+       "kind": "substitute",
+       "relation": "operation.56",
+       "sourceSignatures": {
+        "operation.140": "d252284c146e277baadccc844723fccb840792794bf4b6e27e482f50d249aa06",
+        "operation.56": "2ba662e9605956ade9461aa76e8fa27c59f13c25a184c09c87f89a6a1affc969"
+       },
+       "sources": [
+        "operation.140"
+       ],
+       "symbol": "x232c5f46da"
+      },
+      {
+       "family": "energy",
+       "kind": "substitute",
+       "relation": "operation.133",
+       "sourceSignatures": {
+        "operation.133": "b8c51a37a035db376d83518a1512f9d7ff56a0ac9e12b5dd3cdb38f05952cab1",
+        "operation.141": "6284ee374d0143807ff073fcff8422e985a617d922a00ffc9bdc7623295d4944"
+       },
+       "sources": [
+        "operation.141"
+       ],
+       "symbol": "x722fd7f36a"
+      },
+      {
+       "family": "energy",
+       "kind": "substitute",
+       "relation": "operation.81",
+       "sourceSignatures": {
+        "operation.142": "bd8389571700fec55b91aa1fd69c5bb6c2f38c796de5c6c93e5ff4d977b7b768",
+        "operation.81": "6b4a5c3409cc2636b3d35883a3eedc0b0f5eba9d43621b1baab7039f666be76e"
+       },
+       "sources": [
+        "operation.142"
+       ],
+       "symbol": "x1fbbee4aa2"
+      },
+      {
+       "family": "energy",
+       "kind": "isolate",
+       "sourceSignatures": {
+        "operation.143": "4fb755e6ddbe2405f80f1b7138572aeb6010b6a1c08b47d7481a794b3bcc6316"
+       },
+       "sources": [
+        "operation.143"
+       ],
+       "symbol": "x224953c4b2"
+      },
+      {
+       "family": "energy",
+       "kind": "substitute",
+       "relation": "operation.85",
+       "sourceSignatures": {
+        "operation.85": "16d70874c0409081a7c26755706e0df47af252061b7bd1d502b349d705745827",
+        "operation.88": "b87ced32dae3d9a66d592c9a85df72daea77d243c29baeacd7f893d7630d7ccf"
+       },
+       "sources": [
+        "operation.88"
+       ],
+       "symbol": "wallHeat"
+      },
+      {
+       "family": "matter",
+       "kind": "isolate",
+       "sourceSignatures": {
+        "reaction.cell.amount.1": "3d7c2e7df16fed981a212e6725da0fac8358320b11d7bb588e81afafb2167d95"
+       },
+       "sources": [
+        "reaction.cell.amount.1"
+       ],
+       "symbol": "x7cfa18b2c8"
+      },
+      {
+       "family": "matter",
+       "kind": "isolate",
+       "sourceSignatures": {
+        "reaction.cell.amount.2": "3cc99cd22f65788c7e02194db22348bc896bdd3fe0364342fe7b2fb0d7f8e399"
+       },
+       "sources": [
+        "reaction.cell.amount.2"
+       ],
+       "symbol": "xb79229350b"
+      },
+      {
+       "family": "matter",
+       "kind": "isolate",
+       "sourceSignatures": {
+        "reaction.cell.amount.3": "cbd680beaa4ad502cc0d5df5410939974e8c0d10ff100de962ad9c086b180d6c"
+       },
+       "sources": [
+        "reaction.cell.amount.3"
+       ],
+       "symbol": "xfc3de12178"
+      },
+      {
+       "family": "matter",
+       "kind": "isolate",
+       "sourceSignatures": {
+        "reaction.cell.amount.4": "45ef7c726f83a3990bdb6e16ddd2ed7277bbe57f06b106286d565b27ccda091d"
+       },
+       "sources": [
+        "reaction.cell.amount.4"
+       ],
+       "symbol": "x60096fb487"
+      },
+      {
+       "domain": "real",
+       "family": "energy",
+       "kind": "declare_domain",
+       "reason": "Liquid-only premise of the thermodynamic journal: the temperature must stay below the bubble temperature of the liquid at the volume pressure. Not monitored at run time; the lowest-boiling azeotrope of the four species is near 343 K at 101.3 kPa",
+       "sourceSignatures": {
+        "operation.145": "aa17ef3d20c6cf9b73ead743b88147090faad562b22919f079e4b02dd92654a2"
+       },
+       "sources": [
+        "operation.145"
+       ],
+       "symbol": "xe19bda88c1"
+      },
+      {
+       "domain": "positive",
+       "family": "momentum",
+       "kind": "declare_domain",
+       "reason": "Uniform-pressure premise: energy, closure and kinetics use the uniform vapour-space pressure; the hydrostatic increase in the liquid (a few kPa, about 2e-3 K on the caloric state) is neglected",
+       "sourceSignatures": {
+        "operation.116": "40fee18c21b5999e94d303d9edb0ffe5c905043681674221b5ea4fd5dd422c86"
+       },
+       "sources": [
+        "operation.116"
+       ],
+       "symbol": "x8cdb384c45"
+      },
+      {
+       "domain": "positive",
+       "family": "momentum",
+       "kind": "declare_domain",
+       "reason": "Constant-molar-volume premise of the package: pure-component liquid molar volumes at 298.15 K with ideal mixing; about 4-5 % density error at 335-340 K in the control volume, concentrations and holdup",
+       "sourceSignatures": {
+        "operation.116": "40fee18c21b5999e94d303d9edb0ffe5c905043681674221b5ea4fd5dd422c86"
+       },
+       "sources": [
+        "operation.116"
+       ],
+       "symbol": "x80e12199b7"
+      },
+      {
+       "family": "matter",
+       "kind": "declare_symbol",
+       "name": "coolantFlow",
+       "unit": "kg/s"
+      },
+      {
+       "dependencies": [
+        "x8a44e00a1e"
+       ],
+       "family": "matter",
+       "kind": "declare_function",
+       "name": "coolantReturnFlow",
+       "unit": "kg/s"
+      },
+      {
+       "family": "matter",
+       "kind": "declare_relation",
+       "left": "xc22c7fdaf9",
+       "reason": "Prescribed service supply: the coolant pump sets the mass flow entering the jacket",
+       "relationKind": "constitutive",
+       "right": "coolantFlow"
+      },
+      {
+       "dependencies": [
+        "x8a44e00a1e"
+       ],
+       "family": "matter",
+       "kind": "declare_function",
+       "name": "coolantMassFraction",
+       "unit": "1"
+      },
+      {
+       "dependencies": [
+        "x8a44e00a1e"
+       ],
+       "family": "matter",
+       "kind": "declare_function",
+       "name": "coolantMoleFraction",
+       "unit": "1"
+      },
+      {
+       "family": "matter",
+       "kind": "declare_relation",
+       "left": "coolantMoleFraction",
+       "reason": "Phase donor: the return stream has the liquid phase composition of the jacket",
+       "relationKind": "constitutive",
+       "right": "x8beafbce6a"
+      },
+      {
+       "family": "matter",
+       "kind": "declare_relation",
+       "left": "coolantMassFraction*x627ec243d2",
+       "reason": "Definition of mass fraction from mole fraction, component molar mass and the phase mean molar mass",
+       "relationKind": "definition",
+       "right": "coolantMoleFraction*x9fd5b58c45"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "operation.158",
+       "sourceSignatures": {
+        "operation.158": "f16dd9861144954b2325ff99dda51948ac9f07cda625a068918fbbdd9a3f1674",
+        "operation.159": "339100fc3aa7c47c743037d8d0d5cde42ddd9b60702b41d07e9d85bf9a48f4c2"
+       },
+       "sources": [
+        "operation.159"
+       ],
+       "symbol": "x99755f14bf"
+      },
+      {
+       "family": "matter",
+       "kind": "isolate",
+       "sourceSignatures": {
+        "operation.160": "1acd4126a30df92154ab043d1dde7b322479bd6bdb44c997c4dae8f7186ca40b"
+       },
+       "sources": [
+        "operation.160"
+       ],
+       "symbol": "coolantMassFraction"
+      },
+      {
+       "family": "matter",
+       "kind": "declare_relation",
+       "left": "xc89ab6b6df",
+       "reason": "Definition of component mass flow of the return stream for a common convective stream velocity",
+       "relationKind": "definition",
+       "right": "coolantReturnFlow*coolantMassFraction"
+      },
+      {
+       "family": "matter",
+       "kind": "declare_relation",
+       "left": "coolantReturnFlow",
+       "reason": "Filled rigid jacket of a liquid whose molar volume the package takes as constant: the liquid volume cannot change, so the return line carries the supply rate",
+       "relationKind": "constitutive",
+       "right": "coolantFlow"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "operation.161",
+       "sourceSignatures": {
+        "operation.161": "f4aef453bbd60e7d736057b32a1ecdf4cbd3a9e8572ef482f9bb110ed3ae6f28",
+        "operation.162": "68ab6a42dbedb6cedb1bd33f43f9dab1f2ec0451ade1c23ce18fbbdb363251b5"
+       },
+       "sources": [
+        "operation.162"
+       ],
+       "symbol": "x973171aff8"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "operation.163",
+       "sourceSignatures": {
+        "operation.163": "7c2a752d6267c142603d0cc65af599ef96147e0e3dc7ad33f184dae66e44baaf",
+        "operation.164": "b58001606f06a845fb5aa929303af4cfefac59b07bd3e2a457df7c056d8abaf7"
+       },
+       "sources": [
+        "operation.164"
+       ],
+       "symbol": "xea2699df0e"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "operation.155",
+       "sourceSignatures": {
+        "matter.jacket.4.closed": "eff38aeee6146d245ab54965ea4bbbb8e4f0bef88dbf29146b11db858c947ef7",
+        "operation.155": "314584796cd12a5e5e0a58f41486d431ce3bf51957ddd4321904c855f3d9e709"
+       },
+       "sources": [
+        "matter.jacket.4.closed"
+       ],
+       "symbol": "xc22c7fdaf9"
+      },
+      {
+       "family": "matter",
+       "kind": "substitute",
+       "relation": "operation.165",
+       "sourceSignatures": {
+        "operation.165": "c57a2f26994f490f2bbfe1e8b667ae39bccf0ebddf55d57a0f48cb69534c7139",
+        "operation.166": "22032a59777b96486b9ba68c9ef0b37cb95bc3273912fe21a1c8a881c196c4e2"
+       },
+       "sources": [
+        "operation.166"
+       ],
+       "symbol": "xc89ab6b6df"
+      },
+      {
+       "family": "energy",
+       "kind": "substitute",
+       "relation": "operation.155",
+       "sourceSignatures": {
+        "energy.jacket.enthalpy-balance": "856c2b052fef93d77a5587ab1bb83b0236a63950a9a6a6d2f3c4d1e7b2e8ad80",
+        "operation.155": "314584796cd12a5e5e0a58f41486d431ce3bf51957ddd4321904c855f3d9e709"
+       },
+       "sources": [
+        "energy.jacket.enthalpy-balance"
+       ],
+       "symbol": "xc22c7fdaf9"
+      },
+      {
+       "family": "energy",
+       "kind": "substitute",
+       "relation": "operation.165",
+       "sourceSignatures": {
+        "operation.165": "c57a2f26994f490f2bbfe1e8b667ae39bccf0ebddf55d57a0f48cb69534c7139",
+        "operation.168": "adb4c2f8de5ea999f1cc542de259004314556779c029f5f7a202e88aae815620"
+       },
+       "sources": [
+        "operation.168"
+       ],
+       "symbol": "xc89ab6b6df"
+      },
+      {
+       "family": "energy",
+       "kind": "declare_relation",
+       "left": "xd39ec3bd61",
+       "reason": "Inlet stream specific enthalpy at its declared exterior state (package)",
+       "relationKind": "constitutive",
+       "right": "x821a4c6ab7"
+      },
+      {
+       "family": "energy",
+       "kind": "substitute",
+       "relation": "operation.170",
+       "sourceSignatures": {
+        "operation.169": "3f1db881ed1e36886a57af1d320dbca6e07527b196d5653936264d5e1742798e",
+        "operation.170": "8e5a7dad240837425deee701e4a5965706818d85ceb20fa5fe3cf6df98a6635c"
+       },
+       "sources": [
+        "operation.169"
+       ],
+       "symbol": "xd39ec3bd61"
+      },
+      {
+       "dependencies": [
+        "x8a44e00a1e"
+       ],
+       "family": "energy",
+       "kind": "declare_function",
+       "name": "coolantMolarEnthalpy",
+       "unit": "J/mol"
+      },
+      {
+       "family": "energy",
+       "kind": "declare_relation",
+       "left": "coolantMolarEnthalpy",
+       "reason": "The return stream draws the jacket liquid at its thermodynamic state (negligible stream kinetic energy; the pressure dependence of the liquid enthalpy over the loop pressure change is neglected)",
+       "relationKind": "constitutive",
+       "right": "xdfccd2910b"
+      },
+      {
+       "family": "energy",
+       "kind": "declare_relation",
+       "left": "x1fd7b5c5df*x627ec243d2",
+       "reason": "Definition of molar enthalpy from mass-specific enthalpy and the mean molar mass",
+       "relationKind": "definition",
+       "right": "coolantMolarEnthalpy"
+      },
+      {
+       "family": "energy",
+       "kind": "substitute",
+       "relation": "operation.173",
+       "sourceSignatures": {
+        "operation.173": "b015cb17e5fbc132afbcf55b555f08a40eaa9f878df67b3c9c239145dff6e43c",
+        "operation.174": "c766979b209c142528d279a63eef249ff98fd1db6ce547f1bd1d3b3353d9e033"
+       },
+       "sources": [
+        "operation.174"
+       ],
+       "symbol": "x96ab7edb29"
+      },
+      {
+       "family": "energy",
+       "kind": "isolate",
+       "sourceSignatures": {
+        "operation.175": "269ac22d5af0fe501e8611b9458718ab6f1808a00dbb844fdafcce2619d0e9d0"
+       },
+       "sources": [
+        "operation.175"
+       ],
+       "symbol": "x1fd7b5c5df"
+      },
+      {
+       "family": "energy",
+       "kind": "substitute",
+       "relation": "operation.176",
+       "sourceSignatures": {
+        "operation.171": "74eb42de22de9ae779e6de9f38b46f04699320898e396e8aef0b86a280cef698",
+        "operation.176": "a82c6b0e503806e557c0ebc672b5775fa375c48031579b5299135742bcffa0ed"
+       },
+       "sources": [
+        "operation.171"
+       ],
+       "symbol": "x1fd7b5c5df"
+      },
+      {
+       "dependencies": [
+        "x8a44e00a1e"
+       ],
+       "family": "energy",
+       "kind": "declare_function",
+       "name": "ambientHeat",
+       "unit": "W"
+      },
+      {
+       "family": "energy",
+       "kind": "declare_relation",
+       "left": "x6aeb88ae59",
+       "reason": "Partition of the jacket boundary heat into its two conductive parts: the wall shared with the process volume (positive into the jacket) and the outer casing",
+       "relationKind": "definition",
+       "right": "wallHeat+ambientHeat"
+      },
+      {
+       "family": "energy",
+       "kind": "declare_relation",
+       "left": "ambientHeat",
+       "reason": "Insulated outer casing: no heat crosses the jacket boundary to the surroundings",
+       "relationKind": "constraint",
+       "right": "0"
+      },
+      {
+       "family": "energy",
+       "kind": "substitute",
+       "relation": "operation.179",
+       "sourceSignatures": {
+        "operation.177": "f0e55ce2cf3cb2f07f8b0d47524d27e336853732bd8ff7fe4868380f79ccbe0f",
+        "operation.179": "0d27885babf9018a84c00c4316edd47b713256222201ad061ffb3cecee5a7a76"
+       },
+       "sources": [
+        "operation.177"
+       ],
+       "symbol": "x6aeb88ae59"
+      },
+      {
+       "family": "energy",
+       "kind": "substitute",
+       "relation": "operation.180",
+       "sourceSignatures": {
+        "operation.180": "0342ecfe2727bfa17243117aff8026c3e58772dcefcb4c6bad852e6e7e6e1cc0",
+        "operation.181": "b77e05b99d4df65facec629ef9e92bf791ca51ed8a73b4ccc5109b857b7d824d"
+       },
+       "sources": [
+        "operation.181"
+       ],
+       "symbol": "x59a1fc712f"
+      },
+      {
+       "family": "energy",
+       "kind": "substitute",
+       "relation": "operation.85",
+       "sourceSignatures": {
+        "operation.182": "3bdbc042ade78345d4b205cab5914beae42dffcf3762a4e40e134e1aab9692cf",
+        "operation.85": "16d70874c0409081a7c26755706e0df47af252061b7bd1d502b349d705745827"
+       },
+       "sources": [
+        "operation.182"
+       ],
+       "symbol": "wallHeat"
+      },
+      {
+       "domain": "nonnegative",
+       "family": "energy",
+       "kind": "declare_domain",
+       "reason": "Forward service flow: the donor orientation of the return stream",
+       "sourceSignatures": {
+        "operation.183": "c69a8c4b625fa232f908fe855c2b5b19b5a3fcd1aa7701828115d18da34cfc8f"
+       },
+       "sources": [
+        "operation.183"
+       ],
+       "symbol": "coolantFlow"
+      },
+      {
+       "family": "energy",
+       "kind": "combine",
+       "sourceSignatures": {
+        "operation.182": "3bdbc042ade78345d4b205cab5914beae42dffcf3762a4e40e134e1aab9692cf",
+        "operation.88": "b87ced32dae3d9a66d592c9a85df72daea77d243c29baeacd7f893d7630d7ccf"
+       },
+       "sources": [
+        "operation.88",
+        "operation.182"
+       ]
+      }
+     ],
+     "version": 1
+    },
+    "kineticReactions": {
+     "format": "rage.kinetic-reactions",
+     "version": 2,
+     "volumes": {
+      "cell": {
+       "elements": {
+        "C": {
+         "1": 2,
+         "2": 2,
+         "3": 4,
+         "4": 0
+        },
+        "H": {
+         "1": 6,
+         "2": 4,
+         "3": 8,
+         "4": 2
+        },
+        "O": {
+         "1": 1,
+         "2": 2,
+         "3": 2,
+         "4": 1
+        }
+       },
+       "molarMassDataIds": {
+        "1": "molarMass1",
+        "2": "molarMass2",
+        "3": "molarMass3",
+        "4": "molarMass4"
+       },
+       "reactions": [
+        {
+         "arrhenius": {
+          "energyDataId": "activation",
+          "temperatureDataId": "rateTemperature"
+         },
+         "id": "esterification",
+         "orders": {
+          "1": 1,
+          "2": 1
+         },
+         "rateConstantDataId": "forwardRate",
+         "stoichiometry": {
+          "1": "-1",
+          "2": "-1",
+          "3": "1",
+          "4": "1"
+         }
+        },
+        {
+         "arrhenius": {
+          "energyDataId": "reverseActivation",
+          "temperatureDataId": "rateTemperature"
+         },
+         "id": "hydrolysis",
+         "orders": {
+          "3": 1,
+          "4": 1
+         },
+         "rateConstantDataId": "reverseRate",
+         "stoichiometry": {
+          "1": "1",
+          "2": "1",
+          "3": "-1",
+          "4": "-1"
+         }
+        }
+       ],
+       "volumeSource": {
+        "kind": "control_volume"
+       }
+      }
+     }
+    },
+    "materialDerivation": {
+     "format": "rage.material-derivation",
+     "version": 1,
+     "volumes": {
+      "cell": {
+       "operations": [
+        {
+         "changes": {
+          "vista": "integral"
+         },
+         "id": "step-1",
+         "title": "Integrate over the control volume · Gauss and Reynolds"
+        },
+        {
+         "changes": {
+          "vista": "cantidad"
+         },
+         "id": "step-2",
+         "title": "Define component inventories and partition the boundary into streams"
+        },
+        {
+         "changes": {
+          "restoImpermeable": true
+         },
+         "id": "step-3",
+         "title": "Impermeable boundary outside the declared streams"
+        },
+        {
+         "changes": {
+          "generacionUniforme": true
+         },
+         "id": "step-4",
+         "title": "Spatially uniform generation density"
+        },
+        {
+         "changes": {
+          "consumoUniforme": true
+         },
+         "id": "step-5",
+         "title": "Spatially uniform consumption density"
+        }
+       ],
+       "origin": "reviewed_rebuild"
+      },
+      "jacket": {
+       "operations": [
+        {
+         "changes": {
+          "campo": {
+           "consumoUniforme": false,
+           "difusion": "flujo",
+           "estacionario": false,
+           "generacionUniforme": false,
+           "sinConsumo": false,
+           "sinConveccion": false,
+           "sinDifusion": false,
+           "sinGeneracion": false,
+           "sinReaccion": true
+          }
+         },
+         "id": "step-1",
+         "title": "No chemical generation or consumption"
+        },
+        {
+         "changes": {
+          "vista": "integral"
+         },
+         "id": "step-2",
+         "title": "Integrate over the control volume · Gauss and Reynolds"
+        },
+        {
+         "changes": {
+          "vista": "cantidad"
+         },
+         "id": "step-3",
+         "title": "Define component inventories and partition the boundary into streams"
+        },
+        {
+         "changes": {
+          "restoImpermeable": true
+         },
+         "id": "step-4",
+         "title": "Impermeable boundary outside the declared streams"
+        }
+       ],
+       "origin": "reviewed_rebuild"
+      },
+      "pipe": {
+       "operations": [
+        {
+         "changes": {
+          "campo": {
+           "consumoUniforme": false,
+           "difusion": "flujo",
+           "estacionario": false,
+           "generacionUniforme": false,
+           "sinConsumo": false,
+           "sinConveccion": false,
+           "sinDifusion": false,
+           "sinGeneracion": false,
+           "sinReaccion": true
+          }
+         },
+         "id": "step-1",
+         "title": "No chemical generation or consumption"
+        },
+        {
+         "changes": {
+          "fija": true
+         },
+         "id": "step-2",
+         "title": "Fixed control-volume boundary"
+        },
+        {
+         "changes": {
+          "vista": "integral"
+         },
+         "id": "step-3",
+         "title": "Integrate over the control volume · Gauss and Reynolds"
+        },
+        {
+         "changes": {
+          "vista": "cantidad"
+         },
+         "id": "step-4",
+         "title": "Define component inventories and partition the boundary into streams"
+        },
+        {
+         "changes": {
+          "restoImpermeable": true
+         },
+         "id": "step-5",
+         "title": "Impermeable boundary outside the declared streams"
+        },
+        {
+         "changes": {
+          "sinAcumulacion": true
+         },
+         "id": "step-6",
+         "title": "Zero total accumulation · algebraic balance"
+        }
+       ],
+       "origin": "reviewed_rebuild"
+      }
+     }
+    },
+    "momentumDerivation": {
+     "format": "rage.momentum-derivation",
+     "version": 1,
+     "volumes": {
+      "cell": {
+       "operations": [
+        {
+         "changes": {
+          "pressureStress": true
+         },
+         "id": "step-1",
+         "title": "Apply: Separate pressure and viscous stress"
+        },
+        {
+         "changes": {
+          "negligibleConvection": true
+         },
+         "id": "step-2",
+         "title": "Apply: Negligible convective momentum transport"
+        },
+        {
+         "changes": {
+          "negligibleViscousStress": true
+         },
+         "id": "step-3",
+         "title": "Apply: Negligible viscous stress"
+        },
+        {
+         "changes": {
+          "zeroLocalAccumulation": true
+         },
+         "id": "step-4",
+         "title": "Apply: No local momentum accumulation"
+        },
+        {
+         "changes": {
+          "uniformGravity": true
+         },
+         "id": "step-5",
+         "title": "Apply: Uniform conservative gravity"
+        },
+        {
+         "changes": {
+          "referenceDensity": true
+         },
+         "id": "step-6",
+         "title": "Apply: Constant reference density"
+        },
+        {
+         "changes": {
+          "verticalGravity": true
+         },
+         "id": "step-7",
+         "title": "Apply: Gravity acts in the negative vertical direction"
+        },
+        {
+         "changes": {
+          "pressureReference": true
+         },
+         "id": "step-8",
+         "title": "Apply: Integrate pressure from a declared surface reference"
+        }
+       ],
+       "origin": "reviewed_rebuild"
+      },
+      "pipe": {
+       "operations": [
+        {
+         "changes": {
+          "pressureStress": true
+         },
+         "id": "step-1",
+         "title": "Decompose Cauchy stress into pressure and viscous stress"
+        },
+        {
+         "changes": {
+          "form": "integral"
+         },
+         "id": "step-2",
+         "title": "Integrate momentum conservation · Gauss and Reynolds transport"
+        },
+        {
+         "changes": {
+          "fixedBoundary": true
+         },
+         "id": "step-3",
+         "title": "Fixed control-volume boundary"
+        },
+        {
+         "changes": {
+          "uniformSections": true
+         },
+         "id": "step-4",
+         "title": "Section averages · uniform local velocity components and pressure"
+        },
+        {
+         "changes": {
+          "impermeableWall": true
+         },
+         "id": "step-5",
+         "title": "No material flux through walls · two-port mass boundary"
+        },
+        {
+         "changes": {
+          "form": "ports"
+         },
+         "id": "step-6",
+         "title": "Resolve inlet, outlet and wall momentum contributions"
+        },
+        {
+         "changes": {
+          "constantArea": true
+         },
+         "id": "step-7",
+         "title": "Straight constant-area flow path · equal port areas"
+        },
+        {
+         "changes": {
+          "referenceDensity": true
+         },
+         "id": "step-8",
+         "title": "Constant reference density over this reduced flow path"
+        },
+        {
+         "changes": {
+          "uniformGravity": true
+         },
+         "id": "step-9",
+         "title": "Uniform conservative gravity · declared elevation difference"
+        },
+        {
+         "changes": {
+          "form": "hydraulic"
+         },
+         "id": "step-10",
+         "title": "Project onto the flow direction · retain hydraulic inertance"
+        },
+        {
+         "changes": {
+          "darcyWeisbach": true
+         },
+         "id": "step-11",
+         "title": "Declare Darcy–Weisbach and local-loss constitutive closure"
+        },
+        {
+         "changes": {
+          "inletStreamId": "liquid",
+          "outletStreamId": "discharge"
+         },
+         "id": "step-12",
+         "title": "Bind momentum ports to existing material streams"
+        }
+       ],
+       "origin": "reviewed_rebuild"
+      }
+     }
+    },
+    "thermodynamicDerivation": {
+     "format": "rage.thermodynamic-derivation",
+     "version": 1,
+     "volumes": {
+      "cell": {
+       "operations": [
+        {
+         "changes": {
+          "closure": {
+           "model": {
+            "id": "unifac-dortmund-public",
+            "version": "1"
+           },
+           "packageId": "pkg",
+           "policy": {
+            "cambioInterno": "prohibido",
+            "cantidad": "monofasico",
+            "evaluacion": "equilibrio_estable",
+            "tiposPermitidos": [
+             "liquido"
+            ]
+           }
+          },
+          "densidadConstante": false,
+          "modelo": "sin_declarar",
+          "monofasico": true,
+          "sinCambioFase": true
+         },
+         "id": "step-1",
+         "title": "Select the configured equilibrium package and declared phase policy"
+        },
+        {
+         "changes": {
+          "soloLiquido": true
+         },
+         "id": "step-2",
+         "title": "Declare a liquid-only phase set: the vapour phase is not modelled"
+        },
+        {
+         "changes": {
+          "referenciaFormacion": "liquido"
+         },
+         "id": "step-3",
+         "title": "Anchor energies to the tabulated liquid formation data"
+        }
+       ],
+       "origin": "reviewed_rebuild"
+      },
+      "jacket": {
+       "operations": [
+        {
+         "changes": {
+          "closure": {
+           "model": {
+            "id": "unifac-dortmund-public",
+            "version": "1"
+           },
+           "packageId": "pkg",
+           "policy": {
+            "cambioInterno": "prohibido",
+            "cantidad": "monofasico",
+            "evaluacion": "equilibrio_estable",
+            "tiposPermitidos": [
+             "liquido"
+            ]
+           }
+          },
+          "densidadConstante": false,
+          "modelo": "sin_declarar",
+          "monofasico": true,
+          "sinCambioFase": true
+         },
+         "id": "step-1",
+         "title": "Select the configured equilibrium package and declared phase policy"
+        },
+        {
+         "changes": {
+          "soloLiquido": true
+         },
+         "id": "step-2",
+         "title": "Declare a liquid-only phase set: the vapour phase is not modelled"
+        },
+        {
+         "changes": {
+          "referenciaFormacion": "liquido"
+         },
+         "id": "step-3",
+         "title": "Anchor energies to the tabulated liquid formation data"
+        }
+       ],
+       "origin": "reviewed_rebuild"
+      }
+     }
+    }
+   },
+   "nombre": "Jacketed continuous liquid reactor: reacting volume and cooling jacket",
+   "procedencia": {
+    "tipo": "nuevo"
+   },
+   "template": {
+    "equipment": true,
+    "format": "rage.model-template",
+    "id": "demo-02-jacketed-cstr",
+    "ports": [
+     {
+      "boundary": {
+       "id": "feed",
+       "type": "stream"
+      },
+      "direction": "inlet",
+      "exteriorState": "estadoExterior",
+      "id": "feed",
+      "kind": "material",
+      "variables": {
+       "composition": {
+        "unitSI": "1"
+       },
+       "flow": {
+        "unitSI": "kg/s"
+       },
+       "pressure": {
+        "unitSI": "Pa"
+       },
+       "specificEnthalpy": {
+        "unitSI": "J/kg"
+       },
+       "temperature": {
+        "unitSI": "K"
+       }
+      },
+      "volumeId": "cell"
+     },
+     {
+      "boundary": {
+       "id": "discharge",
+       "type": "stream"
+      },
+      "direction": "outlet",
+      "donorPhase": "liquido",
+      "id": "product",
+      "kind": "material",
+      "variables": {
+       "composition": {
+        "unitSI": "1"
+       },
+       "flow": {
+        "unitSI": "kg/s"
+       },
+       "pressure": {
+        "unitSI": "Pa"
+       },
+       "specificEnthalpy": {
+        "unitSI": "J/kg"
+       },
+       "temperature": {
+        "unitSI": "K"
+       }
+      },
+      "volumeId": "pipe"
+     },
+     {
+      "boundary": {
+       "id": "coolantIn",
+       "type": "stream"
+      },
+      "direction": "inlet",
+      "exteriorState": "estadoExterior",
+      "id": "supply",
+      "kind": "material",
+      "variables": {
+       "composition": {
+        "unitSI": "1"
+       },
+       "flow": {
+        "unitSI": "kg/s"
+       },
+       "pressure": {
+        "unitSI": "Pa"
+       },
+       "specificEnthalpy": {
+        "unitSI": "J/kg"
+       },
+       "temperature": {
+        "unitSI": "K"
+       }
+      },
+      "volumeId": "jacket"
+     },
+     {
+      "boundary": {
+       "id": "coolantOut",
+       "type": "stream"
+      },
+      "direction": "outlet",
+      "donorPhase": "liquido",
+      "id": "return",
+      "kind": "material",
+      "variables": {
+       "composition": {
+        "unitSI": "1"
+       },
+       "flow": {
+        "unitSI": "kg/s"
+       },
+       "pressure": {
+        "unitSI": "Pa"
+       },
+       "specificEnthalpy": {
+        "unitSI": "J/kg"
+       },
+       "temperature": {
+        "unitSI": "K"
+       }
+      },
+      "volumeId": "jacket"
+     }
+    ],
+    "recipe": {
+     "journals": [
+      "materialDerivation",
+      "energyDerivation",
+      "momentumDerivation",
+      "thermodynamicDerivation",
+      "equationWorkbench"
+     ]
+    },
+    "templateVersion": "1",
+    "version": 1
+   },
+   "termodinamica": {
+    "paquetes": [
+     {
+      "id": "pkg",
+      "modelo": {
+       "id": "unifac-dortmund-public",
+       "version": "1"
+      }
+     }
+    ]
+   },
+   "version": 0,
+   "volumenes": [
+    {
+     "balances": {
+      "energia": true,
+      "materia": true,
+      "momento": true
+     },
+     "componenteIds": [
+      1,
+      2,
+      3,
+      4
+     ],
+     "frontera": {
+      "presionId": "cell.pressure",
+      "tipo": "presion_prescrita"
+     },
+     "id": "cell",
+     "inicial": {
+      "cantidades": {
+       "base": "masica",
+       "datoIds": {
+        "1": "cell.mass",
+        "2": "cell.mass2",
+        "3": "cell.mass3",
+        "4": "cell.mass4"
+       }
+      },
+      "energia": {
+       "datoId": "cell.temperature",
+       "tipo": "T"
+      }
+     },
+     "supuestos": {
+      "energia": {
+       "adiabatico": false,
+       "densidadConstante": false,
+       "entalpia": true,
+       "estacionario": false,
+       "forma": "total",
+       "modelo": "sin_declarar",
+       "monofasico": true,
+       "presionPrescrita": true,
+       "presionUniforme": true,
+       "referenciaFormacion": "liquido",
+       "separarPresion": true,
+       "sinAcumulacionTotal": false,
+       "sinCambioFase": true,
+       "sinCinetica": true,
+       "sinConduccionLocal": false,
+       "sinFuenteVolumetrica": true,
+       "sinFuerzasVolumen": true,
+       "sinTrabajoViscoso": true,
+       "soloLiquido": true,
+       "trabajoTotalHeredado": false,
+       "uniforme": true
+      },
+      "materia": {
+       "campo": {
+        "consumoUniforme": false,
+        "difusion": "flujo",
+        "estacionario": false,
+        "generacionUniforme": false,
+        "sinConsumo": false,
+        "sinConveccion": false,
+        "sinDifusion": false,
+        "sinGeneracion": false,
+        "sinReaccion": false
+       },
+       "cantidadVolumen": false,
+       "consumoUniforme": true,
+       "coordenadas": "cartesianas",
+       "densidadComunPuertos": false,
+       "densidadMediaConstante": false,
+       "expandida": false,
+       "expandirProducto": false,
+       "fija": false,
+       "generacionUniforme": true,
+       "invariantes": [
+        false,
+        false,
+        false
+       ],
+       "restoImpermeable": true,
+       "sinAcumulacion": false,
+       "uniforme": false,
+       "vista": "cantidad"
+      }
+     },
+     "termodinamica": {
+      "paqueteId": "pkg",
+      "politica": {
+       "cambioInterno": "prohibido",
+       "cantidad": "monofasico",
+       "evaluacion": "equilibrio_estable",
+       "tiposPermitidos": [
+        "liquido"
+       ]
+      },
+      "tipo": "equilibrio"
+     }
+    },
+    {
+     "balances": {
+      "energia": true,
+      "materia": true,
+      "momento": false
+     },
+     "componenteIds": [
+      4
+     ],
+     "frontera": {
+      "presionId": "jacket.pressure",
+      "tipo": "presion_prescrita"
+     },
+     "id": "jacket",
+     "inicial": {
+      "cantidades": {
+       "base": "masica",
+       "datoIds": {
+        "4": "jacket.mass"
+       }
+      },
+      "energia": {
+       "datoId": "jacket.temperature",
+       "tipo": "T"
+      }
+     },
+     "supuestos": {
+      "energia": {
+       "adiabatico": false,
+       "densidadConstante": false,
+       "entalpia": true,
+       "estacionario": false,
+       "forma": "total",
+       "modelo": "sin_declarar",
+       "monofasico": true,
+       "presionPrescrita": true,
+       "presionUniforme": true,
+       "referenciaFormacion": "liquido",
+       "separarPresion": true,
+       "sinAcumulacionTotal": false,
+       "sinCambioFase": true,
+       "sinCinetica": true,
+       "sinConduccionLocal": false,
+       "sinFuenteVolumetrica": true,
+       "sinFuerzasVolumen": true,
+       "sinTrabajoViscoso": true,
+       "soloLiquido": true,
+       "trabajoTotalHeredado": false,
+       "uniforme": true
+      },
+      "materia": {
+       "campo": {
+        "consumoUniforme": false,
+        "difusion": "flujo",
+        "estacionario": false,
+        "generacionUniforme": false,
+        "sinConsumo": false,
+        "sinConveccion": false,
+        "sinDifusion": false,
+        "sinGeneracion": false,
+        "sinReaccion": true
+       },
+       "cantidadVolumen": false,
+       "consumoUniforme": false,
+       "coordenadas": "cartesianas",
+       "densidadComunPuertos": false,
+       "densidadMediaConstante": false,
+       "expandida": false,
+       "expandirProducto": false,
+       "fija": false,
+       "generacionUniforme": false,
+       "invariantes": [
+        false,
+        false,
+        false
+       ],
+       "restoImpermeable": true,
+       "sinAcumulacion": false,
+       "uniforme": false,
+       "vista": "cantidad"
+      }
+     },
+     "termodinamica": {
+      "paqueteId": "pkg",
+      "politica": {
+       "cambioInterno": "prohibido",
+       "cantidad": "monofasico",
+       "evaluacion": "equilibrio_estable",
+       "tiposPermitidos": [
+        "liquido"
+       ]
+      },
+      "tipo": "equilibrio"
+     }
+    },
+    {
+     "balances": {
+      "energia": false,
+      "materia": false,
+      "momento": true
+     },
+     "componenteIds": [
+      1,
+      2,
+      3,
+      4
+     ],
+     "frontera": {
+      "datoId": "path.volume",
+      "tipo": "rigida"
+     },
+     "id": "pipe",
+     "inicial": {
+      "cantidades": {
+       "base": "masica",
+       "datoIds": {
+        "1": "cell.mass",
+        "2": "cell.mass2",
+        "3": "cell.mass3",
+        "4": "cell.mass4"
+       }
+      },
+      "energia": {
+       "datoId": "cell.temperature",
+       "tipo": "T"
+      }
+     },
+     "supuestos": {
+      "energia": {
+       "adiabatico": true,
+       "entalpia": true,
+       "estacionario": false,
+       "forma": "total",
+       "presionPrescrita": false,
+       "presionUniforme": false,
+       "separarPresion": true,
+       "sinAcumulacionTotal": true,
+       "sinCinetica": true,
+       "sinConduccionLocal": false,
+       "sinFuenteVolumetrica": true,
+       "sinFuerzasVolumen": true,
+       "sinTrabajoViscoso": true,
+       "trabajoTotalHeredado": false,
+       "uniforme": false
+      },
+      "materia": {
+       "campo": {
+        "consumoUniforme": false,
+        "difusion": "flujo",
+        "estacionario": false,
+        "generacionUniforme": false,
+        "sinConsumo": false,
+        "sinConveccion": false,
+        "sinDifusion": false,
+        "sinGeneracion": false,
+        "sinReaccion": true
+       },
+       "cantidadVolumen": false,
+       "consumoUniforme": false,
+       "coordenadas": "cartesianas",
+       "densidadComunPuertos": false,
+       "densidadMediaConstante": false,
+       "expandida": false,
+       "expandirProducto": false,
+       "fija": true,
+       "generacionUniforme": false,
+       "invariantes": [
+        false,
+        false,
+        false
+       ],
+       "restoImpermeable": true,
+       "sinAcumulacion": true,
+       "uniforme": false,
+       "vista": "cantidad"
+      }
+     },
+     "termodinamica": {
+      "motivo": "The path transports the drawn liquid phase without separate storage or a separate thermodynamic closure.",
+      "supuesto": "fase_no_evaluada",
+      "tipo": "supuesto"
+     }
+    }
+   ]
+  }
+ }
+}
