@@ -24,6 +24,7 @@ Units: SI (J/mol, K, Pa, mol).
 """
 
 import math
+from fractions import Fraction
 
 import numpy as np
 from scipy.optimize import least_squares, minimize
@@ -260,6 +261,52 @@ def certify(phase, NU, n, n0, T, P, A=None):
     return out
 
 
+# --- conservation rows that keep the trace species ------------------------------------------------------
+def reduce_conservation(B, n):
+    """(B', M) with B' = M B, the same row space as B, Gauss-Jordan reduced with the most abundant species as pivots.
+
+    Each abundant species then appears in a single row, and the remaining rows involve only less abundant species.
+    The ratio of two trace species (H2 and O2 of a nearly complete H2 + 1/2 O2 -> H2O) is then a row without
+    cancellation (n_H2 - 2 n_O2), where the original element rows reach it only through 2 - n_H2O, an O(1) number
+    that carries a trace amount of 1e-12 with a relative resolution of 1e-4."""
+    B = np.array(B, dtype=float)
+    M = np.eye(B.shape[0])
+    used = set()
+    for r in range(B.shape[0]):
+        best = None
+        for c in np.argsort(-np.asarray(n, dtype=float)):
+            if int(c) in used:
+                continue
+            col = np.abs(B[r:, c])
+            if col.max() > 1e-12 * max(1.0, np.abs(B).max()):
+                best = (int(c), r + int(np.argmax(col)))
+                break
+        if best is None:
+            break
+        c, k = best
+        used.add(c)
+        B[[r, k]], M[[r, k]] = B[[k, r]], M[[k, r]]
+        M[r], B[r] = M[r] / B[r, c], B[r] / B[r, c]
+        for i in range(B.shape[0]):
+            if i != r and B[i, c] != 0.0:
+                M[i], B[i] = M[i] - B[i, c] * M[r], B[i] - B[i, c] * B[r]
+    # Stoichiometric coefficients and element counts are small rationals; the float invariants carry noise of a few
+    # ulps (-1.9999999999999996 for -2), which makes B n0 differ from its exact value by 4e-16 and shifts a trace
+    # row by that amount. Entries within 1e-12 of a fraction with denominator <= 1000 are snapped to it.
+    for idx, x in np.ndenumerate(B):
+        q = float(Fraction(float(x)).limit_denominator(1000))
+        if x != q and abs(x - q) <= 1e-12 * max(1.0, abs(x)):
+            B[idx] = q
+    return B, M
+
+
+def row_magnitude(B, n):
+    """Size of the amounts each conservation row involves, sum_i |B_ri| n_i. Since B n = B n0 at a solution, it is
+    also the size of the row's right-hand side: the residual of a row divided by it is relative to the species the
+    row involves, so a trace row is converged to trace accuracy."""
+    return np.maximum(np.abs(B) @ np.asarray(n, dtype=float), 1e-300)
+
+
 # --- extent formulation -----------------------------------------------------------------------------------
 def solve_extents(phase, NU, n0, T, P, A=None, xi0=None):
     """Extents of the independent reactions from sum_i nu_ij mu_i / RT = 0, with n kept strictly positive."""
@@ -285,26 +332,36 @@ def solve_extents(phase, NU, n0, T, P, A=None, xi0=None):
     Binv = st["invariants"]
     z = np.log(moles(xi))
 
-    def F(z):
-        n = np.exp(z)
-        return np.concatenate([NI @ phase.mu(T, P, n) / (R * T), Binv @ (n - n0) / scale])
+    def rows(z):
+        """Invariant rows reduced on the current amounts, and the size of their terms (see reduce_conservation)."""
+        Br, _ = reduce_conservation(Binv, np.exp(z))
+        return Br, row_magnitude(Br, np.exp(z))
 
-    f = F(z)
+    def F(z, Br, mag):
+        n = np.exp(z)
+        # B n - B n0, not B (n - n0): subtracting a feed of order one from a trace amount first would round the
+        # trace amount to the resolution of the feed (2e-16), which is a relative 1e-4 at 1e-12 mol
+        return np.concatenate([NI @ phase.mu(T, P, n) / (R * T), (Br @ n - Br @ n0) / mag])
+
+    Br, mag = rows(z)
+    f = F(z, Br, mag)
     for it in range(500):
         if np.max(np.abs(f)) < 1e-14:
             break
         n = np.exp(z)
-        Jz = np.vstack([NI @ _dmu_dn(phase, T, P, n) * n / (R * T), Binv * n / scale])
+        Jz = np.vstack([NI @ _dmu_dn(phase, T, P, n) * n / (R * T), (Br * n) / mag[:, None]])
         dz = np.linalg.lstsq(Jz, -f, rcond=None)[0]
         alpha = min(1.0, 5.0 / max(float(np.max(np.abs(dz))), 1e-300))   # at most a factor e^5 per step
         while True:
             trial = z + alpha * dz
-            f_trial = F(trial)
+            f_trial = F(trial, Br, mag)
             if np.linalg.norm(f_trial) < (1 - 1e-4 * alpha) * np.linalg.norm(f) or alpha < 1e-12:
                 break
             alpha *= 0.5
         step = float(np.max(np.abs(trial - z)))
-        z, f = trial, f_trial
+        z = trial
+        Br, mag = rows(z)
+        f = F(z, Br, mag)
         if step < 1e-15:
             break
     xi = np.linalg.lstsq(NI.T, np.exp(z) - n0, rcond=None)[0]
@@ -386,17 +443,25 @@ def minimise_gibbs(phase, NU, n0, T, P, A=None, constraints="reactions"):
     # Polish on the stationarity conditions of the same Lagrangian, mu_i / RT = sum_k lambda_k B_ki and
     # B n = b: still the Gibbs formulation (element or invariant potentials), no reaction basis enters.
     z = sol.x
-    lam, *_ = np.linalg.lstsq(Bm.T, phase.mu(T, P, np.exp(z)) / (R * T), rcond=None)
+    # The conservation rows are reduced on the amounts of the SLSQP solution (abundant species as pivots) and each
+    # divided by the size of its terms, so the polish converges a trace species to trace accuracy; with the original
+    # rows scaled by the total moles, a 1e-12 mol species was left wrong by 1e-4 to 1e-1 relative, by amounts that
+    # depended on the round-off of the platform (F9, test_nearly_exhausted_reactant). The multipliers are mapped back
+    # to the rows of Bm: Bred = M Bm, so lambda = M^T lambda_red.
+    Br, M = reduce_conservation(Bm, np.exp(z))
+    br = Br @ n0
+    mag = row_magnitude(Br, np.exp(z))
+    lam, *_ = np.linalg.lstsq(Br.T, phase.mu(T, P, np.exp(z)) / (R * T), rcond=None)
     m = len(z)
 
     def kkt(v):
         n = np.exp(v[:m])
-        return np.concatenate([phase.mu(T, P, n) / (R * T) - Bm.T @ v[m:], (Bm @ n - b) / scale])
+        return np.concatenate([phase.mu(T, P, n) / (R * T) - Br.T @ v[m:], (Br @ n - br) / mag])
 
     pol = least_squares(kkt, np.concatenate([z, lam]), method="lm", xtol=1e-15, ftol=1e-15, gtol=1e-15)
     n = np.exp(pol.x[:m])
     return {"moles": [float(v) for v in n], "optimizer": str(sol.message), "constraints": constraints,
-            "lagrange_multipliers": [float(v) for v in pol.x[m:]],
+            "lagrange_multipliers": [float(v) for v in M.T @ pol.x[m:]],
             "certificate": certify(phase, NU, n, n0, T, P, A),
             "method": "Gibbs minimisation (SLSQP over ln n, then Newton on its stationarity conditions)"}
 

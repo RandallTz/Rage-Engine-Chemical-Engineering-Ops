@@ -177,6 +177,36 @@ class NearBoundary(unittest.TestCase):
             self.assertLess(abs(out["moles"][0] / ref - 1), 1e-3)   # n_H2O = 2 fixes n_H2 to ~1e-16 absolute
         self.assertLess(abs(ext["moles"][0] - gib["moles"][0]), 1e-15)
 
+    def test_trace_reactant_is_accurate_not_only_certified(self):
+        # F9 (CI, 9-10 Nov 2026): the same case gave n_H2 off by 0.60 relative on one runner CPU and 1e-4 locally, while
+        # the certificate (absolute element residual 1e-10) passed. n_H2 = 9.6e-13 mol is the trace of two O(1)
+        # conservation rows; its accuracy was set by the round-off of the Newton exit and by float invariants (-2 stored
+        # as -1.9999999999999996). The rows are now reduced on the abundant species, snapped to their rational values and
+        # scaled by the amounts they involve. Against the independent bisection root, to 1e-9 for both formulations,
+        # from several starting extents.
+        O2 = "7782-44-7"
+        gas = ce.IdealGasPhase([H2, O2, H2O])
+        A, _ = ce.element_matrix(gas.cas)
+        lnK = ce.equilibrium_constant(gas, [-1, -0.5, 1], 600.0, ce.P0)["lnK"]
+        f = lambda le: (math.log(2 - math.exp(le)) - le - 0.5 * (le - math.log(2))
+                        + 0.5 * math.log(2 + math.exp(le) / 2) - lnK)
+        ref = math.exp(brentq(f, -200, math.log(1.999), xtol=1e-14))
+        for xi0 in (None, [0.5], [1.0], [1.5], [1.9]):
+            ext = ce.solve_extents(gas, [[-1, -0.5, 1]], [2.0, 1.0, 0.0], 600.0, ce.P0, A, xi0=xi0)
+            self.assertLess(abs(ext["moles"][0] / ref - 1), 1e-9, xi0)
+            self.assertLess(abs(ext["moles"][0] / ext["moles"][1] / 2 - 1), 1e-9, xi0)     # n_H2 = 2 n_O2 exactly
+        gib = ce.minimise_gibbs(gas, [[-1, -0.5, 1]], [2.0, 1.0, 0.0], 600.0, ce.P0, A, constraints="elements")
+        self.assertLess(abs(gib["moles"][0] / ref - 1), 1e-9)
+        self.assertLess(abs(gib["moles"][0] / gib["moles"][1] / 2 - 1), 1e-9)
+
+    def test_reduced_conservation_rows_keep_their_space_and_rationals(self):
+        B = np.array([[-1 / 3, 14 / 15, 2 / 15], [2 / 3, 2 / 15, 11 / 15]])
+        n = np.array([1e-12, 5e-13, 2.0])
+        Br, M = ce.reduce_conservation(B, n)
+        np.testing.assert_allclose(M @ B, Br, atol=1e-14)
+        self.assertEqual(sorted(np.round(Br[:, 0], 12).tolist()), [0.0, 1.0])     # H2O pivots in one row only
+        self.assertIn(-2.0, Br[:, 1].tolist())                                     # snapped, not -1.9999999999999996
+
     def test_uncertified_extent_solve_raises(self):
         gas = ce.IdealGasPhase([N2, H2, NH3])
         A, _ = ce.element_matrix(gas.cas)

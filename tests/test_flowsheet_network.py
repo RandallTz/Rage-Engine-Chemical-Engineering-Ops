@@ -439,10 +439,23 @@ def test_steady_network_matches_simultaneous_reference(model, documents):
     browser = browser_round_trip(stored)        # review F1: a result stored by the client
     assert json.dumps(browser, sort_keys=True) != json.dumps(stored, sort_keys=True)
     read_result(browser, browser_round_trip(selection))
+    from core.resultados import ErrorResultados
+    # A stage series copied into a steady profile is checked by the common reader (profile must preserve each source value).
     tampered = copy.deepcopy(stored)
-    tampered['series'][0]['valores'] = 1.0 + float(np.atleast_1d(tampered['series'][0]['valores'])[0])
-    with pytest.raises(FlowsheetError):
+    network = tampered['indexedNetwork']
+    profiled = {key for profile in network['profiles'] for key in profile['stageSeriesIds'] if key}
+    source = next(row for row in tampered['series'] if row['id'] in profiled)
+    source['valores'] = 1.0 + float(np.atleast_1d(source['valores'])[0])
+    with pytest.raises(ErrorResultados):
         read_result(tampered, selection)
+    # A stage series no profile copies is covered by the flowsheet result fingerprint.
+    free = [row for stage in network['stages'] for row in tampered['series'] if row['id'] in stage['seriesIds'] and row['id'] not in profiled and row['valores'] is not None]
+    if free:
+        tampered = copy.deepcopy(stored)
+        row = next(r for r in tampered['series'] if r['id'] == free[0]['id'])
+        row['valores'] = 1.0 + float(np.atleast_1d(row['valores'])[0])
+        with pytest.raises(FlowsheetError):
+            read_result(tampered, selection)
     conversions = [1 - root[6 * j] / (root[6 * j] + root[6 * j + 2]) for j in (0, 2)]
     TIMES['steadyReference'] = {'conversionR1': conversions[0], 'conversionR2': conversions[1],
                                 'temperatures': temperatures,

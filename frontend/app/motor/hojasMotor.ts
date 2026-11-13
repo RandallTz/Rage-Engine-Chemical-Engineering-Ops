@@ -23,6 +23,14 @@ export const hojasServidor:HojaMotor[]=[];
 /** Una derivación de energía anterior que declaraba supuestos termodinámicos se separa, sin pérdida, en su
  * derivación termodinámica (recorridoTermodinamico.ts): cada ecuación en su lugar. */
 export const normalizarHoja=(h:HojaMotor):HojaMotor=>{if(h.indexedSelection!==undefined)readSavedIndexed(h.indexedSelection);return h.commonModel||h.redTermodinamica?h:migrarTermoHoja(h.ensamblaje?{...h,...normalizarEnsamblaje(h.ensamblaje,h.config)}:h);};
+/** A full browser store (5 MiB per origin) must reach the user as a located message, not as the raw DOMException. */
+export function escribirHojas(text:string,what:string){
+  try{localStorage.setItem(CLAVE_HOJAS,text);}catch(error){
+    const quota=error instanceof Error&&(error.name==='QuotaExceededError'||error.name==='NS_ERROR_DOM_QUOTA_REACHED'||/quota/i.test(error.message));
+    if(!quota)throw error;
+    throw new Error(`Browser storage is full: ${what} (${(text.length/1e6).toFixed(1)} million characters in total) does not fit in this browser's 5 MiB model store (${CLAVE_HOJAS}), so it was not saved and the previous saved version is unchanged. The solver result itself is not lost if it was computed. Export the model, remove unused models or reduce the model size (for example fewer stages), then try again.`,{cause:error});
+  }
+}
 export function leerHojas():HojaMotor[] {
   if(typeof window==='undefined')return hojasServidor;
   const raw=localStorage.getItem(CLAVE_HOJAS);if(raw===textoCache)return cache;
@@ -36,12 +44,12 @@ export function guardarHoja(hoja:HojaMotor) {
   const existentes=leerHojas(),otras=existentes.filter(h=>h.id!==hoja.id);
   const previous=existentes.find(h=>h.id===hoja.id);
   const actualizada={...reconcileDerived(previous,reconcileModelTopology(previous??hoja,reconcileMomentumTopology(previous,normalizarHoja(hoja)))),actualizada:new Date().toISOString()};
-  localStorage.setItem(CLAVE_HOJAS,JSON.stringify([actualizada,...otras]));window.dispatchEvent(new Event('motor-hojas'));return actualizada;
+  escribirHojas(JSON.stringify([actualizada,...otras]),`model "${actualizada.nombre}"`);window.dispatchEvent(new Event('motor-hojas'));return actualizada;
 }
 /** Atomic addition; existing documents, including archived ones, are preserved. */
 export function guardarHojasNuevas(nuevas:HojaMotor[]){
   const existentes=leerHojas(),ids=new Set(existentes.map(h=>h.id)),agregadas=nuevas.filter(h=>{if(ids.has(h.id))return false;ids.add(h.id);return true;});
-  if(agregadas.length){localStorage.setItem(CLAVE_HOJAS,JSON.stringify([...agregadas.map(normalizarHoja),...existentes]));window.dispatchEvent(new Event('motor-hojas'));}
+  if(agregadas.length){escribirHojas(JSON.stringify([...agregadas.map(normalizarHoja),...existentes]),`${agregadas.length} imported model(s)`);window.dispatchEvent(new Event('motor-hojas'));}
   return agregadas.length;
 }
 export function escucharHojas(callback:()=>void){const listener=()=>callback();window.addEventListener('storage',listener);window.addEventListener('motor-hojas',listener);return()=>{window.removeEventListener('storage',listener);window.removeEventListener('motor-hojas',listener);};}
