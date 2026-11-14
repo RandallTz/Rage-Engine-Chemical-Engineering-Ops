@@ -97,6 +97,26 @@ def _spatial_domain_for(graph,source,selected=None):
     return candidates[0] if candidates else None
 
 
+def _located(key,code,message):
+    """A coded rejection that names the operation it comes from."""
+    error=JournalError(key+': '+message);error.code=code;error.location=key
+    return error
+
+
+def _reject_degenerate_relation(key,left,right):
+    """Kernel audit A-2: a declared relation must state something.
+
+    Its difference must not simplify to zero (an identity, such as q = q) or to
+    a nonzero number (a contradiction, such as 1 = 2 or q = q + 1). The same
+    meanings as the polynomial branch selector, located at the operation.
+    """
+    residual=sp.simplify(left-right)
+    if residual==0:
+        raise _located(key,'identity_relation','This declared relation is an identity; it states nothing about its quantities.')
+    if residual.is_number and residual.is_zero is False:
+        raise _located(key,'contradictory_relation','This declared relation is inconsistent; it has no solutions.')
+
+
 def replay_operations(source,selected,owners,declared_units,definition,*,require_same_family=False,unit_resolver=known_unit):
     read_definition(definition)
     graph=copy.deepcopy(source);final=list(selected);locations=dict(owners);units=dict(declared_units)
@@ -202,6 +222,7 @@ def replay_operations(source,selected,owners,declared_units,definition,*,require
             left,right=_parse(op['left'],quantities,conditions,units),_parse(op['right'],quantities,conditions,units)
             a,b=_dimension(left,units),_dimension(right,units)
             if a is not None and b is not None and a!=b:raise JournalError('The two sides of this relation have incompatible dimensions.')
+            _reject_degenerate_relation(key,left,right)
             relation_kind=op.get('relationKind','definition')
             title={'definition':'Declared definition','constitutive':'Declared constitutive relation','constraint':'Declared condition'}[relation_kind]
             domain_ids=op.get('domains',[])
@@ -218,6 +239,36 @@ def replay_operations(source,selected,owners,declared_units,definition,*,require
                 conditions.append('Source: '+json.dumps(source,sort_keys=True,ensure_ascii=False,separators=(',',':')))
             graph.add(key,left,right,title,'declared_relation',inputs=tuple(domain_ids),assumptions=tuple(dict.fromkeys(conditions)),family=op['family'],kind=relation_kind,
                       predicates=tuple(graph.domains[domain_id].expression for domain_id in domain_ids))
+            graph.nodes[key].source=copy.deepcopy(source)
+            blocking=True
+        elif kind=='declare_rate':
+            # Demo 0.3 C1: the first time derivative of a declared dependent
+            # quantity equals a declared expression. The quantity becomes a
+            # candidate differential state; its initial value is Solve data.
+            if op['symbol'] not in quantities:raise _located(key,'unknown_quantity','Select a current declared quantity for the rate.')
+            quantity=quantities[op['symbol']]
+            if isinstance(quantity,sp.Derivative):
+                raise _located(key,'higher_order_rate','A declared rate is a first derivative; declare the rate of a new quantity instead of a second derivative.')
+            if not isinstance(quantity,sp.core.function.AppliedUndef):
+                raise _located(key,'rate_of_constant','A declared symbol is constant; declare a quantity that depends on time to give it a rate.')
+            if quantity not in introduced.values():
+                raise _located(key,'undeclared_rate_quantity','Declare the quantity in this history before giving it a rate; physical-journal quantities take their rates from their laws.')
+            if len(quantity.args)!=1 or not isinstance(quantity.args[0],sp.Symbol) or _dimension(quantity.args[0],units)!={'T':1}:
+                raise _located(key,'unsupported_rate_coordinate','A declared rate needs a quantity depending only on one time coordinate.')
+            time=quantity.args[0]
+            conditions=[op['reason']]
+            right=_parse(op['right'],quantities,conditions,units)
+            left=sp.Derivative(quantity,time,evaluate=False)
+            a,b=_dimension(left,units),_dimension(right,units)
+            if a is None or b is not None and a!=b:
+                raise _located(key,'incompatible_rate_units','The declared rate must have the unit of its quantity per unit time.')
+            if right.has(left):raise _located(key,'implicit_rate','The declared rate cannot contain its own derivative.')
+            relation_kind=op.get('relationKind','definition')
+            source=op.get('source')
+            if source is not None:
+                conditions.append('Source: '+json.dumps(source,sort_keys=True,ensure_ascii=False,separators=(',',':')))
+            graph.add(key,left,right,'Declared rate ('+relation_kind+')','declared_rate',assumptions=tuple(dict.fromkeys(conditions)),
+                      family=op['family'],kind=relation_kind)
             graph.nodes[key].source=copy.deepcopy(source)
             blocking=True
         elif kind in ('restrict_to_boundary','expand_normal_derivative','declare_condition'):
@@ -391,7 +442,7 @@ def replay_operations(source,selected,owners,declared_units,definition,*,require
             locations[key]=owners.pop() if len(owners)==1 else 'system'
             # Consequences supplement their premises; they do not silently
             # replace a physical law or add independent dynamic states.
-            if kind not in ('zero','declare_relation','declare_condition','declare_fourier_law'):graph.nodes[key].dependent=True
+            if kind not in ('zero','declare_relation','declare_rate','declare_condition','declare_fourier_law'):graph.nodes[key].dependent=True
         created=tuple(id_ for id_ in graph.nodes if id_ not in previous)
         after=tuple((id_,graph.nodes[id_].equation) for id_ in created)
         conditions=tuple(dict.fromkeys(condition for id_ in created for condition in graph.conditions_for(id_)))
