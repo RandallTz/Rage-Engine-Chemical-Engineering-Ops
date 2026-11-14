@@ -191,6 +191,7 @@ class DerivedSystem(DerivedGraph):
             self.parameter_records.append({'id': qid, 'dataId': data_id,
                 'value': float(self.parameter_values[parameter]), 'unit': self._unit(q)})
         self.replacements = dict(self.parameter_symbols)
+        self._bind_recorded_zeros()
         self._package_closures(equilibrium)
         self.algebraic_rows = self.selection.get('algebraic', [])
         self.algebraic_quantities = [self._quantity(row['quantityId']) for row in self.algebraic_rows]
@@ -210,6 +211,10 @@ class DerivedSystem(DerivedGraph):
                 continue
             key = 'operation.' + str(index); equation = self.graph.nodes[key].equation
             target = equation.lhs
+            if isinstance(target, sp.Symbol) and self._time_dependent(equation.rhs):
+                # Demo 0.3 C1 (DR-4): a declared constant cannot receive a
+                # value that changes in time; declare a time-dependent quantity.
+                raise LoweringError('constant_time_join', 'A declared constant symbol is joined to a time-dependent expression: ' + str(target), key)
             if isinstance(target, (sp.Symbol, sp.core.function.AppliedUndef)) and target not in self.states and target not in self.replacements and target not in self.algebraic_quantities:
                 self.replacements[target] = equation.rhs
         self._kinetic_declarations()
@@ -294,7 +299,8 @@ class DerivedSystem(DerivedGraph):
             closure.bind_inputs(self.algebraic_quantities if self.thermal_reaction else ())
         self._initial_conditions()
         self.proof_conditions = []
-        bound_coordinates = {p.args[1] for node in self.graph.nodes.values() for p in node.predicates if isinstance(p, HoldsOnInterval) and p.args[1] != self.time}
+        self._inactive_branches()
+        bound_coordinates ={p.args[1] for node in self.graph.nodes.values() for p in node.predicates if isinstance(p, HoldsOnInterval) and p.args[1] != self.time}
         self.bound_coordinates = bound_coordinates
         self._collect_conditions()
         if self.nonlinear:
@@ -351,6 +357,76 @@ class DerivedSystem(DerivedGraph):
         self.linear_policy = self.block_jacobian.policy
         # Preserve the dense finite-difference default for small existing systems.
         self.jacobian = self.block_jacobian if self.linear_policy['selected'] == 'sparse' else None
+
+    def _time_dependent(self, expression):
+        return expression.has(self.time)
+
+    def _recorded_operations(self, kind):
+        for index, operation in enumerate(self.replayed.definition['operations'][:self.replayed.definition['cursor']], 1):
+            if operation['kind'] == kind:
+                yield 'operation.' + str(index), operation
+
+    def _bind_recorded_zeros(self):
+        """Demo 0.3 C1 (DR-3): a recorded zero on a declared symbol binds it.
+
+        `apply_zero` on a symbol declared in this history (for example the
+        derivative time of a PID law reduced to PI) is a recorded assumption,
+        so the symbol lowers as exactly zero. A datum for it must be absent or
+        zero; a nonzero datum contradicts the recorded deduction.
+        """
+        self.zero_bindings = []
+        declared = set(self.replayed.introduced.values())
+        for key, operation in self._recorded_operations('apply_zero'):
+            q = self.quantities.get(operation['symbol'])
+            if not isinstance(q, sp.Symbol) or q not in declared:
+                continue
+            if q in self.parameter_symbols:
+                value = self.parameter_values[self.parameter_symbols[q]]
+                if value != 0:
+                    raise LoweringError('zero_datum_conflict', 'A nonzero datum contradicts the recorded zero of ' + str(q) + '; remove the datum or undo the zero.', key)
+            self.replacements[q] = sp.S.Zero
+            self.zero_bindings.append({'equationId': key, 'quantity': str(q)})
+
+    def _inactive_branches(self):
+        """Demo 0.3 C1 (DR-3, CR-1): declared rates and premises left out of the run.
+
+        A declared rate whose quantity is not a selected state and occurs in no
+        lowered expression is an inactive branch (for example the derivative
+        filter of a PID reduced to PI). Rows and premises that involve only such
+        quantities, or declared symbols bound to no datum and absent from the
+        lowered expressions, are excluded from numerical enforcement and listed
+        in the compilation report. A declared rate whose quantity does occur
+        must be selected as a state.
+        """
+        expressions = [*self.rates.values(), *(e for _, e in self.reconstructed), *self.runtime_rates]
+        expressions += [self._expand(self._equation(row['equationId']).equation.lhs - self._equation(row['equationId']).equation.rhs, self.runtime_replacements)
+                        for row in self.algebraic_rows]
+        if self.algebraic_block is not None and hasattr(self.algebraic_block, 'forcing'):
+            expressions += list(self.algebraic_block.forcing)
+        for closure in self.closures:
+            expressions += list(getattr(closure, 'input_expressions', ()))
+        lowered = set()
+        for expression in expressions:
+            expression = self._expand(expression)
+            lowered.update(expression.atoms(sp.Symbol, sp.core.function.AppliedUndef))
+        self.inactive = []
+        inactive = set()
+        for key, operation in self._recorded_operations('declare_rate'):
+            q = self.graph.nodes[key].equation.lhs.expr
+            if q in self.states:
+                continue
+            if q in lowered:
+                raise LoweringError('unselected_rate', 'A declared rate quantity occurs in the lowered model; select its rate row as a state: ' + str(q), key)
+            inactive.add(q)
+            self.inactive.append({'equationId': key, 'kind': 'inactive_rate', 'latex': math_latex(self.graph.nodes[key].equation, self.graph.names)})
+        bound = set(self.parameter_symbols) | set(self.replacements)
+        inactive.update(q for q in self.replayed.introduced.values()
+                        if isinstance(q, sp.Symbol) and q not in bound and q not in lowered)
+        self.inactive_quantities = inactive
+
+    def _inactive(self, expression):
+        quantities = getattr(self, 'inactive_quantities', set())
+        return bool(quantities) and bool(self._expand(expression).atoms(sp.Symbol, sp.core.function.AppliedUndef) & quantities)
 
     def _normalize(self, expression):
         expression = self._expand(expression).doit()
@@ -515,6 +591,11 @@ class DerivedSystem(DerivedGraph):
             if predicate in seen or predicate is sp.S.true:
                 continue
             seen.add(predicate)
+            if not isinstance(predicate, HoldsOnInterval) and self._inactive(predicate):
+                # CR-1: a premise of an inactive or reduced-away row concerns
+                # quantities that take no part in this run; listed, not enforced.
+                self.inactive.append({'equationId': key, 'kind': 'inactive_premise', 'latex': math_latex(predicate, self.graph.names)})
+                continue
             virtual_source = (self.algebraic_block.virtual_condition(predicate)
                               if self.nonlinear and hasattr(self.algebraic_block,'virtual_condition') else None)
             if virtual_source is not None:
@@ -664,6 +745,12 @@ class DerivedSystem(DerivedGraph):
             residual = self._normalize(node.equation.lhs-node.equation.rhs)
             if residual == 0 or self._closure_identity(residual):
                 continue
+            if self._inactive(residual):
+                # Demo 0.3 C1: a row of an inactive declared rate (or a row
+                # reduced to it) is listed, never lowered nor enforced.
+                if not any(row['equationId'] == key for row in getattr(self, 'inactive', [])):
+                    self.__dict__.setdefault('inactive', []).append({'equationId': key, 'kind': 'inactive_row', 'latex': math_latex(node.equation, self.graph.names)})
+                continue
             numerical = si_magnitude(residual).subs(self.parameter_values)
             if numerical.is_number is True and abs(float(numerical)) <= 1e-12:
                 continue
@@ -740,7 +827,7 @@ class DerivedSystem(DerivedGraph):
             return {'tipo': 'suma' if expression.is_Add else 'producto', 'argumentos': [self._ast(arg) for arg in expression.args]}
         if expression.is_Pow:
             return {'tipo': 'potencia', 'base': self._ast(expression.base), 'exponente': self._ast(expression.exp)}
-        supported = {sp.exp: 'exp', sp.log: 'log', sp.sin: 'sin', sp.cos: 'cos', sp.Abs: 'abs'}
+        supported = {sp.exp: 'exp', sp.log: 'log', sp.sin: 'sin', sp.cos: 'cos', sp.Abs: 'abs', sp.Min: 'min', sp.Max: 'max'}
         if expression.func in supported:
             return {'tipo': 'funcion', 'nombre': supported[expression.func], 'argumentos': [self._ast(arg) for arg in expression.args]}
         raise LoweringError('unsupported_expression', 'No numerical lowering for the retained expression: ' + str(expression))
@@ -999,6 +1086,10 @@ class DerivedSystem(DerivedGraph):
                 'selection': self.selection, 'proofConditions': self.proof_conditions,
                 'runtimeConditions': [{'equationId': key, 'strict': strict, 'latex': label} for _, strict, key, label in self.margins],
                 'reconstructions': self.selection['reconstructions']}}
+        if getattr(self, 'inactive', None) or getattr(self, 'zero_bindings', None):
+            # Demo 0.3 C1: only reports that use the reduction rules carry it,
+            # so every earlier compilation report is unchanged.
+            report['derivedExecution']['inactiveBranches'] = {'zeroBindings': getattr(self, 'zero_bindings', []), 'rows': getattr(self, 'inactive', [])}
         if self.algebraic_block is not None and not self.nonlinear:
             block = self.algebraic_block
             report['derivedExecution']['algebraicBlock'] = {
