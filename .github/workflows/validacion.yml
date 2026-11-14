@@ -138,6 +138,7 @@ jobs:
           - group-12
           - group-13
           - group-14
+          - group-15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
