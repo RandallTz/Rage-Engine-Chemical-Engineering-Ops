@@ -6,6 +6,7 @@ import { readCompilationReport } from '../modelo/compilation';
 import {readSteadyResult} from '../modelo/steadyContract';
 import {readAssessment} from '../modelo/assessment';
 import {readIndexedNetwork} from './indexedNetwork';
+import {readRunTimeline} from './runTimeline';
 
 export class ErrorResultados extends Error { constructor(public ruta: string, motivo: string) { super(`${ruta}: ${motivo}`); } }
 const fallo = (ruta: string, motivo: string): never => { throw new ErrorResultados(ruta, motivo); };
@@ -45,6 +46,7 @@ export function leerResultados(dato: unknown): ConjuntoResultados {
   if(provenance.daeDiagnostics!==undefined||(r as unknown as ConjuntoResultados).procedencia.compilation?.derivedExecution?.version===4)readDAEEvidence(r as unknown as ConjuntoResultados);
   if(provenance.nonlinearDiagnostics!==undefined)readNonlinearEvidence(r as unknown as ConjuntoResultados);
   if(provenance.assessment!==undefined)provenance.assessment=readAssessment(provenance.assessment,r as unknown as ConjuntoResultados);
+  if(provenance.runTimeline!==undefined)readRunTimeline(r as unknown as ConjuntoResultados,fallo);
   return r as unknown as ConjuntoResultados;
 }
 
