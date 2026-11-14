@@ -19,6 +19,7 @@ export type ConjuntoResultados = {
     daeDiagnostics?:{version:1;method:'scipy_bdf_nested_newton';acceptedChecks:number;maxResidual:number;maxConservation:number;driftTolerance:number;scope:string};
     nonlinearDiagnostics?:{version:1;method:'damped_newton';sourceSignature:string;settings:NonNullable<import('../modelo/derivedExecution').DerivedExecution['nonlinear']>;evaluatedSolves:number;lastEvaluation:Record<string,unknown>;failures:Record<string,unknown>[];publishedSamples:number;scope:string};
     assessment?: import('../modelo/assessment').ModelAssessment;
+    runTimeline?: import('./runTimeline').RunTimeline;
     physicalCertification?: import('../../app/motor/contratoEnsamblajeV2').CertificacionV2 | null;
     equilibrium?: NonNullable<import('../../app/motor/contratoEnsamblajeV2').RespuestaResolucionV2['resultados']>;
     diagnostics?: {codigo:string; estado:string; mensaje:string; variableIds:string[]; origen:{propietarioId:string; ruta:string}}[] };
