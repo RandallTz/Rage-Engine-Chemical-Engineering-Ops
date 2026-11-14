@@ -187,6 +187,21 @@
       "test_eos_dynamic_volume.py"
     ]
   },
+  "pytest_shards": {
+    "_comment": "A heavy test split over several CI groups. The file stays assigned once in pytest_slow_groups; that group runs its other tests (-k 'not <test>'). Each group listed here runs only <test>, as shard i of len(groups) through the two environment variables, which the test reads with tests/v2_parity_cases.shard_from_env and shard_selected (archive index modulo the shard count). check_tiers.py proves every archive and every collected test runs exactly once. Local --tier slow runs and runs without --group are not sharded.",
+    "test_v2_compatibility.py": {
+      "test": "test_all_25_archives",
+      "shard_var": "V2_PARITY_SHARD",
+      "count_var": "V2_PARITY_SHARDS",
+      "groups": ["group-2-shard-1", "group-2-shard-2", "group-2-shard-3"]
+    },
+    "test_v2_route_switch.py": {
+      "test": "test_25_requests_through_http",
+      "shard_var": "V2_HTTP_SHARD",
+      "count_var": "V2_HTTP_SHARDS",
+      "groups": ["group-3-shard-1", "group-3-shard-2", "group-3-shard-3"]
+    }
+  },
   "pytest_measured_seconds": {
     "test_assessment_roundtrip.py": 9.59,
     "test_run_timeline_results.py": 2.5,

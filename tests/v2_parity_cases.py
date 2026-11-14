@@ -2,6 +2,7 @@
 import contextlib
 import hashlib
 import json
+import os
 from pathlib import Path
 from unittest.mock import patch
 
@@ -11,6 +12,18 @@ ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = '0931e2c77e83011aead32888d78239fc08e66dabc8dad9cb9fa20a6ea1c9657d'
 RELATIVE_SERIES = 1e-6
 EVENT_SECONDS = 1e-6
+
+
+def shard_selected(index, shard, count):
+    """Whether archive number `index` belongs to shard `shard` of `count` (CI splits the 25 archives this way;
+    tools/ci/check_tiers.py proves the shards of tools/ci/test_tiers.json cover each archive exactly once)."""
+    return index % count == shard
+
+
+def shard_from_env(shard_var, count_var):
+    shard, count = int(os.environ.get(shard_var, '0')), int(os.environ.get(count_var, '1'))
+    assert count >= 1 and 0 <= shard < count, (shard_var, shard, count)
+    return shard, count
 
 
 def archives():
