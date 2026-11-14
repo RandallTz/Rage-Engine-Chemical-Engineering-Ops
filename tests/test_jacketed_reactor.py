@@ -6,7 +6,7 @@ brentq, and with the published steady state of arXiv:2110.00618 (Debnath, Sahoo,
 and Liu, 2021, Section "Application to a CSTR", Eq. 19 and Table 1) evaluated on the deduced
 jacket energy row with that source's constant-cp caloric closure.
 
-JacketedReactor (slow: authoring about 11 min, two BDF runs): the accepted Demo 0.2 continuous
+JacketedReactor (slow: authoring 11-27 min, two 60000 s BDF runs): the accepted Demo 0.2 continuous
 reactor coupled to the jacket through one shared-wall relation. Compared with an independent
 LSODA integration, with the stationary balances of both volumes solved together, and with the
 prescribed-jacket limit (large coolant flow) of the accepted single-reactor reference.
@@ -24,7 +24,7 @@ import sympy as sp
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from jacketed_reactor_inputs import (SERVICE, JACKETED, JACKET, COOLANT_IN, COOLANT_OUT, author_jacket_service, author_jacketed_reactor,
+from jacketed_reactor_inputs import (SERVICE, JACKETED, JACKET, COOLANT_IN, COOLANT_OUT, author_jacket_service, author_jacketed_reactor, jacketed_data,
                                      reference_jacket_service, steady_jacket_service, reference_jacketed, steady_jacketed, water_enthalpy_functions, T)
 from core.compilador.derived import DerivedSystem, resolve_system
 from core.modelo.equation_workbench import build
@@ -163,6 +163,8 @@ class JacketedReactor(unittest.TestCase):
         self.assertLess(np.max(abs(values['campo.' + ids[4]] - self.reference.y[4])) / abs(self.reference.y[4][0]), 5e-8)   # 0.084 J on 3.8e6 J
         self.assertLess(np.max(abs(values['campo.' + ids[5]] - self.reference.y[5])), 1e-9)   # kg/s
         self.assertEqual(np.max(abs(values['campo.' + ids[6]] - JACKETED['mj0'])), 0.0)      # kg
+        self.assertEqual(float(self.model['datos']['service.UA']['declaracion']['texto']), JACKETED['UA'])   # the record describes the run (JR-2)
+        self.assertEqual(float(self.model['datos']['solve.tf']['declaracion']['texto']), JACKETED['tf'])
         self.assertLess(np.max(abs(values['campo.' + ids[7]] - self.reference.y[7])) / abs(self.reference.y[7][0]), 1e-8)
         checks = {row['id']: row for row in self.result['verificaciones']}
         self.assertLess(checks['conservation.matter.cell.total']['valor'], 1e-9)
@@ -175,9 +177,11 @@ class JacketedReactor(unittest.TestCase):
         steady = steady_jacketed()
         T_cell = _closure_T(self.system, self.result, 'cell')
         T_jacket = _closure_T(self.system, self.result, JACKET)
-        # At 6000 s the reactor is still relaxing (its slowest time constant is about the holdup time); both the
-        # engine and the reference must be on the same side and the reference's own long-time limit is the root.
+        # At 60000 s (about a hundred holdup times) the pair is at its steady state: the engine's final sample, the
+        # reference's final sample and the joint root must agree.
         self.assertLess(abs(T_cell[-1] - self.reference_T[-1]), 2e-5)
+        self.assertLess(abs(T_cell[-1] - steady['temperature']), 1e-6)         # K
+        self.assertLess(abs(T_jacket[-1] - steady['jacketTemperature']), 1e-6)
         self.assertLess(steady['residual'], 1e-8)   # scaled hybr residual
         sol, T_long, Tj_long = reference_jacketed(np.linspace(0, 60000, 7))
         self.assertLess(abs(T_long[-1] - steady['temperature']), 1e-3)      # K
@@ -187,8 +191,7 @@ class JacketedReactor(unittest.TestCase):
 
     def test_prescribed_jacket_temperature_is_the_large_flow_limit(self):
         """With a large coolant flow the jacket stays at its inlet temperature and the reactor steady state is the accepted single-reactor reference with Tj = Tin."""
-        data = dict(JACKETED, **demo02_cstr.demo_data())
-        data.update(coolantFlow=5.0, tf=60000.0)
+        data = dict(jacketed_data(), coolantFlow=5.0)
         model = copy.deepcopy(self.model)
         model['datos']['service.flow']['declaracion']['texto'] = repr(5.0)
         model['datos']['solve.tf']['declaracion']['texto'] = repr(60000.0)

@@ -43,8 +43,19 @@ COOLANT_IN, COOLANT_OUT = 'coolantIn', 'coolantOut'
 # Service data: water coolant, pumped at a prescribed rate; the jacket is filled and rigid.
 SERVICE = {'Pj': 101325.0, 'mj0': 0.2, 'Tj0': 320.0, 'coolantFlow': 2e-3, 'Tin': 320.0, 'Pin': 2e5,
            'UA': 50.0, 'Tprocess': 335.0, 'tf': 600.0}
-# Jacketed reactor: the accepted Demo 0.2 continuous reactor data plus the service data.
-JACKETED = dict(demo02_cstr.DEMO, **{k: v for k, v in SERVICE.items() if k not in ('Tprocess', 'tf')}, tf=6000.0)
+# Jacketed reactor: the accepted Demo 0.2 continuous reactor data plus the service data. UA keeps the Demo 0.2
+# reactor's jacket conductance (5 W/K) and the horizon its 60000 s; `jacketed_data()` applies these last, so what is
+# declared here is what runs (review JR-2).
+# JACKETED holds only the pair's own declarations; the reactor data, including the calibrated reverse kinetics of
+# `demo_data()`, are never overridden by a stale copy of DEMO.
+JACKETED = dict({k: v for k, v in SERVICE.items() if k not in ('Tprocess', 'tf', 'UA')}, UA=demo02_cstr.DEMO['UA'], tf=60000.0)
+
+
+def jacketed_data():
+    """The Demo 0.2 reactor data (with its calibrated reverse kinetics) overridden by the jacketed-reactor declaration."""
+    data = dict(demo02_cstr.demo_data(), **JACKETED)
+    data.pop('Tj', None)   # the prescribed jacket temperature of the single reactor is not a datum of the pair
+    return data
 
 
 def _journal(model, key, fmt):
@@ -314,7 +325,7 @@ def jacketed_template():
 
 
 def author_jacketed_reactor(data=None, method='bdf'):
-    data = dict(JACKETED, **demo02_cstr.demo_data()) if data is None else data
+    data = jacketed_data() if data is None else data
     author, out = author_outlet(data, prepare=lambda model: demo02_cstr.prepare(model, data), source_factory=jacketed_source,
                                 owner=REACTOR, vapour=False, heat_builder=reactor_wall_partition, reactive=True)
     out['reactor.heat'] = out['energy']
@@ -394,7 +405,7 @@ def reference_jacketed(times, data=None):
     from the package chemical potential; T_j by inversion.
     """
     from scipy.integrate import solve_ivp
-    data = dict(JACKETED, **demo02_cstr.demo_data()) if data is None else data
+    data = jacketed_data() if data is None else data
     _, masses, volumes, enthalpy, temperature, rate = demo02_cstr.reference_functions(data)
     hj, Tj_of, _ = water_enthalpy_functions(data['Pj'])
     h_in = hj(data['Tin'], data['Pin'])
@@ -422,9 +433,16 @@ def reference_jacketed(times, data=None):
 
 
 def steady_jacketed(data=None, guess=None):
-    """Stationary balances of both volumes solved together: amounts, T, outlet flow and T_j (hybr root)."""
-    from scipy.optimize import root
-    data = dict(JACKETED, **demo02_cstr.demo_data()) if data is None else data
+    """Stationary balances of both volumes solved together: amounts, T, outlet flow and T_j (hybr root).
+
+    Starting point (review JR-1): each volume at its own steady state given the other's guess, alternated
+    twice. The jacket balance for a given reactor temperature is a monotone scalar equation with one root
+    (brentq); the single-reactor sequential reference for a given jacket temperature is the accepted Demo 0.2
+    root. Two sweeps put the seed within the hybr basin for coolant flows from 2e-3 to 5 kg/s; seeding
+    T_j = T_in instead ignores the wall heat and the isenthalpic inlet offset and stalls hybr at 5 kg/s.
+    """
+    from scipy.optimize import root, brentq
+    data = jacketed_data() if data is None else data
     _, masses, volumes, enthalpy, temperature, rate = demo02_cstr.reference_functions(data)
     hj, _, _ = water_enthalpy_functions(data['Pj'])
     h_in = hj(data['Tin'], data['Pin'])
@@ -444,8 +462,12 @@ def steady_jacketed(data=None, guess=None):
                 (data['P'] + mass * data['g'] / data['area'] - data['Pout'] - loss) / 1e3,
                 (data['coolantFlow'] * (h_in - hj(Tj)) + wall) / (data['UA'] + data['coolantFlow'] * 4180.) / 10.]   # scaled by the jacket's thermal sensitivity
     if guess is None:
-        row = demo02_cstr.sequential_steady_reference(1, dict(data, Tj=data['Tin']))[0]
-        guess = [*row['amounts'], row['temperature'], row['flow'], data['Tin']]
+        Tj = data['Tin']
+        for _ in range(2):
+            row = demo02_cstr.sequential_steady_reference(1, dict(data, Tj=Tj))[0]
+            Tj = brentq(lambda t: data['coolantFlow'] * (h_in - hj(t)) + data['UA'] * (row['temperature'] - t),
+                        min(data['Tin'], row['temperature']) - 1, max(data['Tin'], row['temperature']) + 1, xtol=1e-11)
+        guess = [*row['amounts'], row['temperature'], row['flow'], Tj]
     solution = root(residual, np.asarray(guess) / scale, method='hybr', options={'xtol': 1e-13})
     if not solution.success:
         raise RuntimeError(solution.message)
