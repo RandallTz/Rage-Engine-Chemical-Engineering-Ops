@@ -38,6 +38,7 @@ from demo02_drum import MATERIAL
 import demo02_cstr
 
 JACKET = 'jacket'
+RESIDUAL_TOLERANCE = 1e-8   # scaled steady residual accepted for the joint root (ten times the package noise floor)
 COOLANT_IN, COOLANT_OUT = 'coolantIn', 'coolantOut'
 
 # Service data: water coolant, pumped at a prescribed rate; the jacket is filled and rigid.
@@ -438,8 +439,14 @@ def steady_jacketed(data=None, guess=None):
     Starting point (review JR-1): each volume at its own steady state given the other's guess, alternated
     twice. The jacket balance for a given reactor temperature is a monotone scalar equation with one root
     (brentq); the single-reactor sequential reference for a given jacket temperature is the accepted Demo 0.2
-    root. Two sweeps put the seed within the hybr basin for coolant flows from 2e-3 to 5 kg/s; seeding
-    T_j = T_in instead ignores the wall heat and the isenthalpic inlet offset and stalls hybr at 5 kg/s.
+    root. This is a block Gauss-Seidel initializer; it is not a convergence proof.
+
+    Acceptance (review JR-4): the root is accepted on the scaled residual, max |r| <= RESIDUAL_TOLERANCE,
+    never on hybr's own success flag. The residual is built from package enthalpies obtained by a central
+    difference with a 1e-3 K step, so its noise floor is about 1e-9 in the scaled rows; hybr with xtol 1e-13
+    cannot keep making progress below that floor and then reports "not making good progress" whether or not
+    the root is already resolved. The stated tolerance is ten times the floor; a root that does not reach it
+    is rejected with the attained residual. `steady_jacketed_grid` sweeps UA and coolant flow.
     """
     from scipy.optimize import root, brentq
     data = jacketed_data() if data is None else data
@@ -469,8 +476,22 @@ def steady_jacketed(data=None, guess=None):
                         min(data['Tin'], row['temperature']) - 1, max(data['Tin'], row['temperature']) + 1, xtol=1e-11)
         guess = [*row['amounts'], row['temperature'], row['flow'], Tj]
     solution = root(residual, np.asarray(guess) / scale, method='hybr', options={'xtol': 1e-13})
-    if not solution.success:
-        raise RuntimeError(solution.message)
+    attained = float(np.max(np.abs(residual(solution.x))))
+    if not attained <= RESIDUAL_TOLERANCE:
+        raise RuntimeError('Joint steady root not resolved: scaled residual %.3g > %.1g (%s)' % (attained, RESIDUAL_TOLERANCE, solution.message))
     v = solution.x * scale
     return {'amounts': v[:4], 'temperature': v[4], 'flow': v[5], 'jacketTemperature': v[6],
-            'conversion': 1 - 2 * v[0] / sum(v[:4]), 'residual': float(np.max(np.abs(residual(solution.x))))}
+            'conversion': 1 - 2 * v[0] / sum(v[:4]), 'residual': attained, 'seed': list(np.asarray(guess)),
+            'seedResidual': float(np.max(np.abs(residual(np.asarray(guess) / scale))))}
+
+
+def steady_jacketed_grid(conductances=(0.5, 5.0, 50.0, 500.0), flows=(1e-4, 2e-3, 0.05, 1.0, 5.0, 50.0), data=None):
+    """The joint steady root over a UA x coolant-flow grid, each from the default seed rule (JR-4 regression)."""
+    base = jacketed_data() if data is None else data
+    rows = []
+    for UA in conductances:
+        for flow in flows:
+            case = dict(base, UA=UA, coolantFlow=flow)
+            result = steady_jacketed(case)
+            rows.append(dict(result, UA=UA, coolantFlow=flow))
+    return rows

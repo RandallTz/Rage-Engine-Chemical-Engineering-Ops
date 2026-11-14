@@ -25,7 +25,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from jacketed_reactor_inputs import (SERVICE, JACKETED, JACKET, COOLANT_IN, COOLANT_OUT, author_jacket_service, author_jacketed_reactor, jacketed_data,
-                                     reference_jacket_service, steady_jacket_service, reference_jacketed, steady_jacketed, water_enthalpy_functions, T)
+                                     reference_jacket_service, steady_jacket_service, reference_jacketed, steady_jacketed, steady_jacketed_grid,
+                                     water_enthalpy_functions, RESIDUAL_TOLERANCE, T)
 from core.compilador.derived import DerivedSystem, resolve_system
 from core.modelo.equation_workbench import build
 import demo02_cstr
@@ -116,6 +117,57 @@ class JacketService(unittest.TestCase):
         self.assertLess(abs(value - p['Tj']), p['rounding'])   # K, within the source's printed rounding
 
 
+class JointSteadyReference(unittest.TestCase):
+    """JR-4 regression: the joint steady root is accepted on its residual, from the default seed, over a UA x flow grid."""
+
+    def test_grid_of_conductances_and_coolant_flows(self):
+        data = jacketed_data()
+        rows = steady_jacketed_grid(data=data)
+        self.assertEqual(len(rows), 24)
+        for row in rows:
+            with self.subTest(UA=row['UA'], flow=row['coolantFlow']):
+                self.assertLessEqual(row['residual'], RESIDUAL_TOLERANCE)
+                # Cooling jacket: the jacket sits between the coolant inlet and the reactor, closer to the inlet the larger the flow.
+                self.assertGreater(row['jacketTemperature'], data['Tin'])
+                self.assertLess(row['jacketTemperature'], row['temperature'])
+                self.assertTrue(0 < row['conversion'] < 1)
+        by_flow = {}
+        for row in rows:
+            by_flow.setdefault(row['UA'], []).append(row['jacketTemperature'])
+        for UA, temperatures in by_flow.items():
+            self.assertEqual(temperatures, sorted(temperatures, reverse=True), UA)   # T_j decreases with the coolant flow
+
+    def test_perturbed_seeds_near_the_formerly_failing_cases(self):
+        """Seeds displaced from the rule (temperatures +-3 K, amounts and flow x0.7 and x1.4) still resolve the same root."""
+        for UA, flow in [(5.0, 1.0), (50.0, 1.0), (500.0, 2e-3), (5.0, 2e-3), (5.0, 5.0)]:
+            data = dict(jacketed_data(), UA=UA, coolantFlow=flow)
+            reference = steady_jacketed(data)
+            seed = np.asarray(reference['seed'])
+            for dT, factor in [(3.0, 1.0), (-3.0, 1.0), (0.0, 0.7), (0.0, 1.4), (3.0, 1.4), (-3.0, 0.7)]:
+                guess = seed.copy(); guess[:4] *= factor; guess[5] *= factor; guess[4] += dT; guess[6] += dT
+                with self.subTest(UA=UA, flow=flow, dT=dT, factor=factor):
+                    row = steady_jacketed(data, guess=list(guess))
+                    self.assertLessEqual(row['residual'], RESIDUAL_TOLERANCE)
+                    self.assertLess(abs(row['temperature'] - reference['temperature']), 1e-6)          # K, two roots resolved to the residual floor
+                    self.assertLess(abs(row['jacketTemperature'] - reference['jacketTemperature']), 1e-6)
+
+    def test_rejects_an_unresolved_root_by_residual_not_by_the_solver_flag(self):
+        data = dict(jacketed_data(), UA=5.0, coolantFlow=1.0)   # a case where hybr reports no progress at the noise floor
+        row = steady_jacketed(data)
+        self.assertLessEqual(row['residual'], RESIDUAL_TOLERANCE)
+        self.assertGreater(row['seedResidual'], row['residual'])
+        # A seed far from the root is accepted only if the solver still resolves it; a deliberately impossible
+        # tolerance rejects with the attained residual stated.
+        import jacketed_reactor_inputs as module
+        saved = module.RESIDUAL_TOLERANCE
+        module.RESIDUAL_TOLERANCE = 1e-16
+        try:
+            with self.assertRaisesRegex(RuntimeError, 'scaled residual'):
+                steady_jacketed(data)
+        finally:
+            module.RESIDUAL_TOLERANCE = saved
+
+
 class JacketedReactor(unittest.TestCase):
     """Authoring takes about 11 minutes; set RAGE_JACKETED_MODEL to a saved model JSON to reuse it."""
 
@@ -182,7 +234,7 @@ class JacketedReactor(unittest.TestCase):
         self.assertLess(abs(T_cell[-1] - self.reference_T[-1]), 2e-5)
         self.assertLess(abs(T_cell[-1] - steady['temperature']), 1e-6)         # K
         self.assertLess(abs(T_jacket[-1] - steady['jacketTemperature']), 1e-6)
-        self.assertLess(steady['residual'], 1e-8)   # scaled hybr residual
+        self.assertLessEqual(steady['residual'], RESIDUAL_TOLERANCE)   # scaled residual, the stated acceptance
         sol, T_long, Tj_long = reference_jacketed(np.linspace(0, 60000, 7))
         self.assertLess(abs(T_long[-1] - steady['temperature']), 1e-3)      # K
         self.assertLess(abs(Tj_long[-1] - steady['jacketTemperature']), 1e-3)
