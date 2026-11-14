@@ -150,3 +150,23 @@ For dynamic results `stageAxisId` is null and `profiles` is empty. For steady re
 Contract tests assemble temperature publications from the shared-authored thermal chain and exercise both strict readers and the existing x-y chart reader. Actual connected-network publication uses the same extension: per-stage quantities come from the global trajectory or zero-accumulation root, with fresh certificates evaluated at those states. The recorded discharge relations are now available; enabling the common HTTP route still requires the complete network selection and compilation evidence.
 
 Boundary values without an authored binding remain null, following the common result contract. In particular, the current drum discharge path provides component flow and specific enthalpy but does not determine a downstream temperature and pressure pair. Publication must not copy the donor temperature across that path or perform an undeclared flash. Such missing series are listed in the internal publisher's version-1 `procedencia.networkEvidence.unresolvedPortSeries`; this diagnostic is not a replacement for compilation evidence. Stage temperature and composition profiles use the closure outputs of each stage volume and remain available.
+
+## Run timeline (`procedencia.runTimeline` v1, Demo 0.3 item C5, 13 November 2026)
+
+A run that has operator or scheduled actions on a timeline may add the optional, additive key `procedencia.runTimeline`:
+
+```
+{format: "rage.run-timeline", version: 1, horizon,
+ actions: [{seq, t, quantityId, value, unit, origin: "scheduled" | "operator"}],
+ termination: {reason: "completed" | "operator_stop" | "solver_stop", tEnd}}
+```
+
+Results v0 and every other key are unchanged: a result without `runTimeline` reads exactly as before, and the version of `rage.resultados` stays 0. Python (`core/resultados/run_timeline.py`, called from `core/resultados/formato.py`) and TypeScript (`frontend/motores/resultados/runTimeline.ts`, called from `lector.ts`) enforce the same rules and reject any other field set or version. Python produces every value (`run_timeline`, `timeline_events`); the client only reads.
+
+- `horizon` is a positive finite number; `tEnd` lies in `[0, horizon]`. Actions are numbered `seq` 0..n-1, sorted by `t`, with `t <= tEnd`. An action is a truncation at the recorded float `t`, so several actions may share one `t`. `quantityId` is a nonempty identity, `value` a finite number, `unit` a unit the shared units service reads (the TypeScript reader checks only that it is a nonempty string; readability is the server's check).
+- **Termination and status.** `completed` requires `estado: "resuelto"` and `tEnd == horizon`. `operator_stop` and `solver_stop` require `estado: "parcial"`; `solver_stop` covers a solver stop, a closure stability stop and an exhausted step budget, so none of them can read as solved (audit finding A-1). A failed result carries no timeline. Verifications cover only the published range.
+- **Time axis.** The first axis with role `tiempo` never decreases and its last value equals `tEnd`. A time may repeat only at an action: the left value, then the right value at `t*`, so a time occurs at most `1 + (number of actions at that time)` times. Charts read the repeated time through the existing path with no change: the series keeps one point per sample, and the jump appears as two points at the same `x`.
+- **Events.** Each action is also an event `timeline_action` on the time axis with `valor = t`, in order. A run that did not complete also carries exactly one event `timeline_termination` at `tEnd`. Charts mark them through the existing `eventos` path.
+- The timeline does not enter the physical signature here; binding it into `report['signature']` belongs to item C7, and the preview rows sent during a live run are not a result.
+
+Verification: `tests/test_run_timeline_results.py` (every termination reason, the status rule, every rejection, the v0 reading, the chart conversion of a repeated time) and `frontend/motores/resultados/verificar_run_timeline.mjs`, which the pytest runs on the same cases and which compares the TypeScript verdict with the Python one and plots the repeated time through `prepareCharts`.

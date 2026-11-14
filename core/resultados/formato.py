@@ -150,6 +150,12 @@ def leer_resultados(dato):
             read_assessment(proc['assessment'], result=dato)
         except (ValueError, TypeError, KeyError) as error:
             _fallo('procedencia.assessment', str(error))
+    if 'runTimeline' in proc:
+        from .run_timeline import read_run_timeline
+        try:
+            read_run_timeline(dato)
+        except (ValueError, TypeError, KeyError) as error:
+            _fallo('procedencia.runTimeline', str(error))
     return dato
 
 

@@ -41,6 +41,7 @@
     "test_catalog_species_domains.py",
     "test_chemical_equilibrium.py",
     "test_assessment_roundtrip.py",
+    "test_run_timeline_results.py",
     "test_common_admission.py",
     "test_integrator_declared_domains.py",
     "test_f3_inverse_closure_rejection.py"
@@ -188,6 +189,7 @@
   },
   "pytest_measured_seconds": {
     "test_assessment_roundtrip.py": 9.59,
+    "test_run_timeline_results.py": 2.5,
     "test_boundary_conditions.py": 36.34,
     "test_bubble_edge_h_noise.py": 32.92,
     "test_catalog_species_domains.py": 9.15,
