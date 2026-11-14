@@ -43,6 +43,7 @@ interior check. This is a finite resolution heuristic, not a proof that arbitrar
 closed windows are absent. Systems without this hook keep endpoint detection.
 """
 
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -115,6 +116,7 @@ def _dense(system, dense):
         value = dense(t)
         _check_domain(system, t, value)
         return value
+    checked.raw = dense      # the bare interpolant: evaluating it never calls the system (used by previews)
     return checked
 
 
@@ -210,7 +212,36 @@ def _rk(sistema, t0, y0, tf, rtol, atol, max_step, metodo="RK45", first_step=Non
 # A trial stage or the endpoint of that step may undershoot such a margin by the cancellation of an explicit
 # Runge-Kutta combination (a state exactly on its bound whose true growth is of high order); the undershoot is a
 # violation only when the margin is still moving outward at that point (the sign of its derivative decides).
-_ADMITTED = {}
+#
+# The admission state belongs to one step generator (one run), never to the system or the module: it is the
+# active scope while that generator executes a step and is empty otherwise, so interleaved runs of one system
+# (a live session and its replay, or a restart) cannot read each other's admitted margins.
+class _Admission:
+    entry = None            # (frozenset of margin indices, horizon) or None
+
+
+_ACTIVE = ContextVar('integrator_admission', default=None)
+
+
+def _scoped(admission, generator):
+    """Resume `generator` with `admission` as the active scope; the scope is empty between resumptions."""
+    try:
+        while True:
+            token = _ACTIVE.set(admission)
+            try:
+                value = next(generator)
+            except StopIteration as stop:
+                return stop.value
+            finally:
+                _ACTIVE.reset(token)
+            yield value
+    finally:
+        token = _ACTIVE.set(admission)
+        try:
+            generator.close()
+        finally:
+            _ACTIVE.reset(token)
+            admission.entry = None
 
 
 def _rate_not_outward(sistema, t, y, indices, horizon):
@@ -224,18 +255,20 @@ def _rate_not_outward(sistema, t, y, indices, horizon):
     return [k for k in indices if np.isfinite(predicted[k]) and predicted[k] >= margins[k]]
 
 
-def _admit_bound_states(sistema, t, y, t_final):
+def _admit_bound_states(sistema, t, y, horizon_time):
     """Record the margins on their bound at an accepted step start that do not leave it (rate sign)."""
-    _ADMITTED.pop(id(sistema), None)
+    admission = _ACTIVE.get()
+    if admission is not None:
+        admission.entry = None
     if not hasattr(sistema, "dominio"):
         return
     margins = sistema.dominio(t, y)
     on_bound = [k for k, v in enumerate(margins) if v <= 0]
     if on_bound:
-        horizon = 1e-7 * max(t_final, 1e-300)
+        horizon = 1e-7 * max(horizon_time, 1e-300)
         keep = _rate_not_outward(sistema, t, y, on_bound, horizon)
-        if keep:
-            _ADMITTED[id(sistema)] = (frozenset(keep), horizon)
+        if keep and admission is not None:
+            admission.entry = (frozenset(keep), horizon)
 
 
 def _fuera(sistema, t, y):
@@ -244,7 +277,8 @@ def _fuera(sistema, t, y):
         return []
     d = sistema.dominio(t, y)
     bad = [k for k, v in enumerate(d) if not v >= 0]
-    admitted = _ADMITTED.get(id(sistema))
+    admission = _ACTIVE.get()
+    admitted = admission.entry if admission is not None else None
     if bad and admitted:
         keep = [k for k in bad if k in admitted[0]]
         if keep:
@@ -259,21 +293,34 @@ def _detener_dominio(sistema, tray, k, t):
     tray.eventos.append(("agotamiento", t, None, None, tray.detenida.mensaje))
 
 
-def integrar(*args, **kwargs):
-    """Integrate; the admitted on-bound margins of an outer call survive a nested (refinement) call."""
-    system = args[0] if args else kwargs['sistema']
-    previous = _ADMITTED.get(id(system))
+def integrar(sistema, y0, t_final, rtol=1e-8, atol=1e-10, max_step=np.inf, h_min=1e-10, max_pasos=200000,
+             metodo="RK45", *, start_time=0.0, horizon=None):
+    """Integrate from `start_time` to `t_final`: drains `pasos` and returns the trajectory.
+
+    `horizon` is the full run length that sets the probe and margin scales (default `t_final`), so a stretch of
+    a longer run passes the whole horizon and its numerics do not depend on where the stretch ends."""
+    generator = pasos(sistema, y0, t_final, rtol, atol, max_step, h_min, max_pasos, metodo,
+                      start_time=start_time, horizon=horizon)
     try:
-        return _integrar_trayectoria(*args, **kwargs)
-    finally:
-        _ADMITTED.pop(id(system), None)
-        if previous is not None:
-            _ADMITTED[id(system)] = previous
+        while True:
+            next(generator)
+    except StopIteration as stop:
+        return stop.value
 
 
-def _integrar_trayectoria(sistema, y0, t_final, rtol=1e-8, atol=1e-10, max_step=np.inf, h_min=1e-10, max_pasos=200000, metodo="RK45", *, _start_time=0.0):
+def pasos(sistema, y0, t_final, rtol=1e-8, atol=1e-10, max_step=np.inf, h_min=1e-10, max_pasos=200000,
+          metodo="RK45", *, start_time=0.0, horizon=None):
+    """Step generator. Yields the live `Trayectoria` before each step attempt and once more when the step loop
+    has ended (its stop, if any, already set); its accepted segments always end at the last accepted time, so a
+    driver may stop at any yield. It owns its admission state and returns the trajectory, which is what
+    draining it (`integrar`) gives."""
+    return _scoped(_Admission(), _pasos(sistema, y0, t_final, rtol, atol, max_step, h_min, max_pasos, metodo,
+                                        start_time, t_final if horizon is None else horizon))
+
+
+def _pasos(sistema, y0, t_final, rtol, atol, max_step, h_min, max_pasos, metodo, start_time, horizon):
     """Retain the accepted prefix if a system-classified failure escapes a probe/restart."""
-    tray = Trayectoria(t_fin=_start_time, y_fin=np.array(y0, dtype=float))
+    tray = Trayectoria(t_fin=start_time, y_fin=np.array(y0, dtype=float))
 
     def refine(index, requested, failure):
         start, end, dense = tray.tramos[index]
@@ -284,7 +331,7 @@ def _integrar_trayectoria(sistema, y0, t_final, rtol=1e-8, atol=1e-10, max_step=
         # A changed endpoint invalidates every later step and event. Rebuild the
         # entire suffix transactionally, rather than joining incompatible states.
         replacement = integrar(sistema, initial, t_final, rtol, atol, min(max_step, step),
-                               h_min, max_pasos, metodo, _start_time=start)
+                               h_min, max_pasos, metodo, start_time=start, horizon=horizon)
         try:
             value = replacement.y(requested)
         except ValueError as error:
@@ -301,14 +348,13 @@ def _integrar_trayectoria(sistema, y0, t_final, rtol=1e-8, atol=1e-10, max_step=
 
     tray._refine = refine
     try:
-        return _integrar(sistema, y0, t_final, rtol, atol, max_step, h_min, max_pasos, metodo, tray, _start_time)
+        yield from _integrar(sistema, y0, t_final, rtol, atol, max_step, h_min, max_pasos, metodo, tray, start_time, horizon)
     except DomainViolation as error:
         if tray.tramos:
             _, tray.t_fin, dense = tray.tramos[-1]
             tray.y_fin = np.array(dense(tray.t_fin), dtype=float)
         tray.detenida = DomainViolation(sistema, error.index, tray.t_fin, abs(error.time-tray.t_fin))
         tray.eventos.append((tray.detenida.codigo, tray.t_fin, None, None, tray.detenida.mensaje))
-        return tray
     except Exception as error:
         stop = sistema.stop_from_exception(error) if hasattr(sistema, 'stop_from_exception') else None
         if stop is None:
@@ -319,10 +365,11 @@ def _integrar_trayectoria(sistema, y0, t_final, rtol=1e-8, atol=1e-10, max_step=
         tray.eventos = [event for event in tray.eventos if event[1] <= tray.t_fin]
         tray.detenida = stop
         tray.eventos.append((stop.codigo, tray.t_fin, None, None, stop.mensaje))
-        return tray
+    return tray
 
 
-def _integrar(sistema, y0, t_final, rtol, atol, max_step, h_min, max_pasos, metodo, tray, start_time=0.0):
+def _integrar(sistema, y0, t_final, rtol, atol, max_step, h_min, max_pasos, metodo, tray, start_time=0.0, horizon=None):
+    horizon = t_final if horizon is None else horizon
     if metodo not in METODOS:
         raise ValueError(f"método no admitido: {metodo}")
     t, y = float(start_time), np.array(y0, dtype=float)
@@ -343,21 +390,22 @@ def _integrar(sistema, y0, t_final, rtol, atol, max_step, h_min, max_pasos, meto
         nulos = [k for k, v in enumerate(d0) if v == 0]
         if nulos:
             f0 = np.asarray(sistema.rhs(t, y), dtype=float)
-            h = 1e-7 * max(t_final, 1e-300)
+            h = 1e-7 * max(horizon, 1e-300)
             d1 = sistema.dominio(t + h, y + h * f0)
             for k in nulos:
                 if d1[k] < 0:
                     _detener_dominio(sistema, tray, k, t)
                     tray.t_fin, tray.y_fin = t, y
                     return tray
-    _admit_bound_states(sistema, t, y, t_final)
+    _admit_bound_states(sistema, t, y, horizon)
     paso_max = max_step
-    margin_min_step = max(h_min, MARGIN_MIN_STEP*t_final)
+    margin_min_step = max(h_min, MARGIN_MIN_STEP*horizon)
     current_margins = initial_margins
     r = _rk(sistema, t, y, t_final, rtol, atol, paso_max, metodo)
     while r.status == "running" and tray.pasos < max_pasos:
+        yield tray
         t_a, y_a = r.t, r.y.copy()
-        _admit_bound_states(sistema, t_a, y_a, t_final)
+        _admit_bound_states(sistema, t_a, y_a, horizon)
         try:
             r.step()
         except Detencion as d:
@@ -412,7 +460,7 @@ def _integrar(sistema, y0, t_final, rtol, atol, max_step, h_min, max_pasos, meto
             zeros = [k for k, value in enumerate(margins) if value == 0]
             if zeros:
                 rate = np.asarray(sistema.rhs(r.t, r.y), dtype=float)
-                probe_h = 1e-7 * max(t_final, 1e-300)
+                probe_h = 1e-7 * max(horizon, 1e-300)
                 predicted = sistema.dominio(r.t + probe_h, r.y + probe_h * rate)
                 outward = next((k for k in zeros if predicted[k] < 0), None)
                 if outward is not None:
@@ -533,5 +581,11 @@ def _integrar(sistema, y0, t_final, rtol, atol, max_step, h_min, max_pasos, meto
             return tray
         firma = nueva
         r = _rk(sistema, hi, y_e, t_final, rtol, atol, max_step, metodo)
+    if tray.detenida is None and r.status == "running":
+        # The step budget ended the loop before t_final: a truncated run is a stop, never a completed one.
+        tray.detenida = Detencion("max_pasos", f"The step budget max_pasos = {max_pasos} was exhausted at t = {r.t:.12g} "
+                                  f"before reaching t = {t_final:.12g}; the trajectory is partial.")
+        tray.eventos.append(("max_pasos", r.t, firma, None, tray.detenida.mensaje))
     tray.t_fin, tray.y_fin = r.t, r.y.copy()
+    yield tray
     return tray

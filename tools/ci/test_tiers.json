@@ -43,6 +43,7 @@
     "test_assessment_roundtrip.py",
     "test_common_admission.py",
     "test_integrator_declared_domains.py",
+    "test_integrator_timeline.py",
     "test_f3_inverse_closure_rejection.py"
   ],
   "pytest_slow_groups": {
@@ -243,6 +244,7 @@
     "test_indexed_publication.py": 572.94,
     "test_indexed_results.py": 26.5,
     "test_integrator_declared_domains.py": 2.55,
+    "test_integrator_timeline.py": 6,
     "test_invariant_point_polish.py": 56.53,
     "test_inverse_steady_http.py": 10.73,
     "test_isobaric_bubble_edge.py": 14.28,
