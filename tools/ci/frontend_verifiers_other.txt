@@ -11,3 +11,4 @@ app/models/verify_flowsheet_http.mjs    # requires tests/prepare_flowsheet_http.
 motores/resultados/verificar_indexed_charts.mjs # helper requires an explicit published-results JSON argument
 verify_multicomponent_diagrams.mjs     # requires a Python runtime and service fixture; awaiting CI classification
 verify_demo02_walkthrough.mjs # Requires isolated frontend and Python backend, Playwright Chromium and prepared flowsheet fixture.
+motores/resultados/verificar_run_timeline.mjs # needs a cases JSON argument (argv[2]); run by tests/test_run_timeline_results.py, which is in the slow tier
