@@ -10,7 +10,7 @@ def read_definition(value, model=None):
     if isinstance(value, dict) and value.get('version') == 5:
         return read_steady_definition(value, model)
     keys(value, ['format', 'version', 'sourceSignature', 'timeId', 'states',
-                 'parameters', 'initialValues', 'initialEquations', 'reconstructions', 'checks'], ['scaling', 'algebraic', 'nonlinear', 'dae'])
+                 'parameters', 'initialValues', 'initialEquations', 'reconstructions', 'checks'], ['scaling', 'algebraic', 'nonlinear', 'dae', 'timeInputs'])
     import re
     if value['format'] != FORMAT or type(value['version']) is not int or value['version'] not in (1, 2, 3, 4):
         raise ValueError('Unsupported derived execution version.')
@@ -27,11 +27,11 @@ def read_definition(value, model=None):
             raise ValueError('A derived execution identity must be a nonempty string.')
 
     identity(value['timeId'])
-    for name in ('parameters', 'initialValues', 'scaling'):
+    for name in ('parameters', 'initialValues', 'scaling', 'timeInputs'):
         if name not in value:
             continue
         mapping = value[name]
-        if not isinstance(mapping, dict) or len(mapping) > 200 or name == 'scaling' and not mapping:
+        if not isinstance(mapping, dict) or len(mapping) > 200 or name in ('scaling', 'timeInputs') and not mapping:
             raise ValueError('Invalid derived execution data bindings: ' + name)
         for quantity, datum in mapping.items():
             identity(quantity); identity(datum)
@@ -70,6 +70,12 @@ def read_definition(value, model=None):
         raise ValueError('Algebraic unknowns must have distinct ownership.')
     if states & rebuilt or (states | rebuilt) & set(value['parameters']) or value['timeId'] in states | rebuilt | set(value['parameters']):
         raise ValueError('State, reconstruction, parameter and time ownership must be distinct.')
+    # Demo 0.3 C2: a declared time input is held as a zero-rate pseudo-state;
+    # its datum is the value at the start. Optional on versions 1-4, so a
+    # selection without the key reads exactly as before.
+    inputs = set(value.get('timeInputs', {}))
+    if inputs & (states | rebuilt | algebraic | set(value['parameters']) | set(value['initialValues']) | {value['timeId']}):
+        raise ValueError('A time input must be distinct from states, reconstructions, algebraic unknowns, parameters, initial values and time.')
     if 'scaling' in value and set(value['scaling']) != states | {value['timeId']}:
         raise ValueError('Scaling requires exactly the time and retained states.')
     if value['version'] in (3, 4):
