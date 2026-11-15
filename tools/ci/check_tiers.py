@@ -44,6 +44,8 @@ def shard_errors(tiers, groups, workflow_groups):
             hits = [s for s in range(count) if shard_selected(index, s, count)]
             if len(hits) != 1:
                 errors.append(f"{file}: archive {index} runs in shards {hits}, not exactly once")
+        if any(not any(shard_selected(i, s, count) for i in range(total)) for s in range(count)):
+            errors.append(f"{file}: a shard has no archive")
         whole = collected(file)
         only = collected(file, "-k", spec["test"])
         rest = collected(file, "-k", f"not {spec['test']}")

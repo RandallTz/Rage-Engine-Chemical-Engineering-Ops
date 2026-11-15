@@ -14,9 +14,21 @@ RELATIVE_SERIES = 1e-6
 EVENT_SECONDS = 1e-6
 
 
+# Shard of each of the 25 archives (by index in `archives()`) when CI splits them in three. Solve seconds per
+# archive were measured locally on 14 Nov 2026 (native + adapter): unifac-red-5 (17) 2708, heteroazeotropo (1) 1510,
+# nrtl-4 heating (9) 350, then twenty-two archives of at most 204 s (1479 s together). Longest-processing-time
+# assignment gives shard loads of 2708, 1510 and 1479 s (largest 47 % of the total), against 746, 1808 and 3144 s
+# for archive index modulo 3, whose three CI shards took 7, 34 and 91 minutes (the same ratio, 1.37). Archive 17
+# alone bounds any split at 47 %, so more shards would not help. Re-measure (cache records in
+# .tmp/codex-v2-parity hold nativeSeconds and adapterSeconds) when archives change.
+SHARD_TABLE_OF_3 = [2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 2, 2, 2, 2, 2, 2, 2]
+
+
 def shard_selected(index, shard, count):
     """Whether archive number `index` belongs to shard `shard` of `count` (CI splits the 25 archives this way;
     tools/ci/check_tiers.py proves the shards of tools/ci/test_tiers.json cover each archive exactly once)."""
+    if count == 3 and len(SHARD_TABLE_OF_3) == 25:
+        return SHARD_TABLE_OF_3[index] == shard
     return index % count == shard
 
 

@@ -161,7 +161,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
       - name: Slow pytest group
-        run: python run_tests.py --tier slow --group ${{ matrix.group }}
+        run: python run_tests.py --tier slow --group ${{ matrix.group }} --stream
 
   frontend:
     name: Frontend (types, pure verifiers, build)

@@ -30,6 +30,9 @@ def main():
     parser.add_argument("--group", help="Select one slow pytest group")
     parser.add_argument("--list", action="store_true")
     parser.add_argument("-v", "--verbose", action="store_true")
+    parser.add_argument("--stream", action="store_true",
+                        help="Print each suite's output while it runs (pytest -s), so a job cancelled at its time "
+                             "limit still shows the case it was in")
     args = parser.parse_args()
     tiers = json.loads(REGISTRY.read_text(encoding="utf-8"))
     slow = set(tiers["slow"])
@@ -79,8 +82,19 @@ def main():
         arguments, suite_env = extra.get(suite.name, ([], {}))
         command = ([sys.executable, "-m", "pytest", "-q", str(suite), *arguments] if suite.name.startswith("test_")
                    else [sys.executable, str(suite)])
-        result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=ROOT,
-                                env={**env, **suite_env})
+        if args.stream:
+            if suite.name.startswith("test_"):
+                command.insert(command.index("-q") + 1, "-s")
+            proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8",
+                                    errors="replace", cwd=ROOT, env={**env, **suite_env})
+            lines = []
+            for line in proc.stdout:
+                lines.append(line)
+                print("    . " + line.rstrip(), flush=True)
+            result = subprocess.CompletedProcess(command, proc.wait(), "".join(lines), "")
+        else:
+            result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=ROOT,
+                                    env={**env, **suite_env})
         ok = result.returncode == 0
         status = "PASS" if ok else ("QUARANTINED" if suite.name in known else "FAIL")
         print(f"[{status}] {suite.name} {time.monotonic() - start:.1f}s", flush=True)
@@ -92,7 +106,7 @@ def main():
                 print(f"    Reason: {known[suite.name]}", flush=True)
         elif not ok:
             failures.append(suite.name)
-        if args.verbose or not ok:
+        if (args.verbose or not ok) and not args.stream:
             output = (result.stdout + "\n" + result.stderr).strip().splitlines()
             print("\n".join("    | " + line for line in (output if args.verbose else output[-40:])), flush=True)
     print(f"Finished in {time.monotonic() - started:.1f}s: {len(failures)} blocking failures, {len(quarantined)} quarantined failures.")
