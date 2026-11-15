@@ -569,8 +569,11 @@ class EquationWorkbenchTests(unittest.TestCase):
         with self.assertRaises(JournalError):ensure_executable(model)
         for factor in ('0','1/0','coefficient-coefficient'):
             with self.assertRaises(JournalError):self.append(model,{'kind':'divide','family':'matter','sources':['matter.upper.1.closed'],'right':factor})
-        self.append(model,{'kind':'declare_relation','family':'matter','left':'coefficient/coefficient','right':'1','reason':'Valid only away from zero'})
-        self.assertIn(sp.Ne(coefficient,0,evaluate=False),build(model)[0].nodes['operation.3'].predicates,'Cancellation must not erase the domain condition.')
+        # Kernel audit A-2: coefficient/coefficient = 1 states nothing and is rejected as an identity.
+        with self.assertRaisesRegex(JournalError,'identity'):self.append(model,{'kind':'declare_relation','family':'matter','left':'coefficient/coefficient','right':'1','reason':'Valid only away from zero'})
+        self.append(model,{'kind':'declare_symbol','family':'matter','name':'ratio','unit':'1'})
+        self.append(model,{'kind':'declare_relation','family':'matter','left':'ratio','right':'coefficient/coefficient','reason':'Valid only away from zero'})
+        self.assertIn(sp.Ne(coefficient,0,evaluate=False),build(model)[0].nodes['operation.4'].predicates,'Cancellation must not erase the domain condition.')
         self.symbolic_publications.append(report)
 
     def test_dimensions_are_checked_before_arithmetic_cancellation(self):

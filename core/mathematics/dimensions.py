@@ -49,6 +49,12 @@ def dimension(expression,units,unit_resolver=known_unit):
     from .operators import StateDifferential
     if isinstance(expression,StateDifferential):return infer(expression.args[0],units)
     if expression.func==sp.Abs:return infer(expression.args[0],units)
+    if expression.func in (sp.Min,sp.Max):
+        # Saturation (Demo 0.3 C1): every argument carries the same dimension.
+        dimensions=[infer(term,units) for term in expression.args]
+        known=[d for d in dimensions if d is not None]
+        if any(d!=known[0] for d in known):raise JournalError('Arguments of min/max have incompatible dimensions.')
+        return known[0] if known else None
     if isinstance(expression,sp.Sum):return infer(expression.function,units)
     if isinstance(expression,sp.Integral):
         result=dict(infer(expression.function,units) or {})
@@ -141,7 +147,17 @@ def parse_expression(text,quantities,conditions=None,units=None,unit_resolver=kn
                 if conditions is not None and value.is_positive is not True:conditions.append(sp.Gt(value,0,evaluate=False))
                 return sp.log(value)
             return sp.exp(value)
-        raise JournalError('This expression editor currently accepts arithmetic, sqrt, exp, log and declared quantities only.')
+        if name in ('min','max'):
+            # Saturating functions (Demo 0.3 C1). The arguments are compared,
+            # so they must share one dimension; checked before SymPy can
+            # collapse a comparable pair to a single argument.
+            if len(args)<2:raise JournalError('min and max compare at least two arguments.')
+            if units is not None:
+                dimensions=[infer(arg,units) for arg in args]
+                known=[d for d in dimensions if d is not None]
+                if any(d!=known[0] for d in known):raise JournalError('Arguments of '+name+' have incompatible dimensions.')
+            return (sp.Min if name=='min' else sp.Max)(*args)
+        raise JournalError('This expression editor currently accepts arithmetic, sqrt, exp, log, min, max and declared quantities only.')
     result=convert(tree)
     from .validity import finite
     finite(result)

@@ -17,7 +17,15 @@ def solve_unique(equation,unknown,names=None):
     A single expression returned by solve is not proof of that machinery.
     """
     target=sp.Dummy('isolated')
-    changed=equation.xreplace({unknown:target})
+    changed=equation.xreplace({unknown:target}) if isinstance(equation,sp.Equality) else equation
+    if not isinstance(changed,sp.Equality):
+        # Kernel audit A-2: rebuilding an identity or a contradiction yields a
+        # Boolean, never an equation that determines the selected quantity.
+        error=JournalError('This relation is an identity; it does not determine a unique quantity.' if changed is sp.true
+                           else 'This relation is inconsistent; it has no solutions.' if changed is sp.false
+                           else 'Isolation requires an equation.')
+        error.code='identity_relation' if changed is sp.true else 'contradictory_relation' if changed is sp.false else 'not_an_equation'
+        raise error
     residual=changed.lhs-changed.rhs
     conditions=[]
     try:

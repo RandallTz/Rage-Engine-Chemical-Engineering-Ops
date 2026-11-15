@@ -145,6 +145,10 @@ def select_polynomial_branch(equation,unknown,premises):
     parameter domains must settle membership for every candidate; unresolved
     parameter-dependent/coalescing regimes are not silently discarded.
     """
+    if not isinstance(equation,sp.Equality):
+        # Kernel audit A-2: an identity or contradiction evaluated to a Boolean.
+        raise MathematicsError('This parameter case is an identity; the equation does not determine a unique quantity.' if equation is sp.true
+                               else 'This parameter case is inconsistent; the equation has no solutions.')
     parameter_sets=validate_domains(premises)
     target_domains=[p for p in premises if p.quantity==unknown]
     if not target_domains:
