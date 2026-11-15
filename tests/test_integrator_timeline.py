@@ -15,6 +15,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / 'tests'))
 import core.solvers.integrador as integrator
 from core.solvers.integrador import DomainViolation, _dense, integrar, pasos
 from core.solvers.timeline import TimelineError, TimelineRun, replay
@@ -55,7 +56,7 @@ OPTIONS = dict(rtol=1e-9, atol=1e-12)
 
 
 class ExistingTrajectoriesAreUnchanged(unittest.TestCase):
-    """Signatures recorded from the integrator before the generator change (git 52e3bda, same machine class)."""
+    """The generator-based integrator against the frozen integrator from before C4."""
     class Switch:
         def rhs(self, t, y): return np.array([-y[0] + 1., .5 * y[1]])
         def firma(self, t, y): return y[0] > .6
@@ -74,15 +75,23 @@ class ExistingTrajectoriesAreUnchanged(unittest.TestCase):
                 [(e[0], float(e[1]).hex()) for e in tray.eventos], digest)
 
     def test_byte_identical_to_the_previous_integrator(self):
+        """Same machine, same inputs: the frozen pre-C4 integrator and the generator-based one agree bit for bit.
+
+        No stored hash: floating-point step data differs across BLAS kernels and CPUs, so the reference is
+        computed here by the legacy copy and only compared on this machine."""
+        from legacy_integrator_reference import integrar as legacy
         cases = [
-            (self.Linear, [1., .5], 6., {}, (37, 0, '0x1.8000000000000p+2', ['0x1.00a2729b33b97p-1', '0x1.0000000000000p-1'], [], 'cc833f7ac02fe592')),
-            (self.Linear, [1., .5], 6., {'metodo': 'BDF'}, (97, 0, '0x1.8000000000000p+2', ['0x1.00a272f9818f7p-1', '0x1.0000000000000p-1'], [], '5e0c3996e2ba44d7')),
-            (self.Switch, [0., 1.], 3., {'max_step': .3}, (48, 9, '0x1.8000000000000p+1', ['0x1.e6824f21dc406p-1', '0x1.1ed3fe6718f87p+2'], [('cambio_firma', '0x1.d5240f19e6adap-1')], '5545b7c78dc755cc')),
-            (self.Switch, [0., 1.], 3., {'metodo': 'BDF', 'rtol': 1e-9}, (127, 0, '0x1.8000000000000p+1', ['0x1.e6824f07346c3p-1', '0x1.1ed3fe7775440p+2'], [('cambio_firma', '0x1.d5240f3b03c39p-1')], '07ddf1f2ca2b9453')),
+            (self.Linear, [1., .5], 6., {}),
+            (self.Linear, [1., .5], 6., {'metodo': 'BDF'}),
+            (self.Switch, [0., 1.], 3., {'max_step': .3}),
+            (self.Switch, [0., 1.], 3., {'metodo': 'BDF', 'rtol': 1e-9}),
         ]
-        for factory, y0, final, options, expected in cases:
+        for factory, y0, final, options in cases:
             with self.subTest(system=factory.__name__, options=options):
-                self.assertEqual(self.signature(integrar(factory(), y0, final, **options)), expected)
+                old = legacy(factory(), y0, final, **options)
+                new = integrar(factory(), y0, final, **options)
+                self.assertEqual(self.signature(new), self.signature(old))
+                self.assertTrue(old.pasos > 20 and new.detenida is None)
 
     def test_draining_the_generator_is_integrar(self):
         a = integrar(self.Switch(), [0., 1.], 3., max_step=.3)
