@@ -206,14 +206,20 @@ class DerivedSystem(DerivedGraph):
             self.guards.extend((condition, row['equationId']) for condition in conditions)
         # Declared, oriented definitions/closures are expressions in the source,
         # not a second collection of equations supplied by this compiler.
+        declared_constants = {q for q in self.replayed.introduced.values() if isinstance(q, sp.Symbol)}
         for index, operation in enumerate(self.replayed.definition['operations'][:self.replayed.definition['cursor']], 1):
             if operation['kind'] != 'declare_relation':
                 continue
             key = 'operation.' + str(index); equation = self.graph.nodes[key].equation
             target = equation.lhs
-            if isinstance(target, sp.Symbol) and self._time_dependent(equation.rhs):
-                # Demo 0.3 C1 (DR-4): a declared constant cannot receive a
-                # value that changes in time; declare a time-dependent quantity.
+            if isinstance(target, sp.Symbol) and target in declared_constants and self._time_dependent(equation.rhs):
+                # Demo 0.3 C1 (DR-4, narrowed after review finding C1-R1): a
+                # constant declared by declare_symbol in this history cannot
+                # receive a value that changes in time; declare a function of
+                # time instead. Symbols introduced by a physical journal (for
+                # example the hydrostatic density rho, uniform over the column
+                # at each instant) are evaluated by their recorded constitutive
+                # relation with its own premise and are not rejected here.
                 raise LoweringError('constant_time_join', 'A declared constant symbol is joined to a time-dependent expression: ' + str(target), key)
             if isinstance(target, (sp.Symbol, sp.core.function.AppliedUndef)) and target not in self.states and target not in self.replacements and target not in self.algebraic_quantities:
                 self.replacements[target] = equation.rhs
