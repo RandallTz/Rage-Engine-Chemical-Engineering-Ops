@@ -41,3 +41,5 @@ verificar_edicion_componentes_red.mjs
 verificar_edicion_y_operaciones_red.mjs
 verificar_entrega_n_componentes.mjs
 verificar_solver_motor.mjs
+verificar_cuota_almacenamiento.mjs
+verificar_firma_hoja_compacta.mjs
