@@ -283,7 +283,7 @@ def _read_model(dato, *, inspect_initialization):
 
 def _read_template(m):
     """Connectability metadata only; journals remain the deduction authority."""
-    t = _claves(m["template"], "template", ["format", "version", "id", "templateVersion", "equipment", "recipe", "ports"])
+    t = _claves(m["template"], "template", ["format", "version", "id", "templateVersion", "equipment", "recipe", "ports"], ["momentumPremise"])
     if t["format"] != "rage.model-template" or type(t["version"]) is not int or t["version"] != 1:
         _fallo("template", "Expected rage.model-template version 1")
     for key in ("id", "templateVersion"):
@@ -301,8 +301,9 @@ def _read_template(m):
             _fallo("template.recipe.journals", "Expected unique references to existing deduction journals")
         _obj(m["motores"][journal], "motores." + journal)
         seen.add(journal)
+    premise = _momentum_premise(m)
     if t["equipment"]:
-        required = ["materialDerivation", "energyDerivation", "momentumDerivation"]
+        required = ["materialDerivation", "energyDerivation"] + ([] if premise else ["momentumDerivation"])
         if any(v["termodinamica"]["tipo"] == "equilibrio" for v in m["volumenes"]):
             required.append("thermodynamicDerivation")
         if any(journal not in journals for journal in required):
@@ -374,9 +375,33 @@ def _read_template(m):
                 _fallo(r + ".variables." + key, "Expected SI unit " + unit)
 
 
+MOMENTUM_PREMISES = ("prescribed_flows",)
+
+
+def _momentum_premise(m):
+    """Optional `template.momentumPremise` (finding J-1): equipment whose flows are all set outside it.
+
+    {"kind": "prescribed_flows", "reason": text} records that no volume of the template balances
+    momentum because every flow crossing it is prescribed (for example by a pump that is not part of
+    the equipment); the prescription itself stays a recorded relation of the deduction. With the
+    premise, the momentum family is not required and no volume may balance momentum.
+    """
+    premise = m["template"].get("momentumPremise")
+    if premise is None:
+        return None
+    _claves(premise, "template.momentumPremise", ["kind", "reason"])
+    _opcion(premise["kind"], "template.momentumPremise.kind", list(MOMENTUM_PREMISES))
+    _texto(premise["reason"], "template.momentumPremise.reason")
+    if any(v["balances"].get("momento") is True for v in m["volumenes"]):
+        _fallo("template.momentumPremise", "A prescribed-flow premise replaces the momentum balance; no volume may balance momentum")
+    return premise
+
+
 def _check_equipment_deduction(m):
     """Equipment must be deduced: each family active somewhere, and every active volume recorded with operations."""
     families = [("materia", "materialDerivation"), ("energia", "energyDerivation"), ("momento", "momentumDerivation")]
+    if _momentum_premise(m):
+        families = families[:2]
     for flag, journal in families:
         active = [v for v in m["volumenes"] if v["balances"].get(flag) is True]
         if not active:
