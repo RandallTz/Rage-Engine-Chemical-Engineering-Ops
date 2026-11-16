@@ -126,7 +126,13 @@ jobs:
         group:
           - group-1
           - group-2
+          - group-2-shard-1
+          - group-2-shard-2
+          - group-2-shard-3
           - group-3
+          - group-3-shard-1
+          - group-3-shard-2
+          - group-3-shard-3
           - group-4
           - group-5
           - group-6
@@ -156,7 +162,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
       - name: Slow pytest group
-        run: python run_tests.py --tier slow --group ${{ matrix.group }}
+        run: python run_tests.py --tier slow --group ${{ matrix.group }} --stream
 
   frontend:
     name: Frontend (types, pure verifiers, build)
