@@ -5,6 +5,7 @@ Network residuals are the connected original rates, never separately authored
 steady equations. Common-result and HTTP publication are separate consumers.
 """
 import numpy as np
+import sympy as sp
 
 from core.modelo.steady_transform import prepare_steady_transform
 from core.solvers import Detencion
@@ -30,12 +31,36 @@ class IndexedSteadySystem:
             self.transforms = [prepare_steady_transform(stage.model) for stage in self.dynamic.stages]
             self.stages = [SteadySystem(row['model']) for row in self.transforms]
         self.indices = []
+        self.invariant_records = []
+        initial = self.dynamic.initial()
         for j, (dynamic_stage, steady_stage) in enumerate(zip(self.dynamic.stages, self.stages)):
-            if steady_stage.selection['unknowns'] != dynamic_stage.state_ids:
+            # Finding J-6: a stage-local steady transform binds an individually invariant state (its rate is
+            # exactly zero) to its initial datum. Connected, that state is projected out only when its
+            # connected rate is still exactly zero (connections replace boundary data that may enter it) and
+            # its bound value is the value the connected state carries.
+            invariants = steady_stage.selection.get('invariants', {})
+            path = 'indexSet.stages.' + str(j+1)
+            if (steady_stage.selection['unknowns'] != [q for q in dynamic_stage.state_ids if q not in invariants]
+                    or any(q not in dynamic_stage.state_ids for q in invariants)):
                 raise _failure('index_network_unsupported_steady_invariants',
-                    'Connected invariant projection requires a separate admission proof.',
-                    'indexSet.stages.' + str(j+1))
-            self.indices.extend(range(self.dynamic.offsets[j], self.dynamic.offsets[j] + dynamic_stage.size))
+                    'Connected invariant projection requires a separate admission proof.', path)
+            bound = {row['quantityId']: row for row in getattr(steady_stage, 'invariant_records', [])}
+            for k, qid in enumerate(dynamic_stage.state_ids):
+                position = self.dynamic.offsets[j] + k
+                if qid not in invariants:
+                    self.indices.append(position)
+                    continue
+                rate = self.dynamic.expressions[position]
+                record = bound.get(qid)
+                if record is None and invariants[qid] == dynamic_stage.selection['initialValues'].get(qid):
+                    # A template-bound steady stage keeps the selection, not the records: the invariant is bound to
+                    # the same datum that initializes the connected state, so the values are one datum.
+                    record = {'quantityId': qid, 'dataId': invariants[qid], 'value': float(initial[position])}
+                if sp.cancel(rate) != 0 or record is None or not np.isclose(initial[position], record['value'], rtol=1e-12, atol=0.):
+                    raise _failure('index_network_unsupported_steady_invariants',
+                        'A connected individually invariant state needs an identically zero connected rate and its bound initial value.',
+                        path + '.' + qid)
+                self.invariant_records.append({'stage': j+1, **record, 'connectedRate': '0'})
         self.seed = np.concatenate([stage.seed for stage in self.stages])
         self.bounds = np.concatenate([stage.bounds for stage in self.stages])
         self.scales = np.concatenate([stage.scales for stage in self.stages])
@@ -192,6 +217,8 @@ class IndexedSteadySystem:
                 if not valid or closure.admits(publication['phase_set']) is not None:
                     raise _failure('index_network_certificate', 'The stationary stage closure did not pass its certificate.',
                                    'indexSet.stages.'+str(j+1)+'.'+closure.owner)
+        if self.invariant_records:
+            evidence = {**evidence, 'connectedInvariants': [dict(row) for row in self.invariant_records]}
         return root, {**evidence, 'networkJacobian': {
             'version':1, 'selected':self.linear_policy['selected'],
             'rule':('stage-local closure blocks with symbolic coupling derivatives' if self.linear_policy['selected']=='sparse'
