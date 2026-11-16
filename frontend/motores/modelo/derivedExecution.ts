@@ -11,6 +11,8 @@ export type TemporalDerivedExecution = {
   reconstructions:{quantityId:string;equationId:string}[];
   checks:{equationId:string;scaleDataId:string}[];
   scaling?:Record<string,string>;
+  /** Demo 0.3 C2: declared time inputs, quantity id to the datum of its starting value; held constant between actions. */
+  timeInputs?:Record<string,string>;
 };
 
 export type DerivedExecutionSource={format:'rage.derived-execution-source';version:1;modelId:string;sourceSignature:string};
@@ -31,13 +33,13 @@ export function readDerivedExecution(value:unknown,data?:Record<string,unknown>)
     return result;
   }
   const identity=(value:unknown):value is string=>typeof value==='string'&&value.trim().length>0&&value.length<=160;
-  const result=object(value,['format','version','sourceSignature','timeId','states','parameters','initialValues','initialEquations','reconstructions','checks'],['scaling','algebraic','nonlinear','dae']);
+  const result=object(value,['format','version','sourceSignature','timeId','states','parameters','initialValues','initialEquations','reconstructions','checks'],['scaling','algebraic','nonlinear','dae','timeInputs']);
   if(result.format!=='rage.derived-execution'||![1,2,3,4].includes(result.version as number)||typeof result.sourceSignature!=='string'||!/^[a-f0-9]{64}$/.test(result.sourceSignature)||!identity(result.timeId))throw new Error('Invalid derived execution version or source signature.');
   if(result.version===1&&Object.hasOwn(result,'algebraic')||[2,3,4].includes(result.version as number)&&(!Array.isArray(result.algebraic)||!result.algebraic.length))throw new Error('Version 2 requires a nonempty coupled algebraic block.');
-  for(const name of ['parameters','initialValues','scaling']) {
+  for(const name of ['parameters','initialValues','scaling','timeInputs']) {
     if(result[name]===undefined)continue;
     const mapping=object(result[name]);
-    if(Object.keys(mapping).length>200||name==='scaling'&&!Object.keys(mapping).length||Object.entries(mapping).some(([key,value])=>!identity(key)||!identity(value)||data&&!Object.hasOwn(data,value)))throw new Error('Invalid derived execution data binding.');
+    if(Object.keys(mapping).length>200||['scaling','timeInputs'].includes(name)&&!Object.keys(mapping).length||Object.entries(mapping).some(([key,value])=>!identity(key)||!identity(value)||data&&!Object.hasOwn(data,value)))throw new Error('Invalid derived execution data binding.');
   }
   for(const [name,fields] of [['states',['quantityId','equationId']],['reconstructions',['quantityId','equationId']],['checks',['equationId','scaleDataId']],['algebraic',['quantityId','equationId']]] as const) {
     const rows=name==='algebraic'&&result.version===1?[]:result[name];
@@ -55,6 +57,7 @@ export function readDerivedExecution(value:unknown,data?:Record<string,unknown>)
   const states=typed.states.map(row=>row.quantityId),rebuilt=typed.reconstructions.map(row=>row.quantityId),parameters=Object.keys(typed.parameters);
   const owned=[typed.timeId,...states,...rebuilt,...parameters,...(typed.algebraic??[]).map(row=>row.quantityId)];
   if(new Set(owned).size!==owned.length)throw new Error('Numerical quantity ownership must be distinct.');
+  if(typed.timeInputs&&Object.keys(typed.timeInputs).some(key=>owned.includes(key)||Object.hasOwn(typed.initialValues,key)))throw new Error('A time input must be distinct from states, reconstructions, algebraic unknowns, parameters, initial values and time.');
   if(typed.scaling&&Object.keys(typed.scaling).sort().join('|')!==[typed.timeId,...states].sort().join('|'))throw new Error('Scaling requires exactly time and retained states.');
   if(([3,4].includes(typed.version))!==Object.hasOwn(typed,'nonlinear'))throw new Error('Versions 3 and 4 require nonlinear settings.');
   if(typed.nonlinear){
@@ -71,7 +74,8 @@ export function readDerivedExecution(value:unknown,data?:Record<string,unknown>)
   if(typed.dae){
     const config=object(typed.dae,['stateBounds','driftTolerance']);
     const bounds=object(config.stateBounds);
-    if(Object.keys(bounds).sort().join('|')!==states.sort().join('|'))throw new Error('DAE state bounds must cover the states.');
+    // Demo 0.3 C2-R2: each time input carries a bound, so the index-one certificate covers every value an action may give it.
+    if(Object.keys(bounds).sort().join('|')!==[...states,...Object.keys(typed.timeInputs??{})].sort().join('|'))throw new Error('DAE state bounds must cover the states and time inputs.');
     for(const item of Object.values(bounds))for(const value of Object.values(object(item,['lowerDataId','upperDataId'])))if(!identity(value)||data&&!Object.hasOwn(data,value))throw new Error('Invalid DAE bound datum.');
     if(typeof config.driftTolerance!=='number'||!Number.isFinite(config.driftTolerance)||config.driftTolerance<=0||config.driftTolerance>1e-9||typed.nonlinear!.residualTolerance>config.driftTolerance)throw new Error('Invalid DAE drift tolerance.');
   }

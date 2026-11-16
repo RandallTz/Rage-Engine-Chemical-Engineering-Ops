@@ -41,7 +41,7 @@ def validate_selected_data(model):
         selection = read_definition(model['motores']['derivedExecution'])
     except (ValueError, KeyError, TypeError) as error:
         raise LoweringError('invalid_derived_formulation', str(error)) from error
-    bindings = [data for field in ('parameters', 'initialValues', 'scaling')
+    bindings = [data for field in ('parameters', 'initialValues', 'scaling', 'timeInputs')
                 for data in selection.get(field, {}).values()]
     bindings += [row['scaleDataId'] for row in selection['checks']]
     for key in bindings:
@@ -191,6 +191,7 @@ class DerivedSystem(DerivedGraph):
             self.parameter_records.append({'id': qid, 'dataId': data_id,
                 'value': float(self.parameter_values[parameter]), 'unit': self._unit(q)})
         self.replacements = dict(self.parameter_symbols)
+        self._time_inputs(equilibrium)
         self._bind_recorded_zeros()
         self._package_closures(equilibrium)
         self.algebraic_rows = self.selection.get('algebraic', [])
@@ -300,7 +301,15 @@ class DerivedSystem(DerivedGraph):
                 raise LoweringError('unsupported_rate', str(error), row['equationId']) from error
             self.rates[derivative] = rate
             self.guards.extend((guard, row['equationId']) for guard in guards)
-        self.reconstructed = [(row, self._expand(self._quantity(row['quantityId']))) for row in self.selection['reconstructions']]
+        for q in self.time_input_quantities:
+            # Demo 0.3 C2: held constant between actions; it jumps only at a
+            # restart, so its rate is exactly zero in the integrated system.
+            self.rates[sp.Derivative(q, self.time)] = sp.S.Zero
+            if self.algebraic_block is not None:
+                # C2-R1: the block RHS is indexed like self.states, so each
+                # pseudo-state carries its zero rate there too.
+                self.runtime_rates.append(sp.S.Zero)
+        self.reconstructed =[(row, self._expand(self._quantity(row['quantityId']))) for row in self.selection['reconstructions']]
         for closure in self.closures:
             closure.bind_inputs(self.algebraic_quantities if self.thermal_reaction else ())
         self._initial_conditions()
@@ -332,7 +341,7 @@ class DerivedSystem(DerivedGraph):
         if 'scaling' in self.selection:
             self._select_scaling()
         self.size = len(self.states)
-        self.state_ids = [row['quantityId'] for row in self.selection['states']]
+        self.state_ids = [row['quantityId'] for row in self.state_rows]
         self.initial_state = self.numeric.inicial()
         self.tf = self.numeric.tf
         self.method = self.numeric.metodo
@@ -363,6 +372,44 @@ class DerivedSystem(DerivedGraph):
         self.linear_policy = self.block_jacobian.policy
         # Preserve the dense finite-difference default for small existing systems.
         self.jacobian = self.block_jacobian if self.linear_policy['selected'] == 'sparse' else None
+
+    def _time_inputs(self, equilibrium):
+        """Demo 0.3 C2: declared time inputs become zero-rate pseudo-states.
+
+        A time input is a quantity of the Model that depends on time only (a
+        set point r(t), a feed rate F(t)); Solve holds it constant between
+        actions. It is appended after the selected states, so the selected
+        rows keep their order and a selection without the key is unchanged.
+        The value reaches every compiled function through the state vector.
+        """
+        self.state_rows = list(self.selection['states'])
+        self.time_input_quantities = []
+        inputs = self.selection.get('timeInputs', {})
+        if not inputs:
+            return
+        if self.selection.get('scaling'):
+            raise LoweringError('time_input_scaling', 'Declared time inputs are lowered in the identity formulation; a scaled formulation is not supported.', 'motores.derivedExecution.timeInputs')
+        specified = set()
+        for volume in equilibrium:
+            for name in ('P', 'V'):
+                specified.add(sp.Function(name + '__' + volume['id'])(self.time))
+        for qid, data_id in inputs.items():
+            q = self._quantity(qid)
+            path = 'motores.derivedExecution.timeInputs.' + qid
+            if isinstance(q, sp.Symbol):
+                error = LoweringError('time_input_constant', 'A declared constant symbol cannot be a time input; the deduction assumed it constant. Declare a quantity that depends on time.')
+                error.diagnostics[0]['path'] = path; raise error
+            if not isinstance(q, sp.core.function.AppliedUndef) or q.args != (self.time,):
+                error = LoweringError('time_input_unsupported', 'A time input must depend only on the selected time coordinate: ' + qid)
+                error.diagnostics[0]['path'] = path; raise error
+            if q in specified:
+                error = LoweringError('time_input_closure', 'The pressure or volume of a package-closure volume is its closure specification datum; a time input on it is not supported.')
+                error.diagnostics[0]['path'] = path; raise error
+            if q in self.states or q in self.parameter_symbols:
+                error = LoweringError('time_input_competing', 'A time input cannot also be a state or a datum: ' + qid)
+                error.diagnostics[0]['path'] = path; raise error
+            self.states.append(q); self.ids[q] = qid; self.time_input_quantities.append(q)
+            self.state_rows.append({'quantityId': qid, 'equationId': 'timeInput.' + qid})
 
     def _time_dependent(self, expression):
         return expression.has(self.time)
@@ -519,6 +566,7 @@ class DerivedSystem(DerivedGraph):
         initial = {self._quantity(qid): self._datum(data, self._dim(self._quantity(qid)))
                    for qid, data in self.selection['initialValues'].items()}
         initial.update(self.parameter_values)
+        initial.update({q: self._datum(self.selection['timeInputs'][self.ids[q]], self._dim(q)) for q in self.time_input_quantities})
         initial.update({q: initial[p] for q, p in self.parameter_symbols.items()})
         pending = [q for q in self.states if q not in initial]
         # Chain the selected initial relations through intermediate quantities
@@ -881,7 +929,7 @@ class DerivedSystem(DerivedGraph):
             initial_id = 'initial_' + identity
             symbols.append(_symbol(initial_id, 'parametro', self._dim(q)))
             datum('matematico.'+initial_id, self.initial_values[q], self._unit(q))
-            equations.append({'id': self.selection['states'][index]['equationId'],
+            equations.append({'id': self.state_rows[index]['equationId'],
                 'izquierda': {'tipo': 'derivada', 'expresion': {'tipo': 'simbolo', 'id': identity}, 'respecto': self.ids[self.time], 'orden': 1},
                 'derecha': self._ast(self.rates[sp.Derivative(q, self.time)])})
             conditions.append({'id': initial_id, 'tipo': 'inicial', 'dominioId': 'time',

@@ -65,6 +65,15 @@ class IndexOne:
             lo,hi=(system._datum(config[key],system._dim(q)) for key in ('lowerDataId','upperDataId'))
             if lo>=hi:raise NonlinearError('dae_bounds_invalid','State bounds must be finite and strictly ordered.')
             self.bounds[q]=(lo,hi)
+        # Demo 0.3 C2-R2: a declared time input is held between actions and
+        # may jump at each one, so its declared box enters the certificate and
+        # the runtime domain like a differential state; the reader requires it.
+        inputs=list(getattr(system,'time_input_quantities',()))
+        for q in inputs:
+            config=self.settings['stateBounds'][system.ids[q]]
+            lo,hi=(system._datum(config[key],system._dim(q)) for key in ('lowerDataId','upperDataId'))
+            if lo>=hi:raise NonlinearError('dae_bounds_invalid','Time-input bounds must be finite and strictly ordered.')
+            self.bounds[q]=(lo,hi)
         for row,q in zip(system.algebraic_rows,system.algebraic_quantities):
             config=system.selection['nonlinear']['variables'][row['quantityId']]
             self.bounds[q]=tuple(system._datum(config[key],system._dim(q)) for key in ('lowerDataId','upperDataId'))
@@ -75,6 +84,8 @@ class IndexOne:
         self.proof.update(method='scipy_bdf_nested_newton',initialization='fixed_differential_states',
                           driftTolerance=self.settings['driftTolerance'],
                           stateBounds={row['quantityId']:[str(v) for v in self.bounds[q]] for row,q in zip(system.selection['states'],system.states)})
+        if inputs:
+            self.proof['timeInputBounds']={system.ids[q]:[str(v) for v in self.bounds[q]] for q in inputs}
         self.accepted_checks=0;self.max_residual=0.;self.max_conservation=0.
 
     def failure(self, code, message, t, stage):
