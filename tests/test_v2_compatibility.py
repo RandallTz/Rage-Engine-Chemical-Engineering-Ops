@@ -17,7 +17,7 @@ from core import ensamblaje_red as network
 from core.resultados import leer_resultados
 from core.resultados.adaptadores import desde_ensamblaje_v2
 from test_common_admission import request
-from v2_parity_cases import (ROOT, archives, archive_context, execution_digest,
+from v2_parity_cases import (ROOT, archives, archive_context, execution_digest, shard_from_env, shard_selected,
                              RELATIVE_SERIES, event_tolerance, zero_tolerance,
                              series_limit, ZERO_REFERENCES, EVENT_REFERENCES)
 
@@ -198,7 +198,10 @@ class CompatibilityTests(unittest.TestCase):
     def test_all_25_archives(self):
         EVIDENCE.mkdir(parents=True, exist_ok=True)
         digest = execution_digest()
-        for path, value, archived in archives():
+        shard, count = shard_from_env('V2_PARITY_SHARD', 'V2_PARITY_SHARDS')
+        for index, (path, value, archived) in enumerate(archives()):
+            if not shard_selected(index, shard, count):
+                continue
             if os.environ.get('V2_PARITY_CASE') and os.environ['V2_PARITY_CASE'] not in path.name:
                 continue
             with self.subTest(request=path.name):

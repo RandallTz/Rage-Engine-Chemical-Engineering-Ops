@@ -92,8 +92,18 @@ class MargulesReference(unittest.TestCase):
 
     def test_tie_lines_are_mirror_images(self):
         # swapping species 0 and 1 maps one liquid of a tie line onto the other
+        # Tie lines of this symmetric system are their own mirror images, so the deviation is the numerical error of the
+        # point. Away from the plait point it is below 4e-12 (measured, eight BLAS kernels). Within 0.02 of it the
+        # potential-equality system is ill conditioned (its smallest singular value falls with the tie-line gap) and
+        # the deviation is the noise of the potentials times that conditioning: with relative noise of 1e-16 injected in
+        # mu (0.45 machine epsilon) the worst deviation over six seeds is 4.7e-10 to 4.8e-9, always at the tie line
+        # nearest the plait point (gap 3.0e-3 to 4.55e-3), and 2.6e-8 to 1.2e-7 at 1e-15. Eight kernels give 2.5e-10
+        # to 2.1e-9 locally, and the Linux CI runner gave 1.31199e-8 (deterministic there), which is a noise of about
+        # one machine epsilon. The near-plait bound is 3e-8: 2.3 times the runner value and 6 times the injected
+        # round-off-level worst case; the far bound stays 1e-8.
         for p in self.branches[0].points:
-            self.assertLessEqual(float(np.max(np.abs(p['xa'][[1, 0, 2]] - p['xb']))), 1e-8)
+            gap = float(np.max(np.abs(p['xa'] - p['xb'])))
+            self.assertLessEqual(float(np.max(np.abs(p['xa'][[1, 0, 2]] - p['xb']))), 1e-8 if gap >= 0.02 else 3e-8)
 
 
 class BenzeneWaterEthanol(unittest.TestCase):
