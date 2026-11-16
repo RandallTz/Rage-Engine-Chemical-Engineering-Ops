@@ -344,7 +344,7 @@ class GenericSteadyTests(unittest.TestCase):
                  ('nonlinear_ill_conditioned', '(u-1)^2', 2, (1, 3), {}),
                  ('nonlinear_ill_conditioned', 'u/1000000000000', 0, (-1, 1), {}),
                  ('nonlinear_iteration_limit', 'u^2-2', 1, (.1, 4), {'maxIterations': 1}),
-                 ('nonlinear_stagnation', 'u^2-2', 1, (.1, 4), {'stepTolerance': 1}),
+                 ('nonlinear_stagnation', 'u^2-2', 1, (.1, 4), {'residualTolerance': 1e-300}),  # fl(sqrt 2)^2 - 2 != 0 (F5 item 1)
                  ('nonlinear_line_search', 'u^3-2*u+2', 1, (-3, 3), {'maxBacktracks': 1}),
                  ('nonlinear_domain', 'u-5', 4, (.1, 4), {}),
                  ('nonlinear_invalid_seed', '(u^2-1)/(u-1)', 1, (-2, 2), {})]
