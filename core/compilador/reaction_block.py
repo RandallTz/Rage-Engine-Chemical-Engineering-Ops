@@ -89,7 +89,7 @@ class ReactionBlock(NonlinearBlock):
         # the Gibbs differential, not a user-supplied function or final formula.
         mu=[sp.Function('mu_'+str(c)+'__'+self.owner)(system.time) for c in volume['componenteIds']]
         RT=sp.Rational(str(chemistry.R))*self.temperature
-        self.virtual_rows=set();self.potential_rows={};self.standard_functions={}
+        self.virtual_rows=set();self.potential_rows={};self.standard_functions={};self.deduced_standard={}
         located='motores.equilibriumReactions.volumes.'+self.owner
         for j,row in enumerate(entry['reactions']):
             node=system._equation(row['equationId'])
@@ -227,6 +227,9 @@ class ReactionBlock(NonlinearBlock):
         recorded row is admitted only if, with its data substituted, it is that
         function of (n, P) plus one undefined standard-potential function of
         time, with the provider's R and P0. No species or case branches.
+        Since F5 item 5 the standard-potential function may instead be a
+        function of the region temperature with a deduced Model relation
+        (_deduced_standard), proved identical to the provider's mu_i0(T).
         """
         closures={}
         pressure=system._quantity(self.declaration['pressureId'])
@@ -253,8 +256,10 @@ class ReactionBlock(NonlinearBlock):
                 reject('reaction_gas_constant_mismatch','The chemical-potential relation must use the provider gas constant 8.314462618 J/(mol K).',key)
             standard=sp.expand_log(value-R*T*sp.log(x[i]*p/(sum(x)*P0)),force=True)
             functions=[f for f in standard.atoms(sp.core.function.AppliedUndef)]
+            deduced=(self._deduced_standard(system,key,i,functions[0],local,data)
+                     if len(functions)==1 and functions[0].args!=(system.time,) else None)
             if (any(sp.simplify(sp.diff(standard,v))!=0 for v in [*x,p]) or len(functions)!=1
-                    or functions[0].args!=(system.time,)
+                    or functions[0].args!=(system.time,) and deduced is None
                     or any(f in functions for f in [*mu,*amounts,*system.states,*system.algebraic_quantities])
                     or any(k!=key and f==functions[0] for k,f in self.standard_functions.items())
                     or sp.simplify(sp.diff(standard,functions[0])-1)!=0):
@@ -267,6 +272,101 @@ class ReactionBlock(NonlinearBlock):
                 reject('reaction_standard_pressure_mismatch','The recorded standard pressure must equal the provider ideal_gas_P0 reference, 1e5 Pa.',key)
             closures[i]=key;self.standard_functions[key]=functions[0]
         return closures
+
+    def _deduced_standard(self, system, key, i, function, local, data):
+        """F5 item 5: a standard potential g_i(T...) defined by a deduced Model relation.
+
+        The relation must be the output of recorded operations (not a declared
+        relation) whose left side is exactly the function in the chemical-potential
+        row. With its data substituted it must be, as a function of the region
+        temperature T, identical to the executed provider standard potential
+            mu_i0(T) = Hf_i + R sum_k a_k (T^(k+1) - T0^(k+1))/(k+1)
+                       - T (S0_i + R (a_0 ln(T/T0) + sum_(k>=1) a_k (T^k - T0^k)/k)),
+        compared coefficient by coefficient on {T^k, T ln T} (relative 1e-12), plus a
+        provider evaluation at the middle of its cp range. Returns the relation key,
+        or None when no deduced relation names the function (the caller then rejects
+        it as a provider mismatch)."""
+        from core.mezclas_datos import T0
+        located='motores.equilibriumReactions.volumes.'+self.owner
+        temperature=system._quantity(self.declaration['temperatureId'])
+        candidates={}
+        for k,node in system.graph.nodes.items():
+            if not isinstance(node.equation,sp.Equality):
+                continue    # domain premises (Contains) and other non-equation nodes
+            lhs=node.equation.lhs
+            if not isinstance(lhs,sp.core.function.AppliedUndef) or lhs.func!=function.func:
+                continue
+            if si_magnitude(lhs.xreplace(local)).xreplace(data)!=function:
+                continue
+            if node.rule=='declared_relation':
+                reject('reaction_standard_potential_not_deduced','A standard potential of the region temperature must be deduced from cp by '
+                       'recorded operations (differentiate, integrate, substitute), not declared as a final formula.',k)
+            candidates[sp.srepr(node.equation.rhs)]=k
+        if not candidates:
+            return None
+        if len(candidates)>1:
+            reject('reaction_chemical_potential_ambiguous','Two deduced relations define the same standard potential.',sorted(candidates.values())[0])
+        deduced=candidates.popitem()[1]
+        provider=self.provider
+        if isinstance(provider,chemistry.IdealGasPhase):
+            species=provider.especies[i]
+        elif isinstance(provider,chemistry.PackagePhase) and provider.tipo=='vapor':
+            species=provider.sistema.esp[i]
+        else:
+            reject('PROVIDER_UNSUPPORTED','A deduced ideal-gas standard potential is admitted for an ideal-gas phase only; '
+                   'the pure-liquid standard potential (pure_liquid_TP) is not deduced from cp.',located)
+        Ts=sp.Symbol('standard_temperature',positive=True)
+        exact=lambda v:sp.Rational(float(v))
+        R=exact(chemistry.R);T0_=exact(T0);a=[exact(v) for v in species.cp]
+        executed=(exact(provider.Hf[i])-Ts*exact(provider.S0[i])
+                  +R*sum(c*(Ts**(k+1)-T0_**(k+1))/(k+1) for k,c in enumerate(a))
+                  -Ts*R*(a[0]*(sp.log(Ts)-sp.log(T0_))+sum(c*(Ts**k-T0_**k)/k for k,c in enumerate(a) if k)))
+        rhs=system.graph.nodes[deduced].equation.rhs.xreplace({temperature:Ts})
+        recorded=si_magnitude(rhs).xreplace({q:v for q,v in data.items() if q!=temperature})
+        L=sp.Symbol('log_standard_temperature')
+        def coefficients(expression):
+            expression=sp.expand(sp.expand_log(sp.expand(expression),force=True)).xreplace({sp.log(Ts):L})
+            if expression.free_symbols-{Ts,L}:
+                return None
+            try:
+                return {m:complex(c) for m,c in zip(sp.Poly(expression,Ts,L).monoms(),sp.Poly(expression,Ts,L).coeffs())}
+            except (sp.PolynomialError,TypeError):
+                return None
+        left,right=coefficients(recorded),coefficients(executed)
+        message=('The deduced standard potential of species '+str(i+1)+' is not the executed provider mu_i0(T) of the '+self._provider_text()+
+                 ' (published cp coefficients, formation Hf and S0 at T0 = 298.15 K and P0)')
+        if left is None or right is None:
+            reject('reaction_standard_potential_mismatch',message+': it is not a function of T alone of the cp-integral form.',deduced)
+        for monomial in set(left)|set(right):
+            u,v=left.get(monomial,0),right.get(monomial,0)
+            if abs(u-v)>1e-12*max(abs(v),1e-3):
+                reject('reaction_standard_potential_mismatch',message+'; coefficient of '+str(monomial)+': '+repr(u)+' recorded, '+repr(v)+' executed.',deduced)
+        middle=(provider.T_range[0]+provider.T_range[1])/2 if hasattr(provider,'T_range') else float(T0)
+        value=float(recorded.subs(Ts,middle))
+        reference=float(provider.mu_standard(middle,float(chemistry.P0))[i])
+        if abs(value-reference)>1e-9*max(abs(reference),1.):
+            reject('reaction_standard_potential_mismatch',message+'; at '+repr(middle)+' K: '+repr(value)+' recorded, '+repr(reference)+' executed.',deduced)
+        # The deduction chain lives on the reduced temperature (tau = T/Tref) and
+        # its constant data; its rows are neither rates nor closures of the
+        # integrated system. Admitted only as recorded operations, they are
+        # certified by the coefficient identity above and, like the virtual
+        # Gibbs chain, are not lowered as additional equations.
+        allowed=('declare_relation','differentiate','integrate','isolate','substitute','expand','factor','multiply','divide')
+        chain=set()
+        def visit(k):
+            if k in chain:return
+            chain.add(k)
+            for parent in system.graph.nodes[k].inputs:visit(parent)
+        visit(deduced)
+        for k in chain:
+            if k.startswith('operation.'):
+                operation=system.replayed.definition['operations'][int(k.split('.')[1])-1]
+                if operation['kind'] not in allowed:
+                    reject('reaction_standard_potential_not_deduced','The standard-potential deduction may use only recorded relations, '
+                           'differentiation, integration, isolation, substitution and algebraic normalization.',k)
+                self.virtual_rows.add(k)
+        self.deduced_standard[i]=deduced
+        return deduced
 
     def _provider(self, system, entry):
         """The executed provider named by the declaration, and its activity form.
@@ -585,6 +685,8 @@ class ReactionBlock(NonlinearBlock):
                 **({'temperatureBox':proof['temperatureBox'],'heatCapacityBounds':proof['heatCapacityBounds']} if thermal else {}),
                 'determinantBounds':[str(v) for v in proof['determinantBounds']],
                 'proof':proof['method']+' Chemical-potential relations: '+str([self.potential_rows[i] for i in sorted(self.potential_rows)])
+                    +(' with standard potentials deduced from cp in '+str([self.deduced_standard[i] for i in sorted(self.deduced_standard)])
+                      +' (coefficient-identical to the provider mu_i0(T))' if self.deduced_standard else '')
                     +' executed by the '+self._provider_text()+'. Provider fingerprints: '+str(proof['provider']['fingerprints'])+' '+self.caloric_limitation}
 
     def is_consequence(self,expression):
