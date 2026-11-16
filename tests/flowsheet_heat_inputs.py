@@ -37,7 +37,7 @@ from core.mathematics.dimensions import catalog  # noqa: E402
 from core.compilador.derived import source_signature  # noqa: E402
 from derived_momentum_inputs import author_outlet, select_outlet  # noqa: E402
 from derived_reactor_inputs import OWNER as REACTOR  # noqa: E402
-from jacketed_reactor_inputs import SERVICE, JACKETED, jacketed_data, author_jacket_service, T  # noqa: E402
+from jacketed_reactor_inputs import SERVICE, JACKETED, jacketed_data, T  # noqa: E402
 import demo02_cstr  # noqa: E402
 
 CACHE = ROOT / '.tmp' / 'flowsheet_heat'
@@ -108,24 +108,74 @@ def service_data():
     return dict(SERVICE, **{k: v for k, v in JACKETED.items() if k in SERVICE and k != 'tf'})
 
 
-def _key():
+MOMENTUM_PREMISE = {'kind': 'prescribed_flows',
+                    'reason': 'The coolant pump outside the jacket sets the supply flow and the rigid filled jacket returns it; '
+                              'no flow of this equipment is set by its own momentum balance (finding J-1)'}
+
+
+def author_service_jacket(data=None, method='bdf'):
+    """The jacket service template for the flowsheet: no momentum balance, under the recorded prescribed-flow
+    premise (J-1), and the single coolant species recorded (J-6), so the return equals the supply exactly.
+    The process-side temperature is the wall port's exterior datum `service.Tprocess`."""
+    from core.modelo import leer_modelo_comun
+    from core.mathematics.dimensions import catalog
+    from m1_acceptance import SharedAuthor
+    from derived_closure_inputs import _datum
+    from jacketed_reactor_inputs import JACKET, jacket_shell, add_jacket_volume, author_jacket, jacket_template, _jacket_selection
+    data = service_data() if data is None else data
+    author = SharedAuthor(leer_modelo_comun(add_jacket_volume(jacket_shell(data), data, momentum_balance=False)))
+    out = author_jacket(author, JACKET, 1, None, None, single_species=True)
+    template = jacket_template()
+    template['recipe']['journals'] = [k for k in template['recipe']['journals'] if k != 'momentumDerivation']
+    template['momentumPremise'] = copy.deepcopy(MOMENTUM_PREMISE)
+    author.model['template'] = template
+    model, _, _ = author.finish({})
+    replayed = build(model)
+    quantities = {**catalog(replayed.graph, replayed.units), **replayed.introduced}
+    named = lambda name: next(k for k, v in quantities.items() if str(v) == name)
+    sel = {'format': 'rage.derived-execution', 'version': 1, 'sourceSignature': None,
+           'timeId': named('t'), 'states': [], 'parameters': {}, 'initialValues': {}, 'initialEquations': [],
+           'reconstructions': [], 'checks': []}
+    _jacket_selection(sel, model, quantities, out, data, JACKET, 1)
+    sel['parameters'][named('processTemperature')] = _datum(model, 'service.Tprocess', data['Tprocess'], 'K')
+    # No transient mass-budget check: the jacket mass rate is identically zero (J-6), so the budget is the
+    # recorded invariant itself and has no characteristic residual scale in the steady mode.
+    model['estudio'] = {'tipo': 'temporal', 'tiempoId': _datum(model, 'solve.tf', data['tf'], 's', 'estudio'),
+                        'metodoSolicitado': method, 'muestras': 61, 'rtol': 1e-9, 'atol': {'cantidad': 1e-9, 'energia': 1e-3}}
+    model['motores']['derivedExecution'] = sel
+    sel['sourceSignature'] = source_signature(model, replayed)
+    return model
+
+
+def _key(name):
+    """Each document is cached on what it is authored from: its author functions in this module, the shared
+    input modules and the data. Editing the other document's author does not invalidate it."""
+    import inspect
+    own = {'reactor': (duty_template, record_premises, author_duty_reactor),
+           'jacket': (author_service_jacket,)}[name]
     digest = hashlib.sha256()
-    for path in SOURCES:
+    for function in own:
+        digest.update(inspect.getsource(function).encode())
+    shared = [p for p in SOURCES if p != 'tests/flowsheet_heat_inputs.py']
+    for path in shared if name == 'jacket' else [p for p in shared if p != 'tests/jacketed_reactor_inputs.py']:
         digest.update((ROOT / path).read_bytes())
-    digest.update(json.dumps([jacketed_data(), service_data()], sort_keys=True, default=str).encode())
+    digest.update(json.dumps([name, jacketed_data(), service_data(), MOMENTUM_PREMISE], sort_keys=True, default=str).encode())
     return digest.hexdigest()[:16]
+
+
+def _cached(name, factory):
+    path = CACHE / (name + '-' + _key(name) + '.json')
+    if path.exists():
+        return json.loads(path.read_text(encoding='utf-8'))
+    document = factory()
+    CACHE.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(document, ensure_ascii=False), encoding='utf-8')
+    return document
 
 
 def authored():
     """(reactor, jacket) recorded documents, authored once per input revision."""
-    path = CACHE / ('documents-' + _key() + '.json')
-    if path.exists():
-        return tuple(json.loads(path.read_text(encoding='utf-8')))
-    reactor = author_duty_reactor()
-    jacket, _ = author_jacket_service(service_data(), method='bdf')
-    CACHE.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps([reactor, jacket], ensure_ascii=False), encoding='utf-8')
-    return reactor, jacket
+    return _cached('reactor', author_duty_reactor), _cached('jacket', author_service_jacket)
 
 
 def _study_datum(model, key, value, unit):
