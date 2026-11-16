@@ -5,6 +5,12 @@ from core.termodinamica import derivation as thermodynamics
 from core.modelo import leer_modelo_comun
 
 
+# Demo 0.3 C3 (dec-control-surface): an optional fifth family, present only when
+# the history records signal rows; other models keep the four physical families.
+SIGNAL_NOTE=('Designed sensor, controller and actuator relations (Signal family). A signal conserves nothing and '
+             'owns no control volume; it joins the process through recorded relations.')
+
+
 def symbolic_formulation_summary(draft):
     """Carry an unbound Model graph into Transform without inventing species."""
     from core.modelo.equation_workbench import fundamental_report
@@ -18,6 +24,8 @@ def symbolic_formulation_summary(draft):
         rows=[row for row in report['equations'] if row['family']==family and (row['current'] or row['id'].startswith('operation.'))]
         families.append({'id':family,'volumes':[{'volumeId':'dominio','status':'recorded' if keys[family] in draft else 'unrecorded',
                                                'steps':rows,'note':'Symbolic formulation with unbound component index i; numerical execution remains blocked until components and supported lowering are declared.'}]})
+    signal=[row for row in report['equations'] if row['family']=='signal']
+    if signal:families.append({'id':'signal','volumes':[{'volumeId':'dominio','status':'recorded','steps':signal,'note':SIGNAL_NOTE}]})
     return {'format':'rage.formulation-summary','version':1,'modelId':report['modelId'],'families':families}
 
 
@@ -106,6 +114,8 @@ def formulation_summary(model):
         for family in families:
             consequences=[row for row in development['equations'] if row['family']==family['id'] and row['id'].startswith('operation.')]
             if consequences:family['volumes'].append({'volumeId':'system','status':'recorded','steps':consequences,'note':'Replayed equation operations. Dependent consequences retain their physical premises; declared relations require an admitted compiler.'})
+        signal=[row for row in development['equations'] if row['family']=='signal']
+        if signal:families.append({'id':'signal','volumes':[{'volumeId':'system','status':'recorded','steps':signal,'note':SIGNAL_NOTE}]})
     from core.modelo.dynamic_definition import describe_definition
     return {"format": "rage.formulation-summary", "version": 1, "modelId": model["id"], "families": families, "dynamicFormulation": describe_definition(model)}
 

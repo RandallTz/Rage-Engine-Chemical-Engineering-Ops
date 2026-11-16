@@ -1,13 +1,13 @@
 /** Storage and transport only; Python owns equation operations and dimensions. */
 export const equationSourceRevision='physical-equation-graphs-8';
-export type EquationFamily='matter'|'momentum'|'energy'|'thermodynamics';
+export type EquationFamily='matter'|'momentum'|'energy'|'thermodynamics'|'signal';
 export type RelationSource={kind:string;citation:string;validRange:string;url?:string;table?:string};
 export type EquationOperation={kind:string;family:EquationFamily;sources?:string[];symbol?:string;relation?:string;name?:string;unit?:string;left?:string;right?:string;reason?:string;dependencies?:string[];relationKind?:'definition'|'constitutive'|'constraint';source?:RelationSource;sourceSignatures?:Record<string,string>;domain?:string;domains?:string[];lower?:string;upper?:string;lowerOpen?:boolean;upperOpen?:boolean;endpointUnit?:string};
 export type EquationWorkbench={format:'rage.equation-workbench';version:1;operations:EquationOperation[];cursor:number};
 export type EquationRow={id:string;title:string;family:EquationFamily;ownerId:string;kind:string;dependent:boolean;current:boolean;latex:string;derivation:{rule:string;inputIds:string[];beforeLatex:string[];assumptions:string[];branches?:{latex:string;admitted:boolean}[]}};
 export type EquationWorkbenchReport={format:'rage.equation-workbench-report';version:1;modelId:string;draft?:boolean;replay?:{completed:number;failedOperation:number;message:string};definition:EquationWorkbench;findings?:{ownerId:string;family:EquationFamily;message:string}[];equations:EquationRow[];quantities:{id:string;input:string;latex:string;unit:string|null;coordinate:boolean;name:string}[];execution:{supported:boolean;reason:string}};
 const kinds=['combine','substitute','isolate','expand','factor','differentiate','integrate','volume_integrate','gauss','reynolds','zero','apply_zero','declare_symbol','declare_function','change_dependencies','declare_relation','declare_rate','multiply','divide','state_variation','declare_domain'];
-const families=['matter','momentum','energy','thermodynamics'];
+const families=['matter','momentum','energy','thermodynamics','signal'];
 function object(value:unknown,required:string[],optional:string[]=[]):Record<string,unknown>{if(!value||typeof value!=='object'||Array.isArray(value))throw new Error('Expected an equation operation object.');const o=value as Record<string,unknown>;if(required.some(k=>!Object.hasOwn(o,k))||Object.keys(o).some(k=>!required.includes(k)&&!optional.includes(k)))throw new Error('Unknown or missing equation operation fields.');return o;}
 const string=(v:unknown):v is string=>typeof v==='string'&&!!v.trim();
 export function readEquationWorkbench(value:unknown):EquationWorkbench{
