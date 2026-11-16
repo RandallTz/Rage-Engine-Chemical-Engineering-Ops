@@ -32,17 +32,19 @@ export function ModelVolumeTabs({volumes,active,select}:{volumes:{id:string;name
   return <section className={ui.structure} aria-label="Physical regions and connections"><header><h3>Physical regions</h3><p>Each region owns its balances and assumptions. Select one to inspect its derivation.</p></header><nav className={ui.regions} aria-label="Model volumes">{volumes.map((volume,index)=><button key={volume.id} aria-label={`Select region ${volume.name}`} aria-pressed={volume.id===active} onClick={()=>select(volume.id)}><span>Region {index+1} · v{index+1}</span><strong>{volume.name}</strong></button>)}</nav>{connections.length>0&&<details><summary>Connections · {connections.length}</summary><ul className={ui.connections}>{connections.map(connection=><li key={connection.id}><button disabled={connection.from===null} onClick={()=>connection.from&&select(connection.from)}>{name(connection.from)}</button><span>↔ <small>{connection.name}</small> ↔</span><button disabled={connection.to===null} onClick={()=>connection.to&&select(connection.to)}>{name(connection.to)}</button></li>)}</ul><p>Connections identify shared transport. Their laws and boundary conditions determine the transported quantities; a connection alone does not impose a pressure loss.</p></details>}</section>;
 }
 export default function ModelWorksheet({family,label,assumptions,variables,settings,children}:{
-  family:'materia'|'energia'|'termodinamica'|'momento';label:string;
+  family:'materia'|'energia'|'termodinamica'|'momento'|'senal';label:string;
   assumptions:ReactNode;variables?:ReactNode;settings?:ReactNode;children:ReactNode;
 }){
   const configuration=useContext(ConfigurationContext);
   const physicalModel=usePhysicalModel();
   const flowsheet=physicalModel?.commonModel?.flowsheet;
   const typed=!!physicalModel;
-  const equationFamily=family==='materia'?'matter':family==='momento'?'momentum':family==='energia'?'energy':'thermodynamics';
-  const aria=family==='materia'?'Equation assumptions':family==='energia'?'Energy assumptions':family==='termodinamica'?'Thermodynamic assumptions':'Momentum assumptions';
+  // Family map. 'senal' is the Signal family of designed control rows (dec-control-surface);
+  // it has no balance view, so the physical producers below receive only the four physical views.
+  const equationFamily=family==='materia'?'matter':family==='momento'?'momentum':family==='energia'?'energy':family==='senal'?'signal':'thermodynamics';
+  const aria=family==='materia'?'Equation assumptions':family==='energia'?'Energy assumptions':family==='termodinamica'?'Thermodynamic assumptions':family==='senal'?'Signal assumptions':'Momentum assumptions';
   return <EquationWorkbenchProvider family={equationFamily}><div className={styles.layout} data-model-worksheet="canonical" data-family={family}>
-    <section className={styles.equations} aria-label={label}>{flowsheet?<><h2>Recorded equipment formulations</h2><p>Each instance retains the recorded equations and assumptions of its referenced template. Python prepares their connected formulation in Transform.</p><ul>{flowsheet.instances.map(instance=><li key={instance.id}>{instance.id} · {instance.template}</li>)}</ul></>:<>{physicalModel&&<ModelAssessmentText model={physicalModel}/>} {typed?<EquationSystemDevelopment/>:children}{!typed&&<><MomentumCoupling family={family}/><DynamicInventoryDevelopment family={family}/></>}</>}</section>
+    <section className={styles.equations} aria-label={label}>{flowsheet?<><h2>Recorded equipment formulations</h2><p>Each instance retains the recorded equations and assumptions of its referenced template. Python prepares their connected formulation in Transform.</p><ul>{flowsheet.instances.map(instance=><li key={instance.id}>{instance.id} · {instance.template}</li>)}</ul></>:<>{physicalModel&&<ModelAssessmentText model={physicalModel}/>} {typed?<EquationSystemDevelopment/>:children}{!typed&&family!=='senal'&&<><MomentumCoupling family={family}/><DynamicInventoryDevelopment family={family}/></>}</>}</section>
     <aside className={`${styles.assumptions} ${styles.operationsPanel}`} aria-label={aria}>
       <header><div><h2>Assumptions</h2><p className={styles.groupHint}>{physicalModel?.ensamblaje?.volumenes.find(v=>v.id===(physicalModel.volumenActivo??physicalModel.ensamblaje?.volumenes[0]?.id))?.nombre??'Selected physical region'} · {equationFamily}</p><p className={styles.groupHint}>Changes apply to this region and family. Viewing equations does not change the model.</p></div></header>
       {!flowsheet&&<ModelReadiness/>}
@@ -54,7 +56,7 @@ export default function ModelWorksheet({family,label,assumptions,variables,setti
       {!flowsheet&&<ModelDomainControls/>}
       {configuration&&<ConfigurationControls key={String(configuration.open)} initiallyOpen={configuration.open}>{configuration.content}</ConfigurationControls>}
       {settings&&<div className={styles.configurationContent}>{settings}</div>}
-      {!flowsheet&&<DynamicInventoryControls family={family}/>}
+      {!flowsheet&&family!=='senal'&&<DynamicInventoryControls family={family}/>}
     </aside>
     {!typed&&variables}
   </div></EquationWorkbenchProvider>;
