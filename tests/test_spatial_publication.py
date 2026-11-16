@@ -498,6 +498,50 @@ class RepairTest(unittest.TestCase):
         self.assertLess(abs(evaluate(equation['derecha'], {'x': x, 'T_s': mp.mpf(50)}, fields) - (280 + 160 * x)), 1e-18)
         self.assertLess(abs(evaluate(equation['izquierda'], {'x': x, 'T_s': mp.mpf(50), 'c': 1, 'rho_mixture__v1': 1}, fields)), 1e-18)
 
+    def test_p412_a_parameter_in_seconds_is_never_taken_as_time(self):
+        # Steady slab with kap(x, P_s), P_s in seconds: no row differentiates with respect to P_s.
+        s = Session(source())
+        symbols(s, P_s='s')
+        s.append(kind='declare_function', name='kap', unit='W/(m*K)', dependencies=[s.id('x'), s.id('P_s')])
+        _, pde = heat_pde(s, s.id('kap(x, P_s)'))
+        region = slab(s, pde)
+        key = s.append(kind='expand_spatial_operators', sources=[pde], domains=[region])
+        s.append(kind='change_dependencies', sources=[key], symbol=s.id('T(x, t)'), dependencies=[s.id('x')], reason='Steady state')
+        _, block = self.published(s)
+        self.assertEqual(block['adapterFindings'], [])
+        model = block['matematico']
+        roles = {item['id']: item['rol'] for item in model['simbolos']}
+        self.assertNotIn('tiempo', roles.values())
+        self.assertEqual((roles['P_s'], roles['T']), ('parametro', 'campo'))
+        self.assertEqual([f['id'] for f in model['funciones']], ['kap'])
+        self.assertEqual([d for d in analizar_modelo(model)['diagnosticos'] if d['severidad'] == 'error'], [])
+        # Control: the transient model with the same coefficient still finds t as the time.
+        s = Session(source())
+        symbols(s, P_s='s')
+        s.append(kind='declare_function', name='kap', unit='W/(m*K)', dependencies=[s.id('x'), s.id('P_s')])
+        _, pde = heat_pde(s, s.id('kap(x, P_s)'))
+        region = slab(s, pde)
+        s.append(kind='expand_spatial_operators', sources=[pde], domains=[region])
+        roles = {item['id']: item['rol'] for item in self.published(s)[1]['matematico']['simbolos']}
+        self.assertEqual((roles['t'], roles['P_s'], roles['T']), ('tiempo', 'parametro', 'campo'))
+
+    def test_p413_a_factored_sum_under_a_divergence_is_checked_term_by_term(self):
+        s = Session(source())
+        _, pde = heat_pde(s)
+        domain(s, pde, 'cartesian', ['x', 'y', 'z'], lower='0')
+        result = s.result()
+        x, y, z, t = sp.symbols('x y z t', real=True)
+        T, w = (sp.Function(n)(x, y, z, t) for n in ('T', 'w'))
+        k = sp.Symbol('k', real=True)
+        graph = copy.deepcopy(result.graph)
+        graph.add('bad', sp.Symbol('a'), Divergence(k * (w + Gradient(T))), 'Divergence of a factored vector sum', 'declared_law', (pde,), (), 'energy')
+        with self.assertRaises(PublicationError) as raised:
+            to_matematico(graph, ['bad'], result.units)
+        self.assertEqual((raised.exception.code, raised.exception.equation_id), ('unclosed_flux', 'bad'))
+        # A factored gradient sum k (grad T + grad w) is a flux in every term and still publishes.
+        graph.add('good', sp.Symbol('a'), Divergence(k * (Gradient(T) + Gradient(w))), 'Two gradient fluxes', 'declared_law', (pde,), (), 'energy')
+        self.assertEqual(len(to_matematico(graph, ['good'], result.units)['ecuaciones']), 1)
+
     def test_p410_a_divergence_needs_a_gradient_in_every_term(self):
         s = Session(source())
         _, pde = heat_pde(s)
