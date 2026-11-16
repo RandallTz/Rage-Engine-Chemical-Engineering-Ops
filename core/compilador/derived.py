@@ -305,7 +305,11 @@ class DerivedSystem(DerivedGraph):
             # Demo 0.3 C2: held constant between actions; it jumps only at a
             # restart, so its rate is exactly zero in the integrated system.
             self.rates[sp.Derivative(q, self.time)] = sp.S.Zero
-        self.reconstructed = [(row, self._expand(self._quantity(row['quantityId']))) for row in self.selection['reconstructions']]
+            if self.algebraic_block is not None:
+                # C2-R1: the block RHS is indexed like self.states, so each
+                # pseudo-state carries its zero rate there too.
+                self.runtime_rates.append(sp.S.Zero)
+        self.reconstructed =[(row, self._expand(self._quantity(row['quantityId']))) for row in self.selection['reconstructions']]
         for closure in self.closures:
             closure.bind_inputs(self.algebraic_quantities if self.thermal_reaction else ())
         self._initial_conditions()
