@@ -91,6 +91,8 @@
       "test_equilibrium_reaction_liquid.py",
       "test_f3_inverse_specifications.py",
       "test_f3_steady_state.py",
+      "test_f5_newton_resolution.py",
+      "test_f5_newton_resolution_componentwise.py",
       "test_indexed_network_lowering.py",
       "test_inverse_steady_http.py",
       "test_kinetic_steady.py",
@@ -190,8 +192,10 @@
     ],
     "group-14": [
       "test_equilibrium_reaction_thermal.py",
+      "test_f5_feed_temperature.py",
       "test_flowsheet_network.py",
-      "test_eos_dynamic_volume.py"
+      "test_eos_dynamic_volume.py",
+      "test_eos_work_term.py"
     ],
     "group-15": [
       "test_jacketed_reactor.py",
@@ -247,6 +251,7 @@
     "test_energy_derivation.py": 19.65,
     "test_equation_manipulation.py": 8.78,
     "test_eos_dynamic_volume.py": 7500,
+    "test_eos_work_term.py": 122.37,
     "test_equation_workbench.py": 559.39,
     "test_equilibrium_reaction_constraint.py": 116.03,
     "test_equilibrium_reaction_liquid.py": 410.35,
@@ -260,6 +265,9 @@
     "test_f3_inverse_specifications.py": 23.03,
     "test_f3_nonlinear_algebraic.py": 78.1,
     "test_f3_steady_state.py": 44.75,
+    "test_f5_feed_temperature.py": 522.29,
+    "test_f5_newton_resolution.py": 36.11,
+    "test_f5_newton_resolution_componentwise.py": 5.09,
     "test_f5_standard_potential.py": 350.19,
     "test_flowsheet_network.py": 1221.72,
     "test_hydraulic_execution.py": 71.67,

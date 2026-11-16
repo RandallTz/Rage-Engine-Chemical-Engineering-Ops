@@ -3,8 +3,27 @@
 The primary solve always starts from the declared seed. Additional deterministic
 probes detect competing roots; finite probing is not a global uniqueness proof.
 No probe result replaces a failed primary solve.
+
+Termination is scaled to the attainable resolution of the iterate (F5 item 1).
+In declared scaled units a coordinate z_i cannot move by less than one unit in
+the last place, spacing(z_i) / x_i, so ``RESOLUTION_ULPS`` such units bound the
+step component that binary64 can still realise in that coordinate. The test is
+per coordinate (repair of the 16 November 2026 review): the coarsest coordinate
+never hides a step that still resolves, and is large, in a small one. A Newton
+step smaller than the declared step tolerance whose components still change the
+iterate is taken: near-complete conversion, where d(ln a)/d(xi) ~ 1/n is large,
+needs such steps before the residual meets its tolerance. Stagnation is reported
+only when every step component is within its own coordinate's resolution while
+the residual still exceeds its tolerance; the residual tolerance is then finer
+than the residual can be resolved at the root. The convergence step test is
+||step||_inf <= step_tolerance, or every step component within its own
+coordinate's resolution. The published evidence keys are a
+versioned Results contract and are unchanged; the resolution appears only in
+the stagnation message.
 """
 import numpy as np
+
+RESOLUTION_ULPS = 4
 
 
 class NonlinearError(Exception):
@@ -41,6 +60,10 @@ def solve(residual, jacobian, seed, bounds, variable_scales, residual_scales, *,
             return admissible is None or bool(admissible(z))
         except (ArithmeticError, ValueError):
             return False
+
+    def resolution(z):
+        # Smallest realisable scaled step of each coordinate at z (a few units in the last place).
+        return RESOLUTION_ULPS * np.spacing(np.abs(z)) / xs
 
     def iterate(start):
         evidence = dict(iterations=0, evaluations=0, backtracks=0,
@@ -88,13 +111,17 @@ def solve(residual, jacobian, seed, bounds, variable_scales, residual_scales, *,
             if not np.all(np.isfinite(correction)):
                 fail('nonlinear_nonfinite', 'The scaled Newton correction is not representable.')
             evidence['stepNorm'] = float(np.linalg.norm(correction, ord=np.inf))
+            attainable = resolution(z)
+            unresolvable = bool(np.all(np.abs(correction) <= attainable))
             if (evidence['residualNorm'] <= residual_tolerance
-                    and evidence['stepNorm'] <= step_tolerance):
-                return z, {**evidence, 'terminationReason': 'converged'}
+                    and (evidence['stepNorm'] <= step_tolerance or unresolvable)):
+                return z, {**evidence, 'terminationReason': 'converged'}, float(np.max(attainable))
             if iteration == max_iterations:
                 fail('nonlinear_iteration_limit', 'The Newton iteration budget was exhausted without convergence.')
-            if evidence['stepNorm'] <= step_tolerance:
-                fail('nonlinear_stagnation', 'The Newton step is small but the residual exceeds tolerance.')
+            if unresolvable:
+                fail('nonlinear_stagnation', 'Every Newton step component is below the attainable binary64 resolution of its '
+                     f'coordinate (at most {float(np.max(attainable)):.3g} scaled) but the scaled residual exceeds its tolerance; the residual tolerance is '
+                     'finer than the residual can be resolved at this root.')
             with np.errstate(over='ignore'):
                 merit = float(np.dot(r, r))
             if not np.isfinite(merit):
@@ -142,7 +169,7 @@ def solve(residual, jacobian, seed, bounds, variable_scales, residual_scales, *,
                 fail(last_failure, 'No admissible sufficient-decrease Newton step within the backtracking budget.')
         raise AssertionError('Unreachable Newton termination')
 
-    root, evidence = iterate(seed)
+    root, evidence, root_floor = iterate(seed)
     midpoint = (bounds[:, 0] + bounds[:, 1]) / 2
     probes = [midpoint, bounds[:, 0], bounds[:, 1]]
     for k in range(n):
@@ -153,7 +180,7 @@ def solve(residual, jacobian, seed, bounds, variable_scales, residual_scales, *,
         if np.array_equal(probe, seed) or not inside(probe):
             continue
         try:
-            other, detail = iterate(probe)
+            other, detail, other_floor = iterate(probe)
         except NonlinearError as error:
             # A failed diagnostic probe is neither a root nor a fallback.
             evidence['evaluations'] += error.diagnostic['evaluations']
@@ -161,7 +188,7 @@ def solve(residual, jacobian, seed, bounds, variable_scales, residual_scales, *,
         completed += 1
         evidence['evaluations'] += detail['evaluations']
         distance = float(np.linalg.norm((other-root)/xs, ord=np.inf))
-        uncertainty = max(100*step_tolerance,
+        uncertainty = max(100*max(step_tolerance, root_floor, other_floor),
                           10*residual_tolerance*max(evidence['conditionInfinity'], detail['conditionInfinity']))
         if distance > uncertainty:
             raise NonlinearError('nonlinear_multiple_roots', 'Deterministic probes found distinct admissible roots; select an unambiguous domain.', **evidence)

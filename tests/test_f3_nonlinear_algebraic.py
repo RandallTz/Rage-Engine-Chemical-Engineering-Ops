@@ -193,7 +193,11 @@ class NonlinearAcceptanceTests(unittest.TestCase):
             ('nonlinear_invalid_settings',lambda m:change_data(m,seed[qid]['scaleDataId'],0)),
             ('invalid_data',lambda m:change_data(m,seed[qid]['scaleDataId'],240,'K')),
             ('nonlinear_iteration_limit',lambda m:m['motores']['derivedExecution']['nonlinear'].update(maxIterations=1)),
-            ('nonlinear_stagnation',lambda m:m['motores']['derivedExecution']['nonlinear'].update(stepTolerance=100)),
+            # F5 item 1: a step tolerance above the step no longer stagnates; stagnation is a residual
+            # tolerance finer than the residual can be resolved at binary64 resolution of the root
+            # (12.345 W/K moves the root off the exactly representable 12 W/K case).
+            ('nonlinear_stagnation',lambda m:(change_data(m,'solve.firstConductance',12.345),
+                                              m['motores']['derivedExecution']['nonlinear'].update(residualTolerance=1e-300))),
             ('stale_formulation',lambda m:m['motores']['equationWorkbench'].update(cursor=m['motores']['equationWorkbench']['cursor']-1)),
             ('invalid_derived_formulation',lambda m:m['motores']['derivedExecution']['algebraic'].pop()),
             ('invalid_derived_formulation',lambda m:m['motores']['derivedExecution']['algebraic'].append(copy.deepcopy(m['motores']['derivedExecution']['algebraic'][0]))),

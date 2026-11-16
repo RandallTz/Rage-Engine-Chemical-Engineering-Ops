@@ -26,6 +26,10 @@ evaluated or discretized; Solve keeps its requires_discretization rejection.
 import sympy as sp
 from sympy.core.function import AppliedUndef
 
+from fractions import Fraction
+
+from core.unidades import interpretar
+
 from .errors import MathematicsError
 from .operators import StateDifferential, is_coordinate
 
@@ -48,6 +52,63 @@ def _lumped(quantity, time):
     if isinstance(quantity, sp.Symbol):
         return quantity != time and not is_coordinate(quantity)
     return isinstance(quantity, AppliedUndef) and all(a == time for a in quantity.args)
+
+
+def _dimension(**powers):
+    return {base: Fraction(power) for base, power in powers.items()}
+
+
+# Thermodynamic nature by dimension (review P6-2, 16 November 2026). An amount, mass, volume, energy or
+# entropy scales with the system; a temperature, pressure, chemical potential, specific or molar property,
+# density or fraction does not. Other dimensions (rates, coefficients) are left to the declared set.
+EXTENSIVE_DIMENSIONS = {
+    'amount': _dimension(N=1), 'mass': _dimension(M=1), 'volume': _dimension(L=3),
+    'energy': _dimension(M=1, L=2, T=-2), 'entropy': _dimension(M=1, L=2, T=-2, Theta=-1)}
+INTENSIVE_DIMENSIONS = {
+    'temperature': _dimension(Theta=1), 'pressure': _dimension(M=1, L=-1, T=-2),
+    'chemical potential': _dimension(M=1, L=2, T=-2, N=-1), 'specific energy': _dimension(L=2, T=-2),
+    'molar entropy': _dimension(M=1, L=2, T=-2, Theta=-1, N=-1), 'specific entropy': _dimension(L=2, T=-2, Theta=-1),
+    'mass density': _dimension(M=1, L=-3), 'molar concentration': _dimension(N=1, L=-3), 'dimensionless ratio': {}}
+
+
+def nature(unit):
+    """('extensive' | 'intensive', kind) from a unit, or None when its dimension does not decide."""
+    if unit is None:
+        return None
+    try:
+        found = {base: Fraction(power) for base, power in interpretar(unit)['dimension'].items() if power}
+    except Exception:
+        return None
+    for label, table in (('extensive', EXTENSIVE_DIMENSIONS), ('intensive', INTENSIVE_DIMENSIONS)):
+        for kind, expected in table.items():
+            if found == expected:
+                return label, kind
+    return None
+
+
+def _check_extensive_set(equation, extensive, time, unit_of):
+    """Reject an extensive set that contradicts the quantities' units (review P6-2)."""
+    quantities = sorted((q for q in equation.atoms(sp.Symbol, AppliedUndef) if _lumped(q, time)), key=sp.default_sort_key)
+    for quantity in extensive:
+        found = nature(unit_of(quantity))
+        if found and found[0] == 'intensive':
+            raise MathematicsError(str(quantity) + ' is a ' + found[1] + ' (' + unit_of(quantity) + '), an intensive quantity; it does not scale with the '
+                                   'system and cannot be declared extensive.')
+    for quantity in quantities:
+        if quantity in extensive:
+            continue
+        found = nature(unit_of(quantity))
+        if found and found[0] == 'extensive':
+            raise MathematicsError(str(quantity) + ' is an ' + found[1] + ' (' + unit_of(quantity) + '), an extensive quantity; declare it in the '
+                                   'extensive set, or the relation would restate it as an intensive field.')
+
+
+def _cancel_volume(expression, volume):
+    """Exact division result with the volume cancelled from ratios as well as products (review P6-3)."""
+    expanded = sp.expand(expression)
+    if not expanded.has(volume):
+        return expanded
+    return sp.cancel(sp.together(expanded))
 
 
 def _recorded(graph, rule, lhs, rhs, domain_id):
@@ -95,6 +156,7 @@ def localize_by_homogeneity(graph, key, source, domain_id, volume, extensive, un
     volume_unit = unit_of(volume)
     if volume_unit is None or volume_unit.replace(' ', '') not in ('m3', 'm^3', 'm**3'):
         raise MathematicsError('The volume must be declared in m3, so each density is per unit volume.')
+    _check_extensive_set(equation, extensive, time, unit_of)
     differentials = sorted(equation.atoms(StateDifferential), key=sp.default_sort_key)
     for differential in differentials:
         if differential.args[0] in extensive:
@@ -151,7 +213,7 @@ def localize_by_homogeneity(graph, key, source, domain_id, volume, extensive, un
               kind=node.kind)
     created.append(substituted)
     factor = volume ** degree
-    local_left, local_right = sp.expand(left / factor), sp.expand(right / factor)
+    local_left, local_right = _cancel_volume(left / factor, volume), _cancel_volume(right / factor, volume)
     if local_left.has(volume) or local_right.has(volume):
         raise MathematicsError('The volume does not cancel from the localized relation; it is not a pointwise relation.')
     if sp.simplify(sp.expand((local_left - local_right) * factor - (left - right))) != 0:
