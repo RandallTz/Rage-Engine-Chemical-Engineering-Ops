@@ -50,10 +50,21 @@ ok(validacion.relaciones.some(x => x.id === "equilibrio.A") && validacion.variab
 // is compared numerically, to 1e-10 absolute, and the rest of the message stays exact.
 const REL_TOL = 5e-8, ABS_TOL = 1e-12, RESIDUAL_ABS_TOL = 2e-4, TM_TOL = 1e-10, TM_FIELD = /min tm = (-?[\d.]+(?:e[+-]?\d+)?)/;
 const RESIDUAL_FIELD = /\.maximoEscalado$|^\$\.verificaciones\.\d+\.valor$/;
+// A sample of a time series (in "series" or in its provenance copy) is compared to REL_TOL times the largest
+// magnitude of its published series, not of the sample itself (the policy of tests/v2_parity_cases.py
+// series_limit), and a phase fraction (molar, mass or volume) to REL_TOL times its bound 1. The integrator's error
+// is relative to the state's scale, so a sample near zero carries the absolute error of that scale. Found in CI run
+// 43810112061 (Linux) at the bubble event: volumen.A.W, published exactly 0, fresh 1.38e-8 J (P dV over the
+// event-location difference, the kernel spread of the event time above; the series reaches 3,769 J, so the limit is
+// 1.9e-4 J), and the incipient vapour's volume fraction, 3.25e-10 against 3.13e-10 (limit 5e-8). A per-sample
+// limit gave both the 1e-12 floor.
+const SERIES_SAMPLE = /^(\$(?:\.[^.]+)*\.series\.\d+)\.valores\.\d+$/, FRACTION_FIELD = /\.fraccion(?:Molar|Masica|Volumen)$/;
 // The method string also reports the accepted-step and retry counts of the adaptive integration (73 steps and 5
 // retries published; 70 and 3 with every other kernel tried): the step sequence is what the kernel moves, so those
 // two counts are masked and the rest of the string stays exact.
 const STEP_COUNTS = /\d+ pasos, \d+ reintentos/;
+const atPath = (root, at) => at.split(".").slice(1).reduce((v, k) => v?.[k], root);
+const seriesScale = (at) => Math.max(0, ...(atPath(ejemplo, at)?.valores ?? []).filter(Number.isFinite).map(Math.abs));
 const sameMessage = (a, b) => {
   if (STEP_COUNTS.test(a) && STEP_COUNTS.test(b) && a.replace(STEP_COUNTS, "") === b.replace(STEP_COUNTS, "")) return true;
   const [ma, mb] = [TM_FIELD.exec(a), TM_FIELD.exec(b)];
@@ -62,7 +73,9 @@ const sameMessage = (a, b) => {
 const differences = (a, b, at = "$", out = []) => {
   if (out.length >= 8) return out;
   if (typeof a === "number" && typeof b === "number") {
-    const tol = RESIDUAL_FIELD.test(at) ? RESIDUAL_ABS_TOL : Math.max(ABS_TOL, REL_TOL * Math.max(Math.abs(a), Math.abs(b)));
+    const series = SERIES_SAMPLE.exec(at);
+    const scale = series ? seriesScale(series[1]) : FRACTION_FIELD.test(at) ? 1 : Math.max(Math.abs(a), Math.abs(b));
+    const tol = RESIDUAL_FIELD.test(at) ? RESIDUAL_ABS_TOL : Math.max(ABS_TOL, REL_TOL * scale);
     if (!(a === b || Math.abs(a - b) <= tol)) out.push(`${at}: fresh ${a} vs published ${b}`);
   } else if (a && b && typeof a === "object" && typeof b === "object" && Array.isArray(a) === Array.isArray(b)) {
     const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
