@@ -646,16 +646,22 @@ class DerivedSystem(DerivedGraph):
             if predicate in seen or predicate is sp.S.true:
                 continue
             seen.add(predicate)
-            if not isinstance(predicate, HoldsOnInterval) and self._inactive(predicate):
-                # CR-1: a premise of an inactive or reduced-away row concerns
-                # quantities that take no part in this run; listed, not enforced.
-                self.inactive.append({'equationId': key, 'kind': 'inactive_premise', 'latex': math_latex(predicate, self.graph.names)})
-                continue
+            # A premise on an eliminated virtual coordinate (for example the
+            # nonzero virtual extent of an equilibrium constraint) is discharged
+            # by the elimination and recorded as a proof condition. The
+            # coordinate is declared, unbound and absent from the lowered
+            # expressions, so it must be classified before the CR-1 rule below,
+            # which would otherwise list it as an inactive premise.
             virtual_source = (self.algebraic_block.virtual_condition(predicate)
                               if self.nonlinear and hasattr(self.algebraic_block,'virtual_condition') else None)
             if virtual_source is not None:
                 self.proof_conditions.append({'equationId': key, 'sourceEquationId': virtual_source,
                     'kind': 'eliminated_coordinate_premise', 'latex': math_latex(predicate, self.graph.names)})
+                continue
+            if not isinstance(predicate, HoldsOnInterval) and self._inactive(predicate):
+                # CR-1: a premise of an inactive or reduced-away row concerns
+                # quantities that take no part in this run; listed, not enforced.
+                self.inactive.append({'equationId': key, 'kind': 'inactive_premise', 'latex': math_latex(predicate, self.graph.names)})
                 continue
             if isinstance(predicate, HoldsOnInterval):
                 equation, coordinate = predicate.args
