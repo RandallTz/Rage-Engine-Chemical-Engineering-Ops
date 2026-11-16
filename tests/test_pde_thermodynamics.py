@@ -19,6 +19,7 @@ whose Euler relation u_v = T s_v - P + sum mu_i c_i and local Gibbs-Duhem
 relation sum c_i d mu_i = -s_v dT + dP (along any spatial direction) hold at
 every point; the localized rows are evaluated on arbitrary smooth profiles.
 """
+import copy
 import json
 from pathlib import Path
 import sys
@@ -31,9 +32,9 @@ from sympy.core.function import AppliedUndef
 
 from core.adimensionalizacion.dimensional import analizar_modelo
 from core.mathematics.errors import MathematicsError
-from core.mathematics.localization import homogeneity_degree
+from core.mathematics.localization import homogeneity_degree, localize_by_homogeneity, nature
 from core.mathematics.operators import StateDifferential, requires_discretization
-from core.modelo.equation_workbench import build
+from core.modelo.equation_workbench import _known_unit, build
 from core.modelo.operation_journal import JournalError
 from test_pde_acceptance import Workbench
 from test_requires_discretization import fick_model
@@ -211,8 +212,9 @@ class RejectionTest(unittest.TestCase):
         self.assertIn('differential of an extensive quantity', message)
 
     def test_an_incomplete_extensive_set_is_not_homogeneous(self):
+        # Review P6-2: n_1 and n_2 are amounts; leaving them out is rejected by their units before the scaling check.
         message = self.attempt('thermodynamics.v1.G-euler', ['G__v1(t)'])
-        self.assertIn('not homogeneous', message)
+        self.assertIn('is an amount (mol), an extensive quantity', message)
 
     def test_a_field_equation_is_not_a_volume_relation(self):
         self.w.family = 'matter'
@@ -228,6 +230,77 @@ class RejectionTest(unittest.TestCase):
         self.assertEqual(homogeneity_degree(sp.Eq(U, T * S), (U, S, V, n)), 1)
         self.assertIsNone(homogeneity_degree(sp.Eq(U, T * S + sp.Symbol('b')), (U, S, V, n)))
         self.assertIsNone(homogeneity_degree(sp.Eq(U * S, T), (U, S, V, n)))
+
+
+class ReviewRepairTest(unittest.TestCase):
+    """P6-2 (the extensive set is checked against the units) and P6-3 (degree-0 ratios) on probe rows of the replayed graph.
+
+    Expected forms are written by hand; the rule is called directly, as in the review reproducer."""
+
+    @classmethod
+    def setUpClass(cls):
+        w, cls.region, _ = localized_model([])
+        cls.result = build(w.model)
+
+    def setUp(self):
+        self.graph = copy.deepcopy(self.result.graph)
+        self.units = dict(self.result.units)
+        self.V, self.P, self.T, self.n1, self.n2 = (sp.Function(n)(T_) for n in ('V__v1', 'P__v1', 'T__v1', 'n_1__v1', 'n_2__v1'))
+        self.R = sp.Symbol('R_gas', positive=True)
+        self.units[self.R] = 'J/(mol*K)'
+
+    def localize(self, key, lhs, rhs, extensive, extra_units=None):
+        self.units.update(extra_units or {})
+        self.graph.add('probe.' + key, lhs, rhs, 'Probe ' + key, 'declared_law', (), (), 'thermodynamics', kind='constitutive')
+        _, _, densities = localize_by_homogeneity(self.graph, 'local.' + key, 'probe.' + key, self.region, self.V, extensive, self.units,
+                                                  lambda q: _known_unit(q, self.units), 'thermodynamics', 'probe')
+        self.units.update(densities)
+        return self.graph.nodes['local.' + key].equation
+
+    def test_p62_an_intensive_quantity_cannot_be_declared_extensive(self):
+        with self.assertRaises(MathematicsError) as raised:
+            self.localize('gas', self.P * self.V, self.n1 * self.R * self.T, (self.T,))
+        self.assertIn('T__v1(t) is a temperature', str(raised.exception))
+        self.assertNotIn('local.gas', self.graph.nodes)
+
+    def test_p62_an_extensive_quantity_cannot_be_left_out(self):
+        with self.assertRaises(MathematicsError) as raised:
+            self.localize('gas', self.P * self.V, self.n1 * self.R * self.T, ())
+        self.assertIn('n_1__v1(t) is an amount', str(raised.exception))
+
+    def test_p62_control_the_correct_set_gives_the_ideal_gas_law_per_unit_volume(self):
+        equation = self.localize('gas', self.P * self.V, self.n1 * self.R * self.T, (self.n1,))
+        c1, P, T = field('n_1_density__v1'), field('P__v1'), field('T__v1')
+        self.assertEqual(sp.simplify(equation.lhs - equation.rhs - (P - c1 * self.R * T)), 0)
+        self.assertEqual(self.units[c1], '(mol)/(m3)')
+
+    def test_a_relation_that_is_not_homogeneous_is_still_rejected(self):
+        U, S = sp.Function('U__v1')(T_), sp.Function('S__v1')(T_)
+        with self.assertRaises(MathematicsError) as raised:
+            self.localize('square', U, self.T * S + self.n1 ** 2, (U, S, self.n1))  # review probe: n_1**2 scales by lambda**2
+        self.assertIn('not homogeneous', str(raised.exception))
+
+    def test_units_decide_the_nature(self):
+        self.assertEqual([nature(u) for u in ('mol', 'J/K', 'K', 'J/mol', '1', 'W')],
+                         [('extensive', 'amount'), ('extensive', 'entropy'), ('intensive', 'temperature'),
+                          ('intensive', 'chemical potential'), ('intensive', 'dimensionless ratio'), None])
+
+    def test_p63_a_mole_fraction_is_a_degree_zero_ratio_of_densities(self):
+        y = sp.Function('y_1__v1')(T_)
+        equation = self.localize('fraction', y, self.n1 / (self.n1 + self.n2), (self.n1, self.n2), {y: '1'})
+        c1, c2 = field('n_1_density__v1'), field('n_2_density__v1')
+        self.assertEqual(sp.simplify(equation.lhs - field('y_1__v1')), 0)
+        self.assertEqual(sp.simplify(equation.rhs - c1 / (c1 + c2)), 0)
+        self.assertFalse(equation.has(self.V))
+        self.assertTrue(any('degree 0' in a for a in self.graph.nodes['local.fraction'].assumptions))
+        self.assertNotIn('Divided by', ' '.join(self.graph.nodes['local.fraction'].assumptions))
+        # Independent numbers: 3 mol/m3 and 1 mol/m3 give y_1 = 3/4 at the point.
+        self.assertEqual(equation.rhs.xreplace({c1: 3, c2: 1}), sp.Rational(3, 4))
+
+    def test_p63_a_volume_ratio_cancels_to_the_local_concentration(self):
+        concentration = sp.Function('C_1__v1')(T_)
+        equation = self.localize('concentration', concentration, self.n1 / self.V, (self.n1,), {concentration: 'mol/m3'})
+        self.assertEqual(sp.simplify(equation.lhs - equation.rhs - (field('C_1__v1') - field('n_1_density__v1'))), 0)
 
 
 if __name__ == '__main__':
