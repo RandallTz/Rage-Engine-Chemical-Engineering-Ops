@@ -105,8 +105,10 @@ def read_definition(value, model=None):
     if value['version'] == 4:
         config = value['dae']
         keys(config, ['stateBounds', 'driftTolerance'])
-        if not isinstance(config['stateBounds'], dict) or set(config['stateBounds']) != states:
-            raise ValueError('DAE state bounds must cover exactly the differential states.')
+        # Demo 0.3 C2-R2: each time input carries a bound too, so the index-one
+        # certificate covers every value an action may give it.
+        if not isinstance(config['stateBounds'], dict) or set(config['stateBounds']) != states | inputs:
+            raise ValueError('DAE state bounds must cover exactly the differential states and time inputs.')
         for item in config['stateBounds'].values():
             keys(item, ['lowerDataId', 'upperDataId'])
             for data in item.values():

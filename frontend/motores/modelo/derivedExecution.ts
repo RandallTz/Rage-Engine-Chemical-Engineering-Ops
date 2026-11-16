@@ -74,7 +74,8 @@ export function readDerivedExecution(value:unknown,data?:Record<string,unknown>)
   if(typed.dae){
     const config=object(typed.dae,['stateBounds','driftTolerance']);
     const bounds=object(config.stateBounds);
-    if(Object.keys(bounds).sort().join('|')!==states.sort().join('|'))throw new Error('DAE state bounds must cover the states.');
+    // Demo 0.3 C2-R2: each time input carries a bound, so the index-one certificate covers every value an action may give it.
+    if(Object.keys(bounds).sort().join('|')!==[...states,...Object.keys(typed.timeInputs??{})].sort().join('|'))throw new Error('DAE state bounds must cover the states and time inputs.');
     for(const item of Object.values(bounds))for(const value of Object.values(object(item,['lowerDataId','upperDataId'])))if(!identity(value)||data&&!Object.hasOwn(data,value))throw new Error('Invalid DAE bound datum.');
     if(typeof config.driftTolerance!=='number'||!Number.isFinite(config.driftTolerance)||config.driftTolerance<=0||config.driftTolerance>1e-9||typed.nonlinear!.residualTolerance>config.driftTolerance)throw new Error('Invalid DAE drift tolerance.');
   }
