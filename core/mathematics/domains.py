@@ -214,9 +214,21 @@ ANGULAR={'phi','theta'}
 PART_NAME=re.compile(r'[A-Za-z][A-Za-z0-9_]{0,40}')
 
 
-def chart_axes(chart):
+def axis_name(symbol):
+    """Chart axis name of a coordinate, without the producer's owner scope (y__v1 -> y)."""
+    return str(symbol).split('__')[0]
+
+
+def axis_scope(symbol):
+    """Owner scope suffix of a coordinate ('' or '__v1')."""
+    name=str(symbol)
+    return name[len(axis_name(symbol)):]
+
+
+def chart_axes(chart,scope=''):
+    """Chart axes, in the owner scope of the producer whose fields they coordinate (PDE-7, 15 November 2026)."""
     if chart not in CHARTS:raise MathematicsError('Select a supported orthogonal chart: cartesian, cylindrical or spherical.')
-    return tuple(sp.Symbol(name,real=True) for name in CHARTS[chart])
+    return tuple(sp.Symbol(name+scope,real=True) for name in CHARTS[chart])
 
 
 def scale_factors(chart,axes=None):
@@ -229,10 +241,12 @@ def scale_factors(chart,axes=None):
 
 def admit_coordinate(chart,coordinate):
     """Located rejection of coordinates outside the chart or the validated scope."""
-    axes={str(a):a for a in chart_axes(chart)}
-    if not isinstance(coordinate,sp.Symbol) or axes.get(str(coordinate))!=coordinate:
-        raise MathematicsError('Coordinate '+str(coordinate)+' does not belong to the '+chart+' chart ('+', '.join(axes)+').')
-    if str(coordinate) in ANGULAR:
+    names=CHARTS[chart] if chart in CHARTS else chart_axes(chart)
+    # A producer may scope its coordinates by owner (the momentum family writes x__v1, y__v1, z__v1); the scope
+    # names whose fields they coordinate, never another axis.
+    if not isinstance(coordinate,sp.Symbol) or axis_name(coordinate) not in names or coordinate!=sp.Symbol(str(coordinate),real=True):
+        raise MathematicsError('Coordinate '+str(coordinate)+' does not belong to the '+chart+' chart ('+', '.join(names)+').')
+    if axis_name(coordinate) in ANGULAR:
         raise MathematicsError('Angular coordinate '+str(coordinate)+' cannot be active yet: exact pi endpoints and angular boundary parts are deferred. Declare r'+(' and z' if chart=='cylindrical' else '')+' only.')
 
 
@@ -264,6 +278,8 @@ class SpatialDomain:
         if not self.coordinates or len(self.coordinates)>3 or len(set(self.coordinates))!=len(self.coordinates):
             raise MathematicsError('Select one to three distinct active coordinates.')
         for coordinate in self.coordinates:admit_coordinate(self.chart,coordinate)
+        if len({axis_scope(c) for c in self.coordinates})!=1:
+            raise MathematicsError('The active coordinates '+', '.join(map(str,self.coordinates))+' belong to different owner scopes; one domain coordinates the fields of one producer scope.')
         if len(self.intervals)!=len(self.coordinates):raise MathematicsError('Declare exactly one interval per active coordinate.')
         for coordinate,premise in zip(self.coordinates,self.intervals):
             if not isinstance(premise,DomainPremise) or premise.domain!='interval' or premise.quantity!=coordinate:
@@ -271,7 +287,7 @@ class SpatialDomain:
             allowed=premise.allowed
             if not isinstance(allowed,sp.Interval) or allowed.measure.is_positive is not True:
                 raise MathematicsError('The interval of '+str(coordinate)+' is empty, reversed or a single point.')
-            if str(coordinate)=='r' and allowed.inf.is_negative:
+            if axis_name(coordinate)=='r' and allowed.inf.is_negative:
                 raise MathematicsError('A radial coordinate interval must be nonnegative.')
         names=[part.name for part in self.parts]
         if len(set(names))!=len(names):raise MathematicsError('Boundary part names must be distinct.')
@@ -282,13 +298,13 @@ class SpatialDomain:
             location=(part.coordinate,part.end)
             if location in locations:raise MathematicsError('Boundary parts overlap at '+str(part.coordinate)+' '+part.end+' end; declare one part per end.')
             locations.add(location)
-            if str(part.coordinate)=='r' and part.end=='lower' and self.endpoint(part)==0:
+            if axis_name(part.coordinate)=='r' and part.end=='lower' and self.endpoint(part)==0:
                 raise MathematicsError('r = 0 is the coordinate axis or centre, not a boundary part.')
 
     @property
     def axes(self):
         """All chart axes; a volume integral binds every one of them."""
-        return chart_axes(self.chart)
+        return chart_axes(self.chart,axis_scope(self.coordinates[0]))
 
     def interval(self,coordinate):
         return self.intervals[self.coordinates.index(coordinate)].allowed
@@ -311,7 +327,7 @@ class SpatialDomain:
         active), a spherical shell int r^2 dr per steradian. The result never
         depends on an inactive coordinate.
         """
-        active={str(c) for c in self.coordinates}
+        active={axis_name(c) for c in self.coordinates}
         r=self.axes[0]
         integrand={'cartesian':sp.S.One,
                    'cylindrical':r if 'r' in active else sp.S.One,

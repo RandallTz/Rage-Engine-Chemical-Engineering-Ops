@@ -93,7 +93,7 @@ def expand_normal_derivative(graph,key,source,domain_id,family):
         part=next((p for p in domain.parts if p.coordinate==coordinate and domain.endpoint(p)==point and p.sign==sign),None)
         if part is None:
             raise JournalError('The normal derivative at '+str(coordinate)+' = '+str(point)+' does not lie on a boundary part of spatial domain '+domain_id+'. Select the domain it was restricted on.')
-        scale=BoundaryTrace(scale_factors(domain.chart)[domain.axes.index(coordinate)],coordinate,point)
+        scale=BoundaryTrace(scale_factors(domain.chart,domain.axes)[domain.axes.index(coordinate)],coordinate,point)
         chart=sign/scale*BoundaryTrace(sp.Derivative(field,coordinate),coordinate,point)
         identity=key+'.identity.'+str(index+1)
         graph.add(identity,target,chart,'Outward normal derivative in the '+domain.chart+' chart','normal_derivative_identity',(domain_id,),
