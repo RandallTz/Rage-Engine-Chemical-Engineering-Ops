@@ -28,7 +28,7 @@ from core.unidades import unidad_SI
 from .errors import MathematicsError as JournalError
 from .operators import (Divergence, Gradient, VolumeIntegral, BoundaryFlux, BOUNDARY_OPERATORS,
                         field_coordinates, is_coordinate)
-from .domains import scale_factors
+from .domains import axis_scope, scale_factors
 
 FOURIER_SOURCE = {
     'kind': 'empirical constitutive law',
@@ -99,7 +99,7 @@ def _restatement(field, domain):
     active = domain.coordinates
     spatial = [a for a in field.args if is_coordinate(a, declared=domain.axes)]
     names = sorted(str(a).split('__')[0] for a in spatial)
-    if domain.chart != 'cartesian' and names == sorted(PLACEHOLDER) and all(a in (sp.Symbol(n, real=True) for n in PLACEHOLDER) for a in spatial):
+    if domain.chart != 'cartesian' and names == sorted(PLACEHOLDER) and all(a in (sp.Symbol(n + axis_scope(domain.coordinates[0]), real=True) for n in PLACEHOLDER) for a in spatial):
         arguments = []
         for argument in field.args:
             if argument not in spatial:arguments.append(argument)
@@ -176,7 +176,7 @@ def expand_spatial_operators(graph, key, source, domain_id, family):
     dummies = {target: sp.Dummy() for target in targets}
     if equation.xreplace(dummies).has(Gradient):
         raise JournalError('A gradient occurs outside a divergence; a vector equation is not expanded here. Project it on a normal (restrict_to_boundary) or contract it first.')
-    h = scale_factors(domain.chart)
+    h = scale_factors(domain.chart, domain.axes)
     H = sp.Mul(*h)
     factors = ', '.join('h_' + str(axis) + ' = ' + str(factor) for axis, factor in zip(domain.axes, h))
     replacements = {}
