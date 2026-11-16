@@ -295,6 +295,14 @@ def replay_operations(source,selected,owners,declared_units,definition,*,require
             else:
                 _,created=expansion.expand_spatial_operators(graph,key,sources[0],op['domains'][0],op['family'])
                 for created_id in created:locations[created_id]=locations.get(sources[0],'system')
+        elif kind=='localize_by_homogeneity':
+            # PDE-6 (16 November 2026): pointwise thermodynamic contract by Euler homogeneity; deduction only.
+            from . import localization
+            if op['symbol'] not in quantities or any(e not in quantities for e in op['extensive']):raise JournalError('Select the current volume and extensive quantities.')
+            _,created,densities=localization.localize_by_homogeneity(graph,key,sources[0],op['domains'][0],quantities[op['symbol']],
+                tuple(quantities[e] for e in op['extensive']),units,lambda q:_known_unit(q,units),op['family'],op['reason'])
+            units.update(densities)
+            for created_id in created:locations[created_id]=locations.get(sources[0],'system')
         elif kind in ('multiply','divide'):
             conditions=[];factor=_parse(op['right'],quantities,conditions,units);_dimension(factor,units)
             if factor.is_zero is True:raise JournalError('Scaling by zero would destroy the equation. Select a nonzero factor.')

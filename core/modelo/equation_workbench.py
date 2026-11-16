@@ -335,7 +335,7 @@ def describe(model,definition=None,*,unbound=False):
     unsigned=_unsigned_findings(definition)
     report=_describe_report(model,definition,unbound,graph,final,locations,units,quantities,blocking,unsigned)
     from core.mathematics.publication import spatial_publication
-    spatial=spatial_publication(graph,final,units,model_id=model['id']+'.spatial')
+    spatial=spatial_publication(graph,final,units,model_id=model['id']+'.spatial',unit_resolver=_known_unit)
     if spatial:report['spatial']=spatial
     return report
 
