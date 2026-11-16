@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "test:equation-workbench": "python ../tests/test_mathematical_kernel.py && python ../tests/test_mathematical_domains.py && python ../tests/test_equation_workbench.py && node verificar_equation_workbench.mjs",
+    "test:equation-workbench": "python ../tests/test_mathematical_kernel.py && python ../tests/test_mathematical_domains.py && python ../tests/test_equation_workbench.py && python ../tests/test_pde_acceptance.py SpatialReportTest && python ../tests/test_pde_thermodynamics.py LocalizationTest && node verificar_equation_workbench.mjs",
     "test:hydraulics": "node verificar_hydraulics.mjs",
     "test:momentum-derivation": "python ../tests/test_momentum_derivation.py && python ../tests/test_equation_manipulation.py && node verificar_workspace_handoffs.mjs",
     "test:dynamic-definition": "python ../tests/test_dynamic_definition.py && node verificar_workspace_handoffs.mjs",
