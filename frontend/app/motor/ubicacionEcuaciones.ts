@@ -7,18 +7,24 @@
  *                  frontera y su comprobación global;
  *   momento        balance de cantidad de movimiento;
  *   termodinámica  cierre de estado (energía y volumen de todas las fases, U = H − PV) y equilibrio entre las
- *                  fases candidatas con su prueba de estabilidad.
+ *                  fases candidatas con su prueba de estabilidad;
+ *   signal         sensor, controller and actuator relations (Demo 0.3 C3, dec-control-surface). A signal
+ *                  conserves nothing; the physical actuator join stays in the family it acts on.
  * Una ecuación sin lugar es un error del motor, no algo que se muestre «en todas partes». */
 import type { VistaHoja } from './familiasBalance';
 
 export type EcuacionUbicable = { id: string; familia: string };
 
-export function panelDeEcuacion(e: EcuacionUbicable): VistaHoja | null {
+/** A worksheet panel: one physical view of the sheet, or the Signal family. */
+export type PanelEcuacion = VistaHoja | 'senal';
+
+export function panelDeEcuacion(e: EcuacionUbicable): PanelEcuacion | null {
   switch (e.familia) {
     case 'matter': return 'materia';
     case 'energy': return 'energia';
     case 'momentum': return 'momento';
     case 'thermodynamics': return 'termodinamica';
+    case 'signal': return 'senal';
     case 'materia': return 'materia';
     case 'energia': return 'energia';
     case 'momento': return 'momento';
@@ -36,4 +42,4 @@ export function panelDeEcuacion(e: EcuacionUbicable): VistaHoja | null {
   }
 }
 
-export const TITULO_PANEL: Record<VistaHoja, string> = { materia: 'Matter equations', energia: 'Energy equations', momento: 'Momentum equations', termodinamica: 'Thermodynamic equations' };
+export const TITULO_PANEL: Record<PanelEcuacion, string> = { materia: 'Matter equations', energia: 'Energy equations', momento: 'Momentum equations', termodinamica: 'Thermodynamic equations', senal: 'Signal equations' };

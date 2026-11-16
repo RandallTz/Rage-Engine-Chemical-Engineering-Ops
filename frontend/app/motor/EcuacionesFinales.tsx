@@ -29,7 +29,8 @@ export default function EcuacionesFinales({hoja:h}:{hoja:HojaMotor}){
     return()=>controller.abort();
   },[source]);
   const current=state?.source===source?state:undefined,b=balancesHoja(h);
-  const active={matter:b.materia,energy:b.energia,momentum:b.momento,thermodynamics:true};
+  // Signal rows are not physical equations; their display in Model is Demo 0.3 C9.
+  const active={matter:b.materia,energy:b.energia,momentum:b.momento,thermodynamics:true,signal:false};
   const error=preparation||current?.error;
   return <section className={styles.paper} aria-label="Final equations">
     <header className={styles.heading}><h2>Final equations</h2><Link href={`/models/${h.id}/model`}>View derivation →</Link></header>
