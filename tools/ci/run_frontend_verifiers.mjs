@@ -13,7 +13,13 @@
 // reads) and fails the verifier if the script fails. A verifier in frontend/ that is in no group and
 // not in tools/ci/frontend_verifiers_other.txt is reported and fails the run,
 // so a new verifier cannot be silently left out of CI.
-import { spawnSync } from 'node:child_process';
+//
+// Time limit: each verifier (with its prerequisite) is stopped after a limit, so one stalled
+// verifier cannot consume the CI job's time and hide the steps after it. The limit is
+// --timeout=SECONDS if given, else the group's default below (0 means none). On expiry the
+// whole process tree is killed (a verifier may have spawned Python) and the verifier counts as
+// failed with status TIME.
+import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -37,8 +43,54 @@ const entries = (name) => read(name).map((l) => {
 
 const groups =['pure', 'python', 'http', 'quarantine'];
 if (!groups.includes(group)) {
-  console.error(`Usage: run_frontend_verifiers.mjs <${groups.join('|')}>`);
+  console.error(`Usage: run_frontend_verifiers.mjs <${groups.join('|')}> [--timeout=SECONDS]`);
   process.exit(2);
+}
+// Per-verifier limits in seconds. Quarantined verifiers are known to fail or not finish
+// (verificar_bateria_multifisica.mjs did not finish in 900 s locally and, without a limit, used
+// the remaining 70 minutes of the interface job in CI run 43660814888).
+// The blocking groups' limits are several times their slowest verifier (whole groups: pure
+// 132 s, python 29 min and http 861 s locally; python 20 min in CI).
+const DEFAULT_TIMEOUT = { pure: 600, python: 2700, http: 1800, quarantine: 600 };
+const timeoutArg = process.argv.slice(3).find((a) => a.startsWith('--timeout='));
+const timeoutSeconds = timeoutArg ? Number(timeoutArg.slice('--timeout='.length)) : DEFAULT_TIMEOUT[group];
+if (!Number.isFinite(timeoutSeconds) || timeoutSeconds < 0) {
+  console.error(`Invalid ${timeoutArg}`);
+  process.exit(2);
+}
+
+function killTree(child) {
+  if (process.platform === 'win32') {
+    spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
+  } else {
+    try { process.kill(-child.pid, 'SIGKILL'); } catch { child.kill('SIGKILL'); }
+  }
+}
+
+// Runs one command with the shared deadline; resolves {status, stdout, stderr, timedOut}.
+function run(command, args, options, deadline) {
+  return new Promise((resolve) => {
+    // detached: a new process group on POSIX, so the whole tree can be killed on expiry.
+    const child = spawn(command, args, { ...options, detached: process.platform !== 'win32', stdio: ['ignore', 'pipe', 'pipe'] });
+    const out = [], err = [];
+    child.stdout.on('data', (d) => out.push(d));
+    child.stderr.on('data', (d) => err.push(d));
+    let timedOut = false;
+    const remaining = deadline === Infinity ? 0 : Math.max(1, deadline - Date.now());
+    const timer = deadline === Infinity ? null : setTimeout(() => { timedOut = true; killTree(child); }, remaining);
+    let settled = false;
+    const finish = (status) => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      resolve({ status: timedOut ? null : status, timedOut,
+        stdout: Buffer.concat(out).toString('utf8'), stderr: Buffer.concat(err).toString('utf8') });
+    };
+    child.on('error', (e) => { err.push(Buffer.from(String(e))); finish(1); });
+    child.on('close', (code) => finish(code));
+    // A grandchild left holding the pipes after the child exits must not keep the runner waiting.
+    child.on('exit', (code) => setTimeout(() => finish(code), timedOut ? 0 : 2000));
+  });
 }
 
 // Coverage guard: every verifier file must belong to exactly one list.
@@ -74,17 +126,16 @@ for (const { file, pre } of files) {
   // pytest runs from the repository root so that tests import `core`.
   const isPytest = pre && path.basename(pre).startsWith('test_');
   const preArgs = isPytest ? ['-m', 'pytest', '-q', '-p', 'no:cacheprovider', path.resolve(frontend, pre)] : [pre];
-  let r = pre ? spawnSync('python', preArgs, { cwd: isPytest ? path.resolve(frontend, '..') : frontend, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024, env }) : { status: 0 };
-  if (r.status === 0) r = spawnSync(process.execPath, [file], {
-    cwd: frontend, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024,
-    env,
-  });
+  const deadline = timeoutSeconds > 0 ? start + timeoutSeconds * 1000 : Infinity;
+  let r = pre ? await run('python', preArgs, { cwd: isPytest ? path.resolve(frontend, '..') : frontend, env }, deadline) : { status: 0 };
+  if (r.status === 0) r = await run(process.execPath, [file], { cwd: frontend, env }, deadline);
   const seconds = (Date.now() - start) / 1000;
   total += seconds;
   const ok = r.status === 0;
-  console.log(`[${ok ? 'OK   ' : 'FAIL '}] ${file.padEnd(48)} ${seconds.toFixed(1)}s`);
+  console.log(`[${ok ? 'OK   ' : r.timedOut ? 'TIME ' : 'FAIL '}] ${file.padEnd(48)} ${seconds.toFixed(1)}s`);
   if (!ok) {
     failed.push(file);
+    if (r.timedOut) console.log(`    | stopped after the ${timeoutSeconds} s per-verifier limit (process tree killed)`);
     const tail = (s) => (s || '').trimEnd().split('\n').slice(-25).map((l) => `    | ${l}`).join('\n');
     console.log(tail(r.stdout)); console.log(tail(r.stderr));
   }
