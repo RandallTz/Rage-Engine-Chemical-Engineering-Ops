@@ -125,6 +125,7 @@
     ],
     "group-10": [
       "test_control_kernel.py",
+      "test_time_inputs.py",
       "test_cubic_eos_mixture.py",
       "test_derived_execution.py",
       "test_f3_inverse_publication.py",
@@ -204,6 +205,7 @@
     "test_common_phase_window.py": 1029.82,
     "test_composition_slices.py": 40.6,
     "test_control_kernel.py": 22.15,
+    "test_time_inputs.py": 149.87,
     "test_cubic_eos_mixture.py": 92.18,
     "test_cubic_eos_reliability.py": 140.35,
     "test_custom_relation_contract.py": 4.09,
