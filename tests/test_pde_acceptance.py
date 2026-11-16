@@ -21,6 +21,7 @@ Independent references (nothing below uses the deduction kernel to check itself)
     v = U (1 - y/H) - sum_n 2U/(n pi) sin(n pi y/H) exp(-nu n^2 pi^2 t/H^2);
 * the nondimensionalization core's own dimensional analysis (``analizar_modelo``).
 """
+import json
 from pathlib import Path
 import sys
 import unittest
@@ -317,6 +318,61 @@ class OwnerScopedChartTest(unittest.TestCase):
             SpatialDomain('cartesian', (x, y), intervals, ())
         domain = SpatialDomain('cartesian', (y,), intervals[1:], ())
         self.assertEqual(domain.axes, chart_axes('cartesian', '__v1'))
+
+
+class SpatialReportTest(unittest.TestCase):
+    """PDE-5: the workbench report path carries the spatial block for Transform (P5-2), and writes real reports
+    and operation histories for the frontend reader (``frontend/verificar_equation_workbench.mjs``)."""
+
+    @classmethod
+    def setUpClass(cls):
+        FickAcceptanceTest.setUpClass()
+        StokesFirstProblemTest.setUpClass()
+        cls.fick, cls.stokes = FickAcceptanceTest.w.report, StokesFirstProblemTest.w.report
+        # Fick wall through the boundary rules: restrict the recorded Fick closure to the wall, meet it with an
+        # impermeable-wall flux condition, substitute and expand the normal derivative.
+        model, names, _ = fick_model()
+        w = Workbench(model, 'matter')
+        x = names['x']
+        region = w.append(kind='declare_spatial_domain', sources=['matter.v1.1.operators'], chart='cartesian', coordinates=[x],
+                          intervals=[{'lower': '0', 'upper': '1', 'lowerOpen': False, 'upperOpen': False, 'endpointUnit': 'cm'}],
+                          parts=[{'name': 'inlet', 'coordinate': x, 'end': 'lower'}, {'name': 'wall', 'coordinate': x, 'end': 'upper'}],
+                          reason='Diffusion slab 0 <= x <= 1 cm')
+        closure = w.append(kind='restrict_to_boundary', sources=['matter.v1.1.fick'], domains=[region], boundary='wall', form='flux')
+        X, T_ = sp.symbols('x t', real=True)
+        flux = sp.Function('j__v1__1')(X, sp.Symbol('y', real=True), sp.Symbol('z', real=True), T_)
+        from core.mathematics.operators import NormalComponent
+        wall = w.append(kind='declare_condition', conditionKind='neumann', form='flux', sources=['matter.v1.1.local'], domains=[region],
+                        boundary='wall', symbol=w.ids()[str(flux)], right='0', reason='Impermeable wall: no component flux through it')
+        normal = w.ids()[str(NormalComponent(flux, X, sp.Rational(1, 100), 1))]
+        closed = w.append(kind='substitute', sources=[wall], relation=closure, symbol=normal)
+        w.append(kind='expand_normal_derivative', sources=[closed], domains=[region])
+        cls.wall = w.report
+        fourier = FourierAcceptanceTest
+        fourier.setUpClass()
+        cls.fourier = fourier.s.definition
+        target = Path(__file__).resolve().parents[1] / '.tmp' / 'equation-workbench-spatial.json'
+        target.parent.mkdir(exist_ok=True)
+        target.write_text(json.dumps({'fick': cls.fick, 'stokes': cls.stokes, 'wall': cls.wall, 'fourierDefinition': cls.fourier}), encoding='utf8')
+
+    def test_report_path_publishes_producer_dimensions(self):
+        document = self.stokes['spatial']['matematico']
+        dimensions = {s['id']: s['dimension'] for s in document['simbolos']}
+        self.assertEqual(dimensions['v_x__v1'], {'L': {'n': 1, 'd': 1}, 'T': {'n': -1, 'd': 1}})
+        self.assertEqual(dimensions['y__v1'], {'L': {'n': 1, 'd': 1}})
+        self.assertEqual(self.stokes['spatial']['values'], {'y__v1_upper': {'value': '1/100', 'unit': 'm'}})
+        self.assertEqual(errors(document), [])
+        self.assertEqual(errors(self.fick['spatial']['matematico']), [])
+
+    def test_reports_carry_every_spatial_rule(self):
+        kinds = {op['kind'] for report in (self.fick, self.stokes, self.wall) for op in report['definition']['operations']}
+        kinds |= {op['kind'] for op in self.fourier['operations']}
+        self.assertTrue({'declare_spatial_domain', 'restrict_to_boundary', 'expand_normal_derivative', 'declare_condition',
+                         'declare_fourier_law', 'expand_spatial_operators'} <= kinds)
+        self.assertEqual([c['equationId'] for c in self.wall['spatial']['conditions']], ['operation.5'])
+        for report in (self.fick, self.stokes, self.wall):
+            self.assertIs(report['execution']['supported'], False)
+            self.assertEqual(report['spatial']['solve'], {'accepted': False, 'code': 'requires_discretization'})
 
 
 if __name__ == '__main__':
