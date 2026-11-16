@@ -15,8 +15,10 @@ document cannot express is a located rejection, never a silent drop.
 import sympy as sp
 from sympy.core.function import AppliedUndef
 
-from .dimensions import dimension
+from .dimensions import dimension, known_unit
+from .domains import axis_name
 from .errors import MathematicsError
+from .expansion import _gradient_terms
 from .operators import (BOUNDARY_OPERATORS, BoundaryFlux, BoundaryTrace, Divergence, Gradient, NormalComponent,
                         NormalDerivative, VolumeIntegral, discretization_message, field_coordinates, is_coordinate,
                         requires_discretization, spatial_content)
@@ -131,8 +133,11 @@ class _Translator:
                 self.fail('the ' + name + ' over (' + ', '.join(ordered) + ') is published only for a declared Cartesian domain on exactly those coordinates; '
                           'expand the spatial operators in the declared chart (expand_spatial_operators) before publishing.', 'non_cartesian_operator')
             if isinstance(e, Divergence):
-                if not all(term.has(Gradient) for term in (inner.args if inner.is_Add else (inner,))):
-                    self.fail('the divergence does not act on a gradient flux in every term; close the flux with its recorded constitutive law (declare_fourier_law) before publishing.', 'unclosed_flux')
+                # The terms are those of the distributed argument, so a factored sum k (w + grad T) is checked term by term (P4-13).
+                try:
+                    _gradient_terms(inner, 'in ' + str(e))
+                except MathematicsError:
+                    self.fail('the divergence does not act on a scalar times a gradient in every term; close the flux with its recorded constitutive law (declare_fourier_law) before publishing.', 'unclosed_flux')
                 self.divergence.append(ordered)
                 try:
                     inside = self.tree(inner)
@@ -176,22 +181,44 @@ class _Translator:
         return {'tipo': 'producto', 'argumentos': [self.tree(f) for f in factors]}
 
 
+def _ancestry(graph, rows):
+    """The rows and every node they were deduced from."""
+    seen, pending = set(), list(rows)
+    while pending:
+        key = pending.pop()
+        if key in seen or key not in graph.nodes:
+            continue
+        seen.add(key)
+        pending.extend(graph.nodes[key].inputs)
+    return seen
+
+
 def _time_symbol(graph, rows, units, time):
+    """The time of the published rows, or ``None`` for a steady model.
+
+    A candidate is a non-coordinate symbol argument of a field in the rows with respect to which the rows, or the
+    equations they were deduced from, differentiate. A parameter that merely accompanies a coordinate in a field or a
+    coefficient function is never the time, whatever its unit (P4-12); a differentiated argument with a known
+    dimension other than time is not the time either (P4-9).
+    """
     if time is not None:
         return time
     axes = {a for domain in graph.spatial_domains.values() for a in domain.axes}
-    candidates = set()
+    arguments = set()
     for row in rows:
         for field in graph.nodes[row].equation.atoms(AppliedUndef):
-            for argument in field.args:
-                if isinstance(argument, sp.Symbol) and argument not in axes and not is_coordinate(argument) and (_dimension(argument, units) or {}).get('T', {}).get('n') == 1:
-                    candidates.add(argument)
-    if not candidates:
-        # No unit identifies the time: a symbol argument that accompanies a coordinate in a field is the only candidate left.
-        for row in rows:
-            for field in graph.nodes[row].equation.atoms(AppliedUndef):
-                if any(is_coordinate(a, None, axes) for a in field.args):
-                    candidates.update(a for a in field.args if isinstance(a, sp.Symbol) and a not in axes and not is_coordinate(a) and _dimension(a, units) is None)
+            if any(is_coordinate(a, None, axes) for a in field.args):
+                arguments.update(a for a in field.args if isinstance(a, sp.Symbol) and a not in axes and not is_coordinate(a))
+    differentiated = set()
+    for key in _ancestry(graph, rows):
+        equation = graph.nodes[key].equation
+        for derivative in (equation.atoms(sp.Derivative) if isinstance(equation, sp.Basic) else ()):
+            differentiated.update(v for v in derivative.variables if v in arguments)
+    candidates = set()
+    for argument in differentiated:
+        found = _dimension(argument, units)
+        if found is None or found == {'T': {'n': 1, 'd': 1}}:
+            candidates.add(argument)
     if len(candidates) > 1:
         raise PublicationError('Several time-like arguments occur (' + ', '.join(sorted(map(str, candidates))) + '); select the time symbol.', 'ambiguous_time')
     return next(iter(candidates), None)
@@ -216,7 +243,22 @@ def _end(domain, coordinate, point):
     return None
 
 
-def to_matematico(graph, rows, units, time=None, model_id='spatial-model', revision=1, values=None):
+def _resolved_units(graph, rows, units, unit_resolver):
+    """``units`` extended with what the producer's unit resolver knows about the quantities of ``rows``."""
+    if unit_resolver is known_unit:
+        return units
+    resolved = dict(units)
+    for row in rows:
+        if row in graph.nodes and isinstance(graph.nodes[row].equation, sp.Basic):
+            for quantity in graph.nodes[row].equation.atoms(sp.Symbol, AppliedUndef):
+                if quantity not in resolved:
+                    unit = unit_resolver(quantity, units)
+                    if unit is not None:
+                        resolved[quantity] = unit
+    return resolved
+
+
+def to_matematico(graph, rows, units, time=None, model_id='spatial-model', revision=1, values=None, unit_resolver=known_unit):
     """v2 ``matematico`` model for the selected spatial rows (field equations and conditions).
 
     Raises ``PublicationError`` located at the offending row. Rows without
@@ -226,8 +268,12 @@ def to_matematico(graph, rows, units, time=None, model_id='spatial-model', revis
     declared constant parameter of the coordinate's dimension (``x_upper``);
     its exact SI value is written into ``values`` (when given) as
     ``{symbol: {'value': exact string, 'unit': unit}}``.
+
+    ``unit_resolver`` is the producers' unit resolver (the one the replay used), so producer fields
+    without an explicit unit entry, such as the momentum family's velocities, keep their dimension.
     """
     values = {} if values is None else values
+    units = _resolved_units(graph, rows, units, unit_resolver)
     declared = tuple(a for domain in graph.spatial_domains.values() for a in domain.axes)
     chosen = [r for r in rows if r in graph.nodes and isinstance(graph.nodes[r].equation, sp.Equality)]
     spatial = [r for r in chosen if (lambda c: bool(c['coordinates'] or c['operators']))(spatial_content(graph.nodes[r].equation, time, declared))]
@@ -441,7 +487,7 @@ def scoped_rows(graph, rows):
     return [r for r in rows if r in descendants or r in anchors]
 
 
-def spatial_publication(graph, rows, units, time=None, model_id='spatial-model'):
+def spatial_publication(graph, rows, units, time=None, model_id='spatial-model', unit_resolver=known_unit):
     """Publication block of the current equations among ``rows``, or ``None`` when none is spatial.
 
     A model is published as spatial once it declares a typed spatial domain; the
@@ -463,7 +509,7 @@ def spatial_publication(graph, rows, units, time=None, model_id='spatial-model')
     for domain_id, domain in graph.spatial_domains.items():
         domains.append({
             'id': domain_id, 'chart': domain.chart,
-            'coordinates': [{'name': str(c), 'lower': str(domain.interval(c).inf), 'upper': str(domain.interval(c).sup), 'unit': 'm' if str(c) != 'phi' else 'rad',
+            'coordinates': [{'name': str(c), 'lower': str(domain.interval(c).inf), 'upper': str(domain.interval(c).sup), 'unit': 'm' if axis_name(c) != 'phi' else 'rad',
                              'lowerOpen': bool(domain.interval(c).left_open), 'upperOpen': bool(domain.interval(c).right_open)} for c in domain.coordinates],
             'parts': [{'name': p.name, 'coordinate': str(p.coordinate), 'end': p.end, 'point': str(domain.endpoint(p)), 'outwardNormal': p.sign} for p in domain.parts]})
     block = {'format': FORMAT, 'version': 1, 'requiresDiscretization': True, 'handoff': 'transform',
@@ -474,7 +520,7 @@ def spatial_publication(graph, rows, units, time=None, model_id='spatial-model')
              'findings': [{**f, 'message': discretization_message(f)} for f in findings]}
     values = {}
     try:
-        block['matematico'] = to_matematico(graph, spatial_ids, units, time, model_id, values=values)
+        block['matematico'] = to_matematico(graph, spatial_ids, units, time, model_id, values=values, unit_resolver=unit_resolver)
         block['adapterFindings'] = []
     except PublicationError as error:
         block['matematico'] = None
