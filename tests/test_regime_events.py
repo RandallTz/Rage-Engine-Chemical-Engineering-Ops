@@ -9,12 +9,10 @@ while it is saturated the hand-derived trajectory is
     u_c = K_c (r - T + I/tau_I) = 0.5 - 1e-4 t^2,
 
 so the valve leaves saturation at t* = sqrt(3000) s, with du_c/dt = -2e-4 t*. Acceptance
-(roadmap Demo 0.3, DR-6): the located exit lies within 10 du_c / |du_c/dt| of t*, where the
-"rtol |u_c|" of the roadmap is applied in the solver's own error weights (as for C2):
-du_c = sum_i |d u_c / d y_i| (rtol |y_i| + atol_i) over the states u_c depends on. u_c is a small
-difference of K_c T terms (K_c T = 16.5 against u_c = 0.2), so the literal rtol |u_c| is about
-80 error weights tighter than the state tolerance the solver enforces; that form is reported by
-the test but not asserted (C6 delivery note).
+(roadmap Demo 0.3, DR-6), asserted literally for RK45 and BDF at rtol 1e-6, 1e-8 and 1e-10:
+|t_e - t*| <= 10 rtol |u_c| / |du_c/dt|, and the event sits on the run's own crossing. The
+C6 review (C6-R1) showed that bisecting on one accepted step's interpolant missed this bound;
+the integrator now places a regime change on reintegrated endpoints (`_refine_change`).
 """
 import copy
 import math
@@ -62,6 +60,21 @@ def regime_changes(trajectory):
     return [(t, before, after) for code, t, before, after, _ in trajectory.eventos if code == 'cambio_firma']
 
 
+def own_crossing(system, trajectory, t, regime=0, half_width=1.):
+    """Crossing of the two arguments of one regime on the run's own dense output, bisected near t."""
+    f = system.regimes[regime]['evaluate']
+    g = lambda s: f[0](s, trajectory.y(s)) - f[1](s, trajectory.y(s))
+    lo, hi = max(0., t - half_width), t + half_width
+    assert np.sign(g(lo)) != np.sign(g(hi)), (g(lo), g(hi))
+    for _ in range(200):
+        m = 0.5 * (lo + hi)
+        if np.sign(g(m)) == np.sign(g(lo)):
+            lo = m
+        else:
+            hi = m
+    return 0.5 * (lo + hi)
+
+
 class RegimeEventTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -87,33 +100,58 @@ class RegimeEventTests(unittest.TestCase):
         self.assertAlmostEqual(margins[1], 0.6 / 0.5, delta=1e-12)
 
     def test_exit_from_saturation_is_located_within_the_slope_tied_bound(self):
+        """DR-6, literal: |t_e - t*| <= 10 rtol |u_c| / |du_c/dt| for RK45 and BDF at rtol 1e-6, 1e-8, 1e-10.
+
+        C6-R1 (review): before the repair the change was bisected on one accepted step's interpolant and
+        missed this bound by 1.7 to 4.1 times; the event must also sit on the run's own crossing.
+        """
         t_exit, slope = exit_time()
         self.assertAlmostEqual(t_exit, math.sqrt(3000), delta=1e-9)
         self.assertAlmostEqual(slope, -2e-4 * math.sqrt(3000), delta=1e-12)
-        # Exact states at t*: U = m c (T - T_ref) with u_ref = 0 and T_ref = 300 K, I as above.
-        energy = HEAT_CAPACITY * (T0 + LOOP['heaterPower'][0] * U_MAX / HEAT_CAPACITY * t_exit - 300)
-        integral = (LOOP['setpoint'][0] - T0) * t_exit - LOOP['heaterPower'][0] * U_MAX / HEAT_CAPACITY * t_exit**2 / 2
-        atol = self.system.numeric.atol
-        energy_index = self.system.states.index(next(q for q in self.system.states if str(q).startswith('U__')))
-        weight = (LOOP['gain'][0] / HEAT_CAPACITY * (RTOL * abs(energy) + atol[energy_index])
-                  + LOOP['gain'][0] / LOOP['integralTime'][0] * (RTOL * abs(integral) + atol[self.integral]))
-        bound = 10 * weight / abs(slope)
-        literal = 10 * RTOL * U_MAX / abs(slope)
-        for method in ('RK45', 'BDF'):
+        for rtol in (1e-6, 1e-8, 1e-10):
+            model = copy.deepcopy(self.model)
+            model['estudio']['rtol'] = rtol
+            literal = 10 * rtol * U_MAX / abs(slope)
+            for method in ('RK45', 'BDF'):
+                with self.subTest(rtol=rtol, method=method):
+                    system = DerivedSystem(copy.deepcopy(model))
+                    trajectory = run(system, method)
+                    changes = regime_changes(trajectory)
+                    self.assertTrue(changes)
+                    t, before, after = changes[0]
+                    self.assertEqual([entry[1] for entry in before if entry not in after], ['regime.1'])
+                    self.assertLessEqual(abs(t - t_exit), literal, (t, t_exit, literal))
+                    own = own_crossing(system, trajectory, t)
+                    self.assertLessEqual(abs(t - own), 1e-2 * literal, (t, own))
+                    print(f'C6 exit {method} rtol {rtol:g}: |dt| = {abs(t - t_exit):.3g} s, '
+                          f'literal 10 rtol |u_c|/|du_c/dt| = {literal:.3g} s, |t - own crossing| = {abs(t - own):.3g} s')
+
+    def test_lower_limit_entry_sits_on_the_trajectory_crossing(self):
+        """C6-R1 second case: the unsaturated loop (u_min = 0, u_max = 1) enters its lower limit.
+
+        Reference: x = T - r, I; x' = a (-x + I/tau_I), I' = -x, a = P K_c/(m c); u_c = K_c (-x + I/tau_I)
+        has its first zero at t_ref by the matrix exponential. The literal DR-6 bound degenerates (u_c = 0
+        there), so the event is checked against the run's own crossing and the reference within the
+        global state error of the run (RK45 6e-9 s, BDF 3.6e-7 s measured at rtol 1e-10).
+        """
+        from scipy.linalg import expm
+        from scipy.optimize import brentq
+        gain, tau, power = LOOP['gain'][0], LOOP['integralTime'][0], LOOP['heaterPower'][0]
+        a = power * gain / HEAT_CAPACITY
+        matrix = np.array([[-a, a / tau], [-1., 0.]])
+        z0 = np.array([T0 - LOOP['setpoint'][0], 0.])
+        u_c = lambda t: gain * np.array([-1., 1 / tau]) @ (expm(matrix * t) @ z0)
+        t_ref = brentq(u_c, 1., 200.)
+        model = lowered_model(self.author, self.rows, {'commandMax': (1, '1'), 'commandMin': (0, '1')})
+        model['estudio']['rtol'] = RTOL
+        for method, tolerance in (('RK45', 1e-7), ('BDF', 1e-6)):
             with self.subTest(method=method):
-                system = DerivedSystem(copy.deepcopy(self.model))
+                system = DerivedSystem(copy.deepcopy(model))
                 trajectory = run(system, method)
-                changes = regime_changes(trajectory)
-                self.assertTrue(changes)
-                t, before, after = changes[0]
-                self.assertEqual([entry[1] for entry in before if entry not in after], ['regime.1'])
-                self.assertLessEqual(abs(t - t_exit), bound, (t, t_exit, bound))
-                # The event sits on the integrated trajectory's own crossing: there the two min
-                # arguments differ by no more than the error-weighted u_c tolerance.
-                values = [f(t, trajectory.y(t)) for f in system.regimes[0]['evaluate']]
-                self.assertLessEqual(abs(values[0] - values[1]), 10 * weight)
-                print(f'C6 exit {method}: |dt| = {abs(t - t_exit):.3g} s, weighted bound {bound:.3g} s, '
-                      f'literal 10 rtol |u_c|/|du_c/dt| = {literal:.3g} s')
+                t = regime_changes(trajectory)[0][0]
+                own = own_crossing(system, trajectory, t, regime=1)
+                self.assertLessEqual(abs(t - own), 1e-9, (t, own))
+                self.assertLessEqual(abs(t - t_ref), tolerance, (t, t_ref))
 
     def test_regime_change_is_published_as_an_event(self):
         system = DerivedSystem(copy.deepcopy(self.model))
