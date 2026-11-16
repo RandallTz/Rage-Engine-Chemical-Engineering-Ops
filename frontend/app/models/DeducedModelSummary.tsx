@@ -9,7 +9,10 @@ import styles from './workspace.module.css';
 import { readDynamicFormulation, type DynamicFormulation } from './dynamicDefinition';
 
 type Summary = { format: 'rage.formulation-summary'; version: 1; modelId: string; dynamicFormulation?: DynamicFormulation; families: { id: string; volumes: { volumeId: string; status: string; note: string; steps: { id: string; title: string; latex: string }[] }[] }[] };
-const names: Record<string, string> = { matter: 'Matter balance', energy: 'Energy balance', momentum: 'Momentum balance', thermodynamics: 'Thermodynamics' };
+const names: Record<string, string> = { matter: 'Matter balance', energy: 'Energy balance', momentum: 'Momentum balance', thermodynamics: 'Thermodynamics', signal: 'Signal (sensors, controllers, actuators)' };
+const physical = ['matter', 'energy', 'momentum', 'thermodynamics'];
+/** The four physical families in order; then the Signal family only when signal rows are recorded. */
+const familyIds = (ids: unknown[]) => (ids.length === 4 || ids.length === 5 && ids[4] === 'signal') && physical.every((id, index) => ids[index] === id);
 export default function DeducedModelSummary({ model }: { model: HojaMotor }) {
   const source = JSON.stringify(modelRequestSafe(model));
   const [result, setResult] = useState<{ source: string; value?: Summary; error?: string } | null>(null);
@@ -23,7 +26,7 @@ export default function DeducedModelSummary({ model }: { model: HojaMotor }) {
         const value = await response.json();
         if (!response.ok) throw new Error(value?.detail?.message ?? 'The derived model could not be described.');
         if(value.modelId!==(body.modelo?.id??body.solicitudV2?.solicitudId??body.draft?.modelId))throw new Error('Unexpected formulation source.');
-        if (value?.format !== 'rage.formulation-summary' || value.version !== 1 || typeof value.modelId !== 'string' || !Array.isArray(value.families) || value.families.length !== 4 || new Set(value.families.map((family: Summary['families'][number]) => family?.id)).size !== 4 || value.families.some((family: Summary['families'][number]) => !family || !names[family.id] || !Array.isArray(family.volumes) || family.volumes.some(volume => !volume || typeof volume.volumeId !== 'string' || !['recorded', 'unrecorded', 'unsupported'].includes(volume.status) || typeof volume.note !== 'string' || !Array.isArray(volume.steps) || volume.steps.some(step => !step || typeof step.id !== 'string' || typeof step.title !== 'string' || typeof step.latex !== 'string')))) throw new Error('Invalid formulation summary from the Engine.');
+        if (value?.format !== 'rage.formulation-summary' || value.version !== 1 || typeof value.modelId !== 'string' || !Array.isArray(value.families) || !familyIds(value.families.map((family: Summary['families'][number]) => family?.id)) || value.families.some((family: Summary['families'][number]) => !family || !names[family.id] || !Array.isArray(family.volumes) || family.volumes.some(volume => !volume || typeof volume.volumeId !== 'string' || !['recorded', 'unrecorded', 'unsupported'].includes(volume.status) || typeof volume.note !== 'string' || !Array.isArray(volume.steps) || volume.steps.some(step => !step || typeof step.id !== 'string' || typeof step.title !== 'string' || typeof step.latex !== 'string')))) throw new Error('Invalid formulation summary from the Engine.');
         if (value.dynamicFormulation !== undefined) readDynamicFormulation(value.dynamicFormulation);
         if (!controller.signal.aborted) setResult({ source, value });
       } catch (failure) { if (!controller.signal.aborted) setResult({ source, error: (failure as Error).message }); }

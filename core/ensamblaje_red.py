@@ -284,6 +284,15 @@ class Sistema:
         """Derivada total de V = V(H, P, n) por diferencia centrada a lo largo de las tasas."""
         vol = self.red.volumenes[j]
         n, H = self.n_E(y, j)
+        # F8b: a package that differentiates its own closure (the cubic EOS packages) gives dV/dt on the phase set
+        # of the state without another flash. Only on the phase set of the integrated segment: a state that already
+        # carries a nascent phase falls through to the one-sided differences below.
+        analitica = getattr(vol.paquete, "dV_dt_PH", None)
+        f0 = self.firmas_tramo[j] if self.firmas_tramo is not None else firma(ev)
+        if analitica is not None and firma(ev) == f0:
+            d = analitica(ev, dP, dH, dn)
+            if d is not None and math.isfinite(d):
+                return d
         # Escala del paso: cada especie respecto de su cantidad; una especie con cantidad exactamente cero
         # (entra por una corriente) respecto del total del volumen. Antes se dividia por 1e-30 y el paso
         # quedaba en ~1e-33: la diferencia de V se perdia en el redondeo.

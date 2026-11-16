@@ -10,7 +10,9 @@ from core.mathematics.provenance import input_ids
 from .operation_journal import JournalError,keys,replay
 
 SOURCE_REVISION='physical-equation-graphs-8'
-FAMILIES=('matter','momentum','energy','thermodynamics')
+# 'signal' holds designed sensor, controller and actuator rows (Demo 0.3 C3,
+# dec-control-surface). A signal conserves nothing and owns no control volume.
+FAMILIES=('matter','momentum','energy','thermodynamics','signal')
 
 
 def _components(state,module):

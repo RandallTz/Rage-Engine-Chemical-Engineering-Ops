@@ -118,6 +118,7 @@
       "test_solid_liquid_equilibrium.py",
       "test_sparse_blocks.py",
       "test_spatial_publication.py",
+      "test_pde_acceptance.py",
       "test_steady_transform.py",
       "test_template_instance.py",
       "test_v2_initialization.py",
@@ -127,6 +128,7 @@
     "group-10": [
       "test_control_kernel.py",
       "test_time_inputs.py",
+      "test_control_loop.py",
       "test_cubic_eos_mixture.py",
       "test_derived_execution.py",
       "test_f3_inverse_publication.py",
@@ -196,7 +198,7 @@
     ]
   },
   "pytest_shards": {
-    "_comment": "A heavy test split over several CI groups. The file stays assigned once in pytest_slow_groups; that group runs its other tests (-k 'not <test>'). Each group listed here runs only <test>, as shard i of len(groups) through the two environment variables, which the test reads with tests/v2_parity_cases.shard_from_env and shard_selected (archive index modulo the shard count). check_tiers.py proves every archive and every collected test runs exactly once. Local --tier slow runs and runs without --group are not sharded.",
+    "_comment": "A heavy test split over several CI groups. The file stays assigned once in pytest_slow_groups; that group runs its other tests (-k 'not <test>'). Each group listed here runs only <test>, as shard i of len(groups) through the two environment variables, which the test reads with tests/v2_parity_cases.shard_from_env and shard_selected (for three shards the measured-cost table SHARD_TABLE_OF_3, otherwise archive index modulo the shard count). check_tiers.py proves every archive and every collected test runs exactly once. Local --tier slow runs and runs without --group are not sharded.",
     "test_v2_compatibility.py": {
       "test": "test_all_25_archives",
       "shard_var": "V2_PARITY_SHARD",
@@ -223,6 +225,7 @@
     "test_composition_slices.py": 40.6,
     "test_control_kernel.py": 22.15,
     "test_time_inputs.py": 149.87,
+    "test_control_loop.py": 275.37,
     "test_cubic_eos_mixture.py": 92.18,
     "test_cubic_eos_reliability.py": 140.35,
     "test_custom_relation_contract.py": 4.09,
@@ -315,6 +318,7 @@
     "test_sparse_blocks.py": 95.42,
     "test_spatial_domain.py": 13.498,
     "test_spatial_publication.py": 28.0,
+    "test_pde_acceptance.py": 87.1,
     "test_steady_package_closure.py": 574.16,
     "test_steady_transform.py": 185.91,
     "test_steep_tv_bracket.py": 30.77,
