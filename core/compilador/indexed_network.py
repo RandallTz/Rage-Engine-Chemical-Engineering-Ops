@@ -8,6 +8,8 @@ discharge-port pressure datum by the receiving volume's pressure
 (`pressure_couplings`). This internal runtime is not yet an HTTP/common-result
 publication path.
 """
+import hashlib
+
 import numpy as np
 import sympy as sp
 from core.mathematics.numeric_lowering import lambdify_numeric
@@ -104,6 +106,64 @@ def check_connection_pressure(donor, port, receiver, closure, path):
     return None
 
 
+HEAT_PREMISE = ('Shared conductive boundary: the heat leaving one connected volume through its retained boundary heat-rate term '
+                'enters the other through its own; no heat is stored on or lost from the connection.')
+
+
+def _datum_symbol(data_id):
+    # The parameter symbol DerivedSystem binds to a datum id (stage-local; scoped by the assembly).
+    return sp.Symbol('datum_' + hashlib.sha256(data_id.encode()).hexdigest()[:12], real=True)
+
+
+def _admitted(system, expression):
+    known = set(system.states) | set(system.closure_quantities)
+    return not (expression.atoms(sp.core.function.AppliedUndef) - known
+                or expression.free_symbols - set(system.parameter_values) - {system.time})
+
+
+def heat_coupling(connection, stages, path):
+    """Resolve a heat connection into two exterior-datum replacements.
+
+    The `law` endpoint's retained boundary heat rate (its recorded law, expanded)
+    depends on its declared exterior temperature datum; that datum is replaced by
+    the other endpoint's volume temperature. The other endpoint's retained heat
+    rate must be c * (one prescribed duty datum); that datum is replaced by minus
+    the law endpoint's heat rate divided by c. Returns the bound records; the
+    equal-and-opposite identity is proved by the assembly after substitution.
+    """
+    coupling = connection['heat']
+    other = 'from' if coupling['law'] == 'to' else 'to'
+    law_end, duty_end = connection[coupling['law']], connection[other]
+    law, duty = stages[law_end['stage']-1], stages[duty_end['stage']-1]
+    rate = lambda system, end: si_magnitude(system._expand(sp.Function('energy_heat_rate__'+end['volumeId'])(system.time)))
+    law_rate = rate(law, law_end)
+    temperature = _datum_symbol(coupling['exteriorTemperature'])
+    if not _admitted(law, law_rate) or temperature not in law.parameter_values or not law_rate.has(temperature):
+        raise _failure('index_network_heat_unresolved',
+            'The law endpoint must resolve its retained boundary heat rate through a recorded law of its own states and '
+            'bound data that uses the declared exterior temperature datum ' + coupling['exteriorTemperature'] + '.', path+'.heat')
+    duty_rate = rate(duty, duty_end)
+    data = duty_rate.free_symbols & set(duty.parameter_values)
+    factor = sp.diff(duty_rate, next(iter(data))) if len(data) == 1 else sp.S.Zero
+    if (len(data) != 1 or duty_rate.atoms(sp.core.function.AppliedUndef) or duty_rate.free_symbols - data - {duty.time}
+            or factor.free_symbols or factor == 0 or sp.simplify(duty_rate - factor*next(iter(data))) != 0):
+        raise _failure('index_network_heat_two_laws',
+            'Exactly one endpoint resolves the duty: the other endpoint\'s retained boundary heat rate must be one prescribed '
+            'duty datum, not a recorded law.', path+'.'+other)
+    owner_T = si_magnitude(duty._expand(sp.Function('T__'+duty_end['volumeId'])(duty.time)))
+    if not _admitted(duty, owner_T):
+        raise _failure('index_network_heat_unresolved', 'The other endpoint\'s volume temperature must be a state or closure quantity.', path+'.'+other)
+    return {'law': (law_end['stage']-1, temperature, law_rate), 'duty': (duty_end['stage']-1, next(iter(data)), duty_rate, factor),
+            'temperature': owner_T, 'record': {
+                'connectionId': connection['id'], 'premise': HEAT_PREMISE, 'orientation': 'from_to',
+                'law': {'endpoint': coupling['law'], 'stage': law_end['stage'], 'instanceId': law_end['instanceId'], 'port': law_end['port'],
+                        'replacedDatum': coupling['exteriorTemperature'], 'by': 'T__'+duty_end['volumeId'],
+                        'heatRate': 'energy_heat_rate__'+law_end['volumeId']},
+                'duty': {'endpoint': other, 'stage': duty_end['stage'], 'instanceId': duty_end['instanceId'], 'port': duty_end['port'],
+                         'replacedDatum': next((k for k in duty.selection['parameters'].values() if _datum_symbol(k) in data), str(next(iter(data)))),
+                         'heatRate': 'energy_heat_rate__'+duty_end['volumeId']}}}
+
+
 class IndexedDerivedSystem:
     """Stage-local namespaces composed into one explicit RHS and sparse Jacobian."""
     def __init__(self, model, *, linear_solver='auto'):
@@ -159,7 +219,19 @@ class IndexedDerivedSystem:
         donor_rows = []
         pressure_rows = []
         self.pressure_couplings = []
+        heat_rows = []
+        self.heat_couplings = []
         for connection in self.expansion['connections']:
+            if connection.get('kind') == 'heat':
+                row = heat_coupling(connection, self.stages, where+'.connections.'+connection['id'])
+                (l, temperature, _), (d, duty, _, _) = row['law'], row['duty']
+                if temperature in self.bindings[l] or duty in self.bindings[d]:
+                    raise _failure('index_network_shared_boundary_datum', 'Each heat connection replaces its own exterior data.',
+                                   where+'.connections.'+connection['id'])
+                row['placeholders'] = (sp.Dummy('connected_temperature'), sp.Dummy('connected_duty'))
+                self.bindings[l][temperature], self.bindings[d][duty] = row['placeholders']
+                heat_rows.append(row)
+                continue
             a, b = connection['from']['stage']-1, connection['to']['stage']-1
             donor, receiver = self.stages[a], self.stages[b]
             port = next(p for p in donor.model['template']['ports'] if p['id']==connection['from']['portId'])
@@ -211,6 +283,13 @@ class IndexedDerivedSystem:
         # Network relation p2[donor] = P[receiver]: the receiving pressure in its own stage scope.
         for b, placeholder, pressure in pressure_rows:
             substitutions[placeholder] = scope(b, pressure)
+        # Heat connection: the law endpoint's exterior temperature is the other volume's temperature,
+        # and the other endpoint's prescribed duty is minus the law endpoint's heat rate (one duty).
+        for row in heat_rows:
+            (l, _, law_rate), (d, _, _, factor) = row['law'], row['duty']
+            temperature, duty = row['placeholders']
+            substitutions[temperature] = scope(d, row['temperature'])
+            substitutions[duty] = -scope(l, law_rate)/factor
         boundary_symbols = set(substitutions)
         def connect(expression):
             for _ in range(len(substitutions)+1):
@@ -221,6 +300,17 @@ class IndexedDerivedSystem:
                 raise _failure('index_network_algebraic_loop', 'Connected boundary values contain an unresolved algebraic loop.', where+'.connections')
             return sp.cancel(expression)
         self.connected_expression = lambda j, expression: connect(scope(j, expression))
+        for row in heat_rows:
+            (l, _, law_rate), (d, _, duty_rate, _) = row['law'], row['duty']
+            into_law, into_duty = connect(scope(l, law_rate)), connect(scope(d, duty_rate))
+            if sp.simplify(into_law + into_duty) != 0:
+                raise _failure('index_network_heat_imbalance', 'The connected boundary heat rates are not equal and opposite.',
+                               where+'.connections.'+row['record']['connectionId'])
+            # Duty from the `from` volume into the `to` volume, in SI, on the connected state.
+            row['duty_expression'] = into_law if row['record']['law']['endpoint'] == 'to' else into_duty
+            self.heat_couplings.append(dict(row['record'], identity='equal_and_opposite',
+                                            dutySI=sp.srepr(row['duty_expression'])))
+        self.heat_duties = [(row['record']['connectionId'], row['duty_expression']) for row in heat_rows]
         expressions = []
         self.guards = []
         blocks = []

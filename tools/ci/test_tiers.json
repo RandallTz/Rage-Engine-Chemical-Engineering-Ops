@@ -192,7 +192,8 @@
       "test_eos_dynamic_volume.py"
     ],
     "group-15": [
-      "test_jacketed_reactor.py"
+      "test_jacketed_reactor.py",
+      "test_flowsheet_heat.py"
     ]
   },
   "pytest_shards": {
@@ -334,6 +335,7 @@
     "test_v2_route_switch.py": 5513.63,
     "test_water_saturation_near_critical.py": 8.663,
     "test_workspace_handoffs.py": 11.913,
-    "test_jacketed_reactor.py": 3000.0
+    "test_jacketed_reactor.py": 3000.0,
+    "test_flowsheet_heat.py": 1450.0
   }
 }
