@@ -91,6 +91,42 @@ for(const report of [publication.source,publication.combined,publication.draft,p
   }
   const bad=structuredClone(report);bad.equations.at(-1).derivation.inputIds=['missing'];assert.throws(()=>readEquationWorkbenchReport(bad));
 }
+// PDE-5: real Python spatial reports (tests/test_pde_acceptance.py SpatialReportTest) through the strict reader and the Transform view.
+const spatial=JSON.parse(fs.readFileSync(path.join(directory,'../.tmp/equation-workbench-spatial.json'),'utf8'));
+const {SpatialPublicationView}=load(path.join(directory,'app/models/DerivedExecution'));
+const spatialKinds=new Set([spatial.fourierDefinition,...['fick','stokes','wall'].map(key=>spatial[key].definition)].flatMap(definition=>readEquationWorkbench(definition).operations.map(op=>op.kind)));
+for(const kind of ['declare_spatial_domain','restrict_to_boundary','expand_normal_derivative','declare_condition','declare_fourier_law','expand_spatial_operators'])assert.ok(spatialKinds.has(kind),`The reader accepts the recorded ${kind} rule.`);
+for(const key of ['fick','stokes','wall']){
+  const report=readEquationWorkbenchReport(spatial[key]);
+  assert.equal(report.execution.supported,false);
+  const html=require('react-dom/server').renderToStaticMarkup(require('react').createElement(SpatialPublicationView,{spatial:report.spatial,report}));
+  assert.ok(html.includes('Spatial model · requires discretization')&&html.includes('spatial discretization is deferred (F7)'),'Transform shows the located Solve rejection.');
+  for(const row of report.spatial.fieldEquations)assert.ok(html.includes(report.equations.find(e=>e.id===row.equationId).title.replace(/&/g,'&amp;')),'Each field equation is shown by its recorded title.');
+  for(const domain of report.spatial.domains)for(const part of domain.parts)assert.ok(html.includes('Boundary '+part.name),'Each oriented boundary part is shown.');
+  if(report.spatial.matematico)assert.ok(html.includes('Nondimensional document ready'));else for(const finding of report.spatial.adapterFindings)assert.ok(html.includes(finding.message.split(' (')[0]),'An adapter limit is shown, never dropped.');
+  const unknown=structuredClone(spatial[key]);unknown.spatial.fieldEquations[0].equationId='missing';assert.throws(()=>readEquationWorkbenchReport(unknown),'A spatial row names an equation of the report.');
+  const silent=structuredClone(spatial[key]);if(silent.spatial.matematico)silent.spatial.matematico=null;else silent.spatial.adapterFindings=[];assert.throws(()=>readEquationWorkbenchReport(silent),'A missing document carries its adapter findings.');
+  const executable=structuredClone(spatial[key]);executable.spatial.solve.accepted=true;assert.throws(()=>readEquationWorkbenchReport(executable));
+  const flipped=structuredClone(spatial[key]);flipped.spatial.domains[0].parts.forEach(part=>{part.outwardNormal=-part.outwardNormal;});if(flipped.spatial.domains[0].parts.length)assert.throws(()=>readEquationWorkbenchReport(flipped),'Outward normals follow the part end.');
+}
+assert.ok(spatial.stokes.spatial.matematico.simbolos.find(s=>s.id==='v_x__v1').dimension,'The report-path document keeps producer dimensions (P5-2).');
+const condition=spatial.fick.definition.operations.find(op=>op.kind==='declare_condition'&&op.conditionKind==='initial');
+for(const mutate of [op=>{op.boundary='left';},op=>{delete op.time;},op=>{op.form='flux';},op=>{op.conditionKind='periodic';},op=>{op.chart='cartesian';},op=>{op.domains=[...op.domains,'other'];}]){
+  const bad=structuredClone(spatial.fick.definition);mutate(bad.operations[bad.operations.indexOf(bad.operations.find(op=>op.kind==='declare_condition'&&op.conditionKind==='initial'))]);assert.throws(()=>readEquationWorkbench(bad));
+}
+assert.ok(condition);
+const domainOperation=spatial.fick.definition.operations.find(op=>op.kind==='declare_spatial_domain');
+for(const mutate of [op=>{op.chart='polar';},op=>{op.parts[0].end='middle';},op=>{op.intervals=[];},op=>{op.coordinates=[op.coordinates[0],op.coordinates[0]];},op=>{op.boundary='left';}]){
+  const bad=structuredClone(spatial.fick.definition);mutate(bad.operations.find(op=>op.kind==='declare_spatial_domain'));assert.throws(()=>readEquationWorkbench(bad));
+}
+assert.ok(domainOperation);
+// PDE-6: a real localization report (tests/test_pde_thermodynamics.py LocalizationTest).
+const localization=readEquationWorkbenchReport(JSON.parse(fs.readFileSync(path.join(directory,'../.tmp/equation-workbench-localization.json'),'utf8')));
+assert.equal(localization.definition.operations.filter(op=>op.kind==='localize_by_homogeneity').length,3,'The reader accepts the recorded localize_by_homogeneity rule.');
+for(const mutate of [op=>{op.extensive=[];},op=>{op.extensive=[op.extensive[0],op.extensive[0]];},op=>{delete op.extensive;},op=>{op.domains=[...op.domains,'other'];}]){
+  const bad=structuredClone(localization.definition);mutate(bad.operations.find(op=>op.kind==='localize_by_homogeneity'));assert.throws(()=>readEquationWorkbench(bad));
+}
+{const bad=structuredClone(localization.definition);bad.operations.find(op=>op.kind==='declare_spatial_domain').extensive=['x'];assert.throws(()=>readEquationWorkbench(bad),'Extensive quantities belong only to a localization.');}
 for(const family of ['matter','momentum','energy','thermodynamics']){
   const snapshot=JSON.stringify(publication.source);
   const view=equationSections(publication.source,family,'upper');
@@ -133,4 +169,4 @@ const result={tiempos:[0,1],seriesEvaluadas:[{id:'a',grupo:'Arbitrary family',un
 const charts=publishedSeriesCharts(result);
 assert.equal(charts.length,2);assert.deepEqual(charts[0].y,['a','b']);assert.deepEqual(charts[1].y,['c']);
 assert.ok(charts.every(chart=>chart.y.every(id=>result.seriesEvaluadas.some(series=>series.id===id))),'Default plots must reference actual published variables.');
-console.log(JSON.stringify({equationReaders:'passed',operationHandoff:'passed',sourceInvalidation:'passed',editableTopology:'passed',renderedFormulas:formulas}));
+console.log(JSON.stringify({equationReaders:'passed',spatialPublication:'passed',operationHandoff:'passed',sourceInvalidation:'passed',editableTopology:'passed',renderedFormulas:formulas}));
