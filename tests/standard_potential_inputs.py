@@ -117,7 +117,48 @@ def deduce(a, owner, i, cas, T_region, data, *, omit=None, coefficients=None, Hf
     return a.result.graph.nodes[current].equation.lhs
 
 
-def deduced_author(owner='gas', deduced=(1,), omit=None, override=None, **kwargs):
+
+def deduce_terminal(a, owner, i, cas, T_region, data, **_):
+    """Review probe (16 November 2026): h_i(tau) and s_i(tau) declared directly as the closed-form cp integrals,
+    G = H - T S, two substitutions and the region constraint. No cp relation, differentiation or integration is
+    recorded, so the result is not deduced from cp and must be rejected (reaction_standard_potential_not_deduced)."""
+    q = a.quantity
+    sym = lambda name: sp.Symbol(name, real=True)
+
+    def declare(name, unit, value=None):
+        if not any(str(v) == name for v in a.result.introduced.values()):
+            a.append('declare_symbol', name=name, unit=unit)
+        if value is not None:
+            data[name] = (value, unit)
+        return sym(name)
+    tau = declare('reducedTemperature', '1')
+    Tr = declare('referenceTemperature', 'K', T_REFERENCE)
+    declare('gasConstant', 'J/(mol*K)')
+    hf, s0 = formation(cas)
+    Hf_ = declare('hf' + str(i), 'J/mol', hf)
+    S0_ = declare('sf' + str(i), 'J/(mol*K)', s0)
+    a_ = [declare('c%d_%d' % (k, i), ('K^-%d' % k) if k else '1', v) for k, v in enumerate(poling(cas))]
+    a.append('declare_function', family=F, name='standardGibbs' + str(i), unit='J/mol', dependencies=[q(tau)])
+    g = sp.Function('standardGibbs' + str(i))(tau)
+    T, TQ = q(Tr), q(tau)
+    Tt = '(' + T + '*' + TQ + ')'
+    h = '+'.join('%s*(%s^%d-%s^%d)/%d' % (q(c), Tt, k + 1, T, k + 1, k + 1) for k, c in enumerate(a_))
+    s = q(a_[0]) + '*log(' + TQ + ')+' + '+'.join('%s*(%s^%d-%s^%d)/%d' % (q(c), Tt, k, T, k, k) for k, c in enumerate(a_) if k)
+    for name, unit in (('standardEnthalpy', 'J/mol'), ('standardEntropyFunction', 'J/(mol*K)')):
+        a.append('declare_function', family=F, name=name + str(i), unit=unit, dependencies=[q(tau)])
+    hfun, sfun = sp.Function('standardEnthalpy' + str(i))(tau), sp.Function('standardEntropyFunction' + str(i))(tau)
+    texts = {'h': q(Hf_) + '+gasConstant*(' + h + ')', 's': q(S0_) + '+gasConstant*(' + s + ')'}
+    gibbs = a.relation(q(g), q(hfun) + '-' + Tt + '*' + q(sfun), 'G = H - T S (reviewer bypass probe)', family=F, kind='definition')
+    hrel = a.relation(q(hfun), texts['h'], 'Terminal enthalpy, no cp or integration recorded (reviewer bypass probe)', family=F, kind='constitutive')
+    srel = a.relation(q(sfun), texts['s'], 'Terminal entropy, no cp or integration recorded (reviewer bypass probe)', family=F, kind='constitutive')
+    final = a.substitute(gibbs, hrel, hfun, family=F)
+    final = a.substitute(final, srel, sfun, family=F)
+    region = a.relation(T + '*' + TQ, q(T_region), 'Temperature of the region state: Tref tau = T', family=F, kind='constraint')
+    current = a.substitute(final, region, tau, family=F)
+    return a.result.graph.nodes[current].equation.lhs
+
+
+def deduced_author(owner='gas', deduced=(1,), omit=None, override=None, terminal=False, **kwargs):
     """The F5-C1 ideal-gas region (tests/equilibrium_reaction_inputs.py) whose mu_i0(T) is deduced from cp.
 
     deduced: the 1-based species whose standard potential is deduced; the others keep the F5-C1 undefined
@@ -144,7 +185,7 @@ def deduced_author(owner='gas', deduced=(1,), omit=None, override=None, **kwargs
         if nu[i - 1] == 0:
             continue
         if i in deduced:
-            standard = deduce(a, owner, i, cas, T, data, omit=omit, **(override or {}).get(i, {}))
+            standard = (deduce_terminal if terminal else deduce)(a, owner, i, cas, T, data, omit=omit, **(override or {}).get(i, {}))
         else:
             a.append('declare_function', name='standardPotential' + str(i), unit='J/mol', dependencies=[q(t)])
             standard = f('standardPotential' + str(i))
