@@ -245,5 +245,94 @@ class ContinuousReactorTimeInputTests(unittest.TestCase):
         rejected(self, 'time_input_constant', model)
 
 
+def with_held_input(model, author):
+    """Append heldInput(t) through the shared session and declare it a time input.
+
+    Returns the model without the key (same history) and the one with it, so the
+    only difference between the two runs is the declaration in Solve.
+    """
+    author.append('declare_function', family='thermodynamics', name='heldInput', unit='W', dependencies=[author.quantity(t)])
+    model = copy.deepcopy(model); model['motores']['equationWorkbench'] = copy.deepcopy(author.definition)
+    replayed = build(model)
+    model['motores']['derivedExecution']['sourceSignature'] = source_signature(model, replayed)
+    names = {**catalog(replayed.graph, replayed.units), **replayed.introduced}
+    qid = next(k for k, v in names.items() if str(v) == 'heldInput(t)')
+    model['datos']['solve.held'] = {'magnitud': 'solve.held', 'funcion': 'parametro', 'declaracion': {'texto': '250', 'unidad': 'W'},
+                                    'origen': {'propietarioId': 'estudio', 'ruta': 'solve.held'}}
+    held = copy.deepcopy(model); held['motores']['derivedExecution']['timeInputs'] = {qid: 'solve.held'}
+    return model, held, qid
+
+
+def bound_input(model, qid, lower=0, upper=1000):
+    for key, value in [('lowerDataId', lower), ('upperDataId', upper)]:
+        model['datos']['dae.input.' + key] = {'magnitud': 'dae.input.' + key, 'funcion': 'parametro',
+            'declaracion': {'texto': str(value), 'unidad': 'W'}, 'origen': {'propietarioId': 'estudio', 'ruta': 'dae.input.' + key}}
+    model['motores']['derivedExecution']['dae']['stateBounds'][qid] = {'lowerDataId': 'dae.input.lowerDataId', 'upperDataId': 'dae.input.upperDataId'}
+    return model
+
+
+class BlockVersionTimeInputTests(unittest.TestCase):
+    """C2-R1, C2-R2 and C2-N1: one held input on selection versions 2, 3 and 4."""
+
+    def compare(self, base, held, qid):
+        reference = DerivedSystem(copy.deepcopy(base)); expected = resolve_system(reference)
+        system = DerivedSystem(copy.deepcopy(held)); result = resolve_system(system)
+        self.assertEqual((expected['estado'], result['estado']), ('resuelto', 'resuelto'))
+        self.assertEqual(system.state_ids[-1], qid)
+        self.assertEqual(system.size, reference.size + 1)
+        values = series(result)
+        np.testing.assert_array_equal(values['campo.' + qid], np.full_like(values['campo.' + qid], 250.))
+        assert_solver_tolerance(reference, series(expected), values, held['estudio']['rtol'])
+        # Only the held series is added.
+        self.assertEqual(set(values) - set(series(expected)), {'campo.' + qid})
+        return system
+
+    def test_version_2_affine_block(self):
+        from test_f3_affine_algebraic import thermal_case
+        model, author = thermal_case()
+        self.assertEqual(model['motores']['derivedExecution']['version'], 2)
+        system = self.compare(*with_held_input(model, author))
+        self.assertEqual(len(system.runtime_rates), system.size)
+        self.assertEqual(system.report['equations'][-1]['id'], 'timeInput.' + system.state_ids[-1])
+
+    def test_version_3_nonlinear_block(self):
+        from test_f3_nonlinear_algebraic import thermal_case
+        model, author = thermal_case()
+        self.assertEqual(model['motores']['derivedExecution']['version'], 3)
+        self.compare(*with_held_input(model, author))
+
+    def test_version_4_index_one_dae(self):
+        import test_f3_index1_dae as dae
+        from test_f3_nonlinear_algebraic import thermal_case
+        store = {}
+        def held_case(owners=('domain_one', 'domain_two')):
+            model, author = thermal_case(owners)
+            base, held, store['qid'] = with_held_input(model, author)
+            return held, author
+        base = dae.dae_case()
+        original = dae.thermal_case
+        dae.thermal_case = held_case
+        try:
+            held = dae.dae_case()
+        finally:
+            dae.thermal_case = original
+        qid = store['qid']
+        selection = held['motores']['derivedExecution']
+        self.assertEqual(selection['version'], 4)
+        # The reader requires a bound for the input: the certificate must cover
+        # every value an action may give it, not only the starting datum.
+        with self.assertRaises(ValueError):
+            read_definition(selection, held)
+        bound_input(held, qid)
+        self.assertIs(read_definition(selection, held), selection)
+        system = self.compare(base, held, qid)
+        self.assertEqual(system.dae.proof['timeInputBounds'], {qid: ['0', '1000']})
+        # A held value outside its declared box is a located domain failure.
+        outside = bound_input(copy.deepcopy(held), qid, 0, 100)
+        with self.assertRaises(LoweringError) as caught:
+            DerivedSystem(outside)
+        self.assertEqual(caught.exception.diagnostics[0]['code'], 'dae_domain', caught.exception.diagnostics)
+
+
 if __name__ == '__main__':
     unittest.main()
