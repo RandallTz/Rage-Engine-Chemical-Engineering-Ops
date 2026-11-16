@@ -89,7 +89,15 @@ function run(command, args, options, deadline) {
     child.on('error', (e) => { err.push(Buffer.from(String(e))); finish(1); });
     child.on('close', (code) => finish(code));
     // A grandchild left holding the pipes after the child exits must not keep the runner waiting.
-    child.on('exit', (code) => setTimeout(() => finish(code), timedOut ? 0 : 2000));
+    // Its pipes are then closed here (otherwise they keep this process alive until the grandchild
+    // exits) and, on POSIX, the leftover process group is killed.
+    child.on('exit', (code) => setTimeout(() => {
+      if (settled) return;
+      child.stdout.destroy();
+      child.stderr.destroy();
+      if (process.platform !== 'win32') { try { process.kill(-child.pid, 'SIGKILL'); } catch { /* group already gone */ } }
+      finish(code);
+    }, timedOut ? 0 : 2000));
   });
 }
 
