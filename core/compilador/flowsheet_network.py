@@ -38,6 +38,8 @@ class FlowsheetDerivedSystem(IndexedDerivedSystem):
         templates = {key: compile_template(source) for key, source in plans.items()}
         # Locate a missing recorded transport law before assembling the graph.
         for row in record['connections']:
+            if 'heat' in row:
+                continue   # a heat connection has no transported stream; heat_coupling locates its laws
             stage = self.expansion['stages'][[r['id'] for r in record['instances']].index(row['from']['instance'])]
             plan = templates[stage['template']]
             port = next(p for p in plan.model['template']['ports'] if p['id'] == row['from']['port'])
@@ -121,6 +123,9 @@ def compilation(system, mode='dynamic'):
               'method': dynamic.method if mode == 'dynamic' else 'damped_newton',
               'specialization': 'original_rates' if mode == 'dynamic' else 'zero_accumulation',
               'linearPolicy': deepcopy(dynamic.linear_policy)}
+    if dynamic.heat_couplings:
+        # Additive optional key, present only with heat connections: the exterior-datum replacements of each.
+        report['heatCouplings'] = deepcopy(dynamic.heat_couplings)
     report = json.loads(json.dumps(report, ensure_ascii=False, allow_nan=False))
     report['signature'] = digest(report)
     return read_compilation(report)
@@ -134,7 +139,7 @@ def read_compilation(value):
         raise FlowsheetError('invalid_flowsheet_compilation', path + where, message)
     fields = {'format', 'version', 'sourceModelId', 'flowsheetId', 'count', 'selection', 'stages', 'connections',
               'ports', 'rateRows', 'method', 'specialization', 'linearPolicy', 'signature'}
-    if not isinstance(value, dict) or set(value) != fields:
+    if not isinstance(value, dict) or set(value) - {'heatCouplings'} != fields:
         bad('Unknown or missing fields.')
     if value['format'] != COMPILATION or type(value['version']) is not int or value['version'] != 1:
         bad('Expected flowsheet compilation version 1.', '.version')
@@ -188,6 +193,29 @@ def read_compilation(value):
         take(row, f'.ports[{i}]')
     if used != set(declared):
         bad('Every instance port must be connected or exposed.', '.ports')
+    couplings = value.get('heatCouplings', [])
+    if 'heatCouplings' in value:
+        endpoint_fields = {'law': {'endpoint', 'stage', 'instanceId', 'port', 'replacedDatum', 'by', 'heatRate'},
+                           'duty': {'endpoint', 'stage', 'instanceId', 'port', 'replacedDatum', 'heatRate'}}
+        connections = {row['id']: row for row in value['connections']}
+        if not isinstance(couplings, list) or not couplings:
+            bad('A heat coupling list is present only with at least one heat coupling.', '.heatCouplings')
+        seen = set()
+        for i, row in enumerate(couplings):
+            where = f'.heatCouplings[{i}]'
+            if (not isinstance(row, dict) or set(row) != {'connectionId', 'premise', 'orientation', 'law', 'duty', 'identity', 'dutySI'}
+                    or row['connectionId'] not in connections or row['connectionId'] in seen
+                    or row['orientation'] != 'from_to' or row['identity'] != 'equal_and_opposite'):
+                bad('Invalid heat coupling.', where)
+            seen.add(row['connectionId'])
+            connection = connections[row['connectionId']]
+            for role, keys in endpoint_fields.items():
+                end = row[role]
+                if (not isinstance(end, dict) or set(end) != keys or end['endpoint'] not in ('from', 'to')
+                        or connection[end['endpoint']] != {k: end[k] for k in ('stage', 'instanceId', 'port')}):
+                    bad('Heat coupling endpoints must be the connection endpoints.', where + '.' + role)
+            if row['law']['endpoint'] == row['duty']['endpoint']:
+                bad('Exactly one endpoint resolves the duty.', where)
     if value['signature'] != digest({k: v for k, v in value.items() if k != 'signature'}):
         bad('Compilation fingerprint mismatch.', '.signature')
     return value
