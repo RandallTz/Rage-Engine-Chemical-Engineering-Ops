@@ -297,5 +297,8 @@ jobs:
         continue-on-error: true
         working-directory: frontend
         run: |
+          # puppeteer-core is not a frontend dependency (navegador.mjs imports it); install it for
+          # this step only, without touching package.json or the lock file.
+          npm install --no-save puppeteer-core@23.11.1
           export NAVEGADOR_PRUEBAS="$(which chromium-browser || which chromium)"
           node verificar_redesign.mjs
