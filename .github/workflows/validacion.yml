@@ -237,7 +237,10 @@ jobs:
         run: node tools/ci/run_frontend_verifiers.mjs python
 
       - name: Known-failing verifiers (non-blocking, kept visible)
+        # Each verifier is stopped after 600 s (run_frontend_verifiers.mjs); the step limit is a
+        # backstop so a known-failing verifier cannot use the job's time and skip the steps below.
         continue-on-error: true
+        timeout-minutes: 25
         run: node tools/ci/run_frontend_verifiers.mjs quarantine
 
       - name: Install Chromium

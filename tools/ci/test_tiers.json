@@ -193,7 +193,7 @@
     ]
   },
   "pytest_shards": {
-    "_comment": "A heavy test split over several CI groups. The file stays assigned once in pytest_slow_groups; that group runs its other tests (-k 'not <test>'). Each group listed here runs only <test>, as shard i of len(groups) through the two environment variables, which the test reads with tests/v2_parity_cases.shard_from_env and shard_selected (archive index modulo the shard count). check_tiers.py proves every archive and every collected test runs exactly once. Local --tier slow runs and runs without --group are not sharded.",
+    "_comment": "A heavy test split over several CI groups. The file stays assigned once in pytest_slow_groups; that group runs its other tests (-k 'not <test>'). Each group listed here runs only <test>, as shard i of len(groups) through the two environment variables, which the test reads with tests/v2_parity_cases.shard_from_env and shard_selected (for three shards the measured-cost table SHARD_TABLE_OF_3, otherwise archive index modulo the shard count). check_tiers.py proves every archive and every collected test runs exactly once. Local --tier slow runs and runs without --group are not sharded.",
     "test_v2_compatibility.py": {
       "test": "test_all_25_archives",
       "shard_var": "V2_PARITY_SHARD",
