@@ -17,7 +17,7 @@ from backend import routes_engine, v2_compatibility as adapter, motor_ensamblaje
 from backend.v2_dispatch import EXECUTOR_ENV
 from test_common_admission import request
 import test_v2_compatibility as parity
-from v2_parity_cases import archives, archive_context, execution_digest
+from v2_parity_cases import archives, archive_context, execution_digest, shard_from_env, shard_selected
 
 EVIDENCE = ROOT/'.tmp/codex-v2-http'
 APP = FastAPI()
@@ -77,15 +77,14 @@ class RouteSwitchTests(unittest.TestCase):
         asyncio.run(check())
 
     def test_25_requests_through_http(self):
-        shard = int(os.environ.get('V2_HTTP_SHARD', '0'))
-        count = int(os.environ.get('V2_HTTP_SHARDS', '1'))
+        shard, count = shard_from_env('V2_HTTP_SHARD', 'V2_HTTP_SHARDS')
         digest = execution_digest()
         EVIDENCE.mkdir(parents=True, exist_ok=True)
         comparator = parity.CompatibilityTests()
         async def check():
             async with httpx.AsyncClient(transport=httpx.ASGITransport(app=APP), base_url='http://test') as client:
                 for index, (path, value, archived) in enumerate(archives()):
-                    if index % count != shard:
+                    if not shard_selected(index, shard, count):
                         continue
                     name = path.stem.removesuffix('-peticion')
                     record = {'requestData': value, 'executionDigest': digest, 'request': path.relative_to(ROOT).as_posix()}
