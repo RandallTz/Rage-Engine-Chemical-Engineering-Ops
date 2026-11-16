@@ -224,7 +224,9 @@ jobs:
     name: Interface (Python-backed verifiers and browser)
     if: github.event_name != 'push'
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    # 76 min in run 43907863036 (Python-backed 20+, quarantine 10, HTTP 19, build and browser); the equation
+    # workbench verifier now also runs its two PDE producers (about 6 min more), so 90 min left too little margin.
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
         with:
