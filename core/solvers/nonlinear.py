@@ -7,14 +7,17 @@ No probe result replaces a failed primary solve.
 Termination is scaled to the attainable resolution of the iterate (F5 item 1).
 In declared scaled units a coordinate z_i cannot move by less than one unit in
 the last place, spacing(z_i) / x_i, so ``RESOLUTION_ULPS`` such units bound the
-step that binary64 can still realise. A Newton step smaller than the declared
-step tolerance but larger than that resolution still changes the iterate and is
-taken: near-complete conversion, where d(ln a)/d(xi) ~ 1/n is large, needs such
-steps before the residual meets its tolerance. Stagnation is reported only when
-the step falls below the attainable resolution while the residual still exceeds
-its tolerance; the residual tolerance is then finer than the residual can be
-resolved at the root. The convergence step test uses
-max(step_tolerance, attainable resolution). The published evidence keys are a
+step component that binary64 can still realise in that coordinate. The test is
+per coordinate (repair of the 16 November 2026 review): the coarsest coordinate
+never hides a step that still resolves, and is large, in a small one. A Newton
+step smaller than the declared step tolerance whose components still change the
+iterate is taken: near-complete conversion, where d(ln a)/d(xi) ~ 1/n is large,
+needs such steps before the residual meets its tolerance. Stagnation is reported
+only when every step component is within its own coordinate's resolution while
+the residual still exceeds its tolerance; the residual tolerance is then finer
+than the residual can be resolved at the root. The convergence step test is
+||step||_inf <= step_tolerance, or every step component within its own
+coordinate's resolution. The published evidence keys are a
 versioned Results contract and are unchanged; the resolution appears only in
 the stagnation message.
 """
@@ -59,8 +62,8 @@ def solve(residual, jacobian, seed, bounds, variable_scales, residual_scales, *,
             return False
 
     def resolution(z):
-        # Smallest realisable scaled step at z (a few units in the last place).
-        return float(np.max(RESOLUTION_ULPS * np.spacing(np.abs(z)) / xs))
+        # Smallest realisable scaled step of each coordinate at z (a few units in the last place).
+        return RESOLUTION_ULPS * np.spacing(np.abs(z)) / xs
 
     def iterate(start):
         evidence = dict(iterations=0, evaluations=0, backtracks=0,
@@ -109,14 +112,15 @@ def solve(residual, jacobian, seed, bounds, variable_scales, residual_scales, *,
                 fail('nonlinear_nonfinite', 'The scaled Newton correction is not representable.')
             evidence['stepNorm'] = float(np.linalg.norm(correction, ord=np.inf))
             attainable = resolution(z)
+            unresolvable = bool(np.all(np.abs(correction) <= attainable))
             if (evidence['residualNorm'] <= residual_tolerance
-                    and evidence['stepNorm'] <= max(step_tolerance, attainable)):
-                return z, {**evidence, 'terminationReason': 'converged'}, attainable
+                    and (evidence['stepNorm'] <= step_tolerance or unresolvable)):
+                return z, {**evidence, 'terminationReason': 'converged'}, float(np.max(attainable))
             if iteration == max_iterations:
                 fail('nonlinear_iteration_limit', 'The Newton iteration budget was exhausted without convergence.')
-            if evidence['stepNorm'] <= attainable:
-                fail('nonlinear_stagnation', 'The Newton step is below the attainable binary64 resolution of the iterate '
-                     f'({attainable:.3g} scaled) but the scaled residual exceeds its tolerance; the residual tolerance is '
+            if unresolvable:
+                fail('nonlinear_stagnation', 'Every Newton step component is below the attainable binary64 resolution of its '
+                     f'coordinate (at most {float(np.max(attainable)):.3g} scaled) but the scaled residual exceeds its tolerance; the residual tolerance is '
                      'finer than the residual can be resolved at this root.')
             with np.errstate(over='ignore'):
                 merit = float(np.dot(r, r))
