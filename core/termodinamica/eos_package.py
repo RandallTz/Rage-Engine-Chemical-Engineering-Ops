@@ -531,6 +531,107 @@ class PaqueteEOS(pv.PaqueteMezcla):
                                     "certification.")
         return e
 
+    # --- the isobaric work term: analytic dV/dt along the rates of (P, H, n) ------------------------------------
+    def dV_dt_PH(self, state, dP, dH, dn):
+        """Total derivative dV/dt of V(H, P, n) on the phase set of `state`, along the rates (dP/dt, dH/dt, dn/dt),
+        without another flash. None when the linearization does not apply (more than two phases, a species fed
+        into a two-phase state where it is absent, a singular split system); the caller then differences flashes.
+
+        Derivation (each phase alpha is a function of (T, P, n^alpha) through F = A^r/RT(T, V, n)):
+            P_V = -RT F_VV - nRT/V^2,  P_T = -R F_V - RT F_TV + nR/V,  P_i = -RT F_Vi + RT/V,
+            vbar_i = -P_i/P_V,  (dV/dT)_P = -P_T/P_V,  (dV/dP)_T = 1/P_V,
+            H^r = -RT^2 F_T + PV - nRT  (T, V, n), so at fixed (P, n) and (T, n):
+            c = (dH/dT)_P = sum n_i cp_i + H^r_T + H^r_V (dV/dT)_P,   d = (dH/dP)_T = H^r_V / P_V,
+            hbar_i = h_i^ig + H^r_i + H^r_V vbar_i.
+        One phase: dT = (dH - d dP - hbar.dn)/c and dV = (dV/dT) dT + (dV/dP) dP + vbar.dn.
+        Two phases (V, L): equal ln f_i stays equal, with (d ln f_i/dT)_P = -(hbar_i - h_i^ig)/RT^2,
+        (d ln f_i/dP)_T = vbar_i/RT - 1/P and (d ln f_i/dn_j)_TP = F_ij + delta_ij/n_i + P_i P_j/(RT P_V); with
+        dn^V = dn - dn^L the N equations and the enthalpy balance give (dT, dn^L), then dV sums both phases.
+        Second derivatives in n and V are the EOS's complex-step Hessian; those in T are fourth-order central
+        differences of its analytic gradient (one-sided across a PSRK alpha switch at a T_c)."""
+        n = np.asarray(state.n, dtype=float)
+        dn = np.asarray(dn, dtype=float)
+        nsp = len(self.especies)
+        if dn.shape != (nsp,) or n.shape != (nsp,) or not (len(state.fases) in (1, 2)):
+            return None
+        T, P = float(state.T), float(state.P)
+        eos = self._eos(range(nsp))
+        try:
+            phases = [self._phase_derivatives(eos, T, P, f.n * np.asarray(f.x, dtype=float), f.v * f.n)
+                      for f in state.fases]
+        except (cubic_eos.CubicOutOfScope, FloatingPointError, ZeroDivisionError):
+            return None
+        if len(phases) == 1:
+            p = phases[0]
+            dT = (dH - p["d"] * dP - float(np.dot(p["hbar"], dn))) / p["c"]
+            return float(p["V_T"] * dT + p["V_P"] * dP + np.dot(p["vbar"], dn))
+        present = [np.asarray(f.x) > 0 for f in state.fases]
+        act = present[0] & present[1]
+        if np.any(present[0] != present[1]) or np.any(dn[~act] != 0):
+            return None
+        vap, liq = phases if state.fases[0].tipo == "vapor" else phases[::-1]
+        k = np.flatnonzero(act)
+        m = len(k)
+        A = np.zeros((m + 1, m + 1))
+        r = np.zeros(m + 1)
+        GV, GL = vap["G"][np.ix_(k, k)], liq["G"][np.ix_(k, k)]
+        A[:m, :m] = -(GV + GL)
+        A[:m, m] = -(vap["hbar"][k] - liq["hbar"][k]) / (mz.R * T * T)
+        r[:m] = -GV @ dn[k] - (vap["vbar"][k] - liq["vbar"][k]) / (mz.R * T) * dP
+        A[m, :m] = liq["hbar"][k] - vap["hbar"][k]
+        A[m, m] = vap["c"] + liq["c"]
+        r[m] = dH - (vap["d"] + liq["d"]) * dP - float(np.dot(vap["hbar"][k], dn[k]))
+        try:
+            sol = np.linalg.solve(A, r)
+        except np.linalg.LinAlgError:
+            return None
+        if not np.all(np.isfinite(sol)):
+            return None
+        dnL, dT = sol[:m], sol[m]
+        dV = (vap["V_T"] + liq["V_T"]) * dT + (vap["V_P"] + liq["V_P"]) * dP
+        dV += float(np.dot(vap["vbar"][k], dn[k] - dnL) + np.dot(liq["vbar"][k], dnL))
+        return float(dV)
+
+    @staticmethod
+    def _phase_derivatives(eos, T, P, nvec, V):
+        """First and second derivatives of one phase of amounts nvec and volume V at (T, P) (see dV_dt_PH)."""
+        R = mz.R
+        ntot = float(nvec.sum())
+        _, FV, FT = eos.gradient(T, V, nvec)
+        Fij, FVi, FVV = eos.hessian_TV(T, V, nvec)
+        h = 1e-4 * T
+        Tc = np.asarray(getattr(eos, "Tc", []), dtype=float)
+        kink = getattr(eos, "mc", None) is not None and np.any(np.abs(Tc - T) < 2 * h)
+
+        def grad(t):
+            gi, gv, gt = eos.gradient(t, V, nvec)
+            return np.asarray(gi, dtype=float), float(gv), float(gt)
+        if kink:
+            # PSRK's Mathias-Copeman alpha switches form at each T_c (C1, not C2): difference on one side only
+            s = -1.0 if np.all(Tc[np.abs(Tc - T) < 2 * h] >= T) else 1.0
+            hs = s * 1e-6 * T
+            g0, g1, g2 = grad(T), grad(T + hs), grad(T + 2 * hs)
+            der = [(-3 * a + 4 * b - c) / (2 * hs) for a, b, c in zip(g0, g1, g2)]
+        else:
+            gm2, gm1, gp1, gp2 = grad(T - 2 * h), grad(T - h), grad(T + h), grad(T + 2 * h)
+            der = [(a - 8 * b + 8 * c - d) / (12 * h) for a, b, c, d in zip(gm2, gm1, gp1, gp2)]
+        FTi, FTV, FTT = der
+        PV = -R * T * FVV - ntot * R * T / V ** 2
+        PT = -R * FV - R * T * FTV + ntot * R / V
+        Pi = -R * T * FVi + R * T / V
+        vbar = -Pi / PV
+        V_T, V_P = -PT / PV, 1.0 / PV
+        HrT = -2 * R * T * FT - R * T * T * FTT + V * PT - ntot * R
+        HrV = -R * T * T * FTV + P + V * PV
+        Hri = -R * T * T * FTi + V * Pi - R * T
+        hig = np.array([e.h_ig(T) for e in eos.esp])
+        cig = np.array([e.cp_ig(T) for e in eos.esp])
+        with np.errstate(divide="ignore"):
+            inv = np.where(nvec > 0, 1.0 / np.where(nvec > 0, nvec, 1.0), np.inf)
+        G = Fij + np.diag(inv) + np.outer(Pi, Pi) / (R * T * PV)
+        return {"V_T": V_T, "V_P": V_P, "vbar": vbar, "c": float(np.dot(nvec, cig) + HrT + HrV * V_T),
+                "d": HrV * V_P, "hbar": hig + Hri + HrV * vbar, "G": G}
+
     def transporte_TP(self, T, P, x):
         clave = (T, P, tuple(np.round(np.asarray(x, dtype=float), 15)))
         if clave not in self._cache:

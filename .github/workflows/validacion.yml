@@ -236,11 +236,18 @@ jobs:
         # These spawn the Python core themselves; no server needed.
         run: node tools/ci/run_frontend_verifiers.mjs python
 
+      # The steps below run even when the Python-backed step fails (if: !cancelled()), so one
+      # failing verifier does not hide the HTTP verifiers, the build and the browser check.
       - name: Known-failing verifiers (non-blocking, kept visible)
+        if: ${{ !cancelled() }}
+        # Each verifier is stopped after 600 s (run_frontend_verifiers.mjs); the step limit is a
+        # backstop so a known-failing verifier cannot use the job's time and skip the steps below.
         continue-on-error: true
+        timeout-minutes: 25
         run: node tools/ci/run_frontend_verifiers.mjs quarantine
 
       - name: Install Chromium
+        if: ${{ !cancelled() }}
         # puppeteer-core deliberately ships no browser.
         run: |
           sudo apt-get update
@@ -248,6 +255,7 @@ jobs:
           which chromium-browser || which chromium
 
       - name: Start the API
+        if: ${{ !cancelled() }}
         run: |
           python -m uvicorn backend.main:app --host 127.0.0.1 --port 8001 &
           # Wait for it to answer instead of sleeping an invented number of
@@ -259,11 +267,13 @@ jobs:
           curl -sf http://127.0.0.1:8001/salud
 
       - name: HTTP verifiers (API only)
+        if: ${{ !cancelled() }}
         env:
           NEXT_PUBLIC_API_URL: http://127.0.0.1:8001
         run: node tools/ci/run_frontend_verifiers.mjs http
 
       - name: Build and serve the frontend
+        if: ${{ !cancelled() }}
         working-directory: frontend
         env:
           # The URL is baked in at build time, so it must be the API we just
@@ -279,6 +289,7 @@ jobs:
           curl -sf http://127.0.0.1:3000/ >/dev/null
 
       - name: Browser check (redesign)
+        if: ${{ !cancelled() }}
         # verificar_redesign.mjs is the only verifier that drives a browser.
         # It targets localhost:3000 and pages that may predate the current
         # navigation, and it has never run in CI: non-blocking until it has a
@@ -286,5 +297,8 @@ jobs:
         continue-on-error: true
         working-directory: frontend
         run: |
+          # puppeteer-core is not a frontend dependency (navegador.mjs imports it); install it for
+          # this step only, without touching package.json or the lock file.
+          npm install --no-save puppeteer-core@23.11.1
           export NAVEGADOR_PRUEBAS="$(which chromium-browser || which chromium)"
           node verificar_redesign.mjs
