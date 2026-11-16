@@ -1,5 +1,9 @@
 """Strict `rage.flowsheet` v1: separately identified recorded template instances.
 
+A connection row may carry the additive optional key `heat`, which makes it a
+heat connection between two retained boundary heat-rate terms (see
+`_heat_connection`); rows without it are read exactly as before.
+
 A flowsheet is a common-model shell (no volumes, streams, exchanges or
 journals of its own) carrying an optional `flowsheet` record and an optional,
 presentation-only `flowsheetLayout` record. Each instance references one
@@ -30,6 +34,7 @@ EXPANSION_FORMAT = 'rage.flowsheet-expansion'
 IDENTITY = re.compile(r'[A-Za-z][A-Za-z0-9_-]{0,63}')
 NUMBER = re.compile(r'[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?')
 MAX_INSTANCES = 64
+HEAT_LAWS = ('from', 'to')
 
 
 class FlowsheetError(ErrorModelo):
@@ -219,6 +224,11 @@ def read_flowsheet(model):
     used = {}
     connection_ids = set()
 
+    def peek(endpoint):
+        if not isinstance(endpoint, dict) or not isinstance(endpoint.get('instance'), str) or not isinstance(endpoint.get('port'), str):
+            return None
+        return ports.get((endpoint['instance'], endpoint['port']))
+
     def take(endpoint, path, direction):
         _exact(endpoint, path, ['instance', 'port'])
         if not isinstance(endpoint['instance'], str) or endpoint['instance'] not in by_id:
@@ -227,7 +237,8 @@ def read_flowsheet(model):
         port = ports.get(key) if isinstance(endpoint['port'], str) else None
         if port is None:
             fail('flowsheet_unknown_port', path + '.port', 'Port does not exist on the instance template.')
-        if port['direction'] != direction:
+        # direction None: a heat connection; each heat port's direction only signs its own power variable.
+        if direction is not None and port['direction'] != direction:
             fail('flowsheet_port_direction', path + '.port', f'Expected an {direction} port.')
         if key in used:
             fail('flowsheet_port_reused', path, 'This instance port is already bound at ' + used[key] + '.')
@@ -238,7 +249,7 @@ def read_flowsheet(model):
     edges = []
     for i, row in enumerate(connections):
         path = f'flowsheet.connections[{i}]'
-        _exact(row, path, ['id', 'from', 'to'])
+        _exact(row, path, ['id', 'from', 'to'], ['heat'])
         _identity(row['id'], path + '.id')
         if row['id'] in connection_ids:
             fail('flowsheet_duplicate_connection', path + '.id', 'Duplicate connection identity.')
@@ -251,10 +262,18 @@ def read_flowsheet(model):
         origin = row['from'].get('instance')
         if isinstance(origin, str) and origin == row['to'].get('instance') and origin in by_id:
             fail('flowsheet_self_connection', path, 'A connection joins two different instances.')
-        a = take(row['from'], path + '.from', 'outlet')
-        b = take(row['to'], path + '.to', 'inlet')
+        first, second = peek(row['from']), peek(row['to'])
+        # The optional `heat` key declares a heat connection; without it a row is read exactly as before.
+        heat = 'heat' in row and first is not None and second is not None and first['kind'] == second['kind'] == 'heat'
+        a = take(row['from'], path + '.from', None if heat else 'outlet')
+        b = take(row['to'], path + '.to', None if heat else 'inlet')
         if a['kind'] != b['kind'] or canonical(a['variables']) != canonical(b['variables']):
             fail('flowsheet_port_kind', path, 'Connected ports require identical kinds and SI variable contracts.')
+        if heat:
+            _heat_connection(row, a, b, path, by_id, templates)
+            continue
+        if 'heat' in row:
+            fail('flowsheet_invalid', path + '.heat', 'Only a heat connection declares a heat coupling.')
         if a['kind'] != 'material':
             fail('flowsheet_unsupported_connection', path, 'Version 1 connects material ports; heat and work ports are exposed.')
         donor = templates[by_id[row['from']['instance']]['template']]
@@ -294,11 +313,46 @@ def read_flowsheet(model):
             fail('flowsheet_dangling_port', 'flowsheet.instances[' + str(list(by_id).index(key[0])) + ']',
                  f'Port {key[1]} of instance {key[0]} must be connected or explicitly exposed.')
     recycles = _list(record['recycles'], 'flowsheet.recycles')
+    material = {key for key, _, _ in edges}
     if (any(not isinstance(r, str) for r in recycles) or len(set(recycles)) != len(recycles)
-            or any(r not in connection_ids for r in recycles)):
+            or any(r not in material for r in recycles)):
         fail('flowsheet_unknown_recycle', 'flowsheet.recycles', 'Recycles list distinct existing connection identities.')
     _check_cycles(edges, set(recycles), [row['id'] for row in instances])
     return record
+
+
+def _heat_connection(row, a, b, path, by_id, templates):
+    """Admission of a heat connection (optional `heat` key): a shared conductive boundary between two instances.
+
+    Orientation: the connection duty Q is the heat flowing from the `from`
+    endpoint's volume into the `to` endpoint's volume, so the two retained
+    boundary heat-rate terms are -Q and +Q. Exactly one endpoint, `heat.law`,
+    resolves Q through its recorded heat law, whose declared exterior
+    temperature datum `heat.exteriorTemperature` stands for the other
+    endpoint's volume temperature; the other endpoint's retained heat term must
+    be a prescribed duty datum. The assembly replaces both exterior data
+    (core/compilador/indexed_network.py) and proves the two terms equal and
+    opposite; nothing here evaluates a law.
+    """
+    if 'heat' not in row:
+        fail('flowsheet_heat_coupling_invalid', path + '.heat',
+             'A heat connection declares which endpoint resolves the duty and its exterior temperature datum.')
+    coupling = _exact(row['heat'], path + '.heat', ['law', 'exteriorTemperature'])
+    if coupling['law'] not in HEAT_LAWS:
+        fail('flowsheet_heat_coupling_invalid', path + '.heat.law', 'Expected the law endpoint: from or to.')
+    for side, port in (('from', a), ('to', b)):
+        if port['boundary'] != {'type': 'term', 'id': 'calor'}:
+            fail('flowsheet_port_kind', path + '.' + side + '.port',
+                 'A heat connection joins two retained boundary heat-rate terms (term calor).')
+    instance = by_id[row[coupling['law']]['instance']]
+    source = templates[instance['template']]
+    datum = source['datos'].get(coupling['exteriorTemperature']) if isinstance(coupling['exteriorTemperature'], str) else None
+    if datum is None or datum['declaracion']['unidad'] != 'K':
+        fail('flowsheet_heat_coupling_invalid', path + '.heat.exteriorTemperature',
+             'Expected a temperature datum (K) declared by the law endpoint template.')
+    if coupling['exteriorTemperature'] in instance['data']:
+        fail('flowsheet_heat_coupling_invalid', path + '.heat.exteriorTemperature',
+             'The connection replaces this exterior temperature; it cannot also carry an instance value.')
 
 
 def _check_cycles(edges, recycles, order):
@@ -424,6 +478,11 @@ def expand_flowsheet(model):
     for row in record['connections']:
         a, b = endpoint(row['from']), endpoint(row['to'])
         signature = digest({'connection': row, 'from': stages[a['stage'] - 1]['signature'], 'to': stages[b['stage'] - 1]['signature']})
+        if 'heat' in row:
+            # A shared conductive boundary: no stream, both endpoints keep their volumes and balances.
+            connections.append({'id': row['id'], 'kind': 'heat', 'from': a, 'to': b, 'recycle': False,
+                                'heat': deepcopy(row['heat']), 'signature': signature})
+            continue
         connection = {'id': row['id'], 'kind': 'material', 'from': a, 'to': b,
                       'recycle': row['id'] in record['recycles'], 'signature': signature}
         connections.append(connection)
