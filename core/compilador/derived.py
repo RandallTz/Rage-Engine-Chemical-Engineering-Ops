@@ -1347,6 +1347,9 @@ class DerivedSystem(DerivedGraph):
         for regime, (_, _, active) in zip(self.regimes, signature[len(self.closures):]):
             regime['initialBranch'] = active
         self.event_state = self._regime_event_state
+        # C6-R1: place each located change on the integrated path, not on one step's interpolant
+        # (core/solvers/integrador.py, _refine_change). Opt-in, so models without min/max are unchanged.
+        self.refine_signature_events = True
 
     def _regime_event_state(self, t, state):
         signature, margins = (self._closure_event_state(t, state) if self.closures else ((), []))
