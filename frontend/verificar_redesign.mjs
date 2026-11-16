@@ -1,74 +1,61 @@
 import assert from 'node:assert/strict';
-import { lanzarNavegador } from './navegador.mjs';
+import { lanzarNavegador, urlBase } from './navegador.mjs';
 
-// UI regression check with synthetic HTTP responses; no physical validation.
+// Browser check of the current product pages: home, the model library (/models), blank model creation and the
+// Checklist, at desktop and phone width, with no runtime page errors. It replaces the check of the retired
+// /simulaciones flowsheet workbench, deleted with Process Simulation (ad8c90a). Pages are awaited by their own
+// elements, not by network idle: a page that keeps a request open never reaches network idle (CI run 43843155286
+// timed out on page.goto with waitUntil networkidle0). No physical validation.
+// Usage: node verificar_redesign.mjs [base URL]   (default URL_PRUEBAS, then http://localhost:3000)
+const BASE = urlBase().replace(/\/$/, '');
+const TIMEOUT = 120000;
 const browser = await lanzarNavegador();
 try {
   const page = await browser.newPage();
+  page.setDefaultTimeout(TIMEOUT);
   await page.setViewport({ width: 1440, height: 1000 });
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
-  await page.setRequestInterception(true);
-  page.on('request', request => {
-    const url = request.url();
-    if (request.method() === 'OPTIONS') {
-      request.respond({ status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, POST, OPTIONS', 'access-control-allow-headers': 'content-type' } });
-    } else if (url.includes('/diagrama/resolver')) {
-      const data = JSON.parse(request.postData());
-      request.respond({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ pool: { ...data.valores, 'col1.N': 12 }, completo: true, diagnostico: [], incognitas_restantes: [], inconsistencias: [], diagramas: {}, masas_molares_mezcla: {} }) });
-    } else if (url.includes('/diagrama/grados-libertad')) {
-      request.respond({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ grados_de_libertad: 0, ecuaciones: 1, incognitas: 1, redundancias: [] }) });
-    } else if (/\/unidades(?:\?|$)/.test(url)) {
-      request.respond({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ magnitudes: {}, variables: {} }) });
-    } else if (/\/componentes\/buscar|\/modelos-termodinamicos/.test(url)) {
-      request.respond({ status: 503, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: '{}' });
-    } else { request.continue(); }
-  });
-  async function clickText(text) {
-    const clicked = await page.evaluate(text => {
-      const el = [...document.querySelectorAll('button')].find(b => b.textContent.trim() === text);
-      el?.click(); return !!el;
-    }, text);
-    assert(clicked, `Missing button: ${text}`);
-  }
-  await page.goto('http://localhost:3000', { waitUntil: 'networkidle0', timeout: 120000 });
-  assert(await page.$('h1'));
+  const open = async (path, selector) => {
+    await page.goto(BASE + path, { waitUntil: 'domcontentloaded', timeout: TIMEOUT });
+    await page.waitForSelector(selector);
+  };
+  const text = () => page.evaluate(() => document.body.innerText);
+
+  await open('/', 'h1#hero-title');
+  assert.deepEqual(await page.$$eval('a[href="/models"], a[href="/checklist"]', as => [...new Set(as.map(a => a.getAttribute('href')))].sort()),
+    ['/checklist', '/models']);
   await page.click('.minimal-methods summary');
-  assert((await page.evaluate(() => document.body.innerText)).includes('MESH'));
-  await page.click('.minimal-methods summary');
+  assert((await text()).includes('Model, Transform, Solve and Results'));
   await page.screenshot({ path: 'preview-home.png', fullPage: true });
-  await page.goto('http://localhost:3000/simulaciones', { waitUntil: 'networkidle0' });
-  await page.type('input[aria-label="Nombre de la nueva simulación"]', 'Verificación de interfaz');
-  await clickText('Crear y abrir');
-  await page.waitForSelector('.react-flow__node');
-  await page.click('.equipment-library summary');
-  await page.type('input[aria-label="Buscar equipo"]', 'bomba');
-  assert.equal(await page.$$eval('.equipment-list button', bs => bs.length), 1);
-  await clickText('+ Bomba');
-  assert.equal(await page.$eval('.equipment-library', e => e.open), false);
-  await clickText('Resolver');
-  await page.waitForFunction(() => document.body.innerText.includes('Resuelto por completo'));
-  await clickText('Editar');
-  await page.click('.react-flow__node-corriente');
-  await page.waitForSelector('.properties-panel input[id]');
-  await page.$eval('.properties-panel input[id]', input => {
-    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
-    setter.call(input, '123'); input.dispatchEvent(new Event('input', { bubbles: true }));
-  });
-  await page.waitForFunction(() => document.body.innerText.includes('Resultados pendientes de actualizar'));
-  await clickText('Reporte');
-  assert(await page.$('fieldset[disabled]'));
-  await clickText('Editar');
-  await page.screenshot({ path: 'preview-workbench.png', fullPage: true });
-  await clickText('Resolver');
-  await page.waitForFunction(() => !document.body.innerText.includes('Resultados pendientes de actualizar'));
-  await clickText('Reporte');
-  assert.equal(await page.$('fieldset[disabled]'), null);
-  await page.screenshot({ path: 'preview-report.png', fullPage: true });
+
+  await open('/models', 'h1');
+  assert.equal(await page.$eval('h1', h => h.textContent.trim()), 'Your models');
+  await page.waitForFunction(() => !document.querySelector('[aria-label="Loading models"]'));
+  const create = await page.$$('button');
+  let clicked = false;
+  for (const button of create) {
+    if ((await button.evaluate(b => b.textContent.trim())).startsWith('Create model')) { await button.click(); clicked = true; break; }
+  }
+  assert(clicked, 'Missing button: Create model');
+  await page.waitForSelector('#new-model-name');
+  await page.type('#new-model-name', 'Interface check');
+  await page.$eval('#new-model-name', input => input.form.requestSubmit());
+  await page.waitForFunction(() => /^\/models\/[^/]+/.test(location.pathname));
+  // The model workspace opens on Model and shows the name in its editable name field.
+  await page.waitForFunction(() => document.querySelector('h1')?.textContent.trim() === 'Model'
+    && [...document.querySelectorAll('input')].some(i => i.value === 'Interface check'));
+  await page.screenshot({ path: 'preview-model.png', fullPage: true });
+
+  await open('/checklist', 'h1');
+  assert.equal(await page.$eval('h1', h => h.textContent.trim()), 'Engine capabilities');
+
   await page.setViewport({ width: 390, height: 844 });
-  await page.goto('http://localhost:3000', { waitUntil: 'networkidle0' });
-  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  for (const path of ['/', '/models']) {
+    await open(path, 'h1');
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `horizontal scroll at 390 px on ${path}`);
+  }
   await page.screenshot({ path: 'preview-mobile.png', fullPage: true });
   assert.deepEqual(errors, []);
-  console.log('OK: navigation, templates, equipment search, result freshness, export protection, mobile layout and runtime.');
+  console.log('OK: home, model library, blank model creation, Checklist, phone layout and runtime errors.');
 } finally { await browser.close(); }
