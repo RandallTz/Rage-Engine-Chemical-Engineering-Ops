@@ -1,4 +1,4 @@
-/** Strict client mirror of core/modelo/flowsheet.py (`rage.flowsheet` v1).
+/** Strict client mirror of core/modelo/flowsheet.py (`rage.flowsheet` v1; the optional `heat` key adds heat connections).
  *
  * Structural, compatibility and topology admission only. Python owns template
  * replay, identities, signatures, lowering and solving; the client never
@@ -12,7 +12,8 @@ import type {ConjuntoResultados} from '../resultados/contrato';
 
 export type FlowsheetEndpoint={instance:string;port:string};
 export type FlowsheetInstance={id:string;template:string;data:Record<string,{texto:string;unidad:string}>};
-export type FlowsheetConnection={id:string;from:FlowsheetEndpoint;to:FlowsheetEndpoint};
+export type FlowsheetHeatCoupling={law:'from'|'to';exteriorTemperature:string};
+export type FlowsheetConnection={id:string;from:FlowsheetEndpoint;to:FlowsheetEndpoint;heat?:FlowsheetHeatCoupling};
 export type Flowsheet={format:'rage.flowsheet';version:1;id:string;templates:Record<string,ModeloComun>;
   instances:FlowsheetInstance[];connections:FlowsheetConnection[];exposures:{id:string;instance:string;port:string}[];recycles:string[]};
 export type FlowsheetLayout={format:'rage.flowsheet-layout';version:1;flowsheetId:string;
@@ -105,26 +106,32 @@ export function readFlowsheet(model:ModeloComun,readModel:(value:unknown)=>Model
   const ports=new Map<string,TemplatePort>();
   for(const row of instances)for(const port of r.templates[row.template].template!.ports)ports.set(JSON.stringify([row.id,port.id]),port);
   const used=new Map<string,string>(),connectionIds=new Set<string>();
-  const take=(endpoint:unknown,path:string,direction:'inlet'|'outlet'):TemplatePort=>{
+  const peek=(endpoint:unknown):TemplatePort|undefined=>isObject(endpoint)&&typeof endpoint.instance==='string'&&typeof endpoint.port==='string'?ports.get(JSON.stringify([endpoint.instance,endpoint.port])):undefined;
+  // direction null: a heat connection; each heat port's direction only signs its own power variable.
+  const take=(endpoint:unknown,path:string,direction:'inlet'|'outlet'|null):TemplatePort=>{
     const e=exact(endpoint,path,['instance','port']);
     if(typeof e.instance!=='string'||!byId.has(e.instance))fail('flowsheet_unknown_instance',path+'.instance','Unknown instance.');
     const key=JSON.stringify([e.instance,e.port]),port=typeof e.port==='string'?ports.get(key):undefined;
     if(!port)fail('flowsheet_unknown_port',path+'.port','Port does not exist on the instance template.');
-    if(port!.direction!==direction)fail('flowsheet_port_direction',path+'.port',`Expected an ${direction} port.`);
+    if(direction!==null&&port!.direction!==direction)fail('flowsheet_port_direction',path+'.port',`Expected an ${direction} port.`);
     if(used.has(key))fail('flowsheet_port_reused',path,'This instance port is already bound at '+used.get(key)+'.');
     used.set(key,path);return port!;
   };
   const edges:[string,string,string][]=[];
   (list(r.connections,'flowsheet.connections') as FlowsheetConnection[]).forEach((row,i)=>{
-    const at=`flowsheet.connections[${i}]`;exact(row,at,['id','from','to']);identity(row.id,at+'.id');
+    const at=`flowsheet.connections[${i}]`;exact(row,at,['id','from','to'],['heat']);identity(row.id,at+'.id');
     if(connectionIds.has(row.id))fail('flowsheet_duplicate_connection',at+'.id','Duplicate connection identity.');
     connectionIds.add(row.id);
     // A valid, unique connection is located by identity, as in the Python assembly.
     const path='flowsheet.connections.'+row.id;
     if(!isObject(row.from)||!isObject(row.to))fail('flowsheet_invalid',path,'Expected from and to endpoints.');
     if(typeof row.from.instance==='string'&&row.from.instance===row.to.instance&&byId.has(row.from.instance))fail('flowsheet_self_connection',path,'A connection joins two different instances.');
-    const a=take(row.from,path+'.from','outlet'),b=take(row.to,path+'.to','inlet');
+    const first=peek(row.from),second=peek(row.to);
+    const heat=Object.hasOwn(row,'heat')&&!!first&&!!second&&first.kind==='heat'&&second.kind==='heat';
+    const a=take(row.from,path+'.from',heat?null:'outlet'),b=take(row.to,path+'.to',heat?null:'inlet');
     if(a.kind!==b.kind||canonical(a.variables)!==canonical(b.variables))fail('flowsheet_port_kind',path,'Connected ports require identical kinds and SI variable contracts.');
+    if(heat){heatConnection(row,a,b,path,byId,r.templates);return;}
+    if(Object.hasOwn(row,'heat'))fail('flowsheet_invalid',path+'.heat','Only a heat connection declares a heat coupling.');
     if(a.kind!=='material')fail('flowsheet_unsupported_connection',path,'Version 1 connects material ports; heat and work ports are exposed.');
     const donor=r.templates[byId.get(row.from.instance)!.template],receiver=r.templates[byId.get(row.to.instance)!.template];
     if(a.boundary.type!=='stream'||b.boundary.type!=='stream'||(b as {exteriorState?:string}).exteriorState!=='estadoExterior')fail('flowsheet_port_kind',path,'A material connection joins a drawn outlet stream to an inlet with a declared exterior state.');
@@ -147,10 +154,23 @@ export function readFlowsheet(model:ModeloComun,readModel:(value:unknown)=>Model
   });
   const order=[...byId.keys()];
   for(const key of ports.keys())if(!used.has(key)){const [instance,port]=JSON.parse(key) as [string,string];fail('flowsheet_dangling_port',`flowsheet.instances[${order.indexOf(instance)}]`,`Port ${port} of instance ${instance} must be connected or explicitly exposed.`);}
-  const recycles=list(r.recycles,'flowsheet.recycles');
-  if(new Set(recycles.map(String)).size!==recycles.length||recycles.some(x=>typeof x!=='string'||!connectionIds.has(x)))fail('flowsheet_unknown_recycle','flowsheet.recycles','Recycles list distinct existing connection identities.');
+  const recycles=list(r.recycles,'flowsheet.recycles'),material=new Set(edges.map(([k])=>k));
+  if(new Set(recycles.map(String)).size!==recycles.length||recycles.some(x=>typeof x!=='string'||!material.has(x)))fail('flowsheet_unknown_recycle','flowsheet.recycles','Recycles list distinct existing connection identities.');
   checkCycles(edges,new Set(recycles as string[]),order);
   return r;
+}
+
+/** Mirrors _heat_connection: a shared conductive boundary; the assembly in Python replaces the exterior data. */
+function heatConnection(row:FlowsheetConnection,a:TemplatePort,b:TemplatePort,path:string,byId:Map<string,FlowsheetInstance>,templates:Record<string,ModeloComun>){
+  if(!Object.hasOwn(row,'heat'))fail('flowsheet_heat_coupling_invalid',path+'.heat','A heat connection declares which endpoint resolves the duty and its exterior temperature datum.');
+  const c=exact(row.heat,path+'.heat',['law','exteriorTemperature']);
+  if(c.law!=='from'&&c.law!=='to')fail('flowsheet_heat_coupling_invalid',path+'.heat.law','Expected the law endpoint: from or to.');
+  for(const [side,port] of [['from',a],['to',b]] as const)
+    if(canonical(port.boundary)!==canonical({type:'term',id:'calor'}))fail('flowsheet_port_kind',path+'.'+side+'.port','A heat connection joins two retained boundary heat-rate terms (term calor).');
+  const instance=byId.get(row[c.law as 'from'|'to'].instance)!,source=templates[instance.template];
+  const datum=typeof c.exteriorTemperature==='string'&&Object.hasOwn(source.datos,c.exteriorTemperature)?source.datos[c.exteriorTemperature]:undefined;
+  if(!datum||datum.declaracion.unidad!=='K')fail('flowsheet_heat_coupling_invalid',path+'.heat.exteriorTemperature','Expected a temperature datum (K) declared by the law endpoint template.');
+  if(Object.hasOwn(instance.data,c.exteriorTemperature as string))fail('flowsheet_heat_coupling_invalid',path+'.heat.exteriorTemperature','The connection replaces this exterior temperature; it cannot also carry an instance value.');
 }
 
 function checkCycles(edges:[string,string,string][],recycles:Set<string>,order:string[]){
@@ -219,7 +239,9 @@ export function readFlowsheetSelection(value:unknown):FlowsheetSelection{
 type Stage={index:number;instanceId:string;template:string;modelId:string;signature:string;templateId:string;templateVersion:string;
   ports:{id:string;portId:string}[];stateCount:number;dynamicReport:Obj;steadyReport:Obj|null};
 type Endpoint={stage:number;instanceId:string;port:string};
-export type FlowsheetCompilation={format:'rage.flowsheet-compilation';version:1;sourceModelId:string;flowsheetId:string;count:number;
+type HeatEnd={endpoint:'from'|'to';stage:number;instanceId:string;port:string;replacedDatum:string;heatRate:string};
+export type FlowsheetHeatCouplingReport={connectionId:string;premise:string;orientation:'from_to';law:HeatEnd&{by:string};duty:HeatEnd;identity:'equal_and_opposite';dutySI:string};
+export type FlowsheetCompilation={format:'rage.flowsheet-compilation';version:1;heatCouplings?:FlowsheetHeatCouplingReport[];sourceModelId:string;flowsheetId:string;count:number;
   selection:FlowsheetSelection;stages:Stage[];connections:{id:string;recycle:boolean;signature:string;from:Endpoint;to:Endpoint}[];
   ports:(Endpoint&{id:string;kind:string;direction:string})[];rateRows:{stage:number;quantityId:string;equationId:string;expressionSI:string}[];
   method:'RK45'|'BDF'|'damped_newton';specialization:'original_rates'|'zero_accumulation';linearPolicy:Obj;signature:string};
@@ -228,7 +250,7 @@ export type FlowsheetCompilation={format:'rage.flowsheet-compilation';version:1;
 export function readFlowsheetCompilation(value:unknown):FlowsheetCompilation{
   const path='flowsheetCompilation',bad=(message:string,where=''):never=>fail('invalid_flowsheet_compilation',path+where,message);
   const fields='format version sourceModelId flowsheetId count selection stages connections ports rateRows method specialization linearPolicy signature'.split(' ');
-  if(!isObject(value)||Object.keys(value).sort().join('|')!==[...fields].sort().join('|'))bad('Unknown or missing fields.');
+  if(!isObject(value)||Object.keys(value).filter(k=>k!=='heatCouplings').sort().join('|')!==[...fields].sort().join('|'))bad('Unknown or missing fields.');
   const r=value as unknown as FlowsheetCompilation;
   if(r.format!=='rage.flowsheet-compilation'||r.version!==1)bad('Expected flowsheet compilation version 1.','.version');
   const mode=readFlowsheetSelection(r.selection).mode;
@@ -261,6 +283,24 @@ export function readFlowsheetCompilation(value:unknown):FlowsheetCompilation{
     ids.add(row.id);take(row,`.ports[${i}]`);
   });
   if(used.size!==declared.size)bad('Every instance port must be connected or exposed.','.ports');
+  if(Object.hasOwn(r,'heatCouplings')){
+    const connections=new Map(r.connections.map(c=>[c.id,c])),seen=new Set<string>();
+    const ends={law:'by|endpoint|heatRate|instanceId|port|replacedDatum|stage',duty:'endpoint|heatRate|instanceId|port|replacedDatum|stage'};
+    if(!Array.isArray(r.heatCouplings)||!r.heatCouplings.length)bad('A heat coupling list is present only with at least one heat coupling.','.heatCouplings');
+    r.heatCouplings!.forEach((row,i)=>{
+      const where=`.heatCouplings[${i}]`;
+      if(!isObject(row)||Object.keys(row).sort().join('|')!=='connectionId|duty|dutySI|identity|law|orientation|premise'||!connections.has(row.connectionId)||seen.has(row.connectionId)
+         ||row.orientation!=='from_to'||row.identity!=='equal_and_opposite')bad('Invalid heat coupling.',where);
+      seen.add(row.connectionId);
+      const connection=connections.get(row.connectionId)!;
+      for(const role of ['law','duty'] as const){
+        const end=row[role];
+        if(!isObject(end)||Object.keys(end).sort().join('|')!==ends[role]||(end.endpoint!=='from'&&end.endpoint!=='to')
+           ||canonical(connection[end.endpoint])!==canonical({stage:end.stage,instanceId:end.instanceId,port:end.port}))bad('Heat coupling endpoints must be the connection endpoints.',where+'.'+role);
+      }
+      if(row.law.endpoint===row.duty.endpoint)bad('Exactly one endpoint resolves the duty.',where);
+    });
+  }
   if(typeof r.signature!=='string'||!/^[a-f0-9]{64}$/.test(r.signature))bad('Missing compilation fingerprint.','.signature');
   return r;
 }

@@ -112,6 +112,12 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Runner hardware (for classifying slow runs)
+        # A slow job is classified as the runner or the code by its CPU and BLAS kernel: unifac-red-5 took
+        # 3,944-3,992 s on the common path on some runners and did not finish in over 4 h on another (F9).
+        run: |
+          grep -m1 'model name' /proc/cpuinfo; nproc
+          OPENBLAS_VERBOSE=2 python -c "import numpy, scipy.linalg; numpy.show_runtime()"
       - name: Slow-tier suite
         run: python run_tests.py --tier slow ${{ matrix.suite }}
 
@@ -161,6 +167,12 @@ jobs:
         run: npm ci
       - name: Install dependencies
         run: pip install -r requirements.txt
+      - name: Runner hardware (for classifying slow runs)
+        # A slow job is classified as the runner or the code by its CPU and BLAS kernel: unifac-red-5 took
+        # 3,944-3,992 s on the common path on some runners and did not finish in over 4 h on another (F9).
+        run: |
+          grep -m1 'model name' /proc/cpuinfo; nproc
+          OPENBLAS_VERBOSE=2 python -c "import numpy, scipy.linalg; numpy.show_runtime()"
       - name: Slow pytest group
         run: python run_tests.py --tier slow --group ${{ matrix.group }} --stream
 
