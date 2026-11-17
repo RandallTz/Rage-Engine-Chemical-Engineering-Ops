@@ -1569,8 +1569,25 @@ def resolve_system(system):
         trajectory.eventos.append(('derived_validity', time/time_scale, None, None, message))
         stop = {'code': 'derived_validity', 'equationId': key, 'condition': condition,
                 'time': time, 'lastValidTime': trajectory.t_fin*time_scale}
-    times = sorted({float(t) for t in requested_times if t <= trajectory.t_fin} | {trajectory.t_fin})
-    raw = [trajectory.y(t) for t in times]
+    return publish_trajectory(system, trajectory, requested_times, stop)
+
+
+def publish_trajectory(system, trajectory, requested_times, stop=None, timeline=None, rows=None):
+    """Publish an integrated trajectory as a result set (Demo 0.3 C7 split: integration is `resolve_system`'s part).
+
+    `rows` is an optional list of `(time, state)` that replaces the sampling of `requested_times`; a run session
+    passes it so that an action instant carries its left then its right state. `timeline` is the run record
+    `{'horizon', 'actions': [{t, quantityId, value, unit, origin}], 'termination': {reason, tEnd}}`: it is published
+    as `procedencia.runTimeline`, its events are added, and its identity is bound into `procedencia.firma`. The
+    compilation report keeps the formulation signature, which the evidence blocks (nonlinear, DAE) are checked against."""
+    runtime = system.scaled if system.scaled is not None else system
+    time_scale = system.scaled.time_scale if system.scaled is not None else 1
+    if rows is None:
+        times = sorted({float(t) for t in requested_times if t <= trajectory.t_fin} | {trajectory.t_fin})
+        raw = [trajectory.y(t) for t in times]
+    else:
+        times = [float(t) for t, _ in rows]
+        raw = [row for _, row in rows]
     if system.scaled is not None:
         physical_times = [t*runtime.time_scale for t in times]
         values = [row[:runtime.size]*runtime.state_scales for row in raw]
@@ -1660,9 +1677,18 @@ def resolve_system(system):
                     events.append(evento('desaparicion_fase', 't', time, phase + ' disappears', 'volumen:' + owner))
         else:
             events.append(evento(code, 't', time, message))
-    return conjunto(system.model['id'], system.model['nombre'], 'fallido' if not values else 'parcial' if trajectory.detenida else 'resuelto',
-        {'motor': 'rage.compilador.derived', 'metodo': system.method, 'firma': system.report['signature'],
+    signature = system.report['signature']
+    partial = bool(trajectory.detenida)
+    if timeline is not None:
+        from core.resultados.run_timeline import run_timeline, timeline_events
+        document = run_timeline(timeline['horizon'], timeline['actions'], timeline['termination']['reason'], timeline['termination']['tEnd'])
+        signature = hashlib.sha256(json.dumps([system.report['signature'], document], sort_keys=True).encode()).hexdigest()
+        events.extend(timeline_events(document, 't'))
+        partial = partial or document['termination']['reason'] != 'completed'
+    return conjunto(system.model['id'], system.model['nombre'], 'fallido' if not values else 'parcial' if partial else 'resuelto',
+        {'motor': 'rage.compilador.derived', 'metodo': system.method, 'firma': signature,
          'compilation': system.report, 'pasos': trajectory.pasos, 'rechazos': trajectory.rechazos,
+         **({'runTimeline': document} if timeline is not None else {}),
          **({'nonlinearDiagnostics': {'version': 1, 'method': 'damped_newton',
              'sourceSignature': system.selection['sourceSignature'], 'settings': system.selection['nonlinear'],
              'evaluatedSolves': system.algebraic_block.calls, 'lastEvaluation': system.algebraic_block.last,
@@ -1673,5 +1699,6 @@ def resolve_system(system):
              'reactionEquilibrium': getattr(system, 'reaction_limits', [])} if getattr(system, 'closures', None) else {}),
          **({'regimes': system.regime_publication()} if getattr(system, 'regimes', None) else {}),
          **({'stop': stop} if stop is not None else {}),
-         **({'mensaje': str(trajectory.detenida)} if trajectory.detenida else {})},
+         **({'mensaje': str(trajectory.detenida)} if trajectory.detenida else
+            {'mensaje': 'The operator stopped the run.'} if partial else {})},
         [eje('t', 'Physical time', 'tiempo', 's', physical_times)], series, events, verifications, modeloId=system.model['id'])
