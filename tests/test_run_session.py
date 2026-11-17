@@ -1,0 +1,303 @@
+"""Demo 0.3 C7: the run session (core/compilador/run_session.py and the `run-session` routes).
+
+Plant: the closed rigid region of `test_time_inputs.heated_region` with its heater duty declared a time input.
+Its energy is the exact integral U(t) = U0 + integral of P, so a run with duty changes at recorded instants is
+checked against an independent piecewise-linear reference, not against the code under test.
+
+Checked: HTTP start/status/advance/stop; a live run equals its replay bit for bit, independent of the client's
+pace and with a rejected action in between; a retried `advance` returns the same rows and a different request on
+the same number is refused; the session limit, idle eviction and keep-alive; concurrent identical requests;
+located rejections (undeclared quantity, unit, unsupported model); the hidden-state snapshot of audit note R-1;
+and `/resolver` results unchanged by the `publish_trajectory` split.
+"""
+import asyncio
+import copy
+from pathlib import Path
+import sys
+import threading
+import unittest
+
+import httpx
+import numpy as np
+from fastapi import FastAPI
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / 'tests'))
+
+from backend.api_modelo import router
+from core.compilador import resolver
+from core.compilador.run_session import SessionError, SessionStore, restore, snapshot
+from core.resultados.formato import leer_resultados
+from test_time_inputs import POWER, HORIZON, heated_region, selection_model
+
+app = FastAPI()
+app.include_router(router)
+
+
+def post(path, body):
+    async def run():
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
+            return await client.post('/modelo/run-session/' + path, json=body, timeout=600)
+    return asyncio.run(run())
+
+
+def duty(value, unit='W'):
+    return [{'quantityId': 'heaterDuty', 'value': value, 'unit': unit}]
+
+
+def series(result):
+    return {row['id']: np.asarray(row['valores'], dtype=float) for row in result['series']}
+
+
+def energy_id(result):
+    return next(key for key in series(result) if key.startswith('campo.') and not key.endswith('heaterDuty')
+                and series(result)[key][0] == 0.0 and series(result)[key][-1] > 0)
+
+
+class Fixture(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        author, energy = heated_region()
+        cls.model = selection_model(author, energy, inputs=['heaterDuty'])
+        from backend.api_modelo import _modelo
+        cls.parsed = _modelo({'modelo': cls.model})
+
+    def store(self, **options):
+        return SessionStore(**options)
+
+    def run_live(self, store, plan, rejected=()):
+        """`plan` is [(to, actions or None)]; returns the finished session's result. `rejected` are extra
+        (to, actions) requests refused on the way."""
+        session = store.start(copy.deepcopy(self.parsed), background=False)
+        self.assertEqual(session.state, 'ready', session.error)
+        seq = 0
+        for to, actions in plan:
+            store.advance(session.id, seq, to, actions); seq += 1
+            if to in dict(rejected):
+                with self.assertRaises(SessionError):
+                    store.advance(session.id, seq, to, dict(rejected)[to])
+        return session
+
+
+class RunTests(Fixture):
+    def test_live_run_matches_the_piecewise_exact_energy_and_the_published_timeline(self):
+        store = self.store()
+        session = self.run_live(store, [(200.0, duty(200.0)), (400.0, duty(0.0)), (HORIZON, None)])
+        result = session.result
+        leer_resultados(result)
+        self.assertEqual(result['estado'], 'resuelto')
+        timeline = result['procedencia']['runTimeline']
+        self.assertEqual([(a['t'], a['value'], a['origin']) for a in timeline['actions']],
+                         [(200.0, 200.0, 'operator'), (400.0, 0.0, 'operator')])
+        self.assertEqual(timeline['termination'], {'reason': 'completed', 'tEnd': HORIZON})
+        times = np.asarray(result['ejes'][0]['valores'])
+        # An action instant carries its left then its right sample.
+        for t in (200.0, 400.0):
+            self.assertEqual(int(np.sum(times == t)), 2)
+        U = series(result)['campo.x34b5c0f5ca']
+        exact = np.array([POWER * min(t, 200.) + 200. * max(0., min(t, 400.) - 200.) for t in times])
+        np.testing.assert_allclose(U, exact, rtol=1e-9, atol=1e-6)
+        held = series(result)['campo.heaterDuty']
+        expected = np.where(times < 200., POWER, np.where(times < 400., 200., 0.))
+        # left value at the instant, right value after it
+        i200 = np.flatnonzero(times == 200.)
+        self.assertEqual((held[i200[0]], held[i200[1]]), (POWER, 200.))
+        np.testing.assert_array_equal(np.delete(held, np.concatenate([np.flatnonzero(times == 200.), np.flatnonzero(times == 400.)])),
+                                      np.delete(expected, np.concatenate([np.flatnonzero(times == 200.), np.flatnonzero(times == 400.)])))
+        self.assertEqual([e['codigo'] for e in result['eventos'] if e['codigo'] == 'timeline_action'], ['timeline_action'] * 2)
+        self.assertNotEqual(result['procedencia']['firma'], resolver(copy.deepcopy(self.parsed))['procedencia']['firma'])
+
+    def test_live_equals_replay_bit_for_bit_independent_of_pace_and_with_a_rejected_action(self):
+        live = self.run_live(self.store(), [(55.5, None), (200.0, duty(200.0)), (333.0, None), (400.0, duty(0.0)), (HORIZON, None)],
+                             rejected={200.0: [{'quantityId': 'nothing', 'value': 1.0, 'unit': 'W'}],
+                                       333.0: [{'quantityId': 'heaterDuty', 'value': 1.0, 'unit': 'K'}]}).result
+        store = self.store()
+        scheduled = [{'t': a['t'], 'quantityId': a['quantityId'], 'value': a['value'], 'unit': a['unit']}
+                     for a in live['procedencia']['runTimeline']['actions']]
+        session = store.start(copy.deepcopy(self.parsed), scheduled, background=False)
+        store.advance(session.id, 0, HORIZON)
+        replay = session.result
+        self.assertEqual([e['codigo'] for e in live['eventos']], [e['codigo'] for e in replay['eventos']])
+        self.assertEqual(live['ejes'], replay['ejes'])
+        self.assertEqual(live['series'], replay['series'])
+        self.assertEqual([a['origin'] for a in replay['procedencia']['runTimeline']['actions']], ['scheduled'] * 2)
+
+    def test_idempotent_advance_sequence_and_limits_of_a_request(self):
+        store = self.store()
+        session = store.start(copy.deepcopy(self.parsed), background=False)
+        first = store.advance(session.id, 0, 100.0)
+        self.assertIs(store.advance(session.id, 0, 100.0), first)
+        with self.assertRaises(SessionError) as error:
+            store.advance(session.id, 0, 150.0)
+        self.assertEqual(error.exception.code, 'sequence_reused')
+        with self.assertRaises(SessionError) as error:
+            store.advance(session.id, 5, 150.0)
+        self.assertEqual((error.exception.status, error.exception.code), (409, 'sequence_mismatch'))
+        with self.assertRaises(SessionError) as error:
+            store.advance(session.id, 1, 50.0)
+        self.assertEqual(error.exception.code, 'time_not_forward')
+        # nothing was consumed by the refused requests
+        self.assertEqual(store.advance(session.id, 1, 100.0)['rows']['t'], [])
+        self.assertEqual(first['rows']['t'][-1], 100.0)
+
+    def test_rejected_actions_are_located_and_change_nothing(self):
+        store = self.store()
+        session = store.start(copy.deepcopy(self.parsed), background=False)
+        store.advance(session.id, 0, 100.0)
+        for actions, code, path in [
+                ([{'quantityId': 'nothing', 'value': 1.0, 'unit': 'W'}], 'time_input_not_declared', 'actions[0].quantityId'),
+                (duty(5.0, 'K'), 'unit_mismatch', 'actions[0].unit'),
+                ([{'quantityId': 'heaterDuty', 'value': 1.0}], 'invalid_action', 'actions[0]'),
+                (duty(float('nan')), 'invalid_action', 'actions[0].value')]:
+            with self.assertRaises(SessionError) as error:
+                store.advance(session.id, 1, 100.0, actions)
+            diagnostic = error.exception.diagnostics[0]
+            self.assertEqual((diagnostic['code'], diagnostic['path']), (code, path))
+        self.assertEqual(len(session.run.actions), 0)
+        self.assertEqual(session.next_seq, 1)
+        # the accepted one, after the refusals, in kW
+        response = store.advance(session.id, 1, 100.0, duty(0.1, 'kW'))
+        self.assertEqual(response['applied']['right']['heaterDuty'], 100.0)
+
+    def test_a_refusal_by_the_state_at_the_edge_is_part_of_the_answer(self):
+        from core.solvers.timeline import TimelineError
+        store = self.store()
+        session = store.start(copy.deepcopy(self.parsed), background=False)
+        original = session.run.apply
+
+        def refuse(updates):
+            raise TimelineError('state_outside_domain', 'outside the declared box')
+        session.run.apply = refuse
+        response = store.advance(session.id, 0, 100.0, duty(5.0))
+        session.run.apply = original
+        self.assertEqual(response['rejected'][0]['code'], 'state_outside_domain')
+        self.assertNotIn('applied', response)
+        self.assertEqual((session.next_seq, session.run.edge, len(session.run.actions)), (1, 100.0, 0))
+        self.assertEqual(response['rows']['t'][-1], 100.0)   # the stretch run is not lost
+        self.assertIs(store.advance(session.id, 0, 100.0, duty(5.0)), response)
+
+    def test_session_limit_idle_eviction_and_keep_alive(self):
+        now = [0.0]
+        store = self.store(clock=lambda: now[0])
+        first = store.start(copy.deepcopy(self.parsed), background=False)
+        second = store.start(copy.deepcopy(self.parsed), background=False)
+        with self.assertRaises(SessionError) as error:
+            store.start(copy.deepcopy(self.parsed), background=False)
+        self.assertEqual((error.exception.status, error.exception.code), (429, 'session_limit'))
+        now[0] = 29 * 60
+        store.advance(first.id, 0, 0.0)                     # a zero-length advance is the keep-alive
+        now[0] = 31 * 60
+        with self.assertRaises(SessionError) as error:
+            store.status(second.id)
+        self.assertEqual((error.exception.status, error.exception.code), (410, 'session_expired'))
+        self.assertEqual(store.status(first.id)['state'], 'ready')   # kept alive, 2 minutes idle
+        store.stop(first.id)
+        self.assertEqual(store.start(copy.deepcopy(self.parsed), background=False).state, 'ready')
+
+    def test_concurrent_identical_requests_get_one_answer(self):
+        store = self.store()
+        session = store.start(copy.deepcopy(self.parsed), background=False)
+        answers, errors = [], []
+
+        def call():
+            try:
+                answers.append(store.advance(session.id, 0, 300.0, duty(10.0)))
+            except Exception as error:  # pragma: no cover - reported below
+                errors.append(error)
+        threads = [threading.Thread(target=call) for _ in range(4)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        self.assertEqual(errors, [])
+        self.assertTrue(all(answer is answers[0] for answer in answers))
+        self.assertEqual(len(session.run.actions), 1)
+
+    def test_unsupported_models_are_rejected_at_start(self):
+        store = self.store()
+        scaled = copy.deepcopy(self.parsed)
+        scaled['motores']['derivedExecution']['scaling'] = {'x': 'y'}
+        for model, path in [(scaled, 'motores.derivedExecution.scaling'),
+                            ({**copy.deepcopy(self.parsed), 'motores': {}}, 'motores.derivedExecution')]:
+            with self.assertRaises(SessionError) as error:
+                store.start(model, background=False)
+            self.assertEqual((error.exception.status, error.exception.diagnostics[0]['path']), (422, path))
+        self.assertEqual(store.sessions, {})
+
+    def test_stop_publishes_a_partial_run_up_to_the_last_accepted_time(self):
+        store = self.store()
+        session = store.start(copy.deepcopy(self.parsed), background=False)
+        store.advance(session.id, 0, 123.0, duty(75.0))
+        out = store.stop(session.id)
+        result = out['result']
+        leer_resultados(result)
+        self.assertEqual(result['estado'], 'parcial')
+        self.assertEqual(result['procedencia']['runTimeline']['termination'], {'reason': 'operator_stop', 'tEnd': 123.0})
+        self.assertEqual(result['ejes'][0]['valores'][-1], 123.0)
+        self.assertEqual(sum(e['codigo'] == 'timeline_termination' for e in result['eventos']), 1)
+        self.assertEqual(store.sessions, {})
+        # the lowered system is released when the run ends
+        self.assertIsNone(session.system)
+
+
+class HiddenStateTests(unittest.TestCase):
+    def test_snapshot_restores_what_a_refused_action_primed(self):
+        class Owner:
+            def __init__(self):
+                self.cache, self.seed = {'a': 1}, 'seed'
+
+        class System:
+            algebraic_block = dae = None
+
+        system = System()
+        system.closures = [Owner()]
+        saved = snapshot(system)
+        system.closures[0].cache['b'] = 2
+        system.closures[0].seed = 'primed'
+        system.closures[0].late = True
+        restore(saved)
+        self.assertEqual((system.closures[0].cache, system.closures[0].seed), ({'a': 1}, 'seed'))
+        self.assertFalse(hasattr(system.closures[0], 'late'))
+
+
+class RouteTests(Fixture):
+    def test_http_start_status_advance_stop(self):
+        started = post('start', {'modelo': self.model})
+        self.assertEqual(started.status_code, 200, started.text)
+        sid = started.json()['sessionId']
+        status = {}
+        for _ in range(600):
+            status = post('status', {'sessionId': sid}).json()
+            if status['state'] != 'lowering':
+                break
+            threading.Event().wait(0.05)
+        self.assertEqual(status['state'], 'ready', status)
+        self.assertEqual((status['timeInputs'], status['horizon'], status['nextSeq']), (['heaterDuty'], HORIZON, 0))
+        bad = post('advance', {'sessionId': sid, 'seq': 0, 'to': 100.0, 'actions': [{'quantityId': 'x', 'value': 1, 'unit': 'W'}]})
+        self.assertEqual(bad.status_code, 422)
+        self.assertEqual(bad.json()['detail']['diagnostics'][0]['code'], 'time_input_not_declared')
+        body = {'sessionId': sid, 'seq': 0, 'to': 100.0, 'actions': duty(100.0)}
+        one, again = post('advance', body), post('advance', body)
+        self.assertEqual((one.status_code, one.json()), (200, again.json()))
+        self.assertEqual(one.json()['applied']['t'], 100.0)
+        done = post('advance', {'sessionId': sid, 'seq': 1, 'to': HORIZON})
+        self.assertEqual(done.json()['state'], 'finished')
+        self.assertEqual(done.json()['result']['estado'], 'resuelto')
+        self.assertEqual(post('advance', {'sessionId': sid, 'seq': 2, 'to': HORIZON}).status_code, 409)
+        stopped = post('stop', {'sessionId': sid})
+        self.assertEqual(stopped.json()['result']['procedencia']['runTimeline']['termination']['reason'], 'completed')
+        self.assertEqual(post('status', {'sessionId': sid}).status_code, 404)
+        self.assertEqual(post('start', {'modelo': self.model, 'extra': 1}).status_code, 422)
+
+    def test_resolver_is_unchanged_by_the_publication_split(self):
+        result = resolver(copy.deepcopy(self.parsed))
+        self.assertEqual(result['estado'], 'resuelto')
+        self.assertNotIn('runTimeline', result['procedencia'])
+        times = result['ejes'][0]['valores']
+        self.assertEqual(len(times), len(set(times)))
+        leer_resultados(result)
+
+
+if __name__ == '__main__':
+    unittest.main()
