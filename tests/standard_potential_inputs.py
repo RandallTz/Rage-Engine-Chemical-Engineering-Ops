@@ -4,8 +4,9 @@ Per reacting species i the Model records, in the thermodynamics family and on th
 tau = T / Tref (dimensionless, so that the entropy integral has a dimensionless logarithm):
 
     G = H - T S                        definition, pure ideal gas at P0, T = Tref tau
-    d/dtau of it                       differentiate
-    dh/dtau = Tref tau ds/dtau         fundamental relation dH = T dS + V dP at the constant standard pressure
+    dg/dtau = dh/dtau - Tref s - Tref tau ds/dtau   differentiate
+    dg/dtau = -Tref s                  definition S = -(dG/dT)_P (fundamental dG = -S dT + V dP at constant P0)
+    dh/dtau = Tref tau ds/dtau         substitute + isolate: dH = T dS at P0, deduced, not declared
     cp = (dh/dtau) / Tref              definition of the isobaric heat capacity
     cp = R (a0 + a1 T + ... + a4 T^4)  constitutive (published Poling ideal-gas polynomial, recorded data)
     integrate dh/dtau and ds/dtau      integration constants named, then fixed at the formation reference:
@@ -78,10 +79,15 @@ def deduce(a, owner, i, cas, T_region, data, *, omit=None, coefficients=None, Hf
     rel = lambda left, right, reason, kind: a.relation(left, right, reason, family=F, kind=kind)
     gibbs = rel(q(g), q(h) if omit == 'entropy' else q(h) + '-' + T + '*' + TQ + '*' + q(s),
                 'Gibbs energy of the pure ideal gas at P0: G = H - T S, with T = Tref tau', 'definition')
-    a.append('differentiate', family=F, sources=[gibbs], symbol=TQ)
-    Dh, Ds = sp.Derivative(h, tau), sp.Derivative(s, tau)
-    fundamental = rel(q(Dh), T + '*' + TQ + '*' + q(Ds),
-                      'Fundamental relation dH = T dS + V dP of the pure substance at the constant standard pressure', 'definition')
+    varied = a.append('differentiate', family=F, sources=[gibbs], symbol=TQ)
+    Dg, Dh, Ds = sp.Derivative(g, tau), sp.Derivative(h, tau), sp.Derivative(s, tau)
+    if omit != 'entropy':
+        # dH = T dS at P0 is deduced: the tau derivative of G = H - T S with S = -(dG/dT)_P.
+        entropy_definition = rel(q(Dg), '-' + T + '*' + q(s),
+                                 'Entropy S = -(dG/dT)_P, from the fundamental relation dG = -S dT + V dP at the constant '
+                                 'standard pressure, with dT = Tref dtau', 'definition')
+        fundamental = a.substitute(varied, entropy_definition, Dg, family=F)
+        fundamental = a.append('isolate', family=F, sources=[fundamental], symbol=q(Dh))
     capacity = rel(q(cp), q(Dh) + '/' + T, 'Isobaric heat capacity cp = dh/dT, with dT = Tref dtau', 'definition')
     polynomial = rel(q(cp), 'gasConstant*(' + '+'.join(q(c) + ('*(' + T + '*' + TQ + ')^%d' % k if k else '')
                                                        for k, c in enumerate(a_)) + ')',
