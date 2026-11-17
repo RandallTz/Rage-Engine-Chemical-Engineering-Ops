@@ -381,6 +381,53 @@ def resolver_modelo(cuerpo: Any = Body(...)):
                                  **({'assessment': assessment} if assessment is not None else {})}) from e
 
 
+def _session_call(call):
+    from core.compilador.run_session import SessionError
+    try:
+        return call()
+    except SessionError as error:
+        raise HTTPException(error.status, {'code': error.code, 'message': error.message, 'diagnostics': error.diagnostics}) from error
+
+
+def _session_id(body):
+    if not isinstance(body, dict) or not isinstance(body.get('sessionId'), str):
+        raise HTTPException(422, {'code': 'invalid_request', 'message': 'Expected a sessionId.'})
+    return body['sessionId']
+
+
+@router.post('/run-session/start')
+def run_session_start(body: Any = Body(...)):
+    """Demo 0.3 C7: answer at once with a session id; lowering runs in the background and `status` reports it."""
+    from core.compilador.run_session import SESSIONS
+    if not isinstance(body, dict) or set(body) - {'modelo', 'scheduled'}:
+        raise HTTPException(422, {'code': 'invalid_request', 'message': 'Expected modelo and an optional scheduled list.'})
+    model = _modelo(body)
+    session = _session_call(lambda: SESSIONS.start(model, body.get('scheduled')))
+    return {'sessionId': session.id, 'state': session.state}
+
+
+@router.post('/run-session/status')
+def run_session_status(body: Any = Body(...)):
+    from core.compilador.run_session import SESSIONS
+    return _session_call(lambda: SESSIONS.status(_session_id(body)))
+
+
+@router.post('/run-session/advance')
+def run_session_advance(body: Any = Body(...)):
+    """Run to `to`, then apply `actions` at that edge. `seq` makes a retry return the same rows; a zero-length
+    advance is the keep-alive of a paused client."""
+    from core.compilador.run_session import SESSIONS
+    if not isinstance(body, dict) or not {'sessionId', 'seq', 'to'} <= set(body) or set(body) - {'sessionId', 'seq', 'to', 'actions'}             or type(body['seq']) is not int:
+        raise HTTPException(422, {'code': 'invalid_request', 'message': 'Expected sessionId, an integer seq, to and optional actions.'})
+    return _session_call(lambda: SESSIONS.advance(body['sessionId'], body['seq'], body['to'], body.get('actions')))
+
+
+@router.post('/run-session/stop')
+def run_session_stop(body: Any = Body(...)):
+    from core.compilador.run_session import SESSIONS
+    return _session_call(lambda: SESSIONS.stop(_session_id(body)))
+
+
 @router.post('/assessment')
 def model_assessment(body: Any = Body(...)):
     """A versioned draft assessment; it does not weaken the executable reader."""
