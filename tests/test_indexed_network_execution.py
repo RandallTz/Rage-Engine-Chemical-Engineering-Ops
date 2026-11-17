@@ -35,6 +35,7 @@ def test_continuation_preserves_prefix_roots_and_rejects_feedback():
         stages=[SimpleNamespace(checks=[], closures=[]) for _ in range(3)],
         initial=lambda:np.ones(3), rhs=lambda t,y:np.zeros(3))
     system.indices = [0,1,2]
+    system.invariant_records = []   # set by __init__ since F4 J-6; this fixture bypasses __init__
     system.seed = np.ones(3)
     system.bounds = np.array([[0.,10.]]*3)
     system.scales = system.residual_scales = np.ones(3)
