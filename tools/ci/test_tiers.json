@@ -268,7 +268,7 @@
     "test_f5_feed_temperature.py": 522.29,
     "test_f5_newton_resolution.py": 36.11,
     "test_f5_newton_resolution_componentwise.py": 5.09,
-    "test_f5_standard_potential.py": 350.19,
+    "test_f5_standard_potential.py": 717.51,
     "test_flowsheet_network.py": 1221.72,
     "test_hydraulic_execution.py": 71.67,
     "test_iapws95_critical_reliability.py": 22.95,
