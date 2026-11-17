@@ -93,7 +93,10 @@ class NewtonTests(unittest.TestCase):
         self.rejection('nonlinear_iteration_limit', lambda z: [z[0]**2-2], lambda z: [[2*z[0]]], max_iterations=1)
 
     def test_stagnation(self):
-        self.rejection('nonlinear_stagnation', lambda z: [z[0]**2-2], lambda z: [[2*z[0]]], step_tolerance=1.)
+        # Since F5 item 1 a step below step_tolerance that still moves the
+        # iterate is taken, so step_tolerance=1 now converges. Stagnation needs
+        # a residual tolerance finer than fl(sqrt 2)^2 - 2 can resolve.
+        self.rejection('nonlinear_stagnation', lambda z: [z[0]**2-2], lambda z: [[2*z[0]]], residual_tolerance=1e-300)
 
     def test_jacobian_domain_error_rejects_the_trial_step(self):
         # The full Newton step from 0.5 lands at 4.25, where the Jacobian is not
