@@ -45,6 +45,11 @@ env:
   # must be told not to look for a display.
   MPLBACKEND: Agg
   PYTHONUTF8: "1"
+  # One OpenBLAS thread on every runner (F9, 16 November 2026): the thread count changes BLAS round-off and with
+  # it the integrator's path. unifac-red-5 on the common route takes 23 steps, 3 retries and 17,064 phase-stability
+  # tests with 4 or 12 threads and 14 steps, 0 retries and 7,035 tests with one thread (904 s against 2,599 s
+  # locally under the same load), so runs depend on the runner's core count as well as its CPU.
+  OPENBLAS_NUM_THREADS: "1"
 
 jobs:
   core-fast:
@@ -219,7 +224,9 @@ jobs:
     name: Interface (Python-backed verifiers and browser)
     if: github.event_name != 'push'
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    # 76 min in run 43907863036 (Python-backed 20+, quarantine 10, HTTP 19, build and browser); the equation
+    # workbench verifier now also runs its two PDE producers (about 6 min more), so 90 min left too little margin.
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
         with:

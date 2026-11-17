@@ -8,7 +8,7 @@
 //   node tools/ci/run_frontend_verifiers.mjs quarantine  # known failing: run non-blocking (continue-on-error)
 //
 // The groups live in tools/ci/frontend_verifiers_<group>.txt, one file name per
-// line ('#' starts a comment). A line `verificar_x.mjs :: tests/test_y.py` first
+// line ('#' starts a comment). A line `verificar_x.mjs :: tests/test_y.py[, tests/test_z.py]` first
 // runs that Python script from frontend/ (it writes the publication the verifier
 // reads) and fails the verifier if the script fails. A verifier in frontend/ that is in no group and
 // not in tools/ci/frontend_verifiers_other.txt is reported and fails the run,
@@ -132,10 +132,15 @@ for (const { file, pre } of files) {
   const env = { ...process.env, MPLBACKEND: 'Agg', PYTHONUTF8: '1', PYTHONIOENCODING: 'utf-8' };
   // A pytest file (test_*.py) as prerequisite runs under pytest; any other script runs directly.
   // pytest runs from the repository root so that tests import `core`.
-  const isPytest = pre && path.basename(pre).startsWith('test_');
-  const preArgs = isPytest ? ['-m', 'pytest', '-q', '-p', 'no:cacheprovider', path.resolve(frontend, pre)] : [pre];
+  // Several prerequisites are separated by commas and run in order; the first that fails stops the verifier.
   const deadline = timeoutSeconds > 0 ? start + timeoutSeconds * 1000 : Infinity;
-  let r = pre ? await run('python', preArgs, { cwd: isPytest ? path.resolve(frontend, '..') : frontend, env }, deadline) : { status: 0 };
+  let r = { status: 0 };
+  for (const one of (pre ? pre.split(',').map((x) => x.trim()).filter(Boolean) : [])) {
+    const isPytest = path.basename(one).startsWith('test_');
+    const preArgs = isPytest ? ['-m', 'pytest', '-q', '-p', 'no:cacheprovider', path.resolve(frontend, one)] : [one];
+    r = await run('python', preArgs, { cwd: isPytest ? path.resolve(frontend, '..') : frontend, env }, deadline);
+    if (r.status !== 0) break;
+  }
   if (r.status === 0) r = await run(process.execPath, [file], { cwd: frontend, env }, deadline);
   const seconds = (Date.now() - start) / 1000;
   total += seconds;

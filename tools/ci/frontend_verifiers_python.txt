@@ -17,7 +17,7 @@ verificar_resultados_graficas.mjs     # 9
 verificar_transform_execution.mjs     # 39
 verificar_unidades_motor.mjs          # 1
 verificar_workspace_handoffs.mjs      # 10
-verificar_equation_workbench.mjs :: ../tests/test_equation_workbench.py   # 620 together
+verificar_equation_workbench.mjs :: ../tests/test_equation_workbench.py, ../tests/test_pde_acceptance.py, ../tests/test_pde_thermodynamics.py   # 620 together; the two PDE files write .tmp/equation-workbench-spatial.json and -localization.json (about 370 s more)
 verificar_steady_state.mjs :: ../tests/test_f3_steady_state.py            # 204 together
 # Added 6 Nov 2026 (verifiers committed by the step-0 consolidation); prerequisites write their .tmp publications.
 verificar_template_record.mjs        # spawns tests/test_template_record.py --cases itself
