@@ -110,22 +110,23 @@ def compilation(system, mode='dynamic'):
                        'stateCount': stage.size,
                        'dynamicReport': deepcopy(stage.report),
                        'steadyReport': None if mode == 'dynamic' else deepcopy(system.stages[j].report)})
-    connections = [{'id': row['id'], 'recycle': row['recycle'], 'signature': row['signature'],
+    # Version 2 (J2R-4): every connection row names its kind, so a heat row without its coupling is
+    # rejected structurally, without recomputing the fingerprint (the TS reader never does).
+    connections = [{'id': row['id'], 'kind': row['kind'], 'recycle': row['recycle'], 'signature': row['signature'],
                     'from': {'stage': row['from']['stage'], 'instanceId': row['from']['instanceId'], 'port': row['from']['port']},
                     'to': {'stage': row['to']['stage'], 'instanceId': row['to']['instanceId'], 'port': row['to']['port']}}
                    for row in expansion['connections']]
     ports = [{'id': item['port']['id'], 'stage': item['endpoint']['stage'], 'instanceId': item['endpoint']['instanceId'],
               'port': item['endpoint']['port'], 'kind': item['port']['kind'], 'direction': item['port']['direction']}
              for item in expansion['ports']]
-    report = {'format': COMPILATION, 'version': 1, 'sourceModelId': dynamic.model['id'],
+    report = {'format': COMPILATION, 'version': 2, 'sourceModelId': dynamic.model['id'],
               'flowsheetId': expansion['flowsheetId'], 'count': len(stages), 'selection': selection_for(dynamic.model, mode),
               'stages': stages, 'connections': connections, 'ports': ports, 'rateRows': rates,
               'method': dynamic.method if mode == 'dynamic' else 'damped_newton',
               'specialization': 'original_rates' if mode == 'dynamic' else 'zero_accumulation',
-              'linearPolicy': deepcopy(dynamic.linear_policy)}
-    if dynamic.heat_couplings:
-        # Additive optional key, present only with heat connections: the exterior-datum replacements of each.
-        report['heatCouplings'] = deepcopy(dynamic.heat_couplings)
+              'linearPolicy': deepcopy(dynamic.linear_policy),
+              # One row per heat connection: the exterior-datum replacements of each (empty without heat).
+              'heatCouplings': deepcopy(dynamic.heat_couplings)}
     report = json.loads(json.dumps(report, ensure_ascii=False, allow_nan=False))
     report['signature'] = digest(report)
     return read_compilation(report)
@@ -139,10 +140,13 @@ def read_compilation(value):
         raise FlowsheetError('invalid_flowsheet_compilation', path + where, message)
     fields = {'format', 'version', 'sourceModelId', 'flowsheetId', 'count', 'selection', 'stages', 'connections',
               'ports', 'rateRows', 'method', 'specialization', 'linearPolicy', 'signature'}
-    if not isinstance(value, dict) or set(value) - {'heatCouplings'} != fields:
+    # Version 1 (before J2R-4): connection rows without kind, optional heatCouplings.
+    # Version 2: every row has kind and heatCouplings lists exactly the heat rows.
+    if not isinstance(value, dict) or value.get('format') != COMPILATION or type(value.get('version')) is not int or value['version'] not in (1, 2):
+        bad('Expected flowsheet compilation version 1 or 2.', '.version')
+    version = value['version']
+    if (set(value) - {'heatCouplings'} != fields if version == 1 else set(value) != fields | {'heatCouplings'}):
         bad('Unknown or missing fields.')
-    if value['format'] != COMPILATION or type(value['version']) is not int or value['version'] != 1:
-        bad('Expected flowsheet compilation version 1.', '.version')
     mode = read_selection(value['selection'])['mode']
     if (value['specialization'] != ('original_rates' if mode == 'dynamic' else 'zero_accumulation')
             or value['method'] not in (('RK45', 'BDF') if mode == 'dynamic' else ('damped_newton',))):
@@ -179,7 +183,9 @@ def read_compilation(value):
             bad('Unknown, foreign or repeated instance port.', where)
         used.add(key)
     for i, row in enumerate(value['connections']):
-        if not isinstance(row, dict) or set(row) != {'id', 'recycle', 'signature', 'from', 'to'} or row['id'] in ids:
+        keys = {'id', 'recycle', 'signature', 'from', 'to'} | ({'kind'} if version == 2 else set())
+        if (not isinstance(row, dict) or set(row) != keys or not isinstance(row['id'], str) or row['id'] in ids
+                or version == 2 and (row['kind'] not in ('material', 'heat') or row['kind'] == 'heat' and row['recycle'] is not False)):
             bad('Invalid or repeated connection.', f'.connections[{i}]')
         ids.add(row['id'])
         take(row['from'], f'.connections[{i}].from')
@@ -194,12 +200,19 @@ def read_compilation(value):
     if used != set(declared):
         bad('Every instance port must be connected or exposed.', '.ports')
     couplings = value.get('heatCouplings', [])
-    if 'heatCouplings' in value:
+    if version == 2:
+        heat_rows = [row['id'] for row in value['connections'] if row['kind'] == 'heat']
+        if (not isinstance(couplings, list) or any(not isinstance(row, dict) for row in couplings)
+                or sorted(str(row.get('connectionId')) for row in couplings) != sorted(heat_rows)):
+            bad('Each heat connection has exactly one heat coupling, and only heat connections have one.', '.heatCouplings')
+    if couplings or version == 1 and 'heatCouplings' in value:
         endpoint_fields = {'law': {'endpoint', 'stage', 'instanceId', 'port', 'replacedDatum', 'by', 'heatRate'},
                            'duty': {'endpoint', 'stage', 'instanceId', 'port', 'replacedDatum', 'heatRate'}}
         connections = {row['id']: row for row in value['connections']}
         if not isinstance(couplings, list) or not couplings:
             bad('A heat coupling list is present only with at least one heat coupling.', '.heatCouplings')
+        if version == 2 and any(connections[row['connectionId']]['kind'] != 'heat' for row in couplings):
+            bad('Only heat connections have a heat coupling.', '.heatCouplings')
         seen = set()
         for i, row in enumerate(couplings):
             where = f'.heatCouplings[{i}]'

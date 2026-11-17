@@ -350,6 +350,7 @@ class DerivedSystem(DerivedGraph):
         self._physical_admission()
         self._validate_initial()
         self._closure_admission()
+        self._regime_admission()
         self.configure_jacobian()
         self.report = self._report()
         if self.dae:
@@ -1225,6 +1226,24 @@ class DerivedSystem(DerivedGraph):
             stop.diagnostics = error.diagnostics
             raise stop from error
 
+    def _admit_time_inputs(self, state):
+        """Demo 0.3 C2-N4: a held time input must stay in its declared index-one box.
+
+        Called from `dominio`, which the integrator evaluates first on a
+        (re)started state, before any algebraic solve. A held input has a zero
+        rate, so between actions this never trips; it rejects an action's new
+        value at the restart admission, before the run is changed (the timeline
+        reports `state_outside_domain`), and names the input and its Solve path
+        instead of a generic differential state.
+        """
+        for q in getattr(self, 'time_input_quantities', ()):
+            value = float(state[self.states.index(q)])
+            lo, hi = self.dae.bounds[q]
+            if not (math.isfinite(value) and float(lo) <= value <= float(hi)):
+                qid = self.ids[q]
+                raise ValueError(f'The time input {qid} = {value:.12g} lies outside its declared index-one box [{lo}, {hi}] '
+                                 f'(motores.derivedExecution.timeInputs.{qid}); the value is rejected before the restart.')
+
     def initial(self):
         return self.initial_state.copy()
 
@@ -1292,9 +1311,68 @@ class DerivedSystem(DerivedGraph):
         return error if self.algebraic_block is not None and isinstance(error, Detencion) else None
 
     def firma(self, t, state):
+        if getattr(self, 'regimes', None):
+            return self._regime_event_state(t, state)[0]
         if getattr(self, 'closures', None):
             return self._closure_event_state(t, state)[0]
         return None
+
+    # --- regime events (Demo 0.3 C6) ------------------------------------------------------------------
+    def _regime_admission(self):
+        """Each lowered min/max node becomes one entry of the discrete signature.
+
+        The entry is the index of the active argument (the least for min, the
+        greatest for max) and its margin is the gap to the next argument divided
+        by the largest argument magnitude. A model with no min/max keeps the
+        earlier signature and event protocol exactly: nothing is attached.
+        """
+        self.regimes = []
+        expressions = [(row['equationId'], self.rates[sp.Derivative(q, self.time)]) for row, q in zip(self.state_rows, self.states)]
+        expressions += [(row['equationId'], expression) for row, expression in self.reconstructed]
+        expressions += [(row['equationId'], rate) for row, _, rate, _ in self.checks]
+        # An affine block's reconstruction is already substituted into self.rates;
+        # a nonlinear block's unknowns are evaluated by the runtime's own _compilar.
+        nodes = {}
+        for equation_id, expression in expressions:
+            for node in sp.preorder_traversal(expression):
+                if node.func in (sp.Min, sp.Max):
+                    nodes.setdefault(node, [])
+                    if equation_id not in nodes[node]:
+                        nodes[node].append(equation_id)
+        if not nodes:
+            return
+        if self.scaled is not None:
+            raise LoweringError('regime_scaling', 'Saturating min/max branches are located as regime events in the identity formulation; a scaled formulation is not supported.', 'motores.derivedExecution.scaling')
+        reverse = {parameter: q for q, parameter in self.parameter_symbols.items()}
+        label = lambda e: math_latex(e.xreplace(reverse), self.graph.names)
+        for index, (node, equation_ids) in enumerate(nodes.items()):
+            self.regimes.append({'id': 'regime.' + str(index + 1), 'function': 'min' if node.func is sp.Min else 'max',
+                'latex': label(node), 'arguments': [label(argument) for argument in node.args], 'equationIds': equation_ids,
+                'evaluate': [self.numeric._compilar(self._ast(argument), 'regime branch') for argument in node.args]})
+        signature, _ = self._regime_event_state(0., self.initial_state)
+        for regime, (_, _, active) in zip(self.regimes, signature[len(self.closures):]):
+            regime['initialBranch'] = active
+        self.event_state = self._regime_event_state
+        # C6-R1: place each located change on the integrated path, not on one step's interpolant
+        # (core/solvers/integrador.py, _refine_change). Opt-in, so models without min/max are unchanged.
+        self.refine_signature_events = True
+
+    def _regime_event_state(self, t, state):
+        signature, margins = (self._closure_event_state(t, state) if self.closures else ((), []))
+        signature, margins = list(signature), list(margins)
+        for regime in self.regimes:
+            values = [float(function(t, state)) for function in regime['evaluate']]
+            if not all(math.isfinite(value) for value in values):
+                raise Detencion('derived_nonfinite', 'A branch of ' + regime['id'] + ' is non-finite.')
+            order = sorted(range(len(values)), key=lambda k: values[k], reverse=regime['function'] == 'max')
+            scale = max(abs(value) for value in values)
+            gap = abs(values[order[1]] - values[order[0]])
+            signature.append(('regime', regime['id'], order[0]))
+            margins.append(gap / scale if scale > 0 else 0.)
+        return tuple(signature), margins
+
+    def regime_publication(self):
+        return [{key: value for key, value in regime.items() if key != 'evaluate'} for regime in self.regimes]
 
     # --- package closures (FD-1 to FD-4, F5-C2) -----------------------------------------------------
     def _package_closures(self, volumes):
@@ -1400,6 +1478,9 @@ class DerivedSystem(DerivedGraph):
         return None
 
     def dominio(self, t, state):
+        if getattr(self, 'dae', None) is not None:
+            # The integrator's first check of a (re)started state; see _admit_time_inputs.
+            self._admit_time_inputs(state)
         return self.numeric.dominio(t, state)
 
     def describir_dominio(self, index):
@@ -1563,8 +1644,16 @@ def resolve_system(system):
     events = []
     for code, t, before, after, message in trajectory.eventos:
         time = t*(system.scaled.time_scale if system.scaled is not None else 1)
-        if code == 'cambio_firma' and getattr(system, 'closures', None):
-            for (owner, previous), (_, current) in zip(before, after):
+        if code == 'cambio_firma' and (getattr(system, 'closures', None) or getattr(system, 'regimes', None)):
+            # Demo 0.3 C6: closure entries come first; regime entries follow.
+            closures = len(getattr(system, 'closures', None) or ())
+            regimes = {regime['id']: regime for regime in getattr(system, 'regimes', None) or ()}
+            for previous, current in zip(before[closures:], after[closures:]):
+                if previous != current:
+                    regime = regimes[previous[1]]
+                    events.append(evento('regime_change', 't', time, regime['latex'] + ': ' + regime['arguments'][previous[2]]
+                                         + r' \to ' + regime['arguments'][current[2]], 'regime:' + regime['id']))
+            for (owner, previous), (_, current) in zip(before[:closures], after[:closures]):
                 for phase in sorted(set(current) - set(previous)):
                     events.append(evento('aparicion_fase', 't', time, phase + ' appears', 'volumen:' + owner))
                 for phase in sorted(set(previous) - set(current)):
@@ -1582,6 +1671,7 @@ def resolve_system(system):
          **({'daeDiagnostics': system.dae.evidence()} if system.dae else {}),
          **({'thermodynamicClosures': [closure.describe() for closure in system.closures],
              'reactionEquilibrium': getattr(system, 'reaction_limits', [])} if getattr(system, 'closures', None) else {}),
+         **({'regimes': system.regime_publication()} if getattr(system, 'regimes', None) else {}),
          **({'stop': stop} if stop is not None else {}),
          **({'mensaje': str(trajectory.detenida)} if trajectory.detenida else {})},
         [eje('t', 'Physical time', 'tiempo', 's', physical_times)], series, events, verifications, modeloId=system.model['id'])

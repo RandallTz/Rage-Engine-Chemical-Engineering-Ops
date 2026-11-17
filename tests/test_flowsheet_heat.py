@@ -9,7 +9,7 @@ Independent references (no compiled expression, bridge or model RHS):
 - the LSODA integration of the jacketed reactor, tests/jacketed_reactor_inputs.reference_jacketed,
   the reference the accepted single-document jacketed reactor matches (5.1e-7 K);
 - the stationary balances of both volumes solved together (steady_jacketed, hybr, residual <= 1e-8), compared with
-  the end of the 60000 s run (the steady mode needs the jacket holdup invariant, finding J-6).
+  the end of the 60000 s run and with the connected steady mode (the jacket holdup projected as an exact invariant, J-6).
 
     python -m pytest -q tests/test_flowsheet_heat.py
 Writes .tmp/flowsheet_heat/{accepted,rejections,dynamic-result}.json for
@@ -80,6 +80,12 @@ def _mutations(documents):
     case('instance value of the replaced datum', lambda m: m['flowsheet']['instances'][1]['data'].update(
         {'service.Tprocess': {'texto': '300.0', 'unidad': 'K'}}))
     case('heat recycle', lambda m: m['flowsheet']['recycles'].append('wall'))
+    case('premise kind', lambda m: m['flowsheet']['templates']['jacket']['template']['momentumPremise'].update(kind='pumped'))
+    case('premise reason', lambda m: m['flowsheet']['templates']['jacket']['template']['momentumPremise'].update(reason=' '))
+    case('premise field', lambda m: m['flowsheet']['templates']['jacket']['template']['momentumPremise'].update(extra=1))
+    case('premise null', lambda m: m['flowsheet']['templates']['jacket']['template'].update(momentumPremise=None))   # review J1R-1
+    case('premise with momentum', lambda m: m['flowsheet']['templates']['jacket']['volumenes'][0]['balances'].update(momento=True))
+    case('no premise, no momentum', lambda m: m['flowsheet']['templates']['jacket']['template'].pop('momentumPremise'))
     case('heat to material', lambda m: connection(m).update(to={'instance': 'J', 'port': 'supply'}))
     case('coupling on material', lambda m: (m['flowsheet']['exposures'].__setitem__(slice(None), [
         {'id': 'feed', 'instance': 'R', 'port': 'feed'}, {'id': 'return', 'instance': 'J', 'port': 'return'},
@@ -99,6 +105,12 @@ def test_heat_rejections_are_located_and_shared_with_the_client(documents):
                 'temperature on the other endpoint': ('flowsheet_heat_coupling_invalid', 'flowsheet.connections.wall.heat.exteriorTemperature'),
                 'instance value of the replaced datum': ('flowsheet_heat_coupling_invalid', 'flowsheet.connections.wall.heat.exteriorTemperature'),
                 'heat recycle': ('flowsheet_unknown_recycle', 'flowsheet.recycles'),
+                'premise kind': ('flowsheet_template_invalid', 'flowsheet.templates.jacket.template.momentumPremise.kind'),
+                'premise reason': ('flowsheet_template_invalid', 'flowsheet.templates.jacket.template.momentumPremise.reason'),
+                'premise field': ('flowsheet_template_invalid', 'flowsheet.templates.jacket.template.momentumPremise'),
+                'premise null': ('flowsheet_template_invalid', 'flowsheet.templates.jacket.template.momentumPremise'),
+                'premise with momentum': ('flowsheet_template_invalid', 'flowsheet.templates.jacket.template.momentumPremise'),
+                'no premise, no momentum': ('flowsheet_template_invalid', 'flowsheet.templates.jacket.template.recipe.journals'),
                 'heat to material': ('flowsheet_port_direction', 'flowsheet.connections.wall.from.port'),
                 'coupling on material': ('flowsheet_invalid', 'flowsheet.connections.wall.heat')}
     rows = []
@@ -180,10 +192,38 @@ def test_dynamic_two_instances_match_the_jacketed_reference(dynamic):
     assert np.max(np.abs(T - T_ref)) < 1e-5
     assert np.max(np.abs(Tj - Tj_ref)) < 1e-5
     report = dynamic['procedencia']['flowsheetCompilation']
-    assert report['version'] == 1 and report['heatCouplings'][0]['connectionId'] == 'wall'
+    assert report['version'] == 2 and report['heatCouplings'][0]['connectionId'] == 'wall'
     steady = steady_jacketed()
     assert abs(T[-1] - steady['temperature']) < 1e-5
     assert abs(Tj[-1] - steady['jacketTemperature']) < 1e-5
+
+
+def test_compilation_rows_name_their_kind(dynamic):
+    """J2R-4: a heat row without its coupling is rejected structurally, even when re-signed."""
+    from core.compilador.flowsheet_network import read_compilation
+    from core.modelo.flowsheet import digest
+    report = copy.deepcopy(dynamic['procedencia']['flowsheetCompilation'])
+    assert [(row['id'], row['kind']) for row in report['connections']] == [('wall', 'heat')]
+
+    def signed(value):
+        value = copy.deepcopy(value)
+        value.pop('signature')
+        value['signature'] = digest(value)
+        return value
+    read_compilation(signed(report))
+    for mutate in (lambda r: r.update(heatCouplings=[]), lambda r: r.pop('heatCouplings'),
+                   lambda r: r['connections'][0].update(kind='material'), lambda r: r['connections'][0].pop('kind')):
+        bad = copy.deepcopy(report)
+        mutate(bad)
+        with pytest.raises(FlowsheetError) as caught:
+            read_compilation(signed(bad))
+        assert caught.value.code == 'invalid_flowsheet_compilation'
+    # A version 1 compilation (rows without kind) is still read.
+    legacy = copy.deepcopy(report)
+    legacy['version'] = 1
+    for row in legacy['connections']:
+        row.pop('kind')
+    read_compilation(signed(legacy))
 
 
 def _find(result, instance):
@@ -191,31 +231,42 @@ def _find(result, instance):
     stage = {'R': 1, 'J': 2}[instance]
     rows = [r for r in result['series'] if r['id'].startswith(f'jacketed.stage.{stage}.closure.') and r['nombre'].startswith('T__')]
     assert len(rows) == 1, (instance, [r['nombre'] for r in result['series'] if r['id'].startswith(f'jacketed.stage.{stage}.')])
-    return np.array(rows[0]['valores'], dtype=float)
+    return np.atleast_1d(np.array(rows[0]['valores'], dtype=float))   # a steady series is one value
 
 
-def test_steady_needs_the_jacket_holdup_invariant(model):
-    """Finding J-6 (not a heat-connection defect): the rigid filled jacket's mass row is identically zero
-    (supply = return) and its holdup enters the other rows only through H/m, so the zero-accumulation
-    Jacobian, scaled as Newton factors it, has rank n - 1: the missing row and the free direction
-    (dm_j, dH_j) proportional to (m_j, H_j) are one deficiency (review J2R-1: the unscaled rank n - 2 was a
-    tolerance artifact of the enthalpy columns). Newton stops with a located error. The stationary pair is checked
-    instead on the dynamic run's end state against the joint stationary balances (test above).
-    When the steady transform projects the holdup invariant (m_j = m_j0), replace this test by the
-    comparison with steady_jacketed()."""
+def test_jacket_holdup_is_an_exact_invariant_of_the_connected_rates(model):
+    """J-6: with the single-species phase molar mass substituted (M_L = M_1 x_1), the jacket mass rate is identically
+    zero in the connected system, so the connected steady path projects the holdup m_j = m_j0 out."""
+    import sympy as sp
     from core.compilador.flowsheet_network import FlowsheetDerivedSystem
     from core.compilador.indexed_steady import IndexedSteadySystem
-    from core.solvers.nonlinear import NonlinearError
     dynamic = FlowsheetDerivedSystem(model)
+    jacket = dynamic.stages[1]
+    mass = dynamic.offsets[1] + [str(q) for q in jacket.states].index(next(str(q) for q in jacket.states if str(q).startswith('m__')))
+    assert sp.cancel(dynamic.expressions[mass]) == 0
     steady = IndexedSteadySystem(model, dynamic=dynamic)
-    J = steady.jacobian(steady.seed)
-    zero = [k for k in range(J.shape[0]) if np.max(np.abs(J[k])) == 0.0]
-    assert len(zero) == 1 and zero[0] >= dynamic.stages[0].size   # one jacket row: d m_j/dt = coolantFlow - coolantFlow
-    scaled = (J * steady.scales[None, :]) / steady.residual_scales[:, None]
-    assert np.linalg.matrix_rank(scaled) == J.shape[0] - 1
-    # The null direction: scaling the jacket holdup at fixed specific enthalpy changes no residual.
-    m, H = dynamic.stages[0].size, dynamic.stages[0].size + 1
-    direction = np.zeros(J.shape[1]); direction[m], direction[H] = steady.seed[m], steady.seed[H]
-    assert np.linalg.norm(J @ direction) <= 1e-12 * np.linalg.norm(J) * np.linalg.norm(direction)
-    with pytest.raises(NonlinearError):
-        steady.solve(continuation=False)
+    assert mass not in steady.indices and len(steady.indices) == dynamic.stages[0].size + jacket.size - 1
+    [record] = steady.invariant_records
+    assert record['stage'] == 2 and record['value'] == pytest.approx(jacketed_data()['mj0'], rel=1e-12)
+
+
+def test_steady_two_instances_match_the_joint_stationary_balances(model):
+    from core.compilador.flowsheet_network import resolve, selection_for
+    selection = selection_for(model, 'steady')
+    result = resolve(model, selection)
+    (OUT / 'steady-result.json').write_text(json.dumps({'result': result, 'selection': selection}), encoding='utf-8')
+    steady = steady_jacketed()
+    assert abs(_find(result, 'R')[-1] - steady['temperature']) < 1e-6
+    assert abs(_find(result, 'J')[-1] - steady['jacketTemperature']) < 1e-6
+    report = result['procedencia']['flowsheetCompilation']
+    assert report['version'] == 2 and report['heatCouplings'][0]['connectionId'] == 'wall'
+
+
+def test_momentum_premise_admits_the_jacket_without_a_momentum_balance(documents):
+    """J-1: the jacket template records the prescribed-flow premise instead of a hydrostatic momentum journal."""
+    from flowsheet_heat_inputs import MOMENTUM_PREMISE
+    _, jacket = documents
+    assert jacket['template']['momentumPremise'] == MOMENTUM_PREMISE
+    assert all(v['balances'].get('momento') is not True for v in jacket['volumenes'])
+    assert 'momentumDerivation' not in jacket['template']['recipe']['journals']
+    leer_modelo_comun(jacket)

@@ -241,8 +241,8 @@ type Stage={index:number;instanceId:string;template:string;modelId:string;signat
 type Endpoint={stage:number;instanceId:string;port:string};
 type HeatEnd={endpoint:'from'|'to';stage:number;instanceId:string;port:string;replacedDatum:string;heatRate:string};
 export type FlowsheetHeatCouplingReport={connectionId:string;premise:string;orientation:'from_to';law:HeatEnd&{by:string};duty:HeatEnd;identity:'equal_and_opposite';dutySI:string};
-export type FlowsheetCompilation={format:'rage.flowsheet-compilation';version:1;heatCouplings?:FlowsheetHeatCouplingReport[];sourceModelId:string;flowsheetId:string;count:number;
-  selection:FlowsheetSelection;stages:Stage[];connections:{id:string;recycle:boolean;signature:string;from:Endpoint;to:Endpoint}[];
+export type FlowsheetCompilation={format:'rage.flowsheet-compilation';version:1|2;heatCouplings?:FlowsheetHeatCouplingReport[];sourceModelId:string;flowsheetId:string;count:number;
+  selection:FlowsheetSelection;stages:Stage[];connections:{id:string;kind?:'material'|'heat';recycle:boolean;signature:string;from:Endpoint;to:Endpoint}[];
   ports:(Endpoint&{id:string;kind:string;direction:string})[];rateRows:{stage:number;quantityId:string;equationId:string;expressionSI:string}[];
   method:'RK45'|'BDF'|'damped_newton';specialization:'original_rates'|'zero_accumulation';linearPolicy:Obj;signature:string};
 
@@ -250,9 +250,12 @@ export type FlowsheetCompilation={format:'rage.flowsheet-compilation';version:1;
 export function readFlowsheetCompilation(value:unknown):FlowsheetCompilation{
   const path='flowsheetCompilation',bad=(message:string,where=''):never=>fail('invalid_flowsheet_compilation',path+where,message);
   const fields='format version sourceModelId flowsheetId count selection stages connections ports rateRows method specialization linearPolicy signature'.split(' ');
-  if(!isObject(value)||Object.keys(value).filter(k=>k!=='heatCouplings').sort().join('|')!==[...fields].sort().join('|'))bad('Unknown or missing fields.');
-  const r=value as unknown as FlowsheetCompilation;
-  if(r.format!=='rage.flowsheet-compilation'||r.version!==1)bad('Expected flowsheet compilation version 1.','.version');
+  // Version 1 (before J2R-4): rows without kind, optional heatCouplings. Version 2: every row has kind and
+  // heatCouplings lists exactly the heat rows, so a dropped coupling is rejected without the fingerprint.
+  if(!isObject(value)||value.format!=='rage.flowsheet-compilation'||(value.version!==1&&value.version!==2))bad('Expected flowsheet compilation version 1 or 2.','.version');
+  const r=value as unknown as FlowsheetCompilation,version=r.version;
+  const keys=Object.keys(value as Obj).filter(k=>version===2||k!=='heatCouplings').sort().join('|');
+  if(keys!==[...fields,...(version===2?['heatCouplings']:[])].sort().join('|'))bad('Unknown or missing fields.');
   const mode=readFlowsheetSelection(r.selection).mode;
   if(r.specialization!==(mode==='dynamic'?'original_rates':'zero_accumulation')||!(mode==='dynamic'?['RK45','BDF']:['damped_newton']).includes(r.method))bad('Mode and specialization disagree.','.specialization');
   if(!Number.isSafeInteger(r.count)||!Array.isArray(r.stages)||r.stages.length!==r.count)bad('Instance count mismatch.','.count');
@@ -274,7 +277,8 @@ export function readFlowsheetCompilation(value:unknown):FlowsheetCompilation{
   const used=new Set<string>(),ids=new Set<string>();
   const take=(e:Endpoint,where:string)=>{const key=JSON.stringify([e?.instanceId,e?.port]);if(!declared.has(key)||instances.get(e.instanceId)!==e.stage||used.has(key))bad('Unknown, foreign or repeated instance port.',where);used.add(key);};
   r.connections.forEach((row,i)=>{
-    if(!isObject(row)||Object.keys(row).sort().join('|')!=='from|id|recycle|signature|to'||ids.has(row.id))bad('Invalid or repeated connection.',`.connections[${i}]`);
+    if(!isObject(row)||Object.keys(row).sort().join('|')!==(version===2?'from|id|kind|recycle|signature|to':'from|id|recycle|signature|to')||typeof row.id!=='string'||ids.has(row.id)
+       ||version===2&&(!['material','heat'].includes(String(row.kind))||row.kind==='heat'&&row.recycle!==false))bad('Invalid or repeated connection.',`.connections[${i}]`);
     ids.add(row.id);take(row.from,`.connections[${i}].from`);take(row.to,`.connections[${i}].to`);
     if(row.from.instanceId===row.to.instanceId)bad('A connection joins two different instances.',`.connections[${i}]`);
   });
@@ -283,7 +287,13 @@ export function readFlowsheetCompilation(value:unknown):FlowsheetCompilation{
     ids.add(row.id);take(row,`.ports[${i}]`);
   });
   if(used.size!==declared.size)bad('Every instance port must be connected or exposed.','.ports');
-  if(Object.hasOwn(r,'heatCouplings')){
+  if(version===2){
+    const heatRows=r.connections.filter(c=>c.kind==='heat').map(c=>c.id).sort();
+    if(!Array.isArray(r.heatCouplings)||r.heatCouplings.some(c=>!isObject(c))
+       ||canonical(r.heatCouplings.map(c=>String(c.connectionId)).sort())!==canonical(heatRows))
+      bad('Each heat connection has exactly one heat coupling, and only heat connections have one.','.heatCouplings');
+  }
+  if(version===2?r.heatCouplings!.length>0:Object.hasOwn(r,'heatCouplings')){
     const connections=new Map(r.connections.map(c=>[c.id,c])),seen=new Set<string>();
     const ends={law:'by|endpoint|heatRate|instanceId|port|replacedDatum|stage',duty:'endpoint|heatRate|instanceId|port|replacedDatum|stage'};
     if(!Array.isArray(r.heatCouplings)||!r.heatCouplings.length)bad('A heat coupling list is present only with at least one heat coupling.','.heatCouplings');

@@ -175,12 +175,13 @@ def reactor_wall_partition(author, owner):
                            'energy', 'constraint')
 
 
-def author_jacket(author, owner=JACKET, component=1, process_temperature=None, law=None):
+def author_jacket(author, owner=JACKET, component=1, process_temperature=None, law=None, single_species=False):
     """Record the jacket's deduction on an author whose source already holds the jacket volume.
 
     process_temperature: quantity id of the other body's temperature (coupled model) or None
     (standalone service template: a declared port variable `processTemperature`).
     law: the shared wall relation already declared by the reactor side, or None to declare it here.
+    single_species: use the closure's single-species phase molar mass (M_L = M_1 x_1), so the return equals the supply exactly (J-6).
     Returns the rows of the state equations and of the published intermediates.
     """
     add, q = author.append, author.quantity
@@ -203,6 +204,12 @@ def author_jacket(author, owner=JACKET, component=1, process_temperature=None, l
     mass_basis = author.relation(f'{fraction}*{ML}', f'{mole}*{M}',
                                  'Definition of mass fraction from mole fraction, component molar mass and the phase mean molar mass', kind='definition')
     mass_basis = author.substitute(mass_basis, donor_fraction, f(mole))
+    if single_species:
+        # Finding J-6: the package closure's own phase molar-mass definition for the single coolant species,
+        # phase_M = M_1 x_1 (thermodynamics.<jacket>.phase-molar-mass-L), turns the mass-fraction definition into
+        # w M_1 x_1 = x_1 M_1, so w = 1 exactly: the return equals the supply and the steady transform can bind
+        # the jacket holdup as an individual invariant. No closure value or new premise is introduced.
+        mass_basis = author.substitute(mass_basis, f'thermodynamics.{j}.phase-molar-mass-L', f(f'phase_M__{j}__L'))
     mass_basis = add('isolate', sources=[mass_basis], symbol=fraction)
     out['coolantMassFraction'] = mass_basis
     transport = author.relation(q(f(f'q__{COOLANT_OUT}__{i}')), f'coolantReturnFlow*{fraction}',

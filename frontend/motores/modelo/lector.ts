@@ -172,7 +172,7 @@ export function leerModeloComun(dato: unknown): ModeloComun {
 
 type PhysicalJournalName='materialDerivation'|'energyDerivation'|'momentumDerivation'|'thermodynamicDerivation';
 export function requiredEquipmentJournals(model:ModeloComun):PhysicalJournalName[] {
-  const required:PhysicalJournalName[]=['materialDerivation','energyDerivation','momentumDerivation'];
+  const required:PhysicalJournalName[]=['materialDerivation','energyDerivation',...(momentumPremise(model)?[]:['momentumDerivation'] as PhysicalJournalName[])];
   if(model.volumenes.some(v=>v.termodinamica.tipo==='equilibrio'))required.push('thermodynamicDerivation');
   return required;
 }
@@ -180,7 +180,8 @@ export function requiredEquipmentJournals(model:ModeloComun):PhysicalJournalName
 /** Equipment must be deduced: each family active somewhere and every active volume recorded with operations. */
 export function equipmentDeductionGaps(model:ModeloComun):{path:string;message:string;family:'matter'|'energy'|'momentum'|'thermodynamics';owner:string}[] {
   const gaps:{path:string;message:string;family:'matter'|'energy'|'momentum'|'thermodynamics';owner:string}[]=[];
-  const families=[['materia','materialDerivation','matter'],['energia','energyDerivation','energy'],['momento','momentumDerivation','momentum']] as const;
+  const families=([['materia','materialDerivation','matter'],['energia','energyDerivation','energy'],['momento','momentumDerivation','momentum']] as const)
+    .filter(([flag])=>flag!=='momento'||!momentumPremise(model));
   const entries=(journal:string)=>{const j=(model.motores as Obj)[journal];const v=j&&typeof j==='object'&&!Array.isArray(j)?(j as Obj).volumes:undefined;return v&&typeof v==='object'&&!Array.isArray(v)?v as Obj:{} as Obj;};
   for(const [flag,journal,family] of families){
     const active=model.volumenes.filter(v=>(v.balances as unknown as Obj)?.[flag]===true);
@@ -200,9 +201,22 @@ export function equipmentDeductionGaps(model:ModeloComun):{path:string;message:s
   return gaps;
 }
 
+/** Optional template.momentumPremise (finding J-1): mirrors core/modelo/lector.py::_momentum_premise. */
+function momentumPremise(model:ModeloComun):Obj|undefined{
+  const template=model.template as unknown as Obj|undefined;
+  return template&&typeof template==='object'&&Object.hasOwn(template,'momentumPremise')?template.momentumPremise as Obj:undefined;
+}
+function readMomentumPremise(model:ModeloComun){
+  const premise=momentumPremise(model);if(premise===undefined)return;
+  const p=claves(premise,'template.momentumPremise',['kind','reason']);
+  if(p.kind!=='prescribed_flows')fallo('template.momentumPremise.kind','Expected one of: prescribed_flows');
+  if(typeof p.reason!=='string'||blank(p.reason))fallo('template.momentumPremise.reason','Nonempty text required');
+  if(model.volumenes.some(v=>(v.balances as unknown as Obj)?.momento===true))fallo('template.momentumPremise','A prescribed-flow premise replaces the momentum balance; no volume may balance momentum');
+}
+
 function readTemplate(model:ModeloComun) {
   const text=(v:unknown,r:string)=>{if(typeof v!=='string'||blank(v))fallo(r,'Nonempty text required');};
-  const t=claves(model.template,'template',['format','version','id','templateVersion','equipment','recipe','ports']);
+  const t=claves(model.template,'template',['format','version','id','templateVersion','equipment','recipe','ports'],['momentumPremise']);
   if(t.format!=='rage.model-template'||t.version!==1)fallo('template','Expected rage.model-template version 1');
   text(t.id,'template.id');text(t.templateVersion,'template.templateVersion');
   if(typeof t.equipment!=='boolean')fallo('template.equipment','Boolean required');
@@ -210,6 +224,7 @@ function readTemplate(model:ModeloComun) {
   const allowed=['materialDerivation','energyDerivation','momentumDerivation','thermodynamicDerivation','equationWorkbench'];
   if(!journals.length||new Set(journals).size!==journals.length||journals.some(j=>typeof j!=='string'||!allowed.includes(j)||!Object.hasOwn(model.motores,j)))fallo('template.recipe.journals','Expected unique references to existing deduction journals');
   for(const journal of journals) obj((model.motores as Obj)[journal as string],'motores.'+journal);
+  readMomentumPremise(model);
   if(t.equipment&&requiredEquipmentJournals(model).some(journal=>!journals.includes(journal)))fallo('template.recipe.journals','Equipment requires recorded matter, energy and momentum journals, plus thermodynamics for package closures');
   if(t.equipment)for(const f of equipmentDeductionGaps(model))fallo(f.path,f.message);
   const ports=lista(t.ports,'template.ports'),seen=new Set(),boundaries=new Set();
