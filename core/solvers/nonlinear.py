@@ -20,6 +20,23 @@ than the residual can be resolved at the root. The convergence step test is
 coordinate's resolution. The published evidence keys are a
 versioned Results contract and are unchanged; the resolution appears only in
 the stagnation message.
+
+Termination at the residual's round-off (F5 item 1 follow-up, 17 November 2026).
+Near a root the evaluated residual is dominated by its own rounding error; the
+Newton step is then that error amplified by the inverse Jacobian, and its size
+depends on the CPU kernel (CI group-9: scaled residual 2.4e-14 against 1e-10,
+step 4.45e-9, cond_inf 9e4 on Cooperlake; converged on Zen). Such a step is
+above the step tolerance and the coordinate resolution, and no backtracked trial
+can lower a merit already at round-off. An iterate is therefore also converged
+when (1) its scaled residual meets the residual tolerance, (2) every backtracked
+trial was evaluated and none gave sufficient decrease (a domain or nonfinite
+failure never counts), and (3) ||step||_inf <= roundoff_step(n, ||r||_inf,
+sigma_min), the bound that any Newton step J^-1 r obeys and that a reader can
+check from the published residual norm and smallest singular value. A finite
+residual that is not round-off always admits a sufficient-decrease trial along
+the Newton direction, so (2) is the evidence that (1) is reached at round-off.
+The tolerances are unchanged; the step is the root's position uncertainty and is
+used as its floor in the probe comparison.
 """
 import numpy as np
 
@@ -34,6 +51,16 @@ class NonlinearError(Exception):
                            'iterations': 0, 'evaluations': 0, 'backtracks': 0,
                            'residualNorm': None, 'stepNorm': None, 'conditionInfinity': None,
                            **evidence, 'terminationReason': code}
+
+
+def roundoff_step(n, residual_norm, smallest_singular_value):
+    """Largest scaled Newton step ||J^-1 r||_inf that a residual of infinity norm residual_norm can produce:
+    ||c||_inf <= ||c||_2 <= ||r||_2 / sigma_min <= sqrt(n) ||r||_inf / sigma_min, with a factor 2 for the
+    rounding of sigma_min itself. Mirrored by core/compilador/steady.py::read_result. A nonpositive sigma_min
+    gives no bound (inf); both callers reject such a Jacobian by their own regularity gates."""
+    if not smallest_singular_value > 0:
+        return np.inf
+    return 2 * np.sqrt(n) * residual_norm / smallest_singular_value
 
 
 def solve(residual, jacobian, seed, bounds, variable_scales, residual_scales, *,
@@ -166,6 +193,10 @@ def solve(residual, jacobian, seed, bounds, variable_scales, residual_scales, *,
                 evidence['backtracks'] += 1
                 factor *= .5
             else:
+                if (last_failure == 'nonlinear_line_search' and evidence['residualNorm'] <= residual_tolerance
+                        and evidence['stepNorm'] <= roundoff_step(n, evidence['residualNorm'], smallest)):
+                    # The residual meets its tolerance and no trial lowers a merit already at round-off.
+                    return z, {**evidence, 'terminationReason': 'converged'}, max(float(np.max(attainable)), evidence['stepNorm'])
                 fail(last_failure, 'No admissible sufficient-decrease Newton step within the backtracking budget.')
         raise AssertionError('Unreachable Newton termination')
 

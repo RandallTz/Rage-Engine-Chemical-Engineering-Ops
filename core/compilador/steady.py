@@ -867,6 +867,8 @@ def attainable_step(result, evidence):
     is within 4 spacing(|z_i|)/x_i of its own coordinate; the published evidence keeps only the step norm, so a
     reader checks the necessary bound ||step||_inf <= max(stepTolerance, max_i 4 spacing(|z_i|)/x_i), with z the
     published root (the iterate at which the last step was computed) and x the published variable scales.
+    A root accepted at the residual's round-off (no backtracked trial lowers the merit) is checked in read_result
+    against nonlinear.roundoff_step(n, residualNorm, smallestSingularValue) instead.
     Mirrored by frontend/motores/modelo/steadyContract.ts::attainableStep.
     """
     values = {row['id']: row['valores'] for row in result['series']}
@@ -904,7 +906,8 @@ def read_result(result):
     for value in [solver[k] for k in ('residualNorm', 'stepNorm', 'conditionInfinity')]+[evidence[k] for k in ('smallestSingularValue', 'relativeAmplification', 'inverseAmplification', 'initialResidualNorm')]:
         if type(value) not in (int, float) or not math.isfinite(value) or value < 0: raise ValueError('Invalid steady regularity measure.')
     config = report['selection']['nonlinear']
-    if (solver['terminationReason'] != 'converged' or solver['residualNorm'] > config['residualTolerance'] or solver['stepNorm'] > max(config['stepTolerance'], attainable_step(result, evidence)) or
+    if (solver['terminationReason'] != 'converged' or solver['residualNorm'] > config['residualTolerance'] or solver['stepNorm'] > max(config['stepTolerance'], attainable_step(result, evidence),
+            nonlinear.roundoff_step(len(evidence['quantityIds']), solver['residualNorm'], evidence['smallestSingularValue'])) or
         solver['iterations'] > config['maxIterations'] or solver['conditionInfinity'] < 1 or evidence['conditionThreshold'] != 1e-8 or evidence['inverseThreshold'] != 1e-8 or evidence['smallestSingularValue'] <= 0 or
         evidence['relativeAmplification'] != solver['conditionInfinity']*np.finfo(float).eps or evidence['inverseAmplification'] != np.finfo(float).eps/evidence['smallestSingularValue'] or
         max(evidence['relativeAmplification'], evidence['inverseAmplification']) > 1e-8 or solver['uniqueness'] != 'local_root_only; finite probes do not prove global uniqueness'):
