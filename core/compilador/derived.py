@@ -1578,7 +1578,8 @@ def publish_trajectory(system, trajectory, requested_times, stop=None, timeline=
     `rows` is an optional list of `(time, state)` that replaces the sampling of `requested_times`; a run session
     passes it so that an action instant carries its left then its right state. `timeline` is the run record
     `{'horizon', 'actions': [{t, quantityId, value, unit, origin}], 'termination': {reason, tEnd}}`: it is published
-    as `procedencia.runTimeline`, its events are added, and its identity is bound into the signature."""
+    as `procedencia.runTimeline`, its events are added, and its identity is bound into `procedencia.firma`. The
+    compilation report keeps the formulation signature, which the evidence blocks (nonlinear, DAE) are checked against."""
     runtime = system.scaled if system.scaled is not None else system
     time_scale = system.scaled.time_scale if system.scaled is not None else 1
     if rows is None:
@@ -1676,18 +1677,17 @@ def publish_trajectory(system, trajectory, requested_times, stop=None, timeline=
                     events.append(evento('desaparicion_fase', 't', time, phase + ' disappears', 'volumen:' + owner))
         else:
             events.append(evento(code, 't', time, message))
-    report, signature = system.report, system.report['signature']
+    signature = system.report['signature']
     partial = bool(trajectory.detenida)
     if timeline is not None:
         from core.resultados.run_timeline import run_timeline, timeline_events
         document = run_timeline(timeline['horizon'], timeline['actions'], timeline['termination']['reason'], timeline['termination']['tEnd'])
         signature = hashlib.sha256(json.dumps([system.report['signature'], document], sort_keys=True).encode()).hexdigest()
-        report = {**system.report, 'signature': signature}
         events.extend(timeline_events(document, 't'))
         partial = partial or document['termination']['reason'] != 'completed'
     return conjunto(system.model['id'], system.model['nombre'], 'fallido' if not values else 'parcial' if partial else 'resuelto',
         {'motor': 'rage.compilador.derived', 'metodo': system.method, 'firma': signature,
-         'compilation': report, 'pasos': trajectory.pasos, 'rechazos': trajectory.rechazos,
+         'compilation': system.report, 'pasos': trajectory.pasos, 'rechazos': trajectory.rechazos,
          **({'runTimeline': document} if timeline is not None else {}),
          **({'nonlinearDiagnostics': {'version': 1, 'method': 'damped_newton',
              'sourceSignature': system.selection['sourceSignature'], 'settings': system.selection['nonlinear'],

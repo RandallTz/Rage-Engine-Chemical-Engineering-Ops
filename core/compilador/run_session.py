@@ -167,8 +167,23 @@ class RunSession:
             grouped.setdefault(float(item['t']), []).append(body)
         out = []
         for t, items in sorted(grouped.items()):
-            out.append(make_action(t, self._updates(items, 'scheduled'), 'scheduled'))
+            updates = self._updates(items, 'scheduled')
+            self._check_box(updates, f'scheduled (t = {t:g})')
+            out.append(make_action(t, updates, 'scheduled'))
         return out
+
+    def _check_box(self, updates, where):
+        """The pure held-input box check (no restart is primed): a value outside its declared index-one box is refused."""
+        system = self.system
+        if getattr(system, 'dae', None) is None:
+            return
+        probe = np.array(system.initial(), dtype=float)
+        for index, value in updates.items():
+            probe[index] = value
+        try:
+            system._admit_time_inputs(probe)
+        except ValueError as error:
+            raise SessionError(422, 'state_outside_domain', f'{where}: {error}', 'scheduled') from error
 
     def _apply(self, updates):
         """Apply validated state-index updates at the edge; the hidden state is restored on any rejection."""
@@ -222,7 +237,15 @@ class RunSession:
         previous = self.run.edge
         cursor = len(self.run.actions)
         # A scheduled action on the way is a jump of its own: record the previous time to emit its right state.
-        self.run.advance(float(to))
+        saved = snapshot(self.system)
+        try:
+            self.run.advance(float(to))
+        except TimelineError as error:
+            # A scheduled action is popped before it is applied, so the run cannot continue as if it were never
+            # there: the session fails with the located cause and nothing is dropped silently.
+            restore(saved)
+            self._abort(error.code, error.message, 'scheduled')
+            raise SessionError(422, error.code, error.message, 'scheduled') from error
         response = {'seq': seq, 'edge': self.run.edge, 'finished': self.run.finished}
         end = self.run.edge
         times = self._sample_times(previous, end)
@@ -259,7 +282,7 @@ class RunSession:
         if self.state == 'ready':
             self.run.stop()
             self._publish()
-        return {'state': self.state, 'result': self.result}
+        return {'state': self.state, 'result': self.result, **({'error': self.error} if self.error else {})}
 
     # -- publication ----------------------------------------------------------------------------------------
     def _timeline(self):
@@ -288,14 +311,25 @@ class RunSession:
             same = [j for j in jumps if j[0] == t]
             rows[t] = [same[0][1], same[-1][2]]
         ordered = [(t, state) for t in sorted(rows) for state in rows[t]]
-        self.result = publish_trajectory(system, trajectory, None, timeline=self._timeline(), rows=ordered)
-        leer_resultados(self.result)
+        try:
+            result = publish_trajectory(system, trajectory, None, timeline=self._timeline(), rows=ordered)
+            leer_resultados(result)
+        except Exception as error:
+            self._abort('publication_failed', f'The finished run could not be published: {error}', 'result')
+            raise SessionError(500, 'publication_failed', self.error['message'], 'result') from error
+        self.result = result
         self.state = 'finished'
         self.release()
 
+    def _abort(self, code, message, path):
+        """End the session as failed with a located error and free the lowered system."""
+        self.state, self.error = 'failed', {'code': code, 'message': message, 'diagnostics': [{'code': code, 'path': path, 'message': message}]}
+        if self.run is not None:
+            self.release()
+
     def release(self):
         """Drop the lowered system (about 121 MB for the CSTR); the published result and timeline stay."""
-        self.timeline = self.run.record()
+        self.timeline = self.run.record() if self.run.finished else None
         self.system = self.run = None
 
     def status(self):
@@ -363,11 +397,12 @@ class SessionStore:
 
     def stop(self, session_id):
         session = self.get(session_id)
-        with session.lock:
-            out = session.stop()
-        with self.guard:
-            self.sessions.pop(session_id, None)
-        return out
+        try:
+            with session.lock:
+                return session.stop()
+        finally:
+            with self.guard:
+                self.sessions.pop(session_id, None)
 
     def status(self, session_id):
         return self.get(session_id).status()
