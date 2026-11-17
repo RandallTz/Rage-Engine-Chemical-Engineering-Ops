@@ -1,4 +1,4 @@
-// rage.flowsheet v1 client parity: the TS reader rejects every Python rejection
+// rage.flowsheet v1 client parity (material and heat connections): the TS reader rejects every Python rejection
 // with the same code and path, admits the same documents, keeps layout edits
 // presentation-only and reads the actual Python steady/dynamic publications.
 // Producer: python -m pytest -q tests/test_flowsheet_network.py (writes .tmp/flowsheet/).
@@ -59,4 +59,26 @@ for(const name of ['steady-result.json','dynamic-result.json']){
 for(const bad of [{},{format:'rage.flowsheet-execution',version:2,sourceSignature:'a'.repeat(64),mode:'steady'},{format:'rage.flowsheet-execution',version:1,sourceSignature:'x',mode:'steady'}]){
   assert.throws(()=>F.readFlowsheetSelection(bad));checks++;
 }
-console.log(JSON.stringify({checks,rejections:rejections.length,results,scope:'rage.flowsheet v1 Python/TS rejection parity, layout invariance and actual network publications'}));
+// rage.flowsheet v1 heat connections (optional `heat` key) (producer: python -m pytest -q tests/test_flowsheet_heat.py, writes .tmp/flowsheet_heat/).
+const heatDir=path.join(root,'.tmp/flowsheet_heat'),heat={rejections:0,results:0};
+if(fs.existsSync(path.join(heatDir,'rejections.json'))){
+  const readHeat=name=>JSON.parse(fs.readFileSync(path.join(heatDir,name),'utf8'));
+  leerModeloComun(readHeat('accepted.json').base);checks++;
+  for(const row of readHeat('rejections.json')){
+    let error;try{leerModeloComun(row.model);}catch(e){error=e;}
+    assert.ok(error instanceof F.FlowsheetError,`heat ${row.name}: expected FlowsheetError, got ${error}`);
+    assert.equal(error.code,row.code,'heat '+row.name);assert.equal(error.path,row.path,'heat '+row.name);checks++;heat.rejections++;
+  }
+  for(const name of ['dynamic-result.json','steady-result.json']){
+    if(!fs.existsSync(path.join(heatDir,name)))continue;
+    const live=readHeat(name);heat.results++;
+    const {compilation}=F.readFlowsheetResult(live.result,live.selection);checks++;
+    assert.equal(compilation.version,1);assert.equal(compilation.heatCouplings.length,1);checks++;
+    for(const mutate of [r=>r.procedencia.flowsheetCompilation.heatCouplings[0].law.endpoint='from',
+      r=>r.procedencia.flowsheetCompilation.heatCouplings[0].connectionId='other',r=>r.procedencia.flowsheetCompilation.heatCouplings[0].identity='approximate',
+      r=>r.procedencia.flowsheetCompilation.heatCouplings=[]]){
+      const bad=structuredClone(live.result);mutate(bad);assert.throws(()=>F.readFlowsheetResult(bad,live.selection));checks++;
+    }
+  }
+}
+console.log(JSON.stringify({checks,rejections:rejections.length,results,heat,scope:'rage.flowsheet v1 (material and heat connections) Python/TS rejection parity, layout invariance and actual network publications'}));
