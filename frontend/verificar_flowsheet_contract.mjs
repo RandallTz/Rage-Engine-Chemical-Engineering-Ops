@@ -73,10 +73,10 @@ if(fs.existsSync(path.join(heatDir,'rejections.json'))){
     if(!fs.existsSync(path.join(heatDir,name)))continue;
     const live=readHeat(name);heat.results++;
     const {compilation}=F.readFlowsheetResult(live.result,live.selection);checks++;
-    assert.equal(compilation.version,1);assert.equal(compilation.heatCouplings.length,1);checks++;
+    assert.equal(compilation.version,2);assert.equal(compilation.heatCouplings.length,1);checks++;
     for(const mutate of [r=>r.procedencia.flowsheetCompilation.heatCouplings[0].law.endpoint='from',
       r=>r.procedencia.flowsheetCompilation.heatCouplings[0].connectionId='other',r=>r.procedencia.flowsheetCompilation.heatCouplings[0].identity='approximate',
-      r=>r.procedencia.flowsheetCompilation.heatCouplings=[]]){
+      r=>r.procedencia.flowsheetCompilation.heatCouplings=[],r=>delete r.procedencia.flowsheetCompilation.heatCouplings,r=>r.procedencia.flowsheetCompilation.connections[0].kind='material',r=>delete r.procedencia.flowsheetCompilation.connections[0].kind]){
       const bad=structuredClone(live.result);mutate(bad);assert.throws(()=>F.readFlowsheetResult(bad,live.selection));checks++;
     }
   }
