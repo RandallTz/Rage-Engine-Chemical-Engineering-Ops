@@ -121,3 +121,17 @@ def test_wrong_cp_coefficient_is_rejected_as_a_provider_mismatch(deduced):
 def test_wrong_formation_enthalpy_is_rejected_as_a_provider_mismatch(deduced):
     diagnostic = _rejected(_mutated(deduced, 'formationEnthalpy1', 1.001))
     assert diagnostic['code'] == 'reaction_standard_potential_mismatch'
+
+
+def test_closed_form_enthalpy_and_entropy_are_not_a_deduction_from_cp():
+    """Review reproducer (16 November 2026): h(tau) and s(tau) declared as the final cp-integral formulas, with no
+    cp relation and no integration in the chain, are admitted today as 'deduced from cp' (operation.91)."""
+    diagnostic = _rejected(S.deduced_author(terminal=True))
+    assert diagnostic['code'] == 'reaction_standard_potential_not_deduced'
+
+
+def test_omitted_entropy_negative_control_is_rejected():
+    """Review reproducer: the omit='entropy' control of standard_potential_inputs (g = h, no -T s) must author and be
+    rejected as a provider mismatch; today the authoring itself raises StopIteration in SharedAuthor.quantity."""
+    diagnostic = _rejected(S.deduced_author(omit='entropy'))
+    assert diagnostic['code'] == 'reaction_standard_potential_mismatch'
