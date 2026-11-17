@@ -241,6 +241,94 @@ class RunTests(Fixture):
         self.assertIsNone(session.system)
 
 
+class NonlinearBlockTests(unittest.TestCase):
+    """C7-R1 and C7-R2: the F3 index-one DAE with a held input bounded to [0, 1000] W (nonlinear algebraic block)."""
+
+    @classmethod
+    def setUpClass(cls):
+        import test_f3_index1_dae as dae
+        from test_f3_nonlinear_algebraic import thermal_case
+        from test_time_inputs import bound_input, with_held_input
+        from backend.api_modelo import _modelo
+        store = {}
+
+        def held_case(owners=('domain_one', 'domain_two')):
+            model, author = thermal_case(owners)
+            _, held, store['qid'] = with_held_input(model, author)
+            return held, author
+        original, dae.thermal_case = dae.thermal_case, held_case
+        try:
+            held = dae.dae_case()
+        finally:
+            dae.thermal_case = original
+        cls.parsed, cls.qid = _modelo({'modelo': bound_input(held, store['qid'], 0, 1000)}), store['qid']
+
+    def test_a_session_publishes_a_nonlinear_model_with_and_without_actions(self):
+        store = SessionStore()
+        session = store.start(copy.deepcopy(self.parsed), background=False)
+        horizon = session.run.horizon
+        result = store.advance(session.id, 0, horizon)['result']
+        leer_resultados(result)
+        self.assertEqual(result['estado'], 'resuelto')
+        self.assertEqual(result['procedencia']['compilation']['signature'],
+                         resolver(copy.deepcopy(self.parsed))['procedencia']['compilation']['signature'])
+        self.assertNotEqual(result['procedencia']['firma'], result['procedencia']['compilation']['signature'])
+        session = store.start(copy.deepcopy(self.parsed), background=False)
+        store.advance(session.id, 0, horizon / 2, [{'quantityId': self.qid, 'value': 500.0, 'unit': 'W'}])
+        result = store.advance(session.id, 1, horizon)['result']
+        leer_resultados(result)
+        self.assertEqual(len(result['procedencia']['runTimeline']['actions']), 1)
+
+    def test_an_out_of_box_scheduled_action_is_a_located_failure_and_is_never_dropped(self):
+        store = SessionStore()
+        scheduled = [{'t': 1.0, 'quantityId': self.qid, 'value': 2000.0, 'unit': 'W'}]
+        session = store.start(copy.deepcopy(self.parsed), scheduled, background=False)
+        self.assertEqual(session.state, 'failed')
+        diagnostic = session.error['diagnostics'][0]
+        self.assertEqual((diagnostic['code'], diagnostic['path']), ('state_outside_domain', 'scheduled'))
+        with self.assertRaises(SessionError) as error:
+            store.advance(session.id, 0, 10.0)
+        self.assertEqual((error.exception.status, error.exception.code), (409, 'session_failed'))
+        self.assertEqual(store.status(session.id)['error']['code'], 'state_outside_domain')
+
+    def test_a_scheduled_action_refused_while_stepping_fails_the_session_located(self):
+        from core.solvers.timeline import TimelineError
+        store = SessionStore()
+        scheduled = [{'t': 1.0, 'quantityId': self.qid, 'value': 500.0, 'unit': 'W'}]
+        session = store.start(copy.deepcopy(self.parsed), scheduled, background=False)
+        self.assertEqual(session.state, 'ready')
+
+        def refuse(t):
+            raise TimelineError('state_outside_domain', 'refused at the restart')
+        session.run.advance = refuse
+        with self.assertRaises(SessionError) as error:
+            store.advance(session.id, 0, 10.0)
+        self.assertEqual((error.exception.status, error.exception.code), (422, 'state_outside_domain'))
+        self.assertEqual(session.state, 'failed')
+        with self.assertRaises(SessionError) as again:
+            store.advance(session.id, 0, 10.0)      # the retry does not continue without the action
+        self.assertEqual(again.exception.code, 'session_failed')
+
+    def test_a_failed_publication_leaves_a_failed_session_and_stop_still_answers(self):
+        import core.compilador.derived as derived
+        store = SessionStore()
+        session = store.start(copy.deepcopy(self.parsed), background=False)
+        original = derived.publish_trajectory
+
+        def broken(*args, **kwargs):
+            raise ValueError('boom')
+        derived.publish_trajectory = broken
+        try:
+            with self.assertRaises(SessionError) as error:
+                store.advance(session.id, 0, session.run.horizon)
+        finally:
+            derived.publish_trajectory = original
+        self.assertEqual(error.exception.code, 'publication_failed')
+        self.assertEqual(session.state, 'failed')
+        out = store.stop(session.id)
+        self.assertEqual((out['state'], out['error']['code']), ('failed', 'publication_failed'))
+
+
 class HiddenStateTests(unittest.TestCase):
     def test_snapshot_restores_what_a_refused_action_primed(self):
         class Owner:
