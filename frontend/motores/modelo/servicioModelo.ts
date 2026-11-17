@@ -110,3 +110,56 @@ export async function describirTermodinamica(cuerpo: { modelo: ModeloComun } | {
     throw new Error(r.status === 422 ? `El Engine no puede describir este modelo: ${d?.detail?.mensaje ?? ""}` : `Servicio del Engine no disponible (HTTP ${r.status}).`);
   return d as DescripcionTermodinamica;
 }
+
+/** Demo 0.3 C9: client of the C7 run-session routes (POST /modelo/run-session/{start,status,advance,stop}).
+ * The server steps, applies actions and publishes; the client only chooses when to ask for the next stretch.
+ * Preview rows are uncertified dense-output samples; only `result` (read by `leerResultados`) is a result. */
+export type RunSessionAction = { quantityId: string; value: number; unit: string };
+export type RunSessionDiagnostic = { code: string; path: string | null; message: string };
+export type RunSessionStatus = { sessionId: string; state: 'lowering' | 'ready' | 'finished' | 'failed';
+  error?: { code: string; message: string; diagnostics: RunSessionDiagnostic[] };
+  horizon?: number; edge?: number; nextSeq?: number; timeInputs?: string[]; stateIds?: string[]; result?: ConjuntoResultados };
+export type RunSessionRows = { t: number[]; values: Record<string, number[]> };
+export type RunSessionJump = { t: number; left: Record<string, number>; right: Record<string, number> };
+export type RunSessionAdvance = { seq: number; edge: number; finished: boolean; rows: RunSessionRows; jumps: RunSessionJump[];
+  applied?: RunSessionJump & { seq: number }; rejected?: RunSessionDiagnostic[]; result?: ConjuntoResultados; state: RunSessionStatus['state'] };
+export class RunSessionError extends Error {
+  constructor(public status: number, public code: string, message: string, public diagnostics: RunSessionDiagnostic[] = []) { super(message); }
+}
+
+async function runSessionCall<T>(route: string, body: unknown, signal?: AbortSignal, timeout = 120000): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(`${API}/run-session/${route}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), cache: 'no-store',
+      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(timeout)]) : AbortSignal.timeout(timeout) });
+  } catch (error) {
+    if (signal?.aborted) throw new RunSessionError(0, 'cancelled', 'The run request was cancelled.');
+    throw new RunSessionError(0, 'unavailable', `Engine service unavailable (${(error as Error).message}).`);
+  }
+  const value = response.headers.get('content-type')?.includes('application/json') ? await response.json() : null;
+  if (!response.ok) {
+    const detail = value?.detail;
+    // Session refusals carry {code, message}; the shared model reader answers earlier with {codigo, mensaje}.
+    throw new RunSessionError(response.status, detail?.code ?? detail?.codigo ?? 'http_' + response.status, detail?.message ?? detail?.mensaje ?? (typeof detail === 'string' ? detail : `Engine service unavailable (HTTP ${response.status}).`), Array.isArray(detail?.diagnostics) ? detail.diagnostics : detail?.ruta ? [{ code: 'invalid_model', path: detail.ruta, message: detail.mensaje }] : []);
+  }
+  return value as T;
+}
+/** A finished run's document goes through the strict reader before anything shows it. */
+function readSessionResult<T extends { result?: unknown }>(value: T): T {
+  if (value.result != null) (value as { result?: ConjuntoResultados }).result = leerResultados(value.result);
+  return value;
+}
+
+export async function startRunSession(modelo: ModeloComun, scheduled?: (RunSessionAction & { t: number })[], signal?: AbortSignal) {
+  return runSessionCall<{ sessionId: string; state: RunSessionStatus['state'] }>('start', { modelo, ...(scheduled?.length ? { scheduled } : {}) }, signal, 30000);
+}
+export async function runSessionStatus(sessionId: string, signal?: AbortSignal) {
+  return readSessionResult(await runSessionCall<RunSessionStatus>('status', { sessionId }, signal, 30000));
+}
+/** Run to `to`, then apply `actions` at that edge. Retrying with the same `seq` and body returns the same answer. */
+export async function advanceRunSession(sessionId: string, seq: number, to: number, actions?: RunSessionAction[], signal?: AbortSignal) {
+  return readSessionResult(await runSessionCall<RunSessionAdvance>('advance', { sessionId, seq, to, ...(actions?.length ? { actions } : {}) }, signal, 600000));
+}
+export async function stopRunSession(sessionId: string, signal?: AbortSignal) {
+  return readSessionResult(await runSessionCall<{ state: RunSessionStatus['state']; result: ConjuntoResultados | null; error?: RunSessionStatus['error'] }>('stop', { sessionId }, signal, 600000));
+}
