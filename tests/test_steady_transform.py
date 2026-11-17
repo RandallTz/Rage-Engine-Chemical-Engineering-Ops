@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import sys
 import unittest
+import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from test_f3_steady_state import thermal_case, analytic_reference
 from core.modelo.steady_transform import prepare_steady_transform
@@ -190,16 +191,22 @@ class SteadyTransformTests(unittest.TestCase):
                 for k, value in reference_rows.items():
                     self.assertAlmostEqual(rows[k]/(value*factor), 1., places=9, msg=k)
 
-    def test_missing_mass_budget_check_is_reported_and_fails_with_a_code(self):
+    def test_missing_mass_budget_check_is_reported_and_reaches_the_same_root(self):
         # RT-13 (b): without a mass-budget check the scale is seed-derived; Solve is told
-        # (basis 'seed' is reported for the inventories) and a tiny holdup in a large
-        # plant fails with a coded error instead of a wrong root.
+        # (basis 'seed' is reported for the inventories) and no wrong root is returned.
+        # Until F5 item 1 the tiny 1 g / 4 g seed in the 100-fold plant stopped with a coded
+        # line-search error: the step tolerance 1e-12 was finer than the enthalpy coordinate can
+        # resolve under its seed-derived scale (4 spacing(H)/x_H ~ 1.4e-9 at H ~ -2.7e10 J), so
+        # the converged iterate (scaled residual ~1e-14) could not pass the step test. With the
+        # termination at the attainable resolution it converges to the same root as the well-scaled
+        # 2000/8000 kg seed; the residual scales come from data, not from the seed.
         from demo01_flash import frozen_model
         from core.compilador.steady import read_result
         def big(m, f=100):
             for k in ('drum.volume', 'solve.A', 'solve.Ao', 'solve.F', 'solve.Q', 'scale.mass'):
                 d = m['datos'][k]['declaracion']; d['texto'] = str(float(d['texto'])*f)
-        for first, second, solves in [('2000.0', '8000.0', True), ('0.001', '0.004', False)]:
+        roots = {}
+        for first, second in [('2000.0', '8000.0'), ('0.001', '0.004')]:
             with self.subTest(holdups=(first, second)):
                 m = frozen_model(); big(m)
                 m['datos']['drum.mass']['declaracion']['texto'] = first
@@ -208,13 +215,14 @@ class SteadyTransformTests(unittest.TestCase):
                 response = prepare_steady_transform(m)
                 inventories = [r for r in response['scaleBasis'] if r['basis'] == 'seed']
                 self.assertTrue(inventories)
-                if solves:
-                    result = SteadySystem(response['model']).solve(); read_result(result)
-                    self.assertEqual(result['estado'], 'resuelto')
-                else:
-                    with self.assertRaises(LoweringError) as caught:
-                        SteadySystem(response['model']).solve()
-                    self.assertTrue(getattr(caught.exception, 'code', None) or caught.exception.diagnostics)
+                result = SteadySystem(response['model']).solve(); read_result(result)
+                self.assertEqual(result['estado'], 'resuelto')
+                roots[first] = {r['nombre']: float(np.atleast_1d(r['valores'])[-1]) for r in result['series']
+                                if r['nombre'].startswith(('m__drum', 'H__drum', 'T__drum'))}
+        self.assertEqual(set(roots['2000.0']), set(roots['0.001']))
+        self.assertEqual(len(roots['0.001']), 4)
+        for name, value in roots['2000.0'].items():
+            self.assertAlmostEqual(roots['0.001'][name]/value, 1., places=11, msg=name)
 
     def test_http_rejection_is_preserved(self):
         from backend.api_modelo import steady_transform
