@@ -860,6 +860,23 @@ def read_report(report, *, numbers=True):
     return report
 
 
+def attainable_step(result, evidence):
+    """Coarsest binary64 step resolution of the published root in declared scaled units (F5 item 1).
+
+    The Newton solver accepts convergence when ||step||_inf <= stepTolerance or when every step component
+    is within 4 spacing(|z_i|)/x_i of its own coordinate; the published evidence keeps only the step norm, so a
+    reader checks the necessary bound ||step||_inf <= max(stepTolerance, max_i 4 spacing(|z_i|)/x_i), with z the
+    published root (the iterate at which the last step was computed) and x the published variable scales.
+    Mirrored by frontend/motores/modelo/steadyContract.ts::attainableStep.
+    """
+    values = {row['id']: row['valores'] for row in result['series']}
+    root = [values.get('steady.'+qid) for qid in evidence['quantityIds']]
+    if any(type(v) not in (int, float) or not math.isfinite(v) for v in root) or len(root) != len(evidence['variableScales']):
+        raise ValueError('The steady root is not published as one finite scalar per unknown.')
+    z, scales = np.abs(np.asarray(root, dtype=float)), np.asarray(evidence['variableScales'], dtype=float)
+    return float(np.max(nonlinear.RESOLUTION_ULPS*np.spacing(z)/scales)) if len(z) else 0.
+
+
 def read_result(result):
     from core.mathematics.contract import keys
     evidence = result['procedencia']['steadyDiagnostics']
@@ -887,7 +904,7 @@ def read_result(result):
     for value in [solver[k] for k in ('residualNorm', 'stepNorm', 'conditionInfinity')]+[evidence[k] for k in ('smallestSingularValue', 'relativeAmplification', 'inverseAmplification', 'initialResidualNorm')]:
         if type(value) not in (int, float) or not math.isfinite(value) or value < 0: raise ValueError('Invalid steady regularity measure.')
     config = report['selection']['nonlinear']
-    if (solver['terminationReason'] != 'converged' or solver['residualNorm'] > config['residualTolerance'] or solver['stepNorm'] > config['stepTolerance'] or
+    if (solver['terminationReason'] != 'converged' or solver['residualNorm'] > config['residualTolerance'] or solver['stepNorm'] > max(config['stepTolerance'], attainable_step(result, evidence)) or
         solver['iterations'] > config['maxIterations'] or solver['conditionInfinity'] < 1 or evidence['conditionThreshold'] != 1e-8 or evidence['inverseThreshold'] != 1e-8 or evidence['smallestSingularValue'] <= 0 or
         evidence['relativeAmplification'] != solver['conditionInfinity']*np.finfo(float).eps or evidence['inverseAmplification'] != np.finfo(float).eps/evidence['smallestSingularValue'] or
         max(evidence['relativeAmplification'], evidence['inverseAmplification']) > 1e-8 or solver['uniqueness'] != 'local_root_only; finite probes do not prove global uniqueness'):
