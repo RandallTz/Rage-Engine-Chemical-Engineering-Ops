@@ -368,6 +368,59 @@ def _pasos(sistema, y0, t_final, rtol, atol, max_step, h_min, max_pasos, metodo,
     return tray
 
 
+def _reintegrate(sistema, t0, y0, t1, rtol, atol, max_step, metodo):
+    """Integrate from (t0, y0) to t1; (segments, y at t1). Nothing is published."""
+    sub = _rk(sistema, t0, y0, t1, rtol, atol, max_step, metodo)
+    segments = []
+    while sub.status == "running":
+        t_s = sub.t
+        sub.step()
+        if sub.status == 'failed':
+            raise Detencion('no_convergente', 'Event reintegration failed.')
+        segments.append((t_s, sub.t, _dense(sistema, sub.dense_output())))
+    return segments, np.array(sub.y, dtype=float)
+
+
+def _refine_change(sistema, firma, segments, lo, hi, y_hi, rtol, atol, max_step, metodo):
+    """Opt-in (`sistema.refine_signature_events`): place a located signature change on the integrated path.
+
+    The bracket [lo, hi] comes from bisection on one accepted step's interpolant. Over a long step its
+    error can put `hi` measurably past the crossing of the integrated trajectory, while the RHS stays on
+    the old branch up to `hi` (Demo 0.3 C6-R1). Here every candidate time is the endpoint of a fresh
+    integration from one grid point of the reintegration (`segments`, from t_a to `hi`), so the change is
+    bracketed on states held to the solver's own tolerance, down to 1e-12 relative in time. Returns
+    (hi, y at hi, segments from t_a to hi); `hi` only moves to points whose signature has changed.
+    """
+    # Base: the last reintegration grid point at or before lo that still carries the old signature.
+    j = 0
+    for k, (t_s, _, dense) in enumerate(segments):
+        if t_s > lo:
+            break
+        if _event_state(sistema, t_s, dense(t_s))[0] == firma:
+            j = k
+    t_b, _, dense_b = segments[j]
+    y_b = np.array(dense_b(t_b), dtype=float)
+    prefix, tail = segments[:j], segments[j:]
+    if lo > t_b:
+        _, y_lo = _reintegrate(sistema, t_b, y_b, lo, rtol, atol, max_step, metodo)
+        if _event_state(sistema, lo, y_lo)[0] != firma:
+            lo = t_b
+    else:
+        lo = t_b
+    for _ in range(200):
+        if hi - lo <= 1e-12 * max(1.0, abs(hi)):
+            break
+        m = 0.5 * (lo + hi)
+        if not lo < m < hi:
+            break
+        segs, y_m = _reintegrate(sistema, t_b, y_b, m, rtol, atol, max_step, metodo)
+        if _event_state(sistema, m, y_m)[0] == firma:
+            lo = m
+        else:
+            hi, y_hi, tail = m, y_m, segs
+    return hi, y_hi, prefix + tail
+
+
 def _integrar(sistema, y0, t_final, rtol, atol, max_step, h_min, max_pasos, metodo, tray, start_time=0.0, horizon=None):
     horizon = t_final if horizon is None else horizon
     if metodo not in METODOS:
@@ -550,6 +603,9 @@ def _integrar(sistema, y0, t_final, rtol, atol, max_step, h_min, max_pasos, meto
                 pending.append((t_s, sub.t, _dense(sistema, sub.dense_output())))
             y_e = sub.y.copy()
             nueva, next_margins = _event_state(sistema, hi, y_e)
+            if nueva != firma and getattr(sistema, 'refine_signature_events', False):
+                hi, y_e, pending = _refine_change(sistema, firma, pending, lo, hi, y_e, rtol, atol, max_step, metodo)
+                nueva, next_margins = _event_state(sistema, hi, y_e)
         except DomainViolation as error:
             tray.rechazos += 1
             attempted = r.t - t_a
