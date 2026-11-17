@@ -358,13 +358,56 @@ class ReactionBlock(NonlinearBlock):
             chain.add(k)
             for parent in system.graph.nodes[k].inputs:visit(parent)
         visit(deduced)
-        for k in chain:
-            if k.startswith('operation.'):
-                operation=system.replayed.definition['operations'][int(k.split('.')[1])-1]
-                if operation['kind'] not in allowed:
-                    reject('reaction_standard_potential_not_deduced','The standard-potential deduction may use only recorded relations, '
-                           'differentiation, integration, isolation, substitution and algebraic normalization.',k)
-                self.virtual_rows.add(k)
+        operations={k:system.replayed.definition['operations'][int(k.split('.')[1])-1] for k in chain if k.startswith('operation.')}
+        for k,operation in operations.items():
+            if operation['kind'] not in allowed:
+                reject('reaction_standard_potential_not_deduced','The standard-potential deduction may use only recorded relations, '
+                       'differentiation, integration, isolation, substitution and algebraic normalization.',k)
+        # Review repair (16 November 2026): coefficient identity alone admits a
+        # closed-form h(T), s(T) declared directly. The chain must integrate
+        # the enthalpy and entropy rates, those rates must descend from a
+        # recorded constitutive cp relation, and no other declared relation of
+        # the reduced temperature may be a closed form.
+        free=lambda e:not e.atoms(sp.core.function.AppliedUndef) and not e.atoms(sp.Derivative)
+        def of_coordinate(e):
+            return (isinstance(e,sp.core.function.AppliedUndef) and not e.has(system.time)
+                    and any(arg.free_symbols for arg in e.args))
+        # cp is the function defined as a temperature derivative (cp = dh/dT) and
+        # given by a constitutive closed form (the published polynomial).
+        derivative_defined={system.graph.nodes[k].equation.lhs.func for k,operation in operations.items()
+                            if operation['kind']=='declare_relation' and operation.get('relationKind')=='definition'
+                            and of_coordinate(system.graph.nodes[k].equation.lhs)
+                            and system.graph.nodes[k].equation.rhs.atoms(sp.Derivative)}
+        capacities={k for k,operation in operations.items()
+                    if operation['kind']=='declare_relation' and operation.get('relationKind')=='constitutive'
+                    and of_coordinate(system.graph.nodes[k].equation.lhs) and free(system.graph.nodes[k].equation.rhs)
+                    and system.graph.nodes[k].equation.lhs.func in derivative_defined}
+        integrated=set()
+        for k,operation in operations.items():
+            if operation['kind']!='integrate':
+                continue
+            ancestors=set()
+            def climb(key):
+                if key in ancestors:return
+                ancestors.add(key)
+                for parent in system.graph.nodes[key].inputs:climb(parent)
+            for parent in system.graph.nodes[k].inputs:climb(parent)
+            sources=[system.graph.nodes[p].equation for p in system.graph.nodes[k].inputs
+                     if isinstance(system.graph.nodes[p].equation,sp.Equality)]
+            if not ancestors&capacities or not sources or not isinstance(sources[0].lhs,sp.Derivative):
+                reject('reaction_standard_potential_not_deduced','Every integration in the standard-potential deduction must integrate a '
+                       'rate (dh/dT or ds/dT) derived from the recorded constitutive cp relation.',k)
+            integrated.add(sources[0].lhs.expr)
+        if len(integrated)<2:
+            reject('reaction_standard_potential_not_deduced','Deduce the standard potential from cp: integrate the recorded enthalpy and '
+                   'entropy rates (dh/dT = cp, ds/dT = cp/T) with the reference state, instead of declaring h(T) or s(T).',deduced)
+        for k,operation in operations.items():
+            equation=system.graph.nodes[k].equation
+            if (operation['kind']=='declare_relation' and k not in capacities and isinstance(equation,sp.Equality)
+                    and of_coordinate(equation.lhs) and free(equation.rhs)):
+                reject('reaction_standard_potential_not_deduced','A closed-form relation of the temperature other than the recorded cp '
+                       'polynomial is declared in the standard-potential deduction; h(T), s(T) and g(T) must come from integration.',k)
+        self.virtual_rows.update(operations)
         self.deduced_standard[i]=deduced
         return deduced
 
