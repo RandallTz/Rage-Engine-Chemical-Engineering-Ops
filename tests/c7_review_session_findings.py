@@ -58,11 +58,14 @@ except Exception as error:
     print('C7-R1: the session is left', session.state, 'and stop raised', type(error).__name__, '-', str(error), flush=True)
 
 session = sessions.start(copy.deepcopy(parsed), [{'t': 1.0, 'quantityId': qid, 'value': 2000.0, 'unit': 'W'}], background=False)
-horizon = session.run.horizon
-try:
-    sessions.advance(session.id, 0, horizon / 2)
-    print('C7-R2 not reproduced: the out-of-box scheduled action was answered')
-except Exception as error:
-    print('C7-R2: out-of-box scheduled action raised', type(error).__name__, getattr(error, 'code', None),
-          '(not a SessionError, so HTTP 500); pending scheduled actions afterwards:', len(session.run._pending),
-          '; edge', session.run.edge, '; next seq', session.next_seq, flush=True)
+if session.state == 'failed':
+    print('C7-R2 repaired: the out-of-box scheduled action fails the session at start with', session.error['diagnostics'], flush=True)
+else:
+    horizon = session.run.horizon
+    try:
+        sessions.advance(session.id, 0, horizon / 2)
+        print('C7-R2 not reproduced: the out-of-box scheduled action was answered')
+    except Exception as error:
+        print('C7-R2: out-of-box scheduled action raised', type(error).__name__, getattr(error, 'code', None),
+              '(not a SessionError, so HTTP 500); pending scheduled actions afterwards:', len(session.run._pending),
+              '; edge', session.run.edge, '; next seq', session.next_seq, flush=True)
