@@ -1,0 +1,24 @@
+name: Diagnostic steady seed (temporary, never merged)
+on:
+  push:
+    branches: ["diag/f9-steady-seed"]
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        copy: [1, 2, 3, 4, 5, 6]
+    env:
+      OPENBLAS_NUM_THREADS: "1"
+      MPLBACKEND: Agg
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: grep -m1 'model name' /proc/cpuinfo; OPENBLAS_VERBOSE=2 python -c "import numpy, scipy.linalg"
+      - run: python tools/ci/diag_steady_seed.py
