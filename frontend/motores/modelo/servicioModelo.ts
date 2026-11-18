@@ -118,7 +118,9 @@ export type RunSessionAction = { quantityId: string; value: number; unit: string
 export type RunSessionDiagnostic = { code: string; path: string | null; message: string };
 export type RunSessionStatus = { sessionId: string; state: 'lowering' | 'ready' | 'finished' | 'failed';
   error?: { code: string; message: string; diagnostics: RunSessionDiagnostic[] };
-  horizon?: number; edge?: number; nextSeq?: number; timeInputs?: string[]; stateIds?: string[]; result?: ConjuntoResultados };
+  horizon?: number; edge?: number; nextSeq?: number; timeInputs?: string[]; stateIds?: string[];
+  /** C9-R1: the SI unit Python states for each row value; rows, jumps and applied states are in these units. */
+  stateUnits?: Record<string, string>; result?: ConjuntoResultados };
 export type RunSessionRows = { t: number[]; values: Record<string, number[]> };
 export type RunSessionJump = { t: number; left: Record<string, number>; right: Record<string, number> };
 export type RunSessionAdvance = { seq: number; edge: number; finished: boolean; rows: RunSessionRows; jumps: RunSessionJump[];
