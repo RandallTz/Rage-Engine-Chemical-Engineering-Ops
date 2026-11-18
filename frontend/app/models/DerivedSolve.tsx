@@ -82,7 +82,7 @@ export function InverseControls({model,quantities,disabled,change,closureVolumeI
  * The preview is uncertified and never replaces Results: only the published document is saved as the result. */
 const PACES=[0.5,1,2,5,10,30,60,300,1800],TICK_MS=500,KEEP_ALIVE_MS=5*60*1000;
 type Phase='idle'|'lowering'|'running'|'paused'|'finished'|'failed';
-type Session={id:string;horizon:number;edge:number;timeInputs:string[];stateIds:string[]};
+type Session={id:string;horizon:number;edge:number;timeInputs:string[];stateIds:string[];stateUnits:Record<string,string>};
 type Preview={t:number[];values:Record<string,(number|null)[]>;events:Evento[]};
 const show=(t:number)=>String(Number(t.toPrecision(6)));// display only
 const describe=(diagnostics:RunSessionDiagnostic[]|undefined)=>(diagnostics??[]).map(d=>`${d.message}${d.path?` (${d.path})`:''}`).join(' ');
@@ -99,7 +99,8 @@ function LiveRun({model,disabled,onActive}:{model:HojaMotor;disabled:boolean;onA
   useEffect(()=>()=>{running.current=false;const s=sessionRef.current;if(s&&!ended.current)void stopRunSession(s.id).catch(()=>{});},[]);
   // Keep-alive: a paused client sends a zero-length advance every 5 minutes (C7 idle eviction is 30 minutes).
   useEffect(()=>{if(phase!=='paused')return;const timer=setInterval(()=>{const s=sessionRef.current;if(s)void serial(()=>advance(s.edge,[])).catch(()=>{});},KEEP_ALIVE_MS);return()=>clearInterval(timer);},[phase]);
-  const unit=(id:string)=>quantities.find(q=>q.id===id)?.unit??'SI';
+  // C9-R1: row values are SI; Python names their unit in `status`. The declared Model unit is never used as a label.
+  const unit=(id:string)=>sessionRef.current?.stateUnits[id]??'SI';
   const name=(id:string)=>quantities.find(q=>q.id===id)?.name??id;
   /** Requests are strictly sequential: one sequence number per answer. */
   function serial<T>(task:()=>Promise<T>):Promise<T>{const next=chain.current.then(task,task);chain.current=next.catch(()=>{});return next;}
@@ -142,13 +143,14 @@ function LiveRun({model,disabled,onActive}:{model:HojaMotor;disabled:boolean;onA
     signature.current=firmaHoja(model);setPhase('lowering');
     try{
       const {sessionId}=await startRunSession(selectedDerivedModel(model));
-      sessionRef.current={id:sessionId,horizon:0,edge:0,timeInputs:[],stateIds:[]};
+      sessionRef.current={id:sessionId,horizon:0,edge:0,timeInputs:[],stateIds:[],stateUnits:{}};
       for(;;){// lowering runs on the server (35-200 s); poll its status
         const status=await runSessionStatus(sessionId);
         if(status.state==='failed'){ended.current=true;throw new RunSessionError(422,status.error?.code??'failed',status.error?.message??'The run session failed.',status.error?.diagnostics);}
         if(status.state==='finished'){if(status.result)await finish(status.result,'The run ended at lowering.');return;}
         if(status.state==='ready'){
-          const s:Session={id:sessionId,horizon:status.horizon!,edge:status.edge!,timeInputs:status.timeInputs!,stateIds:status.stateIds!};
+          const s:Session={id:sessionId,horizon:status.horizon!,edge:status.edge!,timeInputs:status.timeInputs!,stateIds:status.stateIds!,stateUnits:status.stateUnits!};
+          if(!s.stateUnits||s.stateIds.some(id=>typeof s.stateUnits[id]!=='string'))throw new RunSessionError(0,'missing_units','The server did not state the units of the run rows.');
           sessionRef.current=s;setSession(s);setShown([...s.timeInputs,...s.stateIds.filter(id=>!s.timeInputs.includes(id))].slice(0,4));
           setPace(PACES.reduce((best,p)=>Math.abs(Math.log(p*30/s.horizon))<Math.abs(Math.log(best*30/s.horizon))?p:best,PACES[0]));
           void requestFormulation('equation-workbench',JSON.stringify({modelo:commonSource(model)})).then(async response=>{const value=await response.json();if(response.ok)setQuantities(readEquationWorkbenchReport(value).quantities);}).catch(()=>{});
@@ -192,7 +194,7 @@ function LiveRun({model,disabled,onActive}:{model:HojaMotor;disabled:boolean;onA
       <label>Pace<select aria-label="Live run pace" value={pace} onChange={event=>setPace(Number(event.target.value))}>{PACES.map(p=><option key={p} value={p}>{p} s simulated per second</option>)}</select></label>
       {phase==='running'?<button onClick={pause}>Pause</button>:<button onClick={run}>{session.edge>0?'Resume':'Run'}</button>}
       <button onClick={()=>void stop()}>Stop and publish</button>
-      {session.timeInputs.length>0?<fieldset><legend>Time inputs</legend>{session.timeInputs.map(id=><div key={id}><label>{name(id)}<input aria-label={`New value ${id}`} value={drafts[id]?.value??''} placeholder={String(preview.values[id]?.at(-1)??'')} onChange={event=>setDrafts(d=>({...d,[id]:{value:event.target.value,unit:d[id]?.unit??unit(id)}}))}/></label><input aria-label={`Unit ${id}`} value={drafts[id]?.unit??unit(id)} onChange={event=>setDrafts(d=>({...d,[id]:{value:d[id]?.value??'',unit:event.target.value}}))}/><button onClick={()=>queueAction(id)}>{phase==='running'?'Apply at next edge':'Apply now'}</button>{queued.some(a=>a.quantityId===id)&&<small> queued</small>}</div>)}</fieldset>:<p>This model declares no time input, so it accepts no action during the run. Declare a set point or disturbance as a time input in Transform.</p>}
+      {session.timeInputs.length>0?<fieldset><legend>Time inputs</legend>{session.timeInputs.map(id=><div key={id}><label>{name(id)}<input aria-label={`New value ${id}`} value={drafts[id]?.value??''} placeholder={preview.values[id]?.at(-1)!=null?`${preview.values[id].at(-1)} ${unit(id)}`:''} onChange={event=>setDrafts(d=>({...d,[id]:{value:event.target.value,unit:d[id]?.unit??unit(id)}}))}/></label><input aria-label={`Unit ${id}`} value={drafts[id]?.unit??unit(id)} onChange={event=>setDrafts(d=>({...d,[id]:{value:d[id]?.value??'',unit:event.target.value}}))}/><button onClick={()=>queueAction(id)}>{phase==='running'?'Apply at next edge':'Apply now'}</button>{queued.some(a=>a.quantityId===id)&&<small> queued</small>}</div>)}</fieldset>:<p>This model declares no time input, so it accepts no action during the run. Declare a set point or disturbance as a time input in Transform.</p>}
     </>}
     {message&&<p role={phase==='failed'?'alert':'status'}>{message}</p>}
     {saved&&<Link href={`/models/${model.id}/results`}>Open the published result in Results</Link>}
