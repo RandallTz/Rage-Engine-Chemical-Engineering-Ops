@@ -165,6 +165,12 @@ function attainableStep(result:ConjuntoResultados,quantityIds:string[],scales:nu
   if(root.length!==scales.length||root.some(v=>!finite(v)))fail('The steady root is not published as one finite scalar per unknown.');
   return root.reduce<number>((m,v,i)=>Math.max(m,4*spacing(v as number)/scales[i]),0);
 }
+/** Mirrors core/solvers/nonlinear.py::roundoff_step: the largest scaled Newton step ||J^-1 r||_inf that a residual of
+ * infinity norm residualNorm can produce, 2 sqrt(n) ||r||_inf / sigma_min. The solver also accepts a root at the
+ * residual's round-off (no backtracked trial lowers a merit within the residual tolerance) when its step obeys it. */
+function roundoffStep(n:number,residualNorm:number,smallestSingularValue:number):number{
+  return smallestSingularValue>0?2*Math.sqrt(n)*residualNorm/smallestSingularValue:Infinity;
+}
 export function readSteadyResult(result:ConjuntoResultados):void{
   const inverse=Boolean(result.procedencia.compilation&&'inverseSpecification' in result.procedencia.compilation);
   const closures=Boolean(result.procedencia.compilation&&'thermodynamicClosures' in result.procedencia.compilation);
@@ -175,7 +181,7 @@ export function readSteadyResult(result:ConjuntoResultados):void{
   if(e.compilationSignature!==r.signature||e.resultSignature!==steadyResultSignature(result)||!same(e.quantityIds,r.variables.map(v=>v.id))||!same(e.equationIds,r.residualRows.map(v=>v.id))||!same(e.variableScales,r.variables.map(v=>v.scaleSI))||!same(e.residualScales,r.residualRows.map(v=>v.scaleSI)))fail('Steady result fingerprint/order mismatch.');
   const n=e.solver;object(n,['iterations','evaluations','backtracks','residualNorm','stepNorm','conditionInfinity','terminationReason','completedProbes','uniqueness']);
   for(const k of ['iterations','evaluations','backtracks','completedProbes'] as const)if(!Number.isSafeInteger(n[k])||n[k]<0)fail('Invalid Newton counter.');
-  if([n.residualNorm,n.stepNorm,n.conditionInfinity,e.smallestSingularValue,e.relativeAmplification,e.inverseAmplification,e.initialResidualNorm].some(x=>!finite(x)||x<0)||n.conditionInfinity<1||e.smallestSingularValue<=0||n.terminationReason!=='converged'||n.residualNorm>c.residualTolerance||n.stepNorm>Math.max(c.stepTolerance,attainableStep(result,e.quantityIds,e.variableScales))||n.iterations>c.maxIterations||e.conditionThreshold!==1e-8||e.inverseThreshold!==1e-8||e.relativeAmplification!==n.conditionInfinity*Number.EPSILON||e.inverseAmplification!==Number.EPSILON/e.smallestSingularValue||Math.max(e.relativeAmplification,e.inverseAmplification)>1e-8||n.uniqueness!=='local_root_only; finite probes do not prove global uniqueness')fail('Steady convergence/regularity gate failed.');
+  if([n.residualNorm,n.stepNorm,n.conditionInfinity,e.smallestSingularValue,e.relativeAmplification,e.inverseAmplification,e.initialResidualNorm].some(x=>!finite(x)||x<0)||n.conditionInfinity<1||e.smallestSingularValue<=0||n.terminationReason!=='converged'||n.residualNorm>c.residualTolerance||n.stepNorm>Math.max(c.stepTolerance,attainableStep(result,e.quantityIds,e.variableScales),roundoffStep(e.quantityIds.length,n.residualNorm,e.smallestSingularValue))||n.iterations>c.maxIterations||e.conditionThreshold!==1e-8||e.inverseThreshold!==1e-8||e.relativeAmplification!==n.conditionInfinity*Number.EPSILON||e.inverseAmplification!==Number.EPSILON/e.smallestSingularValue||Math.max(e.relativeAmplification,e.inverseAmplification)>1e-8||n.uniqueness!=='local_root_only; finite probes do not prove global uniqueness')fail('Steady convergence/regularity gate failed.');
   if(inverse){const block=r.inverseSpecification!,summary=exactObject(e.inverseSpecification,['specificationSignature','freedInputs','specificationRows','seedRegularity']);
     if(summary.specificationSignature!==r.specificationSignature||!same(summary.freedInputs,block.freedInputs.map(v=>v.quantityId))||!same(summary.specificationRows,block.rows.map(v=>v.id))||steadySignature(summary.seedRegularity)!==steadySignature(block.seedRegularity))fail('Stale inverse specification diagnostics.');}
   if(closures){
