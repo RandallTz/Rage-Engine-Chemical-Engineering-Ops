@@ -40,6 +40,23 @@ const model=JSON.parse(execFileSync('python',['-c',[
   'author, energy = heated_region()',
   "print(json.dumps(selection_model(author, energy, inputs=['heaterDuty'])))"].join('\n')],{cwd:root,encoding:'utf8',maxBuffer:64<<20}));
 
+// Section 6 (C9-R1): the same plant with the duty declared in kW. Authored before any request, because a long
+// blocking call would leave the HTTP keep-alive socket closed by the server.
+const kw=JSON.parse(execFileSync('python',['-c',[
+    'import json, sys',
+    "sys.path[:0] = ['.', 'tests']",
+    'import test_time_inputs as ti',
+    'original = ti.Author.append',
+    'def append(self, kind, **kw):',
+    "    if kw.get('name') in ('heaterDuty', 'heaterPower'): kw['unit'] = 'kW'",
+    '    return original(self, kind, **kw)',
+    'ti.Author.append = append',
+    'author, energy = ti.heated_region()',
+    'ti.Author.append = original',
+    "model = ti.selection_model(author, energy, inputs=['heaterDuty'])",
+    "key = model['motores']['derivedExecution']['timeInputs']['heaterDuty']",
+    "model['datos'][key]['declaracion'] = {'texto': '1', 'unidad': 'kW'}",
+    'print(json.dumps(model))'].join('\n')],{cwd:root,encoding:'utf8',maxBuffer:64<<20}));
 const POWER=50,HORIZON=600;
 const duty=(value,unit='W')=>[{quantityId:'heaterDuty',value,unit}];
 let checks=0;const ok=(condition,message)=>{assert.ok(condition,message);checks++;};
@@ -118,5 +135,21 @@ const energyId=result=>result.series.find(row=>row.id.startsWith('campo.')&&!row
   const signal=equationSections(report,'signal','region_a'),energy=equationSections(report,'energy','region_a');
   ok(signal.result.map(r=>r.id).join()==='operation.1,operation.2'&&signal.shared.length===0,'Signal rows owned by the system are the Signal family result');
   ok(energy.shared.map(r=>r.id).join()==='operation.3'&&energy.result.every(r=>r.family==='energy'),'physical families keep their region and cross-domain sections');
+}
+// 6. C9-R1: a non-SI declared unit. The duty is declared in kW and set to 1 kW; the rows are SI and Python names
+// their unit, so the preview labels 1000 W, never 1000 kW. The client converts nothing.
+{
+
+  const {sessionId}=await startRunSession(kw);const status=await ready(sessionId);
+  assert.equal(status.state,'ready',JSON.stringify(status.error));checks++;
+  ok(status.stateUnits&&status.stateIds.every(id=>typeof status.stateUnits[id]==='string'),'status names the unit of every row');
+  ok(status.stateUnits.heaterDuty==='W','the duty rows are labelled in W although the Model declares kW');
+  const energyUnit=status.stateUnits[status.stateIds.find(id=>id!=='heaterDuty'&&status.stateUnits[id]==='J')];ok(energyUnit==='J','the energy rows are labelled in J');
+  const a=await advanceRunSession(sessionId,0,50);ok(a.rows.values.heaterDuty.every(v=>v===1000),'1 kW arrives as 1000 in the stated unit W');
+  const applied=await advanceRunSession(sessionId,1,a.edge,duty(2,'kW'));ok(applied.applied.right.heaterDuty===2000,'an action in kW is converted by Python to 2000 W');
+  await stopRunSession(sessionId);
+  const solve=fs.readFileSync(path.join(directory,'app/models/DerivedSolve.tsx'),'utf8');
+  ok(/const unit=\(id:string\)=>sessionRef\.current\?\.stateUnits\[id\]\?\?'SI'/.test(solve),'the preview labels rows with the unit Python states');
+  ok(!/quantities\.find\(q=>q\.id===id\)\?\.unit/.test(solve),'the declared workbench unit is not used as a label of SI rows');
 }
 console.log(`verificar_run_session: ${checks} checks passed against ${api}`);
