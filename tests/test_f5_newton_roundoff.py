@@ -50,6 +50,9 @@ def test_a_residual_converged_iterate_at_round_off_is_converged():
     assert detail['terminationReason'] == 'converged'
     assert detail['residualNorm'] <= 1e-10
     assert 1e-12 < detail['stepNorm'] <= roundoff_step(2, detail['residualNorm'], 0.38)
+    # The path is the round-off exit on every CPU: the arithmetic here is exact IEEE (unit-triangular 2x2 solve,
+    # one quantized row), so the full backtracking budget is exhausted before acceptance.
+    assert detail['backtracks'] == 20
     assert abs(z[0] - 1.) < 2 * GRID and abs(z[1] - 2. * z[0]) < 1e-15
 
 
