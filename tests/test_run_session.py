@@ -241,6 +241,36 @@ class RunTests(Fixture):
         self.assertIsNone(session.system)
 
 
+    def test_status_names_the_si_unit_of_every_row_whatever_the_declared_unit(self):
+        """C9-R1: rows are SI state values; status names their unit, so a client labels them without converting."""
+        import test_time_inputs as ti
+        original = ti.Author.append
+        def append(author, kind, **fields):
+            if fields.get('name') in ('heaterDuty', 'heaterPower'):
+                fields['unit'] = 'kW'
+            return original(author, kind, **fields)
+        ti.Author.append = append
+        try:
+            author, energy = ti.heated_region()
+        finally:
+            ti.Author.append = original
+        model = ti.selection_model(author, energy, inputs=['heaterDuty'])
+        key = model['motores']['derivedExecution']['timeInputs']['heaterDuty']
+        model['datos'][key]['declaracion'] = {'texto': '1', 'unidad': 'kW'}
+        from backend.api_modelo import _modelo
+        store = self.store()
+        session = store.start(_modelo({'modelo': model}), background=False)
+        status = store.status(session.id)
+        self.assertEqual(set(status['stateUnits']), set(status['stateIds']))
+        self.assertEqual(status['stateUnits']['heaterDuty'], 'W')
+        self.assertEqual(sorted(status['stateUnits'].values()), ['J', 'W', 'kg'])
+        out = store.advance(session.id, 0, 50.0)
+        self.assertEqual(out['rows']['values']['heaterDuty'][-1], 1000.0)   # 1 kW in the stated unit W
+        energy_id = next(i for i, u in status['stateUnits'].items() if u == 'J')
+        self.assertAlmostEqual(out['rows']['values'][energy_id][-1], 50000.0, delta=1e-6)
+        store.stop(session.id)
+
+
 class NonlinearBlockTests(unittest.TestCase):
     """C7-R1 and C7-R2: the F3 index-one DAE with a held input bounded to [0, 1000] W (nonlinear algebraic block)."""
 

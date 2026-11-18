@@ -108,6 +108,8 @@ export function readEquationWorkbenchReport(value:unknown):EquationWorkbenchRepo
 
 /** Presentation order only. Expressions and provenance come unchanged from Python. */
 export function equationSections(report:EquationWorkbenchReport,family:EquationFamily,owner?:string){
+  // Demo 0.3 C9: a control loop belongs to no physical region, so Signal rows (owned by 'system') are the family's own rows.
+  if(family==='signal'){const rows=report.equations.filter(row=>row.family==='signal');const rootIds=new Set(rows.filter(row=>row.derivation.rule==='declared_law'&&!row.derivation.inputIds.length).map(row=>row.id));return {roots:rows.filter(row=>rootIds.has(row.id)),steps:rows.filter(row=>!rootIds.has(row.id)),result:rows.filter(row=>row.current),shared:[] as EquationRow[]};}
   const rows=report.equations.filter(row=>row.family===family&&(!owner||row.ownerId===owner||row.ownerId==='unbound'));
   const roots=rows.filter(row=>row.derivation.rule==='declared_law'&&!row.derivation.inputIds.length);
   const rootIds=new Set(roots.map(row=>row.id));
