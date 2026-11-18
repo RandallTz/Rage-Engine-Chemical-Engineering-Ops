@@ -1,0 +1,38 @@
+{
+ "format": "rage.run-session-schedule",
+ "version": 1,
+ "modelId": "demo-0.3-controlled-reactor",
+ "note": "Each case is the body of `scheduled` for run-session/start (C7); times in s from the start.",
+ "cases": {
+  "setpointThenFeed": [
+   {
+    "t": 100.0,
+    "quantityId": "setpoint_TC1",
+    "value": 336.2439635,
+    "unit": "K"
+   },
+   {
+    "t": 1500.0,
+    "quantityId": "x0afd3d0c5f",
+    "value": 0.0012,
+    "unit": "kg/s"
+   }
+  ],
+  "saturatingSetpoint": [
+   {
+    "t": 100.0,
+    "quantityId": "setpoint_TC1",
+    "value": 340.2439635,
+    "unit": "K"
+   }
+  ],
+  "smallSetpoint": [
+   {
+    "t": 100.0,
+    "quantityId": "setpoint_TC1",
+    "value": 335.3439635,
+    "unit": "K"
+   }
+  ]
+ }
+}
