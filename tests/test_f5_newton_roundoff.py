@@ -50,6 +50,9 @@ def test_a_residual_converged_iterate_at_round_off_is_converged():
     assert detail['terminationReason'] == 'converged'
     assert detail['residualNorm'] <= 1e-10
     assert 1e-12 < detail['stepNorm'] <= roundoff_step(2, detail['residualNorm'], 0.38)
+    # The path is the round-off exit on every CPU: the arithmetic here is exact IEEE (unit-triangular 2x2 solve,
+    # one quantized row), so the full backtracking budget is exhausted before acceptance.
+    assert detail['backtracks'] == 20
     assert abs(z[0] - 1.) < 2 * GRID and abs(z[1] - 2. * z[0]) < 1e-15
 
 
@@ -105,7 +108,10 @@ def test_tiny_steady_seed_with_last_bit_residual_noise_converges_to_the_same_roo
                         if r['nombre'].startswith(('m__drum', 'H__drum', 'T__drum'))}
     tiny = details['0.001']
     assert tiny['terminationReason'] == 'converged' and tiny['residualNorm'] <= 1e-10
-    assert tiny['backtracks'] >= 20  # the round-off termination is the path exercised
+    # Whether the injected noise reaches the round-off exit depends on the BLAS kernel: on Windows and the Cooperlake
+    # runners it does (20 backtracks); on the Zen runner of CI run 44175404450 the ordinary rules converge first
+    # (0 backtracks). The exit itself is exercised on every CPU by the quantized-row reproducer above, so here the
+    # CPU-independent claims are convergence and the same root, asserted here; the path taken is not.
     assert len(roots['0.001']) == 4
     for name, value in roots['2000.0'].items():
         assert abs(roots['0.001'][name] / value - 1) < 1e-11, name
