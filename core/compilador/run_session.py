@@ -338,7 +338,10 @@ class RunSession:
             out['error'] = self.error
         if self.state == 'ready':
             out.update(horizon=self.run.horizon, edge=self.run.edge, nextSeq=self.next_seq, timeInputs=sorted(self.inputs),
-                       stateIds=list(self.system.state_ids))
+                       stateIds=list(self.system.state_ids),
+                       # C9-R1: rows, jumps and applied states are SI state values; Python names their unit, so a
+                       # client labels them without converting and without assuming the Model's declared unit.
+                       stateUnits={qid: _unit_of(self.system, q) for qid, q in zip(self.system.state_ids, self.system.states)})
         if self.state == 'finished':
             out['result'] = self.result
         return out
